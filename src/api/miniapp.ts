@@ -400,16 +400,25 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
             return res.status(401).json({ error: "User not identified" });
         }
 
-        const user = await db.getUserByTelegramId(req.telegramUser.id);
-        console.log(`[MINIAPP] /orders/mine: tg_id=${req.telegramUser.id} user_found=${!!user}`);
+        const tgId = Number(req.telegramUser.id);
+        const user = await db.getUserByTelegramId(tgId);
+        console.log(`[MINIAPP] /orders/mine: tg_id=${tgId} user_found=${!!user}`);
 
         if (!user) {
             return res.json({ orders: [] });
         }
 
         const orders = await db.getUserOrders(user.id);
+        // Manually inject user info for the UI
+        const mappedOrders = orders.map(o => ({
+            ...o,
+            username: user.username,
+            trust_score: user.trust_score,
+            wallet_address: user.wallet_address
+        }));
+
         console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
-        res.json({ orders });
+        res.json({ orders: mappedOrders });
     } catch (err: any) {
         console.error("/orders/mine error:", err);
         res.status(500).json({ error: err.message });
@@ -422,8 +431,22 @@ router.get("/debug/status", async (req: Request, res: Response) => {
         ok: true,
         env: env.NODE_ENV,
         node: process.version,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        v: "v1.2.3" // Version tracker
     });
+});
+
+router.get("/debug/db-dump", async (req: Request, res: Response) => {
+    try {
+        const users = await db.getUserByTelegramId(123456789); // Check user
+        const { data: allOrders } = await (db as any).getClient().from("orders").select("*");
+        res.json({
+            target_user: users,
+            orders: allOrders
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 router.post("/orders", async (req: Request, res: Response) => {
