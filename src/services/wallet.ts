@@ -147,15 +147,38 @@ class WalletService {
         const decimals = await tokenContract.decimals();
         const amountUnits = ethers.parseUnits(amount, decimals);
 
-        // 1. Approve
-        const approveTx = await tokenContract.approve(contractAddress, amountUnits);
-        await approveTx.wait();
+        // 1. Smart Approve: Check existing allowance first
+        const currentAllowance = await tokenContract.allowance(signer.address, contractAddress);
+        if (currentAllowance < amountUnits) {
+            console.log(`[WALLET] Insufficient allowance (${ethers.formatUnits(currentAllowance, decimals)}). Approving ${amount} ${tokenAddress}...`);
+            const approveTx = await tokenContract.approve(contractAddress, amountUnits);
+            await approveTx.wait();
 
-        // 2. Deposit
-        const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
-        await depositTx.wait();
+            // Small Sleep to mitigate RPC state lag on L2s like Base
+            await new Promise(r => setTimeout(r, 1000));
+        }
 
-        return depositTx.hash;
+        // 2. Deposit with Retry/Buffer for gas estimation lag
+        try {
+            const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
+            await depositTx.wait();
+            return depositTx.hash;
+        } catch (err: any) {
+            // If estimateGas fails with allowance error despite approve, try one more time after a longer sleep
+            if (err.message.includes("allowance") || err.message.includes("estimateGas")) {
+                console.warn("[WALLET] Deposit estimation failed, retrying after delay...", err.message);
+                await new Promise(r => setTimeout(r, 3000));
+
+                // One more check
+                const allowanceAfterSleep = await tokenContract.allowance(signer.address, contractAddress);
+                console.log(`[WALLET] Retrying. Allowance: ${ethers.formatUnits(allowanceAfterSleep, decimals)}`);
+
+                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
+                await depositTx.wait();
+                return depositTx.hash;
+            }
+            throw err;
+        }
     }
 
     async withdrawFromVault(userIndex: number, amount: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
