@@ -611,6 +611,9 @@ router.post("/trades", async (req: Request, res: Response) => {
         }
 
         const tradeAmount = amount || order.amount;
+        if (tradeAmount < 1.0) {
+            return res.status(400).json({ error: "Minimum trade amount is 1.0 USDC/USDT" });
+        }
         if (tradeAmount <= 0 || tradeAmount > order.amount - (order.filled_amount || 0)) {
             return res.status(400).json({ error: "Invalid trade amount" });
         }

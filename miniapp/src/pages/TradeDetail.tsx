@@ -115,6 +115,11 @@ export function TradeDetail({ user }: Props) {
 
     async function handleCreateTrade() {
         if (!order) return;
+        if (order.amount < 1.0) {
+            setError("Minimum trade amount is 1.0 USDC/USDT");
+            haptic('error');
+            return;
+        }
         haptic('heavy');
         setActionLoading(true);
         setError('');
