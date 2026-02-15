@@ -57,6 +57,12 @@ export function MyAds() {
             </div>
 
             <div className="my-ads-list">
+                {/* DEBUG SECTION */}
+                <div style={{ padding: 10, background: '#333', color: '#0f0', fontSize: 10, marginBottom: 20 }}>
+                    DEBUG: Loading={loading.toString()} Count={orders.length}
+                    <pre>{JSON.stringify(orders, null, 2)}</pre>
+                </div>
+
                 {loading ? (
                     <div className="flex flex-col gap-3">
                         {[1, 2, 3].map(i => (
