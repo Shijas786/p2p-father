@@ -818,8 +818,8 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
         if (trade.buyer_id !== user.id) return res.status(403).json({ error: "Only the buyer can confirm payment" });
         if (trade.status !== "in_escrow") return res.status(400).json({ error: "Trade not in escrow state" });
 
-        // UTR duplicate check (only if UTR is provided)
-        if (utr) {
+        // UTR duplicate check (only if UTR is provided and real)
+        if (utr && utr !== "NOT_PROVIDED") {
             const isUsed = await db.isUTRUsed(utr);
             if (isUsed) {
                 return res.status(400).json({ error: "This UTR has already been used in another trade!" });

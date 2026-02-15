@@ -666,25 +666,31 @@ export function TradeDetail({ user }: Props) {
                 )}
 
                 {/* DISPUTE & REFUND SECTION */}
-                {trade && ['in_escrow', 'fiat_sent'].includes(trade.status) && (
-                    <div className="mt-4">
-                        {disputeTimer > 0 ? (
-                            <div className="text-center animate-in">
-                                <button className="btn btn-secondary btn-block opacity-50 cursor-not-allowed" disabled>
-                                    ⏳ Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
-                                </button>
-                                <p className="text-xs text-muted mt-2 italic">
-                                    "The dispute button is meditating 🧘‍♂️. Please chat with the seller while it finds inner peace."
-                                </p>
-                            </div>
-                        ) : (
-                            <button
-                                className="btn btn-danger btn-block"
-                                onClick={raiseDispute}
-                                disabled={actionLoading}
-                            >
-                                ⚠️ Raise Dispute
-                            </button>
+                {trade && ['fiat_sent', 'in_escrow'].includes(trade.status) && (
+                    <div className="mt-4 animate-in">
+                        <button
+                            className={`btn btn-danger btn-block ${disputeTimer > 0 || trade.status === 'in_escrow' ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                                if (trade.status === 'in_escrow') {
+                                    alert("You can only raise a dispute after confirming payment.");
+                                    return;
+                                }
+                                if (disputeTimer > 0) {
+                                    const minutes = Math.floor(disputeTimer / 60000);
+                                    const seconds = (Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0');
+                                    alert(`The dispute button is meditating 🧘‍♂️\n\nAppeal available in ${minutes}:${seconds}`);
+                                    return;
+                                }
+                                raiseDispute();
+                            }}
+                            disabled={actionLoading}
+                        >
+                            ⚠️ Raise Dispute
+                        </button>
+                        {disputeTimer > 0 && trade.status === 'fiat_sent' && (
+                            <p className="text-[10px] text-muted text-center mt-2">
+                                Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
+                            </p>
                         )}
                     </div>
                 )}
