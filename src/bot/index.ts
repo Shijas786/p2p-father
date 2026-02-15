@@ -3124,9 +3124,17 @@ bot.on("message:text", async (ctx) => {
                         await ctx.reply("No orders available right now. Be the first! /sell");
                     } else {
                         const list = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
-                        await ctx.reply(`📊 *Order Book*\n\n${list}`, { parse_mode: "Markdown" });
+                        try {
+                            await ctx.reply(`📊 *Order Book*\n\n${list}`, { parse_mode: "Markdown" });
+                        } catch (err: any) {
+                            console.error("VIEW_ORDERS Markdown Error:", err);
+                            console.log("Failed Payload:", list);
+                            // Fallback to plain text
+                            await ctx.reply(`📊 Order Book (Plain Text - Format Error)\n\n${list}`);
+                        }
                     }
-                } catch {
+                } catch (err) {
+                    console.error("VIEW_ORDERS Database Error:", err);
                     await ctx.reply("❌ Could not load orders.");
                 }
                 break;

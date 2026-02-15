@@ -24,7 +24,7 @@ export function formatOrder(order: Order, index?: number): string {
         `   Rate: ${formatINR(order.rate)}/${order.token || "USDC"}`,
         `   Total: ${formatINR(available * order.rate)}`,
         `   Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
-        `   Trader: @${order.username || "anon"} (⭐ ${order.trust_score?.toFixed(0) || "?"}%)`,
+        `   Trader: @${escapeMarkdown(order.username || "anon")} (⭐ ${order.trust_score?.toFixed(0) || "?"}%)`,
         `   ID: \`${order.id.slice(0, 8)}\``,
     ].join("\n");
 }
