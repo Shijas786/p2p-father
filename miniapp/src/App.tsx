@@ -17,6 +17,7 @@ import { Wallet } from './pages/Wallet';
 import { Bridge } from './pages/Bridge';
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
+import { Admin } from './pages/Admin';
 import './styles/global.css';
 
 const queryClient = new QueryClient({
@@ -205,6 +206,7 @@ function AppInner() {
           <Route path="wallet" element={<Wallet user={user} />} />
           <Route path="bridge" element={<Bridge />} />
           <Route path="my-ads" element={<MyAds user={user} />} />
+          <Route path="admin" element={<Admin />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
         </Route>
       </Routes>

@@ -24,11 +24,15 @@ type BotContext = Context & { session: SessionData };
 
 const bot = new Bot<BotContext>(env.TELEGRAM_BOT_TOKEN);
 
+// Initialize Logger
+import { logger } from "../utils/logger";
+logger.init(bot);
+
 // GLOBAL DEBUG LOGGER
 bot.use(async (ctx, next) => {
     // Log only if it's a message to avoid spamming other updates like poll answers/etc if not needed
     if (ctx.message || ctx.channelPost) {
-        console.log(`[DEBUG] Update received: ${JSON.stringify(ctx.update, null, 2)}`);
+        logger.info("DEBUG", `Update received: ${JSON.stringify(ctx.update, null, 2)}`);
     }
     await next();
 });
@@ -41,6 +45,7 @@ bot.use(
         }),
     })
 );
+
 
 // ═══════════════════════════════════════════════════════════════
 //                    HELPER FUNCTIONS
@@ -3248,7 +3253,7 @@ bot.on("message:text", async (ctx) => {
                 await ctx.reply(intent.response || "I'm not sure what you mean. Try /help to see what I can do! 🤖");
         }
     } catch (error) {
-        console.error("Message handler error:", error);
+        logger.error("MESSAGE_HANDLER_ERROR", "Error in message handler", error);
         await ctx.reply("🤖 Something went wrong. Try again or use /help for commands.");
     }
 });

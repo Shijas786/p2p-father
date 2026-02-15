@@ -909,6 +909,18 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
     }
 });
 
+// Helper to notify all admins
+async function notifyAdmins(message: string) {
+    if (env.ADMIN_IDS.length === 0) return;
+    for (const adminId of env.ADMIN_IDS) {
+        try {
+            await bot.api.sendMessage(adminId, message, { parse_mode: "HTML" });
+        } catch (e) {
+            console.error(`[NOTIFY] Failed to notify admin ${adminId}:`, e);
+        }
+    }
+}
+
 router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
@@ -928,6 +940,12 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             status: "disputed",
             dispute_reason: reason || "Dispute raised via Mini App",
         });
+
+        // NOTIFY ADMINS
+        await notifyAdmins(
+            `🚨 <b>DISPUTE RAISED!</b>\n\nTrade ID: <code>${trade.id}</code>\nRaised By: @${user.username || user.first_name}\nReason: ${reason || "No reason provided"}\n\n<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
+        );
+
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -942,10 +960,11 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
-        // Only seller or admin can trigger refund
+        // STRICTLY RESTRICT TO ADMINS ONLY
+        // Sellers cannot refund themselves anymore for safety.
         const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
-        if (trade.seller_id !== user.id && !isAdmin) {
-            return res.status(403).json({ error: "Not authorized to refund this trade" });
+        if (!isAdmin) {
+            return res.status(403).json({ error: "Only Admins can refund trades now (Safety Measure)." });
         }
 
         // Refund on-chain if trade has on_chain_trade_id

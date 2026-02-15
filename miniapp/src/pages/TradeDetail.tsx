@@ -96,6 +96,29 @@ export function TradeDetail({ user }: Props) {
         }).catch(console.error);
     }, [id, orderId]);
 
+    const [disputeTimer, setDisputeTimer] = useState<number>(0);
+
+    useEffect(() => {
+        if (trade && trade.fiat_sent_at) {
+            const calculateTime = () => {
+                const sentTime = new Date(trade.fiat_sent_at).getTime();
+                const now = Date.now();
+                const diff = now - sentTime;
+                const oneHour = 60 * 60 * 1000;
+
+                if (diff < oneHour) {
+                    setDisputeTimer(oneHour - diff);
+                } else {
+                    setDisputeTimer(0);
+                }
+            };
+
+            calculateTime();
+            const interval = setInterval(calculateTime, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [trade]);
+
     async function refreshData() {
         if (!id) return;
         try {
@@ -377,24 +400,6 @@ export function TradeDetail({ user }: Props) {
         }
     }
 
-    async function handleRefund() {
-        if (!id) return;
-        if (!confirm("Are you sure you want to refund and cancel this trade?")) return;
-
-        haptic('medium');
-        setActionLoading(true);
-        setError('');
-        try {
-            await api.trades.refund(id);
-            haptic('success');
-            await loadTrade();
-        } catch (err: any) {
-            setError(err.message);
-            haptic('error');
-        } finally {
-            setActionLoading(false);
-        }
-    }
 
     function getStepIndex(status: string): number {
         const idx = STEPS.findIndex(s => s.key === status);
@@ -573,6 +578,26 @@ export function TradeDetail({ user }: Props) {
             )}
 
             {/* Standard Actions (Fiat Sent, Release, Dispute) */}
+
+            {/* Disputed Status UI */}
+            {trade && trade.status === 'disputed' && (
+                <div className="card border-red p-4 text-center animate-in mb-4">
+                    <div className="text-4xl mb-2">🚫</div>
+                    <h3 className="text-red font-bold uppercase">Trade Disputed</h3>
+                    <p className="text-sm text-muted mt-2 mb-4">
+                        Admin has been notified. Please utilize the chat to provide evidence.
+                    </p>
+                    <a
+                        href={`https://t.me/P2PKeralaBot`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline btn-block"
+                    >
+                        💬 Contact Support
+                    </a>
+                </div>
+            )}
+
             <div className="td-actions">
                 {trade && trade.status === 'in_escrow' && !isSeller && (
                     <div className="card-glass border-green p-3 animate-in">
@@ -640,28 +665,27 @@ export function TradeDetail({ user }: Props) {
                     </div>
                 )}
 
+                {/* DISPUTE & REFUND SECTION */}
                 {trade && ['in_escrow', 'fiat_sent'].includes(trade.status) && (
-                    <button
-                        className="btn btn-danger btn-block mt-2"
-                        onClick={raiseDispute}
-                        disabled={actionLoading}
-                    >
-                        ⚠️ Raise Dispute
-                    </button>
-                )}
-
-                {trade && trade.status === 'in_escrow' && isSeller && (
                     <div className="mt-4">
-                        <button
-                            className="btn btn-danger-soft btn-block"
-                            onClick={handleRefund}
-                            disabled={actionLoading}
-                        >
-                            {actionLoading ? <span className="spinner" /> : '🔙 Refund / Cancel Trade'}
-                        </button>
-                        <p className="text-[10px] text-muted text-center mt-2">
-                            You can reclaim your funds if the buyer hasn't sent fiat yet.
-                        </p>
+                        {disputeTimer > 0 ? (
+                            <div className="text-center animate-in">
+                                <button className="btn btn-secondary btn-block opacity-50 cursor-not-allowed" disabled>
+                                    ⏳ Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
+                                </button>
+                                <p className="text-xs text-muted mt-2 italic">
+                                    "The dispute button is meditating 🧘‍♂️. Please chat with the seller while it finds inner peace."
+                                </p>
+                            </div>
+                        ) : (
+                            <button
+                                className="btn btn-danger btn-block"
+                                onClick={raiseDispute}
+                                disabled={actionLoading}
+                            >
+                                ⚠️ Raise Dispute
+                            </button>
+                        )}
                     </div>
                 )}
 

@@ -190,4 +190,14 @@ export const api = {
             fee_bps: number;
         }>('/stats'),
     },
+
+    // ---- Admin ----
+    admin: {
+        getDisputes: () => request<{ disputes: any[] }>('/admin/disputes'),
+        resolveDispute: (id: string, releaseToBuyer: boolean) =>
+            request<{ success: boolean; txHash?: string }>(`/admin/trades/${id}/resolve`, {
+                method: 'POST',
+                body: JSON.stringify({ releaseToBuyer }),
+            }),
+    },
 };
