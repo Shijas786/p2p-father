@@ -418,10 +418,7 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
         }));
 
         console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
-        res.json({
-            orders: mappedOrders,
-            debug_user: { id: user.id, tg_id: tgId, username: user.username }
-        });
+        res.json({ orders: mappedOrders });
     } catch (err: any) {
         console.error("/orders/mine error:", err);
         res.status(500).json({ error: err.message });
