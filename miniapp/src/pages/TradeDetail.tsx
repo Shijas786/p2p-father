@@ -322,15 +322,13 @@ export function TradeDetail({ user }: Props) {
         }
     }
 
-    const [utr, setUtr] = useState('');
-
     async function confirmPayment() {
         if (!id) return;
         haptic('medium');
         setActionLoading(true);
         setError('');
         try {
-            await api.trades.confirmPayment(id, utr);
+            await api.trades.confirmPayment(id, "NOT_PROVIDED");
             haptic('success');
             await loadTrade();
         } catch (err: any) {
@@ -593,25 +591,14 @@ export function TradeDetail({ user }: Props) {
                             <div className="text-[10px] text-orange mt-1">Pay exactly ₹{trade.fiat_amount}</div>
                         </div>
 
-                        <p className="text-xs text-muted mb-3">Paste the 12-digit UTR/Reference number from your banking app below (optional).</p>
-
-                        <div className="utr-input-group mb-3">
-                            <input
-                                type="text"
-                                placeholder="Enter 12-digit UTR (Optional)"
-                                value={utr}
-                                onChange={(e) => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                                className="utr-input font-mono"
-                                maxLength={12}
-                            />
-                        </div>
+                        <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller's UPI ID above.</p>
 
                         <button
                             className="btn btn-primary btn-block btn-lg"
                             onClick={confirmPayment}
                             disabled={actionLoading}
                         >
-                            {actionLoading ? <span className="spinner" /> : (utr.length === 12 ? '💸 I Sent Fiat' : '💸 I Sent (No UTR)')}
+                            {actionLoading ? <span className="spinner" /> : '💸 I have sent the payment'}
                         </button>
                     </div>
                 )}

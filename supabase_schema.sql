@@ -103,12 +103,22 @@ create table public.fees (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- 6. CHAT MESSAGES TABLE
+create table public.trade_messages (
+  id uuid default gen_random_uuid() primary key,
+  trade_id uuid references public.trades(id) not null,
+  user_id uuid references public.users(id) not null,
+  message text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Enable Row Level Security (RLS)
 alter table public.users enable row level security;
 alter table public.orders enable row level security;
 alter table public.trades enable row level security;
 alter table public.payment_proofs enable row level security;
 alter table public.fees enable row level security;
+alter table public.trade_messages enable row level security;
 
 -- Create Policies (SERVICE_ROLE override allows bot to do everything)
 -- Public Read access for Orders (Marketplace view)
@@ -122,5 +132,24 @@ create policy "Users can see their own data" on public.users
 -- TRADES: Participants can see their trades
 create policy "Participants can see trades" on public.trades
   for select using (auth.uid() = buyer_id or auth.uid() = seller_id);
+
+-- MESSAGES: Participants can see/create messages
+create policy "Participants can see messages" on public.trade_messages
+  for select using (
+    exists (
+      select 1 from public.trades
+      where trades.id = trade_messages.trade_id
+      and (trades.buyer_id = auth.uid() or trades.seller_id = auth.uid())
+    )
+  );
+
+create policy "Participants can insert messages" on public.trade_messages
+  for insert with check (
+    exists (
+      select 1 from public.trades
+      where trades.id = trade_messages.trade_id
+      and (trades.buyer_id = auth.uid() or trades.seller_id = auth.uid())
+    )
+  );
 
 -- NOTE: The bot uses SERVICE_KEY which bypasses RLS automatically.
