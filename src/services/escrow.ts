@@ -34,6 +34,11 @@ const ESCROW_ABI = [
     "function feeBps() view returns (uint256)",
     "function approvedTokens(address) view returns (bool)",
     "function balances(address user, address token) view returns (uint256)",
+
+    // Events
+    "event TradeCreated(uint256 indexed tradeId, address indexed seller, address indexed buyer, address token, uint256 amount, uint256 feeAmount, uint256 deadline)",
+    "event TradeReleased(uint256 indexed tradeId, address indexed buyer, uint256 buyerReceives, uint256 feeAmount)",
+    "event TradeRefunded(uint256 indexed tradeId, address indexed seller, uint256 amount)",
 ];
 
 type Chain = 'base' | 'bsc';
