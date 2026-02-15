@@ -583,6 +583,18 @@ router.get("/trades", async (req: Request, res: Response) => {
     }
 });
 
+router.get("/trades/mine", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const trades = await db.getUserTrades(user.id);
+        res.json({ trades });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/trades/:id", async (req: Request, res: Response) => {
     try {
         const trade = await db.getTradeById(req.params.id as string);
@@ -818,7 +830,7 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
         await db.savePaymentProof({
             trade_id: trade.id,
             user_id: user.id,
-            utr: utr,
+            utr: utr || "NOT_PROVIDED",
             amount: trade.fiat_amount,
             receiver_upi: "", // Optionally fetch from seller if needed for logs
             timestamp: new Date().toISOString(),
@@ -834,7 +846,7 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
 
         // NOTIFY SELLER
         await notifyTradeUpdate(trade.seller_id,
-            `💰 <b>Payment Reported!</b>\n\nBuyer <b>${user.first_name || 'User'}</b> has reported paying <b>₹${trade.fiat_amount}</b>.\n\nUTR: <code>${utr}</code>\n\n<b>Action Required:</b> Verify the payment in your bank app and release the crypto.`
+            `💰 <b>Payment Reported!</b>\n\nBuyer <b>${user.first_name || 'User'}</b> has reported paying <b>₹${trade.fiat_amount}</b>.\n\nUTR: <code>${utr || 'Not provided'}</code>\n\n<b>Action Required:</b> Verify the payment in your bank app and release the crypto.`
         );
     } catch (err: any) {
         console.error("[MINIAPP] Confirm payment error:", err);
@@ -967,6 +979,62 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
 
     } catch (err: any) {
         console.error("[MINIAPP] Refund error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  CHAT — Trade Messages
+// ═══════════════════════════════════════════════════════════════
+
+router.get("/trades/:id/messages", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+            return res.status(403).json({ error: "Not a party to this trade" });
+        }
+
+        const messages = await db.getTradeMessages(trade.id);
+        res.json({ messages });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/trades/:id/messages", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+            return res.status(403).json({ error: "Not a party to this trade" });
+        }
+
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: "Message content required" });
+
+        const newMessage = await db.createTradeMessage({
+            trade_id: trade.id,
+            user_id: user.id,
+            message
+        });
+
+        res.json({ success: true, message: newMessage });
+
+        // Notify other party
+        const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+        await notifyTradeUpdate(otherPartyId,
+            `💬 <b>New message from ${user.username || user.first_name || 'Partner'}</b>\n\n"${message}"`
+        );
+    } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
 });

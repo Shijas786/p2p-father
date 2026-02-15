@@ -145,7 +145,14 @@ export const api = {
             request<{ success: boolean; refund_tx_hash: string }>(`/trades/${id}/refund`, {
                 method: 'POST',
             }),
+        mine: () => request<{ trades: any[] }>('/trades/mine'),
         getById: (id: string) => request<{ trade: any }>(`/trades/${id}`),
+        getMessages: (id: string) => request<{ messages: any[] }>(`/trades/${id}/messages`),
+        sendMessage: (id: string, message: string) =>
+            request<{ success: boolean; message: any }>(`/trades/${id}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({ message }),
+            }),
     },
 
     // ---- Profile ----

@@ -6,7 +6,11 @@ import { OrderCard } from '../components/OrderCard';
 import { IconHistory, IconRefresh, IconArrowLeft } from '../components/Icons';
 import './MyAds.css'; // We can keep the CSS file for now
 
-export function MyAds() {
+interface Props {
+    user: any;
+}
+
+export function MyAds({ user }: Props) {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -18,12 +22,33 @@ export function MyAds() {
     async function loadOrders() {
         setLoading(true);
         try {
-            const { orders: data } = await api.orders.mine();
-            // Filter out active orders if we only want history?
-            // User said "we dont need separate section for my ads" (active)
-            // So let's show ONLY non-active (filled, cancelled)
-            const history = (data || []).filter((o: any) => o.status !== 'active');
-            setOrders(history);
+            const [{ orders: adsData }, { trades: tradesData }] = await Promise.all([
+                api.orders.mine(),
+                api.trades.mine()
+            ]);
+
+            // Filter out active orders (only history)
+            const adsHistory = (adsData || []).filter((o: any) => o.status !== 'active');
+
+            // Format trades to look like orders for the OrderCard
+            const tradesHistory = (tradesData || []).map((t: any) => ({
+                id: t.id,
+                type: t.buyer_id === user?.id ? 'buy' : 'sell', // User role
+                token: t.token,
+                chain: t.chain,
+                amount: t.amount,
+                rate: t.rate,
+                status: t.status,
+                created_at: t.created_at,
+                is_trade: true // Flag to distinguish
+            }));
+
+            // Merge and sort by date
+            const merged = [...adsHistory, ...tradesHistory].sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+
+            setOrders(merged);
         } catch {
             setOrders([]);
         } finally {
@@ -53,7 +78,11 @@ export function MyAds() {
                 ) : orders.length > 0 ? (
                     <div className="flex flex-col gap-3">
                         {orders.map(order => (
-                            <div key={order.id} className="relative grayscale-[0.2] opacity-90">
+                            <div
+                                key={order.id}
+                                className="relative grayscale-[0.2] opacity-90 tappable"
+                                onClick={() => order.is_trade && navigate(`/trade/${order.id}`)}
+                            >
                                 <OrderCard order={order} showActions={false} />
                                 <div className={`status-badge-overlay status-${order.status}`}>
                                     {order.status.toUpperCase()}

@@ -1,27 +1,23 @@
-
 import { db } from "../src/db/client";
 
 async function main() {
-    console.log("--- ALL ORDERS DUMP ---");
     const client = (db as any).getClient();
 
-    // Fetch all orders, newest first
+    console.log("Fetching all orders...");
     const { data: orders, error } = await client
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
 
     if (error) {
-        console.error("Error fetching orders:", error);
+        console.error("Error:", error);
         return;
     }
 
-    console.log(`Found ${orders.length} total orders.`);
-
-    for (const o of orders) {
-        const { data: user } = await client.from("users").select("username, telegram_id").eq("id", o.user_id).single();
-        console.log(`[${o.created_at}] ID:${o.id.slice(0, 8)}... Type:${o.type} Status:${o.status} Amount:${o.amount} Filled:${o.filled_amount} User:${user?.username} (TG:${user?.telegram_id})`);
-    }
+    console.log(`Found ${orders.length} orders.`);
+    orders.forEach((o: any) => {
+        console.log(`ID: ${o.id} (Short: ${o.id.slice(0, 8)}) | Status: ${o.status} | Amount: ${o.amount} | Type: ${o.type} | Created: ${o.created_at}`);
+    });
 }
 
-main();
+main().catch(console.error);

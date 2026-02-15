@@ -200,3 +200,12 @@ export interface SessionData {
         content: string;
     }>;
 }
+export interface TradeMessage {
+    id: string;
+    trade_id: string;
+    user_id: string;
+    message: string;
+    created_at: string;
+    // Joined data
+    username?: string;
+}

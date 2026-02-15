@@ -165,7 +165,7 @@ class Database {
             .single();
         if (error) {
             console.error(`[DB] getOrderById error: ${error.message} (id: ${orderId})`);
-            return null; // Or throw if prefer 404 behavior or actual 500
+            return null;
         }
         if (!data) return null;
         return {
@@ -323,10 +323,17 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username)")
             .eq("id", tradeId)
             .single();
-        return data as Trade | null;
+
+        if (!data) return null;
+
+        return {
+            ...data,
+            seller_upi_id: data.seller?.upi_id,
+            seller_username: data.seller?.username
+        } as any;
     }
 
     async getUserTrades(userId: string, limit = 10): Promise<Trade[]> {
@@ -433,6 +440,37 @@ class Database {
         const db = this.getClient();
         const { data } = await db.from("fees").select("amount");
         return (data || []).reduce((sum: number, f: any) => sum + f.amount, 0);
+    }
+
+    // ═══════════════════════════════════════
+    //              CHAT
+    // ═══════════════════════════════════════
+
+    async getTradeMessages(tradeId: string): Promise<any[]> {
+        const db = this.getClient();
+        const { data, error } = await db
+            .from("trade_messages")
+            .select("*, users(username)")
+            .eq("trade_id", tradeId)
+            .order("created_at", { ascending: true });
+
+        if (error) throw new Error(`Failed to get messages: ${error.message}`);
+        return (data || []).map(m => ({
+            ...m,
+            username: m.users?.username
+        }));
+    }
+
+    async createTradeMessage(message: Partial<any>): Promise<any> {
+        const db = this.getClient();
+        const { data, error } = await db
+            .from("trade_messages")
+            .insert(message)
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to create message: ${error.message}`);
+        return data;
     }
 
     // ═══════════════════════════════════════

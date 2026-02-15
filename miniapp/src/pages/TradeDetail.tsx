@@ -49,6 +49,9 @@ export function TradeDetail({ user }: Props) {
     const [lockTxHash, setLockTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [order, setOrder] = useState<any>(null);
     const [feePercentage, setFeePercentage] = useState<number>(0.01);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [sendingMessage, setSendingMessage] = useState(false);
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
@@ -78,6 +81,12 @@ export function TradeDetail({ user }: Props) {
     useEffect(() => {
         if (id) {
             loadTrade();
+            loadMessages();
+            // Polling
+            const interval = setInterval(() => {
+                refreshData();
+            }, 10000);
+            return () => clearInterval(interval);
         } else if (orderId) {
             loadOrder();
         }
@@ -86,6 +95,18 @@ export function TradeDetail({ user }: Props) {
             if (data.fee_percentage) setFeePercentage(data.fee_percentage);
         }).catch(console.error);
     }, [id, orderId]);
+
+    async function refreshData() {
+        if (!id) return;
+        try {
+            const { trade: data } = await api.trades.getById(id);
+            setTrade(data);
+            const { messages: msgs } = await api.trades.getMessages(id);
+            setMessages(msgs);
+        } catch (err) {
+            console.error('Polling error:', err);
+        }
+    }
 
     async function loadOrder() {
         if (!orderId) return;
@@ -110,6 +131,31 @@ export function TradeDetail({ user }: Props) {
             setError(err.message || 'Failed to load trade');
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function loadMessages() {
+        if (!id) return;
+        try {
+            const { messages: data } = await api.trades.getMessages(id);
+            setMessages(data);
+        } catch (err) {
+            console.error('Failed to load messages:', err);
+        }
+    }
+
+    async function handleSendMessage() {
+        if (!id || !newMessage.trim()) return;
+        setSendingMessage(true);
+        try {
+            await api.trades.sendMessage(id, newMessage);
+            setNewMessage('');
+            haptic('light');
+            loadMessages();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setSendingMessage(false);
         }
     }
 
@@ -533,12 +579,26 @@ export function TradeDetail({ user }: Props) {
                 {trade && trade.status === 'in_escrow' && !isSeller && (
                     <div className="card-glass border-green p-3 animate-in">
                         <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
-                        <p className="text-xs text-muted mb-3">Paste the 12-digit UTR/Reference number from your banking app below.</p>
+
+                        {/* Seller UPI Display */}
+                        <div className="bg-white/5 rounded p-3 mb-3 border border-white/10">
+                            <div className="text-[10px] text-muted uppercase font-bold mb-1">Pay to UPI ID</div>
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id || 'Not set'}</span>
+                                <button className="btn btn-xs btn-outline" onClick={() => {
+                                    navigator.clipboard.writeText(trade.seller_upi_id || '');
+                                    haptic('success');
+                                }}>Copy</button>
+                            </div>
+                            <div className="text-[10px] text-orange mt-1">Pay exactly ₹{trade.fiat_amount}</div>
+                        </div>
+
+                        <p className="text-xs text-muted mb-3">Paste the 12-digit UTR/Reference number from your banking app below (optional).</p>
 
                         <div className="utr-input-group mb-3">
                             <input
                                 type="text"
-                                placeholder="Enter 12-digit UTR"
+                                placeholder="Enter 12-digit UTR (Optional)"
                                 value={utr}
                                 onChange={(e) => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
                                 className="utr-input font-mono"
@@ -549,9 +609,9 @@ export function TradeDetail({ user }: Props) {
                         <button
                             className="btn btn-primary btn-block btn-lg"
                             onClick={confirmPayment}
-                            disabled={actionLoading || utr.length < 12}
+                            disabled={actionLoading}
                         >
-                            {actionLoading ? <span className="spinner" /> : '💸 I Sent Fiat'}
+                            {actionLoading ? <span className="spinner" /> : (utr.length === 12 ? '💸 I Sent Fiat' : '💸 I Sent (No UTR)')}
                         </button>
                     </div>
                 )}
@@ -623,6 +683,46 @@ export function TradeDetail({ user }: Props) {
                         <span className="td-check">🎉</span>
                         <h3 className="text-green">Trade Completed!</h3>
                         <p className="text-sm text-muted mt-1">Funds have been released successfully</p>
+                    </div>
+                )}
+
+                {/* Trade Chat */}
+                {trade && (
+                    <div className="td-chat mt-6 card-glass p-0 overflow-hidden">
+                        <div className="p-3 border-b border-white/10 bg-white/5 flex items-center justify-between">
+                            <h4 className="m-0 text-sm font-bold">Trade Chat</h4>
+                            <span className="text-[10px] text-muted">Active</span>
+                        </div>
+                        <div className="chat-messages p-3 flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                            {messages.length === 0 && (
+                                <p className="text-center text-xs text-muted py-4">No messages yet. Start the conversation!</p>
+                            )}
+                            {messages.map(m => (
+                                <div key={m.id} className={`chat-msg ${m.user_id === user.id ? 'msg-me' : 'msg-them'}`}>
+                                    <div className="msg-bubble">
+                                        <div className="msg-sender">{m.username || 'User'}</div>
+                                        <div className="msg-text">{m.message}</div>
+                                        <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="chat-input p-2 bg-black/20 flex gap-2 border-t border-white/5">
+                            <input
+                                placeholder="Type a message..."
+                                value={newMessage}
+                                onChange={e => setNewMessage(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                                className="flex-1 bg-transparent border-0 text-sm outline-none px-2"
+                            />
+                            <button
+                                className="btn btn-primary btn-sm px-4"
+                                onClick={handleSendMessage}
+                                disabled={sendingMessage || !newMessage.trim()}
+                            >
+                                Send
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
