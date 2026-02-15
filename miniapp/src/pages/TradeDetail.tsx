@@ -4,35 +4,11 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { parseUnits } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
+import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import './TradeDetail.css';
 
-// ---- Contract Constants (Base Mainnet) ----
-const ESCROW_CONTRACT_ADDRESS = "0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260";
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const USDT_ADDRESS = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
-
-const ERC20_ABI = [
-    {
-        "constant": true,
-        "inputs": [{ "name": "_owner", "type": "address" }, { "name": "_spender", "type": "address" }],
-        "name": "allowance",
-        "outputs": [{ "name": "", "type": "uint256" }],
-        "payable": false,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": false,
-        "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }],
-        "name": "approve",
-        "outputs": [{ "name": "", "type": "bool" }],
-        "payable": false,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-] as const;
-
-const ESCROW_ABI = [
+// createTrade ABI extension (not in shared contracts.ts)
+const ESCROW_CREATE_TRADE_ABI = [
     {
         "inputs": [
             { "internalType": "address", "name": "buyer", "type": "address" },
@@ -77,13 +53,17 @@ export function TradeDetail({ user }: Props) {
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
 
+    // Chain-aware contract addresses
+    const tradeChain = (trade?.chain || order?.chain || 'base') as 'base' | 'bsc';
+    const escrowAddress = (CONTRACTS[tradeChain]?.escrow || CONTRACTS.base.escrow) as `0x${string}`;
+    const tokenAddress = ((CONTRACTS[tradeChain]?.tokens as any)?.[trade?.token || 'USDC'] || CONTRACTS.base.tokens.USDC) as `0x${string}`;
+
     // Check Allowance
-    const tokenAddress = trade?.token === 'USDC' ? USDC_ADDRESS : USDT_ADDRESS;
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: tokenAddress as `0x${string}`,
+        address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'allowance',
-        args: externalAddress && trade ? [externalAddress, ESCROW_CONTRACT_ADDRESS] : undefined,
+        args: externalAddress && trade ? [externalAddress, escrowAddress] : undefined,
         query: { enabled: !!externalAddress && !!trade }
     });
 
@@ -158,11 +138,11 @@ export function TradeDetail({ user }: Props) {
         setError('');
         try {
             const hash = await writeContractAsync({
-                address: tokenAddress as `0x${string}`,
+                address: tokenAddress,
                 abi: ERC20_ABI,
                 functionName: 'approve',
                 // Approve Amount
-                args: [ESCROW_CONTRACT_ADDRESS, tradeAmountBigInt],
+                args: [escrowAddress, tradeAmountBigInt],
             });
             setApproveTxHash(hash);
             console.log('Approve TX:', hash);
@@ -231,12 +211,12 @@ export function TradeDetail({ user }: Props) {
             // Proceeding with code skeleton.
 
             const hash = await writeContractAsync({
-                address: ESCROW_CONTRACT_ADDRESS,
-                abi: ESCROW_ABI,
+                address: escrowAddress,
+                abi: ESCROW_CREATE_TRADE_ABI,
                 functionName: 'createTrade',
                 args: [
-                    (trade.buyer_wallet_address || '0x0000000000000000000000000000000000000000') as `0x${string}`, // FAILURE RISK
-                    tokenAddress as `0x${string}`,
+                    (trade.buyer_wallet_address || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+                    tokenAddress,
                     tradeAmountBigInt,
                     duration
                 ],
@@ -295,11 +275,6 @@ export function TradeDetail({ user }: Props) {
 
     async function confirmPayment() {
         if (!id) return;
-        if (!/^\d{12}$/.test(utr)) {
-            setError('Please enter a valid 12-digit UTR/Reference number.');
-            haptic('error');
-            return;
-        }
         haptic('medium');
         setActionLoading(true);
         setError('');

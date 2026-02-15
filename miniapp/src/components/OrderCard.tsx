@@ -25,9 +25,10 @@ interface Props {
     showActions?: boolean;
     isMyOrder?: boolean;
     onRefresh?: () => void;
+    feePercentage?: number;
 }
 
-export function OrderCard({ order, onTap, showActions = true, isMyOrder, onRefresh }: Props) {
+export function OrderCard({ order, onTap, showActions = true, isMyOrder, onRefresh, feePercentage = 0.01 }: Props) {
     const [cancelling, setCancelling] = useState(false);
 
     const handleCancel = async (e: React.MouseEvent) => {
@@ -49,7 +50,7 @@ export function OrderCard({ order, onTap, showActions = true, isMyOrder, onRefre
     };
 
     const totalAvailable = order.amount - (order.filled_amount || 0);
-    const available = totalAvailable * 0.995; // Fee model: buyer sees 99.5% of locked amount
+    const available = totalAvailable * (1 - feePercentage / 2); // Dynamic fee: buyer sees amount minus seller's half of fee
     const isBuy = order.type === 'buy';
 
     return (

@@ -1,0 +1,1 @@
+import { ethers } from 'ethers'; async function main() { const p = new ethers.JsonRpcProvider('https://mainnet.base.org'); const c = new ethers.Contract('0x78c2B85759C5F7d58fEea82D0Be098E540272245', ['function owner() view returns (address)'], p); console.log('Owner:', await c.owner()); } main();

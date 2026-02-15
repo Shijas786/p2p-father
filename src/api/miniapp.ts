@@ -384,7 +384,7 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
             };
         }));
 
-        console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
+        console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for user ${user.id}`);
         res.json({ orders: mappedOrders });
     } catch (err: any) {
         console.error("/orders/mine error:", err);
@@ -434,29 +434,31 @@ router.get("/orders", async (req: Request, res: Response) => {
 
 // Moved /orders/mine above /orders/:id
 
-// Temporary health/stats for debugging
-router.get("/debug/status", async (req: Request, res: Response) => {
-    res.json({
-        ok: true,
-        env: env.NODE_ENV,
-        node: process.version,
-        timestamp: new Date().toISOString(),
-        v: "v1.2.3" // Version tracker
-    });
-});
-
-router.get("/debug/db-dump", async (req: Request, res: Response) => {
-    try {
-        const users = await db.getUserByTelegramId(123456789); // Check user
-        const { data: allOrders } = await (db as any).getClient().from("orders").select("*");
+// Debug endpoints (dev only)
+if (env.NODE_ENV === 'development') {
+    router.get("/debug/status", async (req: Request, res: Response) => {
         res.json({
-            target_user: users,
-            orders: allOrders
+            ok: true,
+            env: env.NODE_ENV,
+            node: process.version,
+            timestamp: new Date().toISOString(),
+            v: "v1.2.3"
         });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
+
+    router.get("/debug/db-dump", async (req: Request, res: Response) => {
+        try {
+            const users = await db.getUserByTelegramId(123456789);
+            const { data: allOrders } = await (db as any).getClient().from("orders").select("*");
+            res.json({
+                target_user: users,
+                orders: allOrders
+            });
+        } catch (err: any) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+}
 
 router.post("/orders", async (req: Request, res: Response) => {
     try {
@@ -472,8 +474,13 @@ router.post("/orders", async (req: Request, res: Response) => {
         const parsedAmount = parseFloat(amount);
         const parsedRate = parseFloat(rate);
 
-        // ... (existing checks)
-
+        // Input validation
+        if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100000) {
+            return res.status(400).json({ error: "Amount must be between 0.01 and 100,000" });
+        }
+        if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 500) {
+            return res.status(400).json({ error: "Rate must be between 0.01 and 500 INR/USDC" });
+        }
         let expiresAt: string | undefined;
         if (expires_in) {
             const minutes = parseInt(expires_in);
@@ -542,6 +549,7 @@ router.post("/orders/:id/cancel", async (req: Request, res: Response) => {
         const order = await db.getOrderById(req.params.id as string);
         if (!order) return res.status(404).json({ error: "Order not found" });
         if (order.user_id !== user.id) return res.status(403).json({ error: "Not your order" });
+        if (order.status !== 'active') return res.status(400).json({ error: "Order is not active" });
 
         await db.cancelOrder(req.params.id as string);
         res.json({ success: true });
@@ -568,7 +576,6 @@ router.get("/trades", async (req: Request, res: Response) => {
         }
 
         const trades = await db.getUserTrades(user.id);
-        console.log(`[MINIAPP] /trades: Found ${trades.length} trades for ${user.username}`);
         res.json({ trades });
     } catch (err: any) {
         console.error("/trades error:", err);
@@ -628,7 +635,6 @@ router.post("/trades", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Only USDC/USDT trades are supported via Vault." });
         }
 
-        const tokenAddress = (order.token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
 
         // Atomically fill the order to prevent double-matching
         const filled = await db.fillOrder(order_id, tradeAmount);
@@ -705,7 +711,10 @@ router.post("/trades", async (req: Request, res: Response) => {
                 fiat_amount: fiatAmount as any,
                 fiat_currency: "INR",
                 rate: order.rate,
-                status: "in_escrow", // Always in_escrow because usage of Vault
+                status: "in_escrow",
+                fee_amount: feeAmount as any,
+                fee_percentage: env.FEE_PERCENTAGE as any,
+                buyer_receives: buyerReceives as any,
                 escrow_tx_hash: escrowTxHash as any,
                 on_chain_trade_id: onChainTradeId as any,
                 escrow_locked_at: lockedAt as any,
@@ -788,19 +797,18 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
         if (!user) return res.status(401).json({ error: "User not found" });
 
         const { utr } = req.body;
-        if (!utr || !/^\d{12}$/.test(utr)) {
-            return res.status(400).json({ error: "A valid 12-digit UTR/Reference number is required." });
-        }
 
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
         if (trade.buyer_id !== user.id) return res.status(403).json({ error: "Only the buyer can confirm payment" });
         if (trade.status !== "in_escrow") return res.status(400).json({ error: "Trade not in escrow state" });
 
-        // Double-Proof Protection
-        const isUsed = await db.isUTRUsed(utr);
-        if (isUsed) {
-            return res.status(400).json({ error: "This UTR has already been used in another trade!" });
+        // UTR duplicate check (only if UTR is provided)
+        if (utr) {
+            const isUsed = await db.isUTRUsed(utr);
+            if (isUsed) {
+                return res.status(400).json({ error: "This UTR has already been used in another trade!" });
+            }
         }
 
         // Save proof
@@ -977,6 +985,8 @@ router.get("/stats", async (req: Request, res: Response) => {
             total_users: stats.total_users,
             total_volume_usdc: stats.total_volume_usdc || 0,
             active_orders: stats.active_orders,
+            fee_percentage: env.FEE_PERCENTAGE,
+            fee_bps: parseInt(env.FEE_BPS),
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });

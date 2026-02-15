@@ -1,4 +1,5 @@
 import { db } from "../db/client";
+import { env } from "../config/env";
 
 export function startExpiryJob() {
     console.log("⏰ Starting Ad Expiry Job...");
@@ -61,7 +62,7 @@ export function startLiquiditySyncJob(escrowService: any) {
                             if (chain === 'bsc') {
                                 tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
                             } else {
-                                tokenAddress = (token === "USDT") ? process.env.USDT_ADDRESS! : process.env.USDC_ADDRESS!;
+                                tokenAddress = (token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
                             }
 
                             const balanceStr = await escrowService.getVaultBalance(user.wallet_address, tokenAddress, chain);

@@ -96,25 +96,30 @@ async function main() {
     });
 
     // Ensure no old webhooks are blocking long polling
-    try {
-        console.log("  Checking for existing webhooks...");
-        // Use bot instance directly
-        await bot.api.deleteWebhook({ drop_pending_updates: true });
-        console.log("  ✅ Webhook deleted (or none existed). Starting polling...");
-    } catch (err: any) {
-        console.log("  ⚠️ Webhook delete minor error:", err.message);
-    }
+    if (!process.env.NO_BOT) {
+        try {
+            console.log("  Checking for existing webhooks...");
+            // Use bot instance directly
+            await bot.api.deleteWebhook({ drop_pending_updates: true });
+            console.log("  ✅ Webhook deleted (or none existed). Starting polling...");
+        } catch (err: any) {
+            console.log("  ⚠️ Webhook delete minor error:", err.message);
+        }
 
-    bot.start({
-        onStart: (botInfo) => {
-            console.log(`  ✅ Bot started! @${botInfo.username}`);
-            console.log(`  💬 Send /start to @${botInfo.username} to begin`);
-            console.log("");
-            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            console.log("  Bot is running. Press Ctrl+C to stop.");
-            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        },
-    });
+        bot.start({
+            onStart: (botInfo) => {
+                console.log(`  ✅ Bot started! @${botInfo.username}`);
+                console.log(`  💬 Send /start to @${botInfo.username} to begin`);
+                console.log("");
+                console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                console.log("  Bot is running. Press Ctrl+C to stop.");
+                console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            },
+        });
+    } else {
+        console.log("  🚫 Bot polling disabled by NO_BOT env var.");
+        console.log("  ✅ API Server only mode.");
+    }
 }
 
 // Graceful shutdown

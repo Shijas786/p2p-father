@@ -1,0 +1,1 @@
+import { ethers } from 'ethers'; async function main() { const p = new ethers.JsonRpcProvider('https://mainnet.base.org'); const tx = await p.getTransactionReceipt('0xe0f7571e05d282ab561014b378ea138735aae897a3129c8ed9769a5a946029d5'); console.log('To:', tx?.to); console.log('Contract:', '0x78c2B85759C5F7d58fEea82D0Be098E540272245'); } main();

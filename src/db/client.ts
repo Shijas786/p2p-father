@@ -292,7 +292,15 @@ class Database {
     }
 
     async cancelOrder(orderId: string): Promise<void> {
-        await this.updateOrder(orderId, { status: "cancelled" });
+        const db = this.getClient();
+        const { data, error } = await db
+            .from("orders")
+            .update({ status: "cancelled", updated_at: new Date().toISOString() })
+            .eq("id", orderId)
+            .eq("status", "active")
+            .select();
+        if (error) throw new Error(`Failed to cancel order: ${error.message}`);
+        if (!data || data.length === 0) throw new Error("Order is not active or does not exist");
     }
 
     // ═══════════════════════════════════════

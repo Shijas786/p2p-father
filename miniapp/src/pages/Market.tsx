@@ -15,6 +15,13 @@ export function Market({ user }: Props) {
     const [tab, setTab] = useState<'sell' | 'buy'>('sell');
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [feePercentage, setFeePercentage] = useState(0.01);
+
+    useEffect(() => {
+        api.stats.get().then(data => {
+            if (data.fee_percentage) setFeePercentage(data.fee_percentage);
+        }).catch(console.error);
+    }, []);
 
     useEffect(() => {
         loadOrders();
@@ -90,6 +97,7 @@ export function Market({ user }: Props) {
                                 onTap={handleTap}
                                 isMyOrder={user?.id === order.user_id}
                                 onRefresh={loadOrders}
+                                feePercentage={feePercentage}
                             />
                         ))}
                     </div>

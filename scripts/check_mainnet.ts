@@ -1,0 +1,1 @@
+import { ethers } from 'ethers'; async function main() { const p = new ethers.JsonRpcProvider('https://eth.llamarpc.com'); const b = await p.getBalance('0x365d1970c1453bfB446F3fa57Ff440c05c2A5799'); console.log('Mainnet ETH:', ethers.formatEther(b)); } main();
