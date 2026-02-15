@@ -32,13 +32,36 @@ const ESCROW_ABI = [
     "function isExpired(uint256 tradeId) view returns (bool)",
     "function getContractBalance(address token) view returns (uint256)",
     "function feeBps() view returns (uint256)",
+    "function feeCollector() view returns (address)",
     "function approvedTokens(address) view returns (bool)",
     "function balances(address user, address token) view returns (uint256)",
+    "function totalFeesCollected(address) view returns (uint256)",
+    "function activeTradeCount(address) view returns (uint256)",
+    "function maxActiveTradesPerUser() view returns (uint256)",
+
+    // Admin functions
+    "function setFeeBps(uint256 newFeeBps)",
+    "function setApprovedToken(address token, bool approved)",
+    "function setRelayer(address relayer, bool approved)",
+    "function setFeeCollector(address newCollector)",
+    "function setMaxActiveTrades(uint256 max)",
+    "function emergencyWithdraw(address token, uint256 amount)",
 
     // Events
+    "event Deposit(address indexed user, address indexed token, uint256 amount)",
+    "event Withdraw(address indexed user, address indexed token, uint256 amount)",
     "event TradeCreated(uint256 indexed tradeId, address indexed seller, address indexed buyer, address token, uint256 amount, uint256 feeAmount, uint256 deadline)",
+    "event FiatMarkedSent(uint256 indexed tradeId, address indexed buyer, uint256 autoReleaseDeadline)",
+    "event AutoReleased(uint256 indexed tradeId, address indexed buyer, uint256 buyerReceives, uint256 feeAmount)",
     "event TradeReleased(uint256 indexed tradeId, address indexed buyer, uint256 buyerReceives, uint256 feeAmount)",
     "event TradeRefunded(uint256 indexed tradeId, address indexed seller, uint256 amount)",
+    "event TradeCancelled(uint256 indexed tradeId, address indexed seller)",
+    "event TradeDisputed(uint256 indexed tradeId, address indexed initiator, string reason)",
+    "event DisputeResolved(uint256 indexed tradeId, address indexed resolver, bool releasedToBuyer)",
+    "event FeeUpdated(uint256 oldFee, uint256 newFee)",
+    "event TokenApproved(address token, bool approved)",
+    "event RelayerUpdated(address relayer, bool approved)",
+    "event FeeCollectorUpdated(address oldCollector, address newCollector)",
 ];
 
 type Chain = 'base' | 'bsc';
