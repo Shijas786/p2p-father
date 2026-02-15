@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 export function MyAds() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<any[]>([]);
-    const [debugInfo, setDebugInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -20,11 +19,10 @@ export function MyAds() {
     async function loadMyAds() {
         setLoading(true);
         try {
-            const data = await api.orders.mine();
-            setDebugInfo((data as any).debug_user);
+            const { orders: data } = await api.orders.mine();
 
             // Sort by latest first
-            setOrders((data.orders || []).sort((a: any, b: any) =>
+            setOrders((data || []).sort((a: any, b: any) =>
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
         } catch (err) {
             console.error('Failed to load my ads:', err);
@@ -60,14 +58,6 @@ export function MyAds() {
             </div>
 
             <div className="my-ads-list">
-                {/* DEBUG SECTION */}
-                <div style={{ padding: 10, background: '#333', color: '#0f0', fontSize: 10, marginBottom: 20 }}>
-                    DEBUG: Loading={loading.toString()} Count={orders.length}
-                    <br />
-                    USER: {debugInfo ? `${debugInfo.username} (ID: ${debugInfo.id})` : 'Loading...'}
-                    <pre>{JSON.stringify(orders, null, 2)}</pre>
-                </div>
-
                 {loading ? (
                     <div className="flex flex-col gap-3">
                         {[1, 2, 3].map(i => (
