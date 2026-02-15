@@ -49,9 +49,9 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
     // Dev mode bypass
     if (!initData && env.NODE_ENV === "development") {
         req.telegramUser = {
-            id: 12345,
-            first_name: "Developer",
-            username: "dev_user",
+            id: 123456789, // Match real user Cryptowolf07 for testing
+            first_name: "Cryptowolf07",
+            username: "Cryptowolf07",
         };
         return next();
     }
@@ -418,7 +418,10 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
         }));
 
         console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
-        res.json({ orders: mappedOrders });
+        res.json({
+            orders: mappedOrders,
+            debug_user: { id: user.id, tg_id: tgId, username: user.username }
+        });
     } catch (err: any) {
         console.error("/orders/mine error:", err);
         res.status(500).json({ error: err.message });
