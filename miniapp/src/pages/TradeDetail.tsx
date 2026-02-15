@@ -328,6 +328,25 @@ export function TradeDetail({ user }: Props) {
         }
     }
 
+    async function handleRefund() {
+        if (!id) return;
+        if (!confirm("Are you sure you want to refund and cancel this trade?")) return;
+
+        haptic('medium');
+        setActionLoading(true);
+        setError('');
+        try {
+            await api.trades.refund(id);
+            haptic('success');
+            await loadTrade();
+        } catch (err: any) {
+            setError(err.message);
+            haptic('error');
+        } finally {
+            setActionLoading(false);
+        }
+    }
+
     function getStepIndex(status: string): number {
         const idx = STEPS.findIndex(s => s.key === status);
         return idx >= 0 ? idx : (status === 'completed' ? 4 : -1);
@@ -578,6 +597,22 @@ export function TradeDetail({ user }: Props) {
                         ⚠️ Raise Dispute
                     </button>
                 )}
+
+                {trade && trade.status === 'in_escrow' && isSeller && (
+                    <div className="mt-4">
+                        <button
+                            className="btn btn-danger-soft btn-block"
+                            onClick={handleRefund}
+                            disabled={actionLoading}
+                        >
+                            {actionLoading ? <span className="spinner" /> : '🔙 Refund / Cancel Trade'}
+                        </button>
+                        <p className="text-[10px] text-muted text-center mt-2">
+                            You can reclaim your funds if the buyer hasn't sent fiat yet.
+                        </p>
+                    </div>
+                )}
+
                 {trade && trade.status === 'completed' && (
                     <div className="td-completed text-center animate-in">
                         <span className="td-check">🎉</span>

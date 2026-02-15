@@ -159,6 +159,18 @@ class EscrowService {
     }
 
     /**
+     * Refund funds to seller (called by Relayer if timeout or Seller cancels)
+     */
+    async refund(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
+        const contract = this.getEscrowContract(chain);
+        console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain}...`);
+        const tx = await contract.refund(tradeId);
+        await tx.wait();
+        console.log(`[ESCROW] Refunded: ${tx.hash}`);
+        return tx.hash;
+    }
+
+    /**
      * Batch validate seller balances for a list of orders.
      * Returns a Set of Order IDs that are invalid (insufficient balance).
      */

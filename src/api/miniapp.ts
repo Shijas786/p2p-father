@@ -919,6 +919,55 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
     }
 });
 
+router.post("/trades/:id/refund", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        // Only seller or admin can trigger refund
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (trade.seller_id !== user.id && !isAdmin) {
+            return res.status(403).json({ error: "Not authorized to refund this trade" });
+        }
+
+        // Refund on-chain if trade has on_chain_trade_id
+        let refundTxHash: string | null = null;
+        if (trade.on_chain_trade_id) {
+            try {
+                // Ensure on_chain_trade_id is passed as string or number correctly
+                const onChainId = typeof trade.on_chain_trade_id === 'string' ? trade.on_chain_trade_id : trade.on_chain_trade_id.toString();
+                refundTxHash = await escrow.refund(onChainId as any, trade.chain as any);
+            } catch (escrowErr: any) {
+                console.error("[MINIAPP] Escrow refund failed:", escrowErr);
+                return res.status(500).json({ error: "Failed to refund on-chain: " + escrowErr.message });
+            }
+        }
+
+        await db.updateTrade(req.params.id as string, {
+            status: "cancelled",
+            completed_at: new Date().toISOString() as any,
+            release_tx_hash: refundTxHash as any,
+        });
+
+        res.json({ success: true, refund_tx_hash: refundTxHash });
+
+        // NOTIFY PARTIES
+        await notifyTradeUpdate(trade.seller_id,
+            `🔙 <b>Refund Processed!</b>\n\nYour <b>${trade.amount} ${trade.token}</b> has been returned to your Vault.`
+        );
+        await notifyTradeUpdate(trade.buyer_id,
+            `❌ <b>Trade Cancelled!</b>\n\nThe trade for <b>${trade.amount} ${trade.token}</b> has been cancelled/refunded.`
+        );
+
+    } catch (err: any) {
+        console.error("[MINIAPP] Refund error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  PROFILE — Get & Update
 // ═══════════════════════════════════════════════════════════════

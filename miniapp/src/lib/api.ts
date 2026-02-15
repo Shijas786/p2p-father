@@ -141,6 +141,10 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ txHash }),
             }),
+        refund: (id: string) =>
+            request<{ success: boolean; refund_tx_hash: string }>(`/trades/${id}/refund`, {
+                method: 'POST',
+            }),
         getById: (id: string) => request<{ trade: any }>(`/trades/${id}`),
     },
 
