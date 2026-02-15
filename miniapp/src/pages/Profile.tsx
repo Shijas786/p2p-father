@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { IconPhone, IconLock, IconInfo, IconCheck, IconWarning, IconMarket, IconArrowRight } from '../components/Icons';
+import { IconPhone, IconLock, IconInfo, IconCheck, IconWarning, IconHistory, IconArrowRight } from '../components/Icons';
 import { useNavigate } from 'react-router-dom';
 import './Profile.css';
 
@@ -92,15 +92,16 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             </div>
 
             {/* My Ads Quick Link */}
+            {/* Order History Quick Link */}
             <div className="p-section card tappable" onClick={() => { haptic('light'); navigate('/my-ads'); }}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-icon-circle bg-blue">
-                            <IconMarket size={20} color="var(--blue)" />
+                            <IconHistory size={20} color="var(--blue)" />
                         </div>
                         <div>
-                            <h3 className="mb-0">My Ads</h3>
-                            <p className="text-xs text-muted mb-0">View and manage your active listings</p>
+                            <h3 className="mb-0">Order History</h3>
+                            <p className="text-xs text-muted mb-0">View past deals and activity</p>
                         </div>
                     </div>
                     <IconArrowRight size={20} color="var(--text-muted)" />
