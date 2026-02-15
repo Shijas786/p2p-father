@@ -547,12 +547,22 @@ router.post("/orders/:id/cancel", async (req: Request, res: Response) => {
 
 router.get("/trades", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user) return res.json({ trades: [] });
+        if (!req.telegramUser) {
+            return res.status(401).json({ error: "User not identified" });
+        }
+
+        const tgId = Number(req.telegramUser.id);
+        const user = await db.getUserByTelegramId(tgId);
+
+        if (!user) {
+            return res.json({ trades: [] });
+        }
 
         const trades = await db.getUserTrades(user.id);
+        console.log(`[MINIAPP] /trades: Found ${trades.length} trades for ${user.username}`);
         res.json({ trades });
     } catch (err: any) {
+        console.error("/trades error:", err);
         res.status(500).json({ error: err.message });
     }
 });
