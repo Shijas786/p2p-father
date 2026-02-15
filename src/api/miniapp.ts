@@ -354,6 +354,44 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
 //  ORDERS — Browse, Create, Cancel
 // ═══════════════════════════════════════════════════════════════
 
+router.get("/orders/mine", async (req: Request, res: Response) => {
+    try {
+        if (!req.telegramUser) {
+            return res.status(401).json({ error: "User not identified" });
+        }
+
+        const tgId = Number(req.telegramUser.id);
+        const user = await db.getUserByTelegramId(tgId);
+
+        if (!user) {
+            return res.json({ orders: [] });
+        }
+
+        const orders = await db.getUserOrders(user.id);
+
+        const mappedOrders = await Promise.all(orders.map(async (o) => {
+            const { data: userData } = await (db as any).getClient()
+                .from("users")
+                .select("username, telegram_id, completed_trades")
+                .eq("id", o.user_id)
+                .single();
+
+            return {
+                ...o,
+                username: userData?.username || "Unknown",
+                user_telegram_id: userData?.telegram_id,
+                completed_trades: userData?.completed_trades || 0
+            };
+        }));
+
+        console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
+        res.json({ orders: mappedOrders });
+    } catch (err: any) {
+        console.error("/orders/mine error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/orders/:id", async (req: Request, res: Response) => {
     try {
         const order = await db.getOrderById(req.params.id as string);
@@ -394,36 +432,7 @@ router.get("/orders", async (req: Request, res: Response) => {
     }
 });
 
-router.get("/orders/mine", async (req: Request, res: Response) => {
-    try {
-        if (!req.telegramUser) {
-            return res.status(401).json({ error: "User not identified" });
-        }
-
-        const tgId = Number(req.telegramUser.id);
-        const user = await db.getUserByTelegramId(tgId);
-        console.log(`[MINIAPP] /orders/mine: tg_id=${tgId} user_found=${!!user}`);
-
-        if (!user) {
-            return res.json({ orders: [] });
-        }
-
-        const orders = await db.getUserOrders(user.id);
-        // Manually inject user info for the UI
-        const mappedOrders = orders.map(o => ({
-            ...o,
-            username: user.username,
-            trust_score: user.trust_score,
-            wallet_address: user.wallet_address
-        }));
-
-        console.log(`[MINIAPP] /orders/mine: Found ${orders.length} orders for ${user.username}`);
-        res.json({ orders: mappedOrders });
-    } catch (err: any) {
-        console.error("/orders/mine error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
+// Moved /orders/mine above /orders/:id
 
 // Temporary health/stats for debugging
 router.get("/debug/status", async (req: Request, res: Response) => {
