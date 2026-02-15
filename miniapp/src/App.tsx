@@ -198,7 +198,7 @@ function AppInner() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home user={user} />} />
-          <Route path="market" element={<Market />} />
+          <Route path="market" element={<Market user={user} />} />
           <Route path="create" element={<CreateOrder />} />
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
           <Route path="trade/new/:orderId" element={<TradeDetail user={user} />} />

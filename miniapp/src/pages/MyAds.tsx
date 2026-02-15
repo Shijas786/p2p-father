@@ -64,45 +64,62 @@ export function MyAds() {
                             <div key={i} className="skeleton" style={{ height: 140, borderRadius: 16 }} />
                         ))}
                     </div>
-                ) : orders.length > 0 ? (
-                    orders.map(order => (
-                        <div key={order.id} className="my-ad-item">
-                            <OrderCard order={order} showActions={false} />
-
-                            <div className={`status-badge status-${order.status}`}>
-                                {order.status}
-                            </div>
-
-                            {order.status === 'active' && (
-                                <div className="my-ad-actions">
-                                    <button
-                                        className="btn btn-secondary btn-sm flex-1"
-                                        style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                                        onClick={() => handleCancel(order.id)}
-                                        disabled={cancellingId === order.id}
-                                    >
-                                        {cancellingId === order.id ? (
-                                            <span className="spinner" />
-                                        ) : (
-                                            <><IconX size={14} /> Cancel Ad</>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))
                 ) : (
-                    <div className="empty-my-ads">
-                        <IconEmpty size={64} color="rgba(255,255,255,0.1)" />
-                        <h3>You haven't posted any ads yet</h3>
-                        <p className="text-sm">Create an ad to start trading on P2P Kerala.</p>
-                        <button
-                            className="btn btn-primary mt-4"
-                            onClick={() => navigate('/create')}
-                        >
-                            <IconPlus size={18} /> Create Your First Ad
-                        </button>
-                    </div>
+                    <>
+                        {/* ACTIVE ORDERS */}
+                        <div className="section-header">
+                            <h2 className="text-lg font-bold mb-2">Active Listings</h2>
+                        </div>
+
+                        {orders.filter(o => o.status === 'active').length > 0 ? (
+                            orders.filter(o => o.status === 'active').map(order => (
+                                <div key={order.id} className="my-ad-item mb-4">
+                                    <OrderCard order={order} showActions={false} />
+                                    <div className="my-ad-actions mt-2">
+                                        <button
+                                            className="btn btn-secondary btn-sm flex-1"
+                                            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                                            onClick={() => handleCancel(order.id)}
+                                            disabled={cancellingId === order.id}
+                                        >
+                                            {cancellingId === order.id ? (
+                                                <span className="spinner" />
+                                            ) : (
+                                                <><IconX size={14} /> Cancel Ad</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="empty-state-card card-glass text-center p-6 mb-6">
+                                <p className="text-muted mb-3">No active ads running.</p>
+                                <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => navigate('/create')}
+                                >
+                                    <IconPlus size={16} /> Create New Ad
+                                </button>
+                            </div>
+                        )}
+
+                        {/* HISTORY */}
+                        {orders.filter(o => o.status !== 'active').length > 0 && (
+                            <div className="history-section mt-8">
+                                <h2 className="text-lg font-bold mb-2 text-muted">History</h2>
+                                <div className="flex flex-col gap-3 opacity-80 hover:opacity-100 transition-opacity">
+                                    {orders.filter(o => o.status !== 'active').map(order => (
+                                        <div key={order.id} className="relative grayscale-[0.5] hover:grayscale-0 transition-all">
+                                            <OrderCard order={order} showActions={false} />
+                                            <div className={`status-badge-overlay status-${order.status}`}>
+                                                {order.status.toUpperCase()}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

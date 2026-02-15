@@ -6,7 +6,11 @@ import { OrderCard } from '../components/OrderCard';
 import { IconSell, IconBuy, IconEmpty, IconPlus, IconRefresh } from '../components/Icons';
 import './Market.css';
 
-export function Market() {
+interface Props {
+    user: any;
+}
+
+export function Market({ user }: Props) {
     const navigate = useNavigate();
     const [tab, setTab] = useState<'sell' | 'buy'>('sell');
     const [orders, setOrders] = useState<any[]>([]);
@@ -30,7 +34,14 @@ export function Market() {
 
     function handleTap(order: any) {
         haptic('light');
-        navigate(`/trade/new/${order.id}`);
+        if (user && order.user_id === user.id) {
+            // Own order: show management options? 
+            // For now, OrderCard handles the "Cancel" button if we pass isMyOrder
+            // But if we tap the card body, maybe nothing happens or we go to detail scan?
+            // Let's just navigate to detail for now, or do nothing.
+        } else {
+            navigate(`/trade/new/${order.id}`);
+        }
     }
 
     return (
@@ -73,7 +84,13 @@ export function Market() {
                 ) : orders.length > 0 ? (
                     <div className="flex flex-col gap-2">
                         {orders.map(order => (
-                            <OrderCard key={order.id} order={order} onTap={handleTap} />
+                            <OrderCard
+                                key={order.id}
+                                order={order}
+                                onTap={handleTap}
+                                isMyOrder={user?.id === order.user_id}
+                                onRefresh={loadOrders}
+                            />
                         ))}
                     </div>
                 ) : (
