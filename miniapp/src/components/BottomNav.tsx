@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { haptic } from '../lib/telegram';
+import { haptic, getTelegramUser } from '../lib/telegram';
 import { api } from '../lib/api';
 import { IconHome, IconMarket, IconPlus, IconWallet, IconUser } from './Icons';
 import './BottomNav.css';
 
-const tabs = [
+const ADMIN_IDS = [123456789];
+
+const baseTabs = [
     { path: '/', Icon: IconHome, label: 'Home' },
     { path: '/market', Icon: IconMarket, label: 'Market' },
     { path: '/create', Icon: IconPlus, label: 'New Ad' },
@@ -13,11 +15,21 @@ const tabs = [
     { path: '/profile', Icon: IconUser, label: 'Profile' },
 ];
 
+// Simple shield icon for admin
+function IconAdmin({ size = 22 }: { size?: number }) {
+    return <span style={{ fontSize: size * 0.8, lineHeight: 1 }}>🛡️</span>;
+}
+
 export function BottomNav() {
     const [activeTrades, setActiveTrades] = useState(0);
+    const tgUser = getTelegramUser();
+    const isAdmin = tgUser && ADMIN_IDS.includes(tgUser.id);
+
+    const tabs = isAdmin
+        ? [...baseTabs, { path: '/admin', Icon: IconAdmin, label: 'Admin' }]
+        : baseTabs;
 
     useEffect(() => {
-        // Poll for active trades count every 30s
         async function check() {
             try {
                 const data = await api.trades.list();
