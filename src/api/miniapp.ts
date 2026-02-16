@@ -1004,6 +1004,82 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  ADMIN — Disputes
+// ═══════════════════════════════════════════════════════════════
+
+router.get("/admin/disputes", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        // Use db.listTrades approach — query disputed trades
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+        const { data: disputes } = await supabase
+            .from("trades")
+            .select("*, seller:users!trades_seller_id_fkey(username, upi_id), buyer:users!trades_buyer_id_fkey(username)")
+            .eq("status", "disputed")
+            .order("created_at", { ascending: false });
+
+        res.json({ disputes: disputes || [] });
+    } catch (err: any) {
+        console.error("[ADMIN] Get disputes error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        const { release_to_buyer } = req.body;
+
+        if (release_to_buyer) {
+            // Release escrow to buyer
+            let txHash: string | null = null;
+            if (trade.on_chain_trade_id) {
+                txHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
+            }
+            await db.updateTrade(trade.id, { status: "completed" } as any);
+            await notifyTradeUpdate(trade.buyer_id,
+                `✅ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to you.`
+            );
+            await notifyTradeUpdate(trade.seller_id,
+                `⚠️ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to the buyer.`
+            );
+            res.json({ success: true, txHash });
+        } else {
+            // Refund to seller
+            let txHash: string | null = null;
+            if (trade.on_chain_trade_id) {
+                txHash = await escrow.refund(trade.on_chain_trade_id, trade.chain as any);
+            }
+            await db.updateTrade(trade.id, { status: "refunded" } as any);
+            await notifyTradeUpdate(trade.seller_id,
+                `🔙 <b>Dispute Resolved!</b>\n\nAdmin has refunded <b>${trade.amount} ${trade.token}</b> to your vault.`
+            );
+            await notifyTradeUpdate(trade.buyer_id,
+                `❌ <b>Dispute Resolved!</b>\n\nAdmin has refunded the trade to the seller.`
+            );
+            res.json({ success: true, txHash });
+        }
+    } catch (err: any) {
+        console.error("[ADMIN] Resolve dispute error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  CHAT — Trade Messages
 // ═══════════════════════════════════════════════════════════════
 
