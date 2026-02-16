@@ -244,17 +244,6 @@ export function Wallet({ user }: Props) {
                 <p className="page-subtitle">Manage your crypto assets</p>
             </div>
 
-            {/* Address */}
-            {balances?.address && (
-                <div className="w-address card" onClick={copyAddress}>
-                    <div className="w-address-label label">Your Address</div>
-                    <div className="w-address-value font-mono text-sm truncate">
-                        {balances.address}
-                    </div>
-                    <div className="text-[10px] text-muted mt-1">Tap to copy</div>
-                </div>
-            )}
-
             {/* Receive QR Section */}
             {balances?.address && (
                 <div className="card" style={{ textAlign: 'center', padding: 20 }}>
@@ -275,6 +264,7 @@ export function Wallet({ user }: Props) {
                             style={{ width: 164, height: 164, borderRadius: 8 }}
                         />
                     </div>
+                    <p className="font-mono text-xs text-muted mb-2" style={{ wordBreak: 'break-all' }}>{balances.address}</p>
                     <p className="text-xs text-muted mb-2">Scan to deposit USDC, ETH, or USDT on <b>Base Network</b></p>
                     <button className="btn btn-sm btn-outline" onClick={copyAddress}>
                         📋 Copy Address
