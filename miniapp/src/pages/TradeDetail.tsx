@@ -603,20 +603,66 @@ export function TradeDetail({ user }: Props) {
                     <div className="card-glass border-green p-3 animate-in">
                         <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
 
-                        {/* Seller UPI Display */}
-                        <div className="bg-white/5 rounded p-3 mb-3 border border-white/10">
-                            <div className="text-[10px] text-muted uppercase font-bold mb-1">Pay to UPI ID</div>
-                            <div className="flex items-center justify-between">
-                                <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id || 'Not set'}</span>
-                                <button className="btn btn-xs btn-outline" onClick={() => {
-                                    navigator.clipboard.writeText(trade.seller_upi_id || '');
-                                    haptic('success');
-                                }}>Copy</button>
+                        {/* Seller Payment Details */}
+                        {trade.seller_upi_id && (
+                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                <div className="text-[10px] text-muted uppercase font-bold mb-1">📱 Pay to UPI ID</div>
+                                <div className="flex items-center justify-between">
+                                    <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id}</span>
+                                    <button className="btn btn-xs btn-outline" onClick={() => {
+                                        navigator.clipboard.writeText(trade.seller_upi_id || '');
+                                        haptic('success');
+                                    }}>Copy</button>
+                                </div>
                             </div>
-                            <div className="text-[10px] text-orange mt-1">Pay exactly ₹{trade.fiat_amount}</div>
-                        </div>
+                        )}
 
-                        <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller's UPI ID above.</p>
+                        {trade.seller_phone && (
+                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                <div className="text-[10px] text-muted uppercase font-bold mb-1">📞 Phone Number</div>
+                                <div className="flex items-center justify-between">
+                                    <span className="font-mono text-lg text-white select-all">{trade.seller_phone}</span>
+                                    <button className="btn btn-xs btn-outline" onClick={() => {
+                                        navigator.clipboard.writeText(trade.seller_phone || '');
+                                        haptic('success');
+                                    }}>Copy</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {trade.seller_bank_account && (
+                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                <div className="text-[10px] text-muted uppercase font-bold mb-1">🏦 Bank Transfer (IMPS)</div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="font-mono text-sm text-white select-all">{trade.seller_bank_account}</span>
+                                    <button className="btn btn-xs btn-outline" onClick={() => {
+                                        navigator.clipboard.writeText(trade.seller_bank_account || '');
+                                        haptic('success');
+                                    }}>Copy</button>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted">IFSC: <span className="font-mono text-white select-all">{trade.seller_bank_ifsc}</span></span>
+                                    <button className="btn btn-xs btn-outline" onClick={() => {
+                                        navigator.clipboard.writeText(trade.seller_bank_ifsc || '');
+                                        haptic('success');
+                                    }}>Copy</button>
+                                </div>
+                                {trade.seller_bank_name && (
+                                    <div className="text-xs text-muted mt-1">Bank: {trade.seller_bank_name}</div>
+                                )}
+                            </div>
+                        )}
+
+                        {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && (
+                            <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
+                                <div className="text-sm text-orange">⚠️ Seller has not set up payment details yet. Contact them via chat.</div>
+                            </div>
+                        )}
+
+                        <div className="text-[10px] text-orange mt-1 mb-3">Pay exactly ₹{trade.fiat_amount}</div>
+
+
+                        <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller using one of the payment methods above.</p>
 
                         <button
                             className="btn btn-primary btn-block btn-lg"

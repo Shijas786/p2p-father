@@ -368,7 +368,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name)")
             .eq("id", tradeId)
             .single();
 
@@ -377,7 +377,11 @@ class Database {
         return {
             ...data,
             seller_upi_id: data.seller?.upi_id,
-            seller_username: data.seller?.username
+            seller_username: data.seller?.username,
+            seller_phone: data.seller?.phone_number,
+            seller_bank_account: data.seller?.bank_account_number,
+            seller_bank_ifsc: data.seller?.bank_ifsc,
+            seller_bank_name: data.seller?.bank_name,
         } as any;
     }
 

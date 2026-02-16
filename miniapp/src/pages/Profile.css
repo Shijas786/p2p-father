@@ -78,3 +78,15 @@
 .p-account-row:last-child {
     border-bottom: none;
 }
+
+/* Payment Method Blocks */
+.p-payment-block {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.p-payment-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text);
+}
