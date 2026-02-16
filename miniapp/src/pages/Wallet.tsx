@@ -273,47 +273,97 @@ export function Wallet({ user }: Props) {
             )}
 
             {/* Vault Section */}
-            <div className="w-vault card" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid var(--border-color)' }}>
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <IconLock size={20} color="var(--primary)" />
-                        <span className="font-bold">P2P Vault</span>
+            <div className="card" style={{
+                background: 'linear-gradient(135deg, #1a1f35 0%, #0d1117 100%)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                borderRadius: 16,
+                padding: '20px',
+            }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+                        <IconLock size={18} color="#6366f1" />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: 2, textTransform: 'uppercase' }}>Escrow Vault</span>
                     </div>
-                    <div className="text-[10px] text-muted uppercase tracking-widest font-bold">SECURED ESCROW</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+                        {(parseFloat(vaultBaseUsdc || '0') + parseFloat(vaultBscUsdc || '0')).toFixed(2)} <span style={{ fontSize: 16, color: '#94a3b8' }}>USDC</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Secured funds for your P2P trades</p>
                 </div>
 
-                {/* Base Vault */}
-                <div className="vault-chain-box mb-4">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-muted font-bold">BASE NETWORK</span>
-                        <span className="text-white font-mono font-bold">{vaultBaseUsdc} USDC</span>
+                {/* Network Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                    {/* Base */}
+                    <div style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        borderRadius: 12,
+                        padding: '12px 14px',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 14 }}>🔵</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>Base</span>
+                            </div>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBaseUsdc} USDC</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                            <span style={{ color: '#f59e0b' }}>🔒 Reserved: {reservedBase}</span>
+                            <span style={{ color: '#22c55e' }}>✅ Available: {availableBase}</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-orange opacity-80 italic">Reserved for Ads: {reservedBase}</span>
-                        <span className="text-green font-bold">Available: {availableBase}</span>
+
+                    {/* BSC */}
+                    <div style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        borderRadius: 12,
+                        padding: '12px 14px',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 14 }}>🟡</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>BSC</span>
+                            </div>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBscUsdc} USDC</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                            <span style={{ color: '#f59e0b' }}>🔒 Reserved: {reservedBsc}</span>
+                            <span style={{ color: '#22c55e' }}>✅ Available: {availableBsc}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* BSC Vault */}
-                <div className="vault-chain-box mb-5">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-muted font-bold">BSC NETWORK</span>
-                        <span className="text-white font-mono font-bold">{vaultBscUsdc} USDC</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-orange opacity-80 italic">Reserved for Ads: {reservedBsc}</span>
-                        <span className="text-green font-bold">Available: {availableBsc}</span>
-                    </div>
-                </div>
-
-                <div className="flex gap-3">
-                    <button className="btn btn-sm btn-primary flex-1 py-3" onClick={() => { setShowDeposit(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}>
-                        Deposit
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                        style={{
+                            flex: 1, padding: '12px 0', borderRadius: 12,
+                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                            color: '#fff', fontWeight: 700, fontSize: 14,
+                            border: 'none', cursor: 'pointer',
+                        }}
+                        onClick={() => { setShowDeposit(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}
+                    >
+                        ⬇️ Deposit
                     </button>
-                    <button className="btn btn-sm btn-secondary flex-1 py-3" onClick={() => { setShowWithdraw(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}>
-                        Withdraw
+                    <button
+                        style={{
+                            flex: 1, padding: '12px 0', borderRadius: 12,
+                            background: 'rgba(255,255,255,0.08)',
+                            color: '#e2e8f0', fontWeight: 700, fontSize: 14,
+                            border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+                        }}
+                        onClick={() => { setShowWithdraw(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}
+                    >
+                        ⬆️ Withdraw
                     </button>
                 </div>
+
+                {/* Info */}
+                <p style={{ fontSize: 10, color: '#475569', textAlign: 'center', marginTop: 12 }}>
+                    Deposit USDC to create sell ads. Funds are held securely until trades complete.
+                </p>
             </div>
 
             {/* Vault Modals */}
