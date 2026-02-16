@@ -10,7 +10,7 @@ interface Props {
     user: any;
 }
 
-
+const PAYMENT_FILTERS = ['All', 'UPI', 'Bank'];
 
 export function Market({ user }: Props) {
     const navigate = useNavigate();
@@ -19,6 +19,7 @@ export function Market({ user }: Props) {
     const [loading, setLoading] = useState(true);
     const [feePercentage, setFeePercentage] = useState(0.01);
     const [searchQuery, setSearchQuery] = useState('');
+    const [paymentFilter, setPaymentFilter] = useState('All');
 
     const [confirmOrder, setConfirmOrder] = useState<any>(null);
 
@@ -59,6 +60,16 @@ export function Market({ user }: Props) {
 
     // Filter and search orders
     const filteredOrders = orders.filter(order => {
+        // Payment method filter
+        if (paymentFilter !== 'All') {
+            const methods = order.payment_methods || [];
+            if (paymentFilter === 'Bank') {
+                // Bank matches IMPS, NEFT, or BANK
+                if (!methods.some((m: string) => ['BANK', 'IMPS', 'NEFT'].includes(m))) return false;
+            } else {
+                if (!methods.includes(paymentFilter.toUpperCase())) return false;
+            }
+        }
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             const matchUsername = order.username?.toLowerCase().includes(q);
@@ -103,6 +114,19 @@ export function Market({ user }: Props) {
                 />
             </div>
 
+            {/* Payment Method Filter */}
+            <div className="market-filters">
+                {PAYMENT_FILTERS.map(f => (
+                    <button
+                        key={f}
+                        className={`market-filter-chip ${paymentFilter === f ? 'active' : ''}`}
+                        onClick={() => { haptic('selection'); setPaymentFilter(f); }}
+                    >
+                        {f === 'UPI' ? '📱' : f === 'Bank' ? '🏦' : '📋'} {f}
+                    </button>
+                ))}
+            </div>
+
             <div className="market-hint text-xs text-muted mb-3">
                 {tab === 'sell'
                     ? 'Sellers offering crypto — tap to buy from them'
@@ -136,7 +160,7 @@ export function Market({ user }: Props) {
                 ) : (
                     <div className="empty-state">
                         <div className="icon"><IconEmpty size={48} color="var(--text-muted)" /></div>
-                        <h3>No {tab} orders</h3>
+                        <h3>No {tab} orders{paymentFilter !== 'All' ? ` with ${paymentFilter}` : ''}</h3>
                         <p className="text-sm">
                             {searchQuery ? 'Try a different search' : 'Be the first to create one!'}
                         </p>
