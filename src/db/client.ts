@@ -40,19 +40,64 @@ class Database {
             return existing as User;
         }
 
-        // Create new user (wallet_index is handled by DB sequence/default)
-        const { data: newUser, error } = await db
-            .from("users")
-            .insert({
-                telegram_id: telegramId,
-                username: username || null,
-                first_name: firstName || null
-            })
-            .select()
-            .single();
+        // ═══ RACE-SAFE WALLET INDEX ASSIGNMENT ═══
+        // Retry loop to handle concurrent signups getting the same index.
+        // The DB has a UNIQUE constraint on wallet_index, so duplicates will error.
+        let attempts = 0;
+        const MAX_ATTEMPTS = 5;
 
-        if (error) throw new Error(`Failed to create user: ${error.message}`);
-        return newUser as User;
+        while (attempts < MAX_ATTEMPTS) {
+            attempts++;
+
+            // Get current max index
+            const { data: maxResult } = await db
+                .from("users")
+                .select("wallet_index")
+                .order("wallet_index", { ascending: false })
+                .limit(1)
+                .single();
+
+            const nextIndex = (maxResult?.wallet_index ?? 0) + 1;
+
+            // Derive wallet address immediately (prevents the old bug where
+            // wallet was only derived on first /auth call)
+            let walletAddress: string | null = null;
+            try {
+                // Import wallet service inline to avoid circular deps
+                const { wallet: walletSvc } = await import("../services/wallet");
+                const derived = walletSvc.deriveWallet(nextIndex);
+                walletAddress = derived.address;
+            } catch (e) {
+                console.error("[DB] Failed to derive wallet for new user:", e);
+            }
+
+            const { data: newUser, error } = await db
+                .from("users")
+                .insert({
+                    telegram_id: telegramId,
+                    username: username || null,
+                    first_name: firstName || null,
+                    wallet_index: nextIndex,
+                    wallet_address: walletAddress,
+                    wallet_type: walletAddress ? 'bot' : null,
+                })
+                .select()
+                .single();
+
+            if (error) {
+                // If it's a unique constraint violation on wallet_index, retry
+                if (error.message.includes("wallet_index") || error.message.includes("duplicate") || error.message.includes("unique")) {
+                    console.warn(`[DB] wallet_index ${nextIndex} collision (attempt ${attempts}), retrying...`);
+                    continue;
+                }
+                throw new Error(`Failed to create user: ${error.message}`);
+            }
+
+            console.log(`[DB] Created user ${newUser.id} with wallet_index=${nextIndex}, address=${walletAddress}`);
+            return newUser as User;
+        }
+
+        throw new Error("Failed to create user after max retries (wallet_index collision)");
     }
 
     async getUserByTelegramId(telegramId: number): Promise<User | null> {
