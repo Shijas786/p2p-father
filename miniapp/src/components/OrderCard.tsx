@@ -57,69 +57,60 @@ export function OrderCard({ order, onTap, showActions = true, isMyOrder, onRefre
         <div
             className={`order-card ${showActions ? 'tappable' : ''} ${order.status === 'filled' ? 'opacity-70' : ''}`}
             onClick={() => {
-                if (isMyOrder) return; // Don't trigger tap for own orders
+                if (isMyOrder) return;
                 if (showActions && onTap) {
                     haptic('light');
                     onTap(order);
                 }
             }}
         >
-            <div className="oc-header">
-                <span className={`badge ${isBuy ? 'badge-green' : 'badge-red'}`}>
-                    {isBuy ? '🟢 BUY' : '🔴 SELL'}
-                </span>
-                <span className="oc-token font-mono">{order.token}</span>
-
-                {isMyOrder && showActions && (
-                    <button
-                        className="btn btn-xs btn-secondary ml-auto border-red-500/30 text-red-400 hover:bg-red-500/10"
-                        onClick={handleCancel}
-                        disabled={cancelling}
-                    >
-                        {cancelling ? <span className="spinner w-3 h-3 border-red-400" /> : <><IconX size={12} /> Cancel</>}
-                    </button>
-                )}
-            </div>
-
-            <div className="oc-body relative">
-                <div className="oc-amount">
-                    <span className="label">Available</span>
-                    <span className="oc-value font-mono">
-                        {available.toFixed(2)} <span className="text-muted">{order.token}</span>
-                    </span>
-                </div>
-
-                <div className="oc-rate">
-                    <span className="label">Rate</span>
-                    <span className="oc-value font-mono text-green">
-                        ₹{order.rate.toLocaleString()}
-                    </span>
-                </div>
-
-                {order.status === 'filled' && (
-                    <div className="absolute top-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 rounded backdrop-blur-md border border-white/10 font-bold tracking-wider pointer-events-none transform rotate-12 translate-x-2 -translate-y-2">
-                        SOLD OUT
-                    </div>
-                )}
-            </div>
-
-            <div className="oc-footer">
-                <div className="oc-user">
-                    {order.username && <span className="text-sm">@{order.username}</span>}
-                    {order.trust_score !== undefined && (
-                        <span className={`oc-trust ${order.trust_score >= 90 ? 'trust-high' : order.trust_score >= 70 ? 'trust-mid' : 'trust-low'}`}>
-                            ⭐ {order.trust_score}%
+            <div className="oc-main-row">
+                <div className="oc-left">
+                    <div className="oc-top-meta">
+                        <span className={`badge ${isBuy ? 'badge-green' : 'badge-red'} oc-type-badge`}>
+                            {isBuy ? 'BUY' : 'SELL'}
                         </span>
+                        {order.username && <span className="oc-username">@{order.username}</span>}
+                        {order.trust_score !== undefined && (
+                            <span className={`oc-trust-compact ${order.trust_score >= 90 ? 'trust-high' : order.trust_score >= 70 ? 'trust-mid' : 'trust-low'}`}>
+                                ⭐{order.trust_score}%
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="oc-details">
+                        <span className="oc-available-text">
+                            {available.toFixed(2)} <span className="oc-token-small">{order.token}</span>
+                        </span>
+                        <div className="oc-methods-compact">
+                            {(order.payment_methods || []).map((m) => (
+                                <span key={m} title={m}>
+                                    {m === 'UPI' ? '📱' : m === 'IMPS' ? '🏦' : m === 'BANK' ? '🏛️' : m === 'PAYTM' ? '💳' : m === 'NEFT' ? '🔄' : '💰'}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="oc-right">
+                    <div className="oc-rate-emphasized font-mono text-green">
+                        ₹{order.rate.toLocaleString()}
+                    </div>
+                    {isMyOrder && showActions && (
+                        <button
+                            className="oc-cancel-btn"
+                            onClick={handleCancel}
+                            disabled={cancelling}
+                        >
+                            {cancelling ? <span className="spinner w-3 h-3 border-red-400" /> : <IconX size={12} />}
+                        </button>
                     )}
                 </div>
-                <div className="oc-methods">
-                    {(order.payment_methods || []).map((m) => (
-                        <span key={m} className="oc-method">
-                            {m === 'UPI' ? '📱' : m === 'IMPS' ? '🏦' : m === 'BANK' ? '🏛️' : m === 'PAYTM' ? '💳' : m === 'NEFT' ? '🔄' : '💰'} {m}
-                        </span>
-                    ))}
-                </div>
             </div>
+
+            {order.status === 'filled' && (
+                <div className="oc-sold-out-overlay">SOLD OUT</div>
+            )}
         </div>
     );
 }

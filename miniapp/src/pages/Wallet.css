@@ -1,54 +1,54 @@
 .w-address {
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
     cursor: pointer;
     text-align: center;
 }
 
 .w-address-label {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .w-address-value {
-    max-width: 260px;
+    max-width: 240px;
     margin: 0 auto;
 }
 
 .w-copy-btn {
     color: var(--green);
-    margin-top: 6px;
+    margin-top: 4px;
     display: inline-block;
 }
 
 .w-tokens {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 4px;
+    margin-bottom: 12px;
 }
 
 .w-token {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 10px 12px;
 }
 
 .w-token-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .w-token-icon {
-    font-size: 1.5rem;
-    width: 40px;
-    height: 40px;
+    font-size: 1.25rem;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-elevated);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
 }
 
 .w-token-info {
@@ -57,7 +57,7 @@
 }
 
 .w-token-symbol {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
 }
 
 .w-token-right {
@@ -67,27 +67,27 @@
 }
 
 .w-token-bal {
-    font-size: 1.0625rem;
+    font-size: 0.9375rem;
 }
 
 .w-actions {
     display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 6px;
 }
 
 .w-vault {
-    padding: 24px;
-    margin-bottom: 20px;
-    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-md);
     display: flex;
     flex-direction: column;
 }
 
 .vault-chain-box {
     background: rgba(255, 255, 255, 0.03);
-    padding: 12px 16px;
-    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -100,5 +100,5 @@
 }
 
 .w-send {
-    padding: 24px 20px;
+    padding: 20px 16px;
 }

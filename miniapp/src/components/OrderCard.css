@@ -1,8 +1,8 @@
 .order-card {
     background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    position: relative;
     transition: all var(--transition-fast);
 }
 
@@ -11,99 +11,130 @@
 }
 
 .order-card.tappable:hover {
-    border-color: var(--green-border);
     background: var(--bg-card-hover);
 }
 
 .order-card.tappable:active {
-    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.oc-header {
+.oc-main-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
 }
 
-.oc-token {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-}
-
-.oc-body {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.oc-amount,
-.oc-rate {
+.oc-left {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
 }
 
-.oc-value {
-    font-size: 1.125rem;
-    font-weight: 700;
-}
-
-.oc-rate {
-    text-align: right;
-}
-
-.oc-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-}
-
-.oc-user {
+.oc-top-meta {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--text-secondary);
 }
 
-.oc-trust {
-    font-size: 0.6875rem;
+.oc-type-badge {
     padding: 1px 6px;
-    border-radius: var(--radius-full);
+    font-size: 0.5625rem;
+    min-width: 38px;
+    justify-content: center;
 }
 
-.oc-trust.trust-high {
+.oc-username {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.oc-trust-compact {
+    font-size: 0.625rem;
+    font-weight: 700;
+}
+
+.oc-trust-compact.trust-high {
     color: var(--green);
-    background: rgba(0, 210, 106, 0.12);
 }
 
-.oc-trust.trust-mid {
+.oc-trust-compact.trust-mid {
     color: var(--orange);
-    background: rgba(255, 165, 0, 0.12);
 }
 
-.oc-trust.trust-low {
+.oc-trust-compact.trust-low {
     color: var(--red);
-    background: rgba(255, 77, 77, 0.12);
 }
 
-.oc-methods {
+.oc-details {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.oc-available-text {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', monospace;
+}
+
+.oc-token-small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.oc-methods-compact {
     display: flex;
     gap: 4px;
-    flex-wrap: wrap;
+    opacity: 0.8;
 }
 
-.oc-method {
-    font-size: 0.625rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    background: var(--bg-elevated);
-    border-radius: var(--radius-full);
-    color: var(--text-muted);
-    letter-spacing: 0.02em;
-    white-space: nowrap;
+.oc-methods-compact span {
+    font-size: 0.75rem;
+}
+
+.oc-right {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oc-rate-emphasized {
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.oc-cancel-btn {
+    padding: 4px;
+    color: var(--red);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.oc-cancel-btn:hover {
+    opacity: 1;
+}
+
+.oc-sold-out-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    backdrop-filter: blur(1px);
+    pointer-events: none;
+    z-index: 1;
 }

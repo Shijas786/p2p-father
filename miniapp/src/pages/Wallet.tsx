@@ -276,38 +276,37 @@ export function Wallet({ user }: Props) {
             <div className="card" style={{
                 background: 'linear-gradient(135deg, #1a1f35 0%, #0d1117 100%)',
                 border: '1px solid rgba(99, 102, 241, 0.2)',
-                borderRadius: 16,
-                padding: '20px',
+                borderRadius: 10,
+                padding: '16px',
             }}>
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
-                        <IconLock size={18} color="#6366f1" />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: 2, textTransform: 'uppercase' }}>Escrow Vault</span>
+                <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
+                        <IconLock size={16} color="#6366f1" />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase' }}>Escrow Vault</span>
                     </div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
-                        {(parseFloat(vaultBaseUsdc || '0') + parseFloat(vaultBscUsdc || '0')).toFixed(2)} <span style={{ fontSize: 16, color: '#94a3b8' }}>USDC</span>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+                        {(parseFloat(vaultBaseUsdc || '0') + parseFloat(vaultBscUsdc || '0')).toFixed(2)} <span style={{ fontSize: 14, color: '#94a3b8' }}>USDC</span>
                     </div>
-                    <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Secured funds for your P2P trades</p>
                 </div>
 
                 {/* Network Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                     {/* Base */}
                     <div style={{
                         background: 'rgba(255,255,255,0.04)',
-                        borderRadius: 12,
-                        padding: '12px 14px',
+                        borderRadius: 8,
+                        padding: '10px 12px',
                         border: '1px solid rgba(255,255,255,0.06)',
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 14 }}>🔵</span>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>Base</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontSize: 12 }}>🔵</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0' }}>Base</span>
                             </div>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBaseUsdc} USDC</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBaseUsdc} USDC</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
                             <span style={{ color: '#f59e0b' }}>🔒 Reserved: {reservedBase}</span>
                             <span style={{ color: '#22c55e' }}>✅ Available: {availableBase}</span>
                         </div>
@@ -316,18 +315,18 @@ export function Wallet({ user }: Props) {
                     {/* BSC */}
                     <div style={{
                         background: 'rgba(255,255,255,0.04)',
-                        borderRadius: 12,
-                        padding: '12px 14px',
+                        borderRadius: 8,
+                        padding: '10px 12px',
                         border: '1px solid rgba(255,255,255,0.06)',
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 14 }}>🟡</span>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>BSC</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontSize: 12 }}>🟡</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0' }}>BSC</span>
                             </div>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBscUsdc} USDC</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{vaultBscUsdc} USDC</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
                             <span style={{ color: '#f59e0b' }}>🔒 Reserved: {reservedBsc}</span>
                             <span style={{ color: '#22c55e' }}>✅ Available: {availableBsc}</span>
                         </div>
@@ -335,12 +334,12 @@ export function Wallet({ user }: Props) {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                     <button
                         style={{
-                            flex: 1, padding: '12px 0', borderRadius: 12,
+                            flex: 1, padding: '10px 0', borderRadius: 8,
                             background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                            color: '#fff', fontWeight: 700, fontSize: 14,
+                            color: '#fff', fontWeight: 700, fontSize: 13,
                             border: 'none', cursor: 'pointer',
                         }}
                         onClick={() => { setShowDeposit(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}
@@ -349,9 +348,9 @@ export function Wallet({ user }: Props) {
                     </button>
                     <button
                         style={{
-                            flex: 1, padding: '12px 0', borderRadius: 12,
+                            flex: 1, padding: '10px 0', borderRadius: 8,
                             background: 'rgba(255,255,255,0.08)',
-                            color: '#e2e8f0', fontWeight: 700, fontSize: 14,
+                            color: '#e2e8f0', fontWeight: 700, fontSize: 13,
                             border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
                         }}
                         onClick={() => { setShowWithdraw(true); setVaultAmount(''); setVaultError(''); setVaultSuccess(''); }}

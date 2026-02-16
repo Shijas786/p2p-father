@@ -1,35 +1,35 @@
 .home-hero {
-    padding: 24px 20px;
-    margin-bottom: 16px;
+    padding: 16px 14px;
+    margin-bottom: 12px;
     text-align: center;
 }
 
 .hh-label {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .hh-balance {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .hh-amount {
-    font-size: 2rem;
+    font-size: 1.625rem;
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
 }
 
 .hh-token {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     font-weight: 600;
 }
 
 .hh-address {
-    margin-top: 8px;
-    max-width: 200px;
+    margin-top: 6px;
+    max-width: 180px;
     margin-inline: auto;
 }
 
@@ -37,28 +37,28 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 /* Quick Actions */
 .home-actions {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 6px;
+    margin-bottom: 16px;
 }
 
 .ha-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 14px 8px;
+    gap: 4px;
+    padding: 10px 4px;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    font-size: 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.6875rem;
     font-weight: 600;
     color: var(--text-secondary);
     transition: all var(--transition-fast);
@@ -74,37 +74,41 @@
 }
 
 .ha-icon {
-    font-size: 1.375rem;
+    font-size: 1.25rem;
 }
 
 /* Stats */
 .home-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 6px;
+    margin-bottom: 16px;
 }
 
 .hs-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 12px 8px;
+    gap: 1px;
+    padding: 8px 4px;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
 }
 
 .hs-value {
-    font-size: 1.0625rem;
+    font-size: 0.9375rem;
     font-weight: 800;
     color: var(--green);
 }
 
+.hs-label {
+    font-size: 0.625rem;
+}
+
 /* Section */
 .home-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 /* Welcome */
@@ -112,7 +116,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
 }
 
 .hw-content {
