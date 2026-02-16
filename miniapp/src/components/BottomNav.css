@@ -35,6 +35,37 @@
 .nav-icon {
     font-size: 1.25rem;
     line-height: 1;
+    position: relative;
+}
+
+.nav-badge {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+    color: #fff;
+    background: var(--red);
+    border-radius: 999px;
+    border: 2px solid rgba(10, 10, 10, 0.9);
+    animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .nav-label {

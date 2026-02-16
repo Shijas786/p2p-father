@@ -32,6 +32,10 @@ export interface User {
     wallet_type: 'bot' | 'external';
     wallet_index: number;
     upi_id: string | null;
+    phone_number: string | null;
+    bank_account_number: string | null;
+    bank_ifsc: string | null;
+    bank_name: string | null;
     bank_details: BankDetails | null;
     trade_count: number;
     completed_trades: number;

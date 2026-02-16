@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi';
 import { parseUnits } from 'viem';
@@ -52,6 +52,8 @@ export function TradeDetail({ user }: Props) {
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
+    const prevStatusRef = useRef<string | null>(null);
+    const actionSectionRef = useRef<HTMLDivElement>(null);
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
@@ -123,6 +125,15 @@ export function TradeDetail({ user }: Props) {
         if (!id) return;
         try {
             const { trade: data } = await api.trades.getById(id);
+            // Detect status change and trigger feedback
+            if (prevStatusRef.current && data.status !== prevStatusRef.current) {
+                haptic('success');
+                // Auto-scroll to action section
+                setTimeout(() => {
+                    actionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+            prevStatusRef.current = data.status;
             setTrade(data);
             const { messages: msgs } = await api.trades.getMessages(id);
             setMessages(msgs);
@@ -578,178 +589,179 @@ export function TradeDetail({ user }: Props) {
             )}
 
             {/* Standard Actions (Fiat Sent, Release, Dispute) */}
-
-            {/* Disputed Status UI */}
-            {trade && trade.status === 'disputed' && (
-                <div className="card border-red p-4 text-center animate-in mb-4">
-                    <div className="text-4xl mb-2">🚫</div>
-                    <h3 className="text-red font-bold uppercase">Trade Disputed</h3>
-                    <p className="text-sm text-muted mt-2 mb-4">
-                        Admin has been notified. Please utilize the chat to provide evidence.
-                    </p>
-                    <a
-                        href={`https://t.me/P2PKeralaBot`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline btn-block"
-                    >
-                        💬 Contact Support
-                    </a>
-                </div>
-            )}
-
-            <div className="td-actions">
-                {trade && trade.status === 'in_escrow' && !isSeller && (
-                    <div className="card-glass border-green p-3 animate-in">
-                        <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
-
-                        {/* Seller Payment Details */}
-                        {trade.seller_upi_id && (
-                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
-                                <div className="text-[10px] text-muted uppercase font-bold mb-1">📱 Pay to UPI ID</div>
-                                <div className="flex items-center justify-between">
-                                    <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id}</span>
-                                    <button className="btn btn-xs btn-outline" onClick={() => {
-                                        navigator.clipboard.writeText(trade.seller_upi_id || '');
-                                        haptic('success');
-                                    }}>Copy</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {trade.seller_phone && (
-                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
-                                <div className="text-[10px] text-muted uppercase font-bold mb-1">📞 Phone Number</div>
-                                <div className="flex items-center justify-between">
-                                    <span className="font-mono text-lg text-white select-all">{trade.seller_phone}</span>
-                                    <button className="btn btn-xs btn-outline" onClick={() => {
-                                        navigator.clipboard.writeText(trade.seller_phone || '');
-                                        haptic('success');
-                                    }}>Copy</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {trade.seller_bank_account && (
-                            <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
-                                <div className="text-[10px] text-muted uppercase font-bold mb-1">🏦 Bank Transfer (IMPS)</div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="font-mono text-sm text-white select-all">{trade.seller_bank_account}</span>
-                                    <button className="btn btn-xs btn-outline" onClick={() => {
-                                        navigator.clipboard.writeText(trade.seller_bank_account || '');
-                                        haptic('success');
-                                    }}>Copy</button>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-muted">IFSC: <span className="font-mono text-white select-all">{trade.seller_bank_ifsc}</span></span>
-                                    <button className="btn btn-xs btn-outline" onClick={() => {
-                                        navigator.clipboard.writeText(trade.seller_bank_ifsc || '');
-                                        haptic('success');
-                                    }}>Copy</button>
-                                </div>
-                                {trade.seller_bank_name && (
-                                    <div className="text-xs text-muted mt-1">Bank: {trade.seller_bank_name}</div>
-                                )}
-                            </div>
-                        )}
-
-                        {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && (
-                            <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
-                                <div className="text-sm text-orange">⚠️ Seller has not set up payment details yet. Contact them via chat.</div>
-                            </div>
-                        )}
-
-                        <div className="text-[10px] text-orange mt-1 mb-3">Pay exactly ₹{trade.fiat_amount}</div>
-
-
-                        <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller using one of the payment methods above.</p>
-
-                        <button
-                            className="btn btn-primary btn-block btn-lg"
-                            onClick={confirmPayment}
-                            disabled={actionLoading}
+            <div ref={actionSectionRef}>
+                {/* Disputed Status UI */}
+                {trade && trade.status === 'disputed' && (
+                    <div className="card border-red p-4 text-center animate-in mb-4">
+                        <div className="text-4xl mb-2">🚫</div>
+                        <h3 className="text-red font-bold uppercase">Trade Disputed</h3>
+                        <p className="text-sm text-muted mt-2 mb-4">
+                            Admin has been notified. Please utilize the chat to provide evidence.
+                        </p>
+                        <a
+                            href={`https://t.me/P2PKeralaBot`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-outline btn-block"
                         >
-                            {actionLoading ? <span className="spinner" /> : '💸 I have sent the payment'}
-                        </button>
+                            💬 Contact Support
+                        </a>
                     </div>
                 )}
 
-                {trade && trade.status === 'fiat_sent' && isSeller && (
-                    <div className="card-glass border-orange p-3 animate-in">
-                        <h4 className="mb-1 text-sm font-bold uppercase tracking-wider text-orange">📢 Payment Reported</h4>
-                        <p className="text-xs text-muted mb-3">The buyer has submitted a UTR. Follow these steps to verify:</p>
+                <div className="td-actions">
+                    {trade && trade.status === 'in_escrow' && !isSeller && (
+                        <div className="card-glass border-green p-3 animate-in">
+                            <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
 
-                        <div className="verification-steps mb-4">
-                            <div className="v-step">
-                                <span className="v-num">1</span>
-                                <span className="v-text">Open your bank/UPI app.</span>
-                            </div>
-                            <div className="v-step">
-                                <span className="v-num">2</span>
-                                <span className="v-text">Check for <b>₹{trade.fiat_amount}</b> from the buyer.</span>
-                            </div>
-                            <div className="v-step">
-                                <span className="v-num">3</span>
-                                <span className="v-text">Match the UTR: <b>{trade.payment_proofs?.[0]?.utr || 'Pending'}</b></span>
-                            </div>
+                            {/* Seller Payment Details */}
+                            {trade.seller_upi_id && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                    <div className="text-[10px] text-muted uppercase font-bold mb-1">📱 Pay to UPI ID</div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id}</span>
+                                        <button className="btn btn-xs btn-outline" onClick={() => {
+                                            navigator.clipboard.writeText(trade.seller_upi_id || '');
+                                            haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {trade.seller_phone && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                    <div className="text-[10px] text-muted uppercase font-bold mb-1">📞 Phone Number</div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-mono text-lg text-white select-all">{trade.seller_phone}</span>
+                                        <button className="btn btn-xs btn-outline" onClick={() => {
+                                            navigator.clipboard.writeText(trade.seller_phone || '');
+                                            haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {trade.seller_bank_account && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
+                                    <div className="text-[10px] text-muted uppercase font-bold mb-1">🏦 Bank Transfer (IMPS)</div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="font-mono text-sm text-white select-all">{trade.seller_bank_account}</span>
+                                        <button className="btn btn-xs btn-outline" onClick={() => {
+                                            navigator.clipboard.writeText(trade.seller_bank_account || '');
+                                            haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-muted">IFSC: <span className="font-mono text-white select-all">{trade.seller_bank_ifsc}</span></span>
+                                        <button className="btn btn-xs btn-outline" onClick={() => {
+                                            navigator.clipboard.writeText(trade.seller_bank_ifsc || '');
+                                            haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                    {trade.seller_bank_name && (
+                                        <div className="text-xs text-muted mt-1">Bank: {trade.seller_bank_name}</div>
+                                    )}
+                                </div>
+                            )}
+
+                            {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
+                                    <div className="text-sm text-orange">⚠️ Seller has not set up payment details yet. Contact them via chat.</div>
+                                </div>
+                            )}
+
+                            <div className="text-[10px] text-orange mt-1 mb-3">Pay exactly ₹{trade.fiat_amount}</div>
+
+
+                            <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller using one of the payment methods above.</p>
+
+                            <button
+                                className="btn btn-primary btn-block btn-lg"
+                                onClick={confirmPayment}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? <span className="spinner" /> : '💸 I have sent the payment'}
+                            </button>
                         </div>
+                    )}
 
-                        <button
-                            className="btn btn-success btn-block btn-lg mb-2"
-                            onClick={confirmReceipt}
-                            disabled={actionLoading}
-                        >
-                            {actionLoading ? <span className="spinner" /> : '✅ Confirm & Release Crypto'}
-                        </button>
-                    </div>
-                )}
+                    {trade && trade.status === 'fiat_sent' && isSeller && (
+                        <div className="card-glass border-orange p-3 animate-in">
+                            <h4 className="mb-1 text-sm font-bold uppercase tracking-wider text-orange">📢 Payment Reported</h4>
+                            <p className="text-xs text-muted mb-3">The buyer has submitted a UTR. Follow these steps to verify:</p>
 
-                {trade && trade.status === 'fiat_sent' && !isSeller && (
-                    <div className="text-center p-4">
-                        <div className="loading-dots mb-2">Waiting for seller to release...</div>
-                        <p className="text-xs text-muted">The seller is verifying your UTR.</p>
-                    </div>
-                )}
+                            <div className="verification-steps mb-4">
+                                <div className="v-step">
+                                    <span className="v-num">1</span>
+                                    <span className="v-text">Open your bank/UPI app.</span>
+                                </div>
+                                <div className="v-step">
+                                    <span className="v-num">2</span>
+                                    <span className="v-text">Check for <b>₹{trade.fiat_amount}</b> from the buyer.</span>
+                                </div>
+                                <div className="v-step">
+                                    <span className="v-num">3</span>
+                                    <span className="v-text">Match the UTR: <b>{trade.payment_proofs?.[0]?.utr || 'Pending'}</b></span>
+                                </div>
+                            </div>
 
-                {/* DISPUTE & REFUND SECTION */}
-                {trade && ['fiat_sent', 'in_escrow'].includes(trade.status) && (
-                    <div className="mt-4 animate-in">
-                        <button
-                            className={`btn btn-danger btn-block ${disputeTimer > 0 || trade.status === 'in_escrow' ? 'opacity-50' : ''}`}
-                            onClick={() => {
-                                if (trade.status === 'in_escrow') {
-                                    alert("You can only raise a dispute after confirming payment.");
-                                    return;
-                                }
-                                if (disputeTimer > 0) {
-                                    const minutes = Math.floor(disputeTimer / 60000);
-                                    const seconds = (Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0');
-                                    alert(`The dispute button is meditating 🧘‍♂️\n\nAppeal available in ${minutes}:${seconds}`);
-                                    return;
-                                }
-                                raiseDispute();
-                            }}
-                            disabled={actionLoading}
-                        >
-                            ⚠️ Raise Dispute
-                        </button>
-                        {disputeTimer > 0 && trade.status === 'fiat_sent' && (
-                            <p className="text-[10px] text-muted text-center mt-2">
-                                Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
-                            </p>
-                        )}
-                    </div>
-                )}
+                            <button
+                                className="btn btn-success btn-block btn-lg mb-2"
+                                onClick={confirmReceipt}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? <span className="spinner" /> : '✅ Confirm & Release Crypto'}
+                            </button>
+                        </div>
+                    )}
 
-                {trade && trade.status === 'completed' && (
-                    <div className="td-completed text-center animate-in">
-                        <span className="td-check">🎉</span>
-                        <h3 className="text-green">Trade Completed!</h3>
-                        <p className="text-sm text-muted mt-1">Funds have been released successfully</p>
-                    </div>
-                )}
+                    {trade && trade.status === 'fiat_sent' && !isSeller && (
+                        <div className="text-center p-4">
+                            <div className="loading-dots mb-2">Waiting for seller to release...</div>
+                            <p className="text-xs text-muted">The seller is verifying your UTR.</p>
+                        </div>
+                    )}
 
-                {/* Trade Chat */}
+                    {/* DISPUTE & REFUND SECTION */}
+                    {trade && ['fiat_sent', 'in_escrow'].includes(trade.status) && (
+                        <div className="mt-4 animate-in">
+                            <button
+                                className={`btn btn-danger btn-block ${disputeTimer > 0 || trade.status === 'in_escrow' ? 'opacity-50' : ''}`}
+                                onClick={() => {
+                                    if (trade.status === 'in_escrow') {
+                                        alert("You can only raise a dispute after confirming payment.");
+                                        return;
+                                    }
+                                    if (disputeTimer > 0) {
+                                        const minutes = Math.floor(disputeTimer / 60000);
+                                        const seconds = (Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0');
+                                        alert(`The dispute button is meditating 🧘‍♂️\n\nAppeal available in ${minutes}:${seconds}`);
+                                        return;
+                                    }
+                                    raiseDispute();
+                                }}
+                                disabled={actionLoading}
+                            >
+                                ⚠️ Raise Dispute
+                            </button>
+                            {disputeTimer > 0 && trade.status === 'fiat_sent' && (
+                                <p className="text-[10px] text-muted text-center mt-2">
+                                    Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {trade && trade.status === 'completed' && (
+                        <div className="td-completed text-center animate-in">
+                            <span className="td-check">🎉</span>
+                            <h3 className="text-green">Trade Completed!</h3>
+                            <p className="text-sm text-muted mt-1">Funds have been released successfully</p>
+                        </div>
+                    )}
+
+                    {/* Trade Chat */}
+                </div>{/* end actionSectionRef */}
                 {trade && (
                     <div className="td-chat mt-6 card-glass p-0 overflow-hidden">
                         <div className="p-3 border-b border-white/10 bg-white/5 flex items-center justify-between">

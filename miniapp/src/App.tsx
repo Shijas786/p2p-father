@@ -18,6 +18,7 @@ import { Bridge } from './pages/Bridge';
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
+import { ToastProvider } from './components/Toast';
 import './styles/global.css';
 
 const queryClient = new QueryClient({
@@ -219,7 +220,9 @@ function App() {
     <ErrorBoundary>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          <AppInner />
+          <ToastProvider>
+            <AppInner />
+          </ToastProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>

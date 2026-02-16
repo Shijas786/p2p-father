@@ -1,7 +1,86 @@
-.market-hint {
-    padding: 0 4px;
+/* Search */
+.market-search {
+    margin-bottom: 8px;
 }
 
-.market-orders {
-    min-height: 200px;
+.market-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    transition: border-color var(--transition-fast);
+}
+
+.market-search-input:focus {
+    border-color: var(--green-border);
+    outline: none;
+}
+
+.market-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Filter Chips */
+.market-filters {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.market-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.market-filter-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.market-filter-chip.active {
+    background: rgba(0, 210, 106, 0.12);
+    border-color: var(--green-border);
+    color: var(--green);
+}
+
+.market-filter-chip:active {
+    transform: scale(0.95);
+}
+
+/* Confirmation Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 360px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }

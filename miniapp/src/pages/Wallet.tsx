@@ -251,6 +251,34 @@ export function Wallet({ user }: Props) {
                     <div className="w-address-value font-mono text-sm truncate">
                         {balances.address}
                     </div>
+                    <div className="text-[10px] text-muted mt-1">Tap to copy</div>
+                </div>
+            )}
+
+            {/* Receive QR Section */}
+            {balances?.address && (
+                <div className="card" style={{ textAlign: 'center', padding: 20 }}>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                        <IconReceive size={18} color="var(--green)" />
+                        <span className="font-bold text-sm">Receive Crypto</span>
+                    </div>
+                    <div
+                        style={{
+                            width: 180, height: 180, margin: '0 auto 12px',
+                            background: '#fff', borderRadius: 12, padding: 8,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                    >
+                        <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=164x164&data=${balances.address}`}
+                            alt="Wallet QR"
+                            style={{ width: 164, height: 164, borderRadius: 8 }}
+                        />
+                    </div>
+                    <p className="text-xs text-muted mb-2">Scan to deposit USDC, ETH, or USDT on <b>Base Network</b></p>
+                    <button className="btn btn-sm btn-outline" onClick={copyAddress}>
+                        📋 Copy Address
+                    </button>
                 </div>
             )}
 

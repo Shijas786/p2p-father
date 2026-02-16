@@ -16,6 +16,7 @@ export function Home({ user }: Props) {
     const [trades, setTrades] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -53,8 +54,18 @@ export function Home({ user }: Props) {
                     )}
                 </div>
                 {balances?.address && (
-                    <div className="hh-address text-xs text-muted font-mono truncate">
-                        {balances.address}
+                    <div className="hh-address text-xs text-muted font-mono truncate" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                        onClick={() => {
+                            navigator.clipboard.writeText(balances.address);
+                            haptic('success');
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                        }}
+                    >
+                        {balances.address.slice(0, 10)}...{balances.address.slice(-6)}
+                        <span style={{ fontSize: 10, color: copied ? 'var(--green)' : 'var(--text-muted)' }}>
+                            {copied ? '✓ Copied' : '📋'}
+                        </span>
                     </div>
                 )}
                 <div className="hh-secondary">
@@ -143,17 +154,17 @@ export function Home({ user }: Props) {
                 )}
             </div>
 
-            {/* Welcome Banner */}
+            {/* Welcome / Onboarding Banner */}
             <div className="home-welcome card">
                 <div className="hw-content">
                     <h3>Welcome, {user?.first_name || 'Trader'} 👋</h3>
                     <p className="text-sm text-secondary">
-                        {user?.upi_id
-                            ? `UPI: ${user.upi_id} • Trust: ${user.trust_score}%`
-                            : 'Set up your UPI to start trading →'}
+                        {(user?.upi_id || user?.phone_number || user?.bank_account_number)
+                            ? `Trust: ${user.trust_score}% • ${user.completed_trades || 0} trades`
+                            : '⚡ Set up your payment methods to start trading →'}
                     </p>
                 </div>
-                {!user?.upi_id && (
+                {!(user?.upi_id || user?.phone_number || user?.bank_account_number) && (
                     <button
                         className="btn btn-sm btn-primary"
                         onClick={() => navigate('/profile')}
@@ -163,5 +174,6 @@ export function Home({ user }: Props) {
                 )}
             </div>
         </div>
+
     );
 }

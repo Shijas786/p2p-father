@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
+import { api } from '../lib/api';
 import { IconHome, IconMarket, IconPlus, IconWallet, IconUser } from './Icons';
 import './BottomNav.css';
 
@@ -12,6 +14,24 @@ const tabs = [
 ];
 
 export function BottomNav() {
+    const [activeTrades, setActiveTrades] = useState(0);
+
+    useEffect(() => {
+        // Poll for active trades count every 30s
+        async function check() {
+            try {
+                const data = await api.trades.list();
+                const active = (data.trades || []).filter(
+                    (t: any) => !['completed', 'cancelled', 'expired', 'refunded'].includes(t.status)
+                );
+                setActiveTrades(active.length);
+            } catch { }
+        }
+        check();
+        const interval = setInterval(check, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <nav className="bottom-nav">
             {tabs.map((tab) => (
@@ -22,7 +42,12 @@ export function BottomNav() {
                     onClick={() => haptic('selection')}
                     end={tab.path === '/'}
                 >
-                    <span className="nav-icon"><tab.Icon size={22} /></span>
+                    <span className="nav-icon">
+                        <tab.Icon size={22} />
+                        {tab.path === '/' && activeTrades > 0 && (
+                            <span className="nav-badge">{activeTrades}</span>
+                        )}
+                    </span>
                     <span className="nav-label">{tab.label}</span>
                 </NavLink>
             ))}

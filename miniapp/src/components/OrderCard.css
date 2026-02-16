@@ -72,12 +72,29 @@
 
 .oc-trust {
     font-size: 0.6875rem;
-    color: var(--yellow);
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+}
+
+.oc-trust.trust-high {
+    color: var(--green);
+    background: rgba(0, 210, 106, 0.12);
+}
+
+.oc-trust.trust-mid {
+    color: var(--orange);
+    background: rgba(255, 165, 0, 0.12);
+}
+
+.oc-trust.trust-low {
+    color: var(--red);
+    background: rgba(255, 77, 77, 0.12);
 }
 
 .oc-methods {
     display: flex;
     gap: 4px;
+    flex-wrap: wrap;
 }
 
 .oc-method {
@@ -88,4 +105,5 @@
     border-radius: var(--radius-full);
     color: var(--text-muted);
     letter-spacing: 0.02em;
+    white-space: nowrap;
 }

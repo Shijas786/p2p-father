@@ -107,12 +107,16 @@ export function OrderCard({ order, onTap, showActions = true, isMyOrder, onRefre
                 <div className="oc-user">
                     {order.username && <span className="text-sm">@{order.username}</span>}
                     {order.trust_score !== undefined && (
-                        <span className="oc-trust">⭐ {order.trust_score}%</span>
+                        <span className={`oc-trust ${order.trust_score >= 90 ? 'trust-high' : order.trust_score >= 70 ? 'trust-mid' : 'trust-low'}`}>
+                            ⭐ {order.trust_score}%
+                        </span>
                     )}
                 </div>
                 <div className="oc-methods">
                     {(order.payment_methods || []).map((m) => (
-                        <span key={m} className="oc-method">{m}</span>
+                        <span key={m} className="oc-method">
+                            {m === 'UPI' ? '📱' : m === 'IMPS' ? '🏦' : m === 'BANK' ? '🏛️' : m === 'PAYTM' ? '💳' : m === 'NEFT' ? '🔄' : '💰'} {m}
+                        </span>
                     ))}
                 </div>
             </div>

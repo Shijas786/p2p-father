@@ -364,7 +364,15 @@ bot.command("start", async (ctx) => {
 
     const upiStatus = user.upi_id
         ? `📱 UPI: \`${user.upi_id}\``
-        : "📱 UPI: Not set — /upi to add";
+        : "📱 UPI: Not set";
+    const phoneStatus = user.phone_number
+        ? `📞 Phone: \`${user.phone_number}\``
+        : "";
+    const bankStatus = user.bank_account_number
+        ? `🏦 Bank: \`${user.bank_account_number}\` (${user.bank_ifsc || ''})`
+        : "";
+    const paymentStatus = [upiStatus, phoneStatus, bankStatus].filter(Boolean).join("\n");
+    const hasPayment = user.upi_id || user.phone_number || user.bank_account_number;
 
     const welcome = [
         "🤖 *Welcome to P2P Kerala Bot!*",
@@ -381,7 +389,7 @@ bot.command("start", async (ctx) => {
         "💰 *Wallet & Profile*",
         "  /portfolio — Check balance & send",
         "  /wallet — Wallet settings",
-        "  /upi — Set UPI ID",
+        "  /payment — Set payment methods",
         "  /profile — Your stats",
         "",
         "💡 *Or chat naturally!*",
@@ -391,7 +399,8 @@ bot.command("start", async (ctx) => {
         "━━━━━━━━━━━━━━━━━━━",
         `🆔 Your ID: \`${user.id.slice(0, 8)}\``,
         `⭐ Trust: ${user.trust_score}% | 📈 Trades: ${user.completed_trades}`,
-        upiStatus,
+        paymentStatus,
+        !hasPayment ? "\n⚠️ *Set up payment methods:* /payment" : "",
     ].join("\n");
 
     const miniAppUrl = "https://distant-angelita-highphaus-3207b925.koyeb.app/app";
@@ -436,10 +445,56 @@ bot.command("start", async (ctx) => {
 //                     /upi COMMAND
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+//              TRADE DM NOTIFICATION HELPER
+// ═══════════════════════════════════════════════════════════════
+
+async function notifyTrader(telegramId: number, message: string) {
+    try {
+        await bot.api.sendMessage(telegramId, message, { parse_mode: "Markdown" });
+    } catch (err) {
+        console.error(`Failed to notify user ${telegramId}:`, err);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//                  /payment COMMAND (replaces /upi)
+// ═══════════════════════════════════════════════════════════════
+
+bot.command("payment", async (ctx) => {
+    const user = await ensureUser(ctx);
+
+    const status = [
+        "💳 *Your Payment Methods*",
+        "",
+        `📱 UPI: ${user.upi_id ? `\`${user.upi_id}\`` : '❌ Not set'}`,
+        `📞 Phone: ${user.phone_number ? `\`${user.phone_number}\`` : '❌ Not set'}`,
+        `🏦 Bank: ${user.bank_account_number ? `\`${user.bank_account_number}\` (${user.bank_ifsc || ''})` : '❌ Not set'}`,
+        "",
+        "*Set up:*",
+        "• `/upi yourname@upi` — Set UPI",
+        "• `/phone 9876543210` — Set phone",
+        "• `/bank ACCT_NO IFSC_CODE` — Set bank",
+        "",
+        "Or use the Mini App for the easiest setup! 📱",
+    ].join("\n");
+
+    const miniAppUrl = "https://distant-angelita-highphaus-3207b925.koyeb.app/app/profile";
+    const keyboard = new InlineKeyboard()
+        .webApp("📱 Open Profile", miniAppUrl)
+        .row()
+        .text("📱 Set UPI", "setup_upi")
+        .text("📞 Set Phone", "setup_phone")
+        .row()
+        .text("🏦 Set Bank", "setup_bank");
+
+    await ctx.reply(status, { parse_mode: "Markdown", reply_markup: keyboard });
+});
+
+// /upi alias (kept for backward compat)
 bot.command("upi", async (ctx) => {
     const user = await ensureUser(ctx);
 
-    // If user provides UPI inline: /upi yourname@upi
     const args = ctx.match?.trim();
     if (args && args.includes("@")) {
         await db.updateUser(user.id, { upi_id: args });
@@ -490,6 +545,76 @@ bot.command("upi", async (ctx) => {
     }
 });
 
+// /phone command
+bot.command("phone", async (ctx) => {
+    const user = await ensureUser(ctx);
+    const args = ctx.match?.trim();
+    const cleaned = args?.replace(/\D/g, '') || '';
+
+    if (cleaned.length >= 10) {
+        await db.updateUser(user.id, { phone_number: cleaned });
+        await ctx.reply(`✅ Phone number updated: \`${cleaned}\``, { parse_mode: "Markdown" });
+        return;
+    }
+
+    ctx.session.awaiting_input = "phone_number";
+    await ctx.reply(
+        [
+            "📞 *Set Your Phone Number*",
+            "",
+            user.phone_number ? `Current: \`${user.phone_number}\`` : "Not set yet.",
+            "",
+            "Send your 10-digit mobile number:",
+        ].join("\n"),
+        { parse_mode: "Markdown" }
+    );
+});
+
+// /bank command
+bot.command("bank", async (ctx) => {
+    const user = await ensureUser(ctx);
+    const args = ctx.match?.trim();
+
+    if (args) {
+        const parts = args.split(/\s+/);
+        if (parts.length >= 2) {
+            const updates: Record<string, any> = {
+                bank_account_number: parts[0],
+                bank_ifsc: parts[1].toUpperCase(),
+            };
+            if (parts[2]) updates.bank_name = parts.slice(2).join(' ');
+            await db.updateUser(user.id, updates as any);
+            await ctx.reply(
+                [
+                    "✅ *Bank Details Updated!*",
+                    "",
+                    `🏦 Account: \`${parts[0]}\``,
+                    `IFSC: \`${parts[1].toUpperCase()}\``,
+                    parts[2] ? `Bank: ${parts.slice(2).join(' ')}` : "",
+                ].join("\n"),
+                { parse_mode: "Markdown" }
+            );
+            return;
+        }
+    }
+
+    ctx.session.awaiting_input = "bank_details";
+    await ctx.reply(
+        [
+            "🏦 *Set Your Bank Details*",
+            "",
+            user.bank_account_number
+                ? `Current: \`${user.bank_account_number}\` (${user.bank_ifsc || ''})`
+                : "Not set yet.",
+            "",
+            "Send: `ACCOUNT_NUMBER IFSC_CODE BANK_NAME`",
+            "Example: `1234567890 SBIN0001234 SBI`",
+        ].join("\n"),
+        { parse_mode: "Markdown" }
+    );
+});
+
+
 // ═══════════════════════════════════════════════════════════════
 //                     /help COMMAND
 // ═══════════════════════════════════════════════════════════════
@@ -525,6 +650,7 @@ bot.command("help", async (ctx) => {
         "/portfolio — View all token balances & send",
         "/send — Withdraw crypto to external wallet",
         "/wallet — Wallet settings",
+        "/payment — Set up payment methods (UPI/Phone/Bank)",
         "/export — Export private key",
         "/bridge — Bridge tokens",
         "/profile — Your profile",
@@ -547,17 +673,19 @@ bot.command("help", async (ctx) => {
 bot.command("newad", async (ctx) => {
     const user = await ensureUser(ctx);
 
-    if (!user.upi_id) {
-        ctx.session.awaiting_input = "upi_id";
+    if (!user.upi_id && !user.phone_number && !user.bank_account_number) {
+        const keyboard = new InlineKeyboard()
+            .text("💳 Set Payment Methods", "setup_payment")
+            .text("⏭️ Skip", `cancel_action:${user.id}`);
         await ctx.reply(
             [
-                "📱 *Set your UPI ID first!*",
+                "💳 *Set up payment methods first!*",
                 "",
-                "You need UPI to receive/send fiat payments.",
+                "You need at least one payment method (UPI, Phone, or Bank) to trade.",
                 "",
-                "Send your UPI ID (e.g., `yourname@upi`):",
+                "Use /payment or tap below:",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
         return;
     }
@@ -3330,4 +3458,20 @@ bot.catch((err) => {
     console.error("Bot error:", err);
 });
 
-export { bot };
+// Register commands with Telegram for autocomplete
+bot.api.setMyCommands([
+    { command: "start", description: "Start the bot" },
+    { command: "newad", description: "Create a buy/sell ad" },
+    { command: "ads", description: "Browse live P2P ads" },
+    { command: "myads", description: "Manage your ads" },
+    { command: "mytrades", description: "Your trade history" },
+    { command: "portfolio", description: "Check balance & send" },
+    { command: "wallet", description: "Wallet settings" },
+    { command: "payment", description: "Set payment methods (UPI/Phone/Bank)" },
+    { command: "profile", description: "Your stats & profile" },
+    { command: "help", description: "How to use this bot" },
+    { command: "send", description: "Withdraw crypto" },
+    { command: "bridge", description: "Bridge tokens" },
+]).catch((err: any) => console.error("setMyCommands error:", err));
+
+export { bot, notifyTrader };
