@@ -214,7 +214,7 @@ router.post("/wallet/send", async (req: Request, res: Response) => {
         let txHash: string;
 
         if (token === "ETH" || token === "BNB") {
-            txHash = await wallet.sendNative(user.wallet_index, to, amount, targetChain);
+            txHash = await wallet.sendNative(user.wallet_index, to, amount.toString(), targetChain);
         } else {
             // Determine token address based on chain
             let tokenAddress = env.USDC_ADDRESS;
@@ -227,7 +227,7 @@ router.post("/wallet/send", async (req: Request, res: Response) => {
             txHash = await wallet.sendToken(
                 user.wallet_index,
                 to,
-                amount,
+                amount.toString(),
                 tokenAddress,
                 targetChain
             );

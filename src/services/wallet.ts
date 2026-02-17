@@ -114,21 +114,23 @@ class WalletService {
     //          TRANSFERS
     // ═══════════════════════════════════════
 
-    async sendNative(userIndex: number, to: string, amount: string, chain: Chain = 'base'): Promise<string> {
+    async sendNative(userIndex: number, to: string, amount: string | number, chain: Chain = 'base'): Promise<string> {
+        const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const tx = await signer.sendTransaction({
             to,
-            value: ethers.parseEther(amount)
+            value: ethers.parseEther(amountStr)
         });
         await tx.wait();
         return tx.hash;
     }
 
-    async sendToken(userIndex: number, to: string, amount: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async sendToken(userIndex: number, to: string, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
         const decimals = await contract.decimals();
-        const tx = await contract.transfer(to, ethers.parseUnits(amount, decimals));
+        const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals));
         await tx.wait();
         return tx.hash;
     }
@@ -137,7 +139,8 @@ class WalletService {
     //          VAULT INTERACTIONS
     // ═══════════════════════════════════════
 
-    async depositToVault(userIndex: number, amount: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async depositToVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const contractAddress = this.getContractAddress(chain);
 
@@ -145,7 +148,7 @@ class WalletService {
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
         const decimals = await tokenContract.decimals();
-        const amountUnits = ethers.parseUnits(amount, decimals);
+        const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         // 1. Smart Approve: Check existing allowance first
         const currentAllowance = await tokenContract.allowance(signer.address, contractAddress);
@@ -181,7 +184,8 @@ class WalletService {
         }
     }
 
-    async withdrawFromVault(userIndex: number, amount: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const contractAddress = this.getContractAddress(chain);
 
@@ -189,7 +193,7 @@ class WalletService {
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
         const decimals = await tokenContract.decimals();
-        const amountUnits = ethers.parseUnits(amount, decimals);
+        const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         const tx = await escrowContract.withdraw(tokenAddress, amountUnits);
         await tx.wait();
@@ -197,11 +201,12 @@ class WalletService {
         return tx.hash;
     }
 
-    async adminTransfer(to: string, amount: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async adminTransfer(to: string, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        const amountStr = amount.toString();
         const signer = this.getAdminSigner(chain);
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
         const decimals = await contract.decimals();
-        const tx = await contract.transfer(to, ethers.parseUnits(amount, decimals));
+        const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals));
         await tx.wait();
         return tx.hash;
     }
