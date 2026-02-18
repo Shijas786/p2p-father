@@ -1,92 +1,306 @@
-.p-user {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 20px;
-    margin-bottom: 16px;
+/* ═══ Profile Page — Binance Style ═══ */
+
+.profile-page {
+    padding: 0 !important;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 20px) !important;
 }
 
-.p-avatar {
-    width: 52px;
-    height: 52px;
+/* ── Header ── */
+.prof-header {
+    padding: 24px 20px 16px;
+    background: #181a20;
+    border-bottom: 1px solid #2b2f36;
+}
+
+.prof-avatar {
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
+    background: linear-gradient(135deg, #f0b90b, #d4a200);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--green), var(--green-dim));
-    color: var(--text-inverse);
-    font-size: 1.375rem;
-    font-weight: 800;
-    flex-shrink: 0;
+    margin-bottom: 12px;
+    overflow: hidden;
 }
 
-.p-user-info {
-    flex: 1;
-    min-width: 0;
+.prof-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.p-user-info h2 {
-    font-size: 1.25rem;
+.prof-avatar-letter {
+    font-size: 24px;
+    font-weight: 700;
+    color: #181a20;
 }
 
-/* Stats */
-.p-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+.prof-name-row {
+    margin-bottom: 8px;
+}
+
+.prof-username {
+    font-size: 20px;
+    font-weight: 700;
+    color: #eaecef;
+    margin-bottom: 2px;
+}
+
+.prof-handle {
+    font-size: 13px;
+    color: #848e9c;
+    display: block;
+}
+
+.prof-badges {
+    display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-top: 8px;
 }
 
-.p-stat {
+.prof-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: #2b2f36;
+    color: #5e6673;
+}
+
+.prof-badge.verified {
+    background: rgba(14, 203, 129, 0.1);
+    color: #0ecb81;
+}
+
+/* ── Stats Grid ── */
+.prof-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #1e2026;
+    border-bottom: 1px solid #2b2f36;
+    padding: 16px 0;
+}
+
+.prof-stat-box {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 14px 8px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    padding: 4px 0;
 }
 
-.p-stat-value {
-    font-size: 1.125rem;
-    font-weight: 800;
-    color: var(--green);
+.prof-stat-num {
+    font-size: 16px;
+    font-weight: 700;
+    color: #eaecef;
+    font-family: 'Space Grotesk', monospace;
 }
 
-/* Section */
-.p-section {
-    margin-bottom: 12px;
-    padding: 16px;
+.prof-stat-label {
+    font-size: 10px;
+    color: #5e6673;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-.p-account-rows {
+/* ── Menu ── */
+.prof-menu {
+    padding: 12px 0;
+}
+
+.prof-section {
+    background: #1e2026;
+    border: 1px solid #2b2f36;
+    border-radius: 10px;
+    margin: 8px 16px;
+    overflow: hidden;
+}
+
+.prof-section-header {
     display: flex;
-    flex-direction: column;
-    gap: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #2b2f36;
 }
 
-.p-account-row {
+.prof-section-icon {
+    font-size: 16px;
+}
+
+.prof-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #eaecef;
+}
+
+/* ── Payment Items ── */
+.prof-payment-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #2b2f36;
+}
+
+.prof-payment-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.8125rem;
+    margin-bottom: 6px;
 }
 
-.p-account-row:last-child {
-    border-bottom: none;
+.prof-payment-name {
+    font-size: 13px;
+    color: #b7bdc6;
 }
 
-/* Payment Method Blocks */
-.p-payment-block {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.p-payment-label {
-    font-size: 0.8125rem;
+.prof-edit-btn {
+    font-size: 12px;
+    color: #f0b90b;
     font-weight: 600;
-    color: var(--text);
+    padding: 4px 0;
+}
+
+.prof-payment-value {
+    font-size: 13px;
+    color: #5e6673;
+    font-family: 'Space Grotesk', monospace;
+}
+
+.prof-bank-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.prof-bank-sub {
+    font-size: 11px;
+    color: #5e6673;
+}
+
+.prof-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.prof-edit-form input {
+    background: #181a20;
+    border: 1px solid #2b2f36;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #eaecef;
+    font-size: 13px;
+}
+
+.prof-edit-form input:focus {
+    border-color: #f0b90b;
+    outline: none;
+}
+
+.prof-save-btn {
+    background: #f0b90b;
+    color: #181a20;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.prof-save-btn:disabled {
+    opacity: 0.5;
+}
+
+/* ── Status Message ── */
+.prof-message {
+    margin: 4px 16px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.prof-message.success {
+    background: rgba(14, 203, 129, 0.1);
+    color: #0ecb81;
+}
+
+.prof-message.error {
+    background: rgba(246, 70, 93, 0.1);
+    color: #f6465d;
+}
+
+/* ── Navigation Items ── */
+.prof-nav-list {
+    background: #1e2026;
+    border: 1px solid #2b2f36;
+    border-radius: 10px;
+    margin: 8px 16px;
+    overflow: hidden;
+}
+
+.prof-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #2b2f36;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.prof-nav-item:active {
+    background: #262930;
+}
+
+.prof-nav-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.prof-nav-text {
+    flex: 1;
+    font-size: 14px;
+    color: #eaecef;
+}
+
+.prof-nav-chevron {
+    font-size: 18px;
+    color: #5e6673;
+}
+
+.prof-wallet-type {
+    font-size: 11px;
+    color: #5e6673;
+    display: block;
+    margin-top: 2px;
+}
+
+.prof-switch-btn {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: rgba(246, 70, 93, 0.1);
+    color: #f6465d;
+    font-weight: 600;
+}
+
+/* ── Account Info ── */
+.prof-account-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #2b2f36;
+}
+
+.prof-account-label {
+    font-size: 13px;
+    color: #5e6673;
+}
+
+.prof-account-value {
+    font-size: 13px;
+    color: #b7bdc6;
+    font-family: 'Space Grotesk', monospace;
 }

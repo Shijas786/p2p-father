@@ -2,178 +2,270 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { TradeCard } from '../components/TradeCard';
-import { IconSell, IconBuy, IconSend, IconBridge, IconEmpty } from '../components/Icons';
 import './Home.css';
 
 interface Props {
     user: any;
 }
 
+const PAYMENT_FILTERS = ['All', 'UPI', 'IMPS', 'Bank'];
+
 export function Home({ user }: Props) {
     const navigate = useNavigate();
-    const [balances, setBalances] = useState<any>(null);
-    const [trades, setTrades] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
+    const [tab, setTab] = useState<'buy' | 'sell'>('buy');
+    const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [copied, setCopied] = useState(false);
+    const [feePercentage, setFeePercentage] = useState(0.01);
+    const [paymentFilter, setPaymentFilter] = useState('All');
+    const [tokenFilter, setTokenFilter] = useState('USDC');
+    const [confirmOrder, setConfirmOrder] = useState<any>(null);
+    const [tokenDropdown, setTokenDropdown] = useState(false);
 
     useEffect(() => {
-        async function load() {
-            try {
-                const [balData, tradeData, statsData] = await Promise.allSettled([
-                    api.wallet.getBalances(),
-                    api.trades.list(),
-                    api.stats.get(),
-                ]);
-                if (balData.status === 'fulfilled') setBalances(balData.value);
-                if (tradeData.status === 'fulfilled') setTrades((tradeData.value as any).trades || []);
-                if (statsData.status === 'fulfilled') setStats(statsData.value);
-            } catch { } finally {
-                setLoading(false);
+        api.stats.get().then(data => {
+            if (data.fee_percentage) setFeePercentage(data.fee_percentage);
+        }).catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        loadOrders();
+    }, [tab]);
+
+    async function loadOrders() {
+        setLoading(true);
+        try {
+            // Buy tab shows sell orders (users want to buy from sellers)
+            // Sell tab shows buy orders (users want to sell to buyers)
+            const orderType = tab === 'buy' ? 'sell' : 'buy';
+            const { orders: data } = await api.orders.list(orderType);
+            setOrders(data || []);
+        } catch {
+            setOrders([]);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleTap(order: any) {
+        haptic('light');
+        if (user && order.user_id === user.id) return;
+        setConfirmOrder(order);
+    }
+
+    function confirmTrade() {
+        if (!confirmOrder) return;
+        haptic('medium');
+        setConfirmOrder(null);
+        navigate(`/trade/new/${confirmOrder.id}`);
+    }
+
+    // Filter orders
+    const filteredOrders = orders.filter(order => {
+        // Token filter
+        if (order.token !== tokenFilter) return false;
+        // Payment method filter
+        if (paymentFilter !== 'All') {
+            const methods = order.payment_methods || [];
+            if (paymentFilter === 'Bank') {
+                if (!methods.some((m: string) => ['BANK', 'IMPS', 'NEFT'].includes(m))) return false;
+            } else {
+                if (!methods.includes(paymentFilter.toUpperCase())) return false;
             }
         }
-        load();
-    }, [user?.wallet_address]);
-
-    const activeTrades = trades.filter(t => !['completed', 'cancelled', 'expired', 'refunded'].includes(t.status));
+        return true;
+    });
 
     return (
-        <div className="page animate-in">
-            {/* Balance Hero */}
-            <div className="home-hero card-glass glow-green">
-                <div className="hh-label label">Total Balance</div>
-                <div className="hh-balance font-mono">
-                    {loading ? (
-                        <div className="skeleton" style={{ width: 120, height: 32 }} />
-                    ) : (
-                        <>
-                            <span className="hh-amount">{balances?.usdc || '0.00'}</span>
-                            <span className="hh-token">USDC</span>
-                        </>
+        <div className="page p2p-page animate-in">
+            {/* Buy/Sell Toggle */}
+            <div className="p2p-toggle">
+                <button
+                    className={`p2p-toggle-btn ${tab === 'buy' ? 'active buy' : ''}`}
+                    onClick={() => { haptic('selection'); setTab('buy'); }}
+                >
+                    Buy
+                </button>
+                <button
+                    className={`p2p-toggle-btn ${tab === 'sell' ? 'active sell' : ''}`}
+                    onClick={() => { haptic('selection'); setTab('sell'); }}
+                >
+                    Sell
+                </button>
+            </div>
+
+            {/* Filters Row */}
+            <div className="p2p-filters">
+                {/* Token Selector */}
+                <div className="p2p-token-selector" onClick={() => setTokenDropdown(!tokenDropdown)}>
+                    <span className="p2p-token-icon">{tokenFilter === 'USDC' ? '🔵' : '🟢'}</span>
+                    <span>{tokenFilter}</span>
+                    <span className="p2p-chevron">▼</span>
+                    {tokenDropdown && (
+                        <div className="p2p-dropdown">
+                            {['USDC', 'USDT'].map(t => (
+                                <div
+                                    key={t}
+                                    className={`p2p-dropdown-item ${tokenFilter === t ? 'active' : ''}`}
+                                    onClick={(e) => { e.stopPropagation(); setTokenFilter(t); setTokenDropdown(false); }}
+                                >
+                                    {t === 'USDC' ? '🔵' : '🟢'} {t}
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
-                {balances?.address && (
-                    <div className="hh-address text-xs text-muted font-mono truncate" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-                        onClick={() => {
-                            navigator.clipboard.writeText(balances.address);
-                            haptic('success');
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                        }}
-                    >
-                        {balances.address.slice(0, 10)}...{balances.address.slice(-6)}
-                        <span style={{ fontSize: 10, color: copied ? 'var(--green)' : 'var(--text-muted)' }}>
-                            {copied ? '✓ Copied' : '📋'}
-                        </span>
+
+                {/* Payment Filters */}
+                <div className="p2p-payment-filters">
+                    {PAYMENT_FILTERS.map(f => (
+                        <button
+                            key={f}
+                            className={`p2p-filter-chip ${paymentFilter === f ? 'active' : ''}`}
+                            onClick={() => { haptic('selection'); setPaymentFilter(f); }}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Trader List */}
+            <div className="p2p-list">
+                {loading ? (
+                    <div className="p2p-skeletons">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="p2p-skeleton-card">
+                                <div className="skeleton" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+                                <div style={{ flex: 1 }}>
+                                    <div className="skeleton" style={{ width: '60%', height: 14, marginBottom: 8 }} />
+                                    <div className="skeleton" style={{ width: '40%', height: 24, marginBottom: 6 }} />
+                                    <div className="skeleton" style={{ width: '80%', height: 12 }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : filteredOrders.length > 0 ? (
+                    filteredOrders.map(order => {
+                        const available = (order.amount - (order.filled_amount || 0)) * (1 - feePercentage / 2);
+                        const totalFiat = available * order.rate;
+                        const isMine = user?.id === order.user_id;
+
+                        return (
+                            <div
+                                key={order.id}
+                                className={`p2p-trader-card ${isMine ? 'is-mine' : ''}`}
+                                onClick={() => !isMine && handleTap(order)}
+                            >
+                                {/* Trader Info */}
+                                <div className="p2p-trader-header">
+                                    <div className="p2p-trader-avatar">
+                                        {order.username?.[0]?.toUpperCase() || '?'}
+                                    </div>
+                                    <div className="p2p-trader-name">
+                                        <span className="p2p-username">{order.username || 'Anonymous'}</span>
+                                        {order.trust_score >= 90 && <span className="p2p-verified-badge">💎</span>}
+                                    </div>
+                                    <div className="p2p-trader-stats">
+                                        <span className="p2p-stat-text">
+                                            {order.trust_score !== undefined && (
+                                                <>Trade(s) {order.completed_trades || 0} | 👍 {order.trust_score}%</>
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Price + Details */}
+                                <div className="p2p-trader-body">
+                                    <div className="p2p-price-section">
+                                        <div className="p2p-price">
+                                            <span className="p2p-currency">₹</span>
+                                            <span className="p2p-rate">{order.rate.toLocaleString()}</span>
+                                            <span className="p2p-per">/{order.token}</span>
+                                        </div>
+                                        <div className="p2p-limits">
+                                            <span className="p2p-limit-label">Limit</span>
+                                            <span className="p2p-limit-value">₹{Math.floor(available * order.rate * 0.1).toLocaleString()} - ₹{Math.floor(totalFiat).toLocaleString()}</span>
+                                        </div>
+                                        <div className="p2p-available">
+                                            <span className="p2p-avail-label">Available</span>
+                                            <span className="p2p-avail-value">{available.toFixed(2)} {order.token}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p2p-action-section">
+                                        {/* Payment Methods */}
+                                        <div className="p2p-methods">
+                                            {(order.payment_methods || []).map((m: string) => (
+                                                <span key={m} className="p2p-method-tag">{m}</span>
+                                            ))}
+                                        </div>
+                                        {/* Buy/Sell Button */}
+                                        {!isMine && (
+                                            <button
+                                                className={`p2p-action-btn ${tab === 'buy' ? 'buy' : 'sell'}`}
+                                                onClick={(e) => { e.stopPropagation(); handleTap(order); }}
+                                            >
+                                                {tab === 'buy' ? 'Buy' : 'Sell'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="p2p-divider" />
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div className="p2p-empty">
+                        <div className="p2p-empty-icon">📋</div>
+                        <h3>No {tab === 'buy' ? 'sellers' : 'buyers'} found</h3>
+                        <p>{paymentFilter !== 'All' ? `No ${paymentFilter} orders available` : 'Be the first to create an ad!'}</p>
+                        <button className="p2p-create-btn" onClick={() => navigate('/ads')}>
+                            + Post Ad
+                        </button>
                     </div>
                 )}
-                <div className="hh-secondary">
-                    {!loading && balances && (
-                        <>
-                            <span className="text-xs text-muted">
-                                ETH: {parseFloat(balances.eth || '0').toFixed(5)}
-                            </span>
-                            <span className="text-xs text-muted">•</span>
-                            <span className="text-xs text-muted">
-                                USDT: {balances.usdt || '0.00'}
-                            </span>
-                        </>
-                    )}
-                </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="home-actions">
-                <button className="ha-btn" onClick={() => { haptic('medium'); navigate('/create'); }}>
-                    <span className="ha-icon"><IconSell size={28} /></span>
-                    <span>Sell</span>
-                </button>
-                <button className="ha-btn" onClick={() => { haptic('medium'); navigate('/market'); }}>
-                    <span className="ha-icon"><IconBuy size={28} /></span>
-                    <span>Buy</span>
-                </button>
-                <button className="ha-btn" onClick={() => { haptic('medium'); navigate('/wallet'); }}>
-                    <span className="ha-icon"><IconSend size={28} /></span>
-                    <span>Send</span>
-                </button>
-                <button className="ha-btn" onClick={() => { haptic('medium'); navigate('/bridge'); }}>
-                    <span className="ha-icon"><IconBridge size={28} /></span>
-                    <span>Bridge</span>
-                </button>
-            </div>
-
-            {/* Platform Stats */}
-            {stats && (
-                <div className="home-stats">
-                    <div className="hs-item">
-                        <span className="hs-value font-mono">{stats.total_users?.toLocaleString() || 0}</span>
-                        <span className="label">Users</span>
-                    </div>
-                    <div className="hs-item">
-                        <span className="hs-value font-mono">${stats.total_volume_usdc?.toLocaleString() || 0}</span>
-                        <span className="label">Volume</span>
-                    </div>
-                    <div className="hs-item">
-                        <span className="hs-value font-mono">{stats.active_orders || 0}</span>
-                        <span className="label">Live Ads</span>
+            {/* ═══ Confirmation Modal ═══ */}
+            {confirmOrder && (
+                <div className="p2p-modal-overlay" onClick={() => setConfirmOrder(null)}>
+                    <div className="p2p-modal animate-in" onClick={e => e.stopPropagation()}>
+                        <h3 className="p2p-modal-title">
+                            {tab === 'buy' ? '🛒 Buy from this seller?' : '💰 Sell to this buyer?'}
+                        </h3>
+                        <div className="p2p-modal-details">
+                            <div className="p2p-modal-row">
+                                <span>Amount</span>
+                                <span className="font-mono font-bold">
+                                    {((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2)).toFixed(2)} {confirmOrder.token}
+                                </span>
+                            </div>
+                            <div className="p2p-modal-row">
+                                <span>Rate</span>
+                                <span className="font-mono" style={{ color: '#0ecb81' }}>₹{confirmOrder.rate}</span>
+                            </div>
+                            <div className="p2p-modal-row">
+                                <span>Total</span>
+                                <span className="font-mono font-bold">
+                                    ₹{(((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2)) * confirmOrder.rate).toLocaleString()}
+                                </span>
+                            </div>
+                            {confirmOrder.username && (
+                                <div className="p2p-modal-row" style={{ borderTop: '1px solid #2b2f36', paddingTop: 10 }}>
+                                    <span>Trader</span>
+                                    <span>@{confirmOrder.username}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p2p-modal-actions">
+                            <button className="p2p-modal-cancel" onClick={() => setConfirmOrder(null)}>Cancel</button>
+                            <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>
+                        </div>
                     </div>
                 </div>
             )}
-
-            {/* Active Trades */}
-            <div className="home-section">
-                <div className="flex items-center justify-between mb-3">
-                    <h3>Active Trades</h3>
-                    {activeTrades.length > 0 && (
-                        <span className="badge badge-green">{activeTrades.length}</span>
-                    )}
-                </div>
-
-                {loading ? (
-                    <div className="flex flex-col gap-2">
-                        <div className="skeleton" style={{ height: 80 }} />
-                        <div className="skeleton" style={{ height: 80 }} />
-                    </div>
-                ) : activeTrades.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                        {activeTrades.slice(0, 3).map(trade => (
-                            <TradeCard
-                                key={trade.id}
-                                trade={trade}
-                                onTap={() => navigate(`/trade/${trade.id}`)}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                        <div className="icon"><IconEmpty size={48} color="var(--text-muted)" /></div>
-                        <h3>No active trades</h3>
-                        <p className="text-sm">Browse the market to start trading</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Welcome / Onboarding Banner */}
-            <div className="home-welcome card">
-                <div className="hw-content">
-                    <h3>Welcome, {user?.first_name || 'Trader'} 👋</h3>
-                    <p className="text-sm text-secondary">
-                        {(user?.upi_id || user?.phone_number || user?.bank_account_number)
-                            ? `Trust: ${user.trust_score}% • ${user.completed_trades || 0} trades`
-                            : '⚡ Set up your payment methods to start trading →'}
-                    </p>
-                </div>
-                {!(user?.upi_id || user?.phone_number || user?.bank_account_number) && (
-                    <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => navigate('/profile')}
-                    >
-                        Setup
-                    </button>
-                )}
-            </div>
         </div>
-
     );
 }

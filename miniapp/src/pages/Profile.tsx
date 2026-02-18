@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { IconLock, IconInfo, IconCheck, IconWarning, IconHistory, IconArrowRight } from '../components/Icons';
-import { useNavigate } from 'react-router-dom';
 import './Profile.css';
 
 interface Props {
@@ -84,218 +83,191 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }, 'Bank details updated!');
     }
 
+    const completionRate = user?.completed_trades && user?.trade_count
+        ? ((user.completed_trades / user.trade_count) * 100).toFixed(1)
+        : '0.0';
+
     return (
-        <div className="page animate-in">
-            <div className="page-header">
-                <h1 className="page-title">Profile</h1>
-            </div>
-
-            {/* User Card */}
-            <div className="p-user card-glass glow-green">
-                <div className="p-avatar">
-                    {user?.first_name?.[0]?.toUpperCase() || '?'}
+        <div className="page profile-page animate-in">
+            {/* ═══ Profile Header ═══ */}
+            <div className="prof-header">
+                <div className="prof-avatar">
+                    {user?.photo_url ? (
+                        <img src={user.photo_url} alt="" className="prof-avatar-img" />
+                    ) : (
+                        <span className="prof-avatar-letter">{user?.first_name?.[0]?.toUpperCase() || '?'}</span>
+                    )}
                 </div>
-                <div className="p-user-info">
-                    <h2>{user?.first_name || 'User'}</h2>
-                    {user?.username && <span className="text-sm text-muted">@{user.username}</span>}
+                <div className="prof-name-row">
+                    <h2 className="prof-username">{user?.first_name || 'User'}</h2>
+                    {user?.username && <span className="prof-handle">@{user.username}</span>}
                 </div>
-                <span className={`badge badge-green`}>
-                    {user?.tier?.toUpperCase() || 'STANDARD'}
-                </span>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="p-stats">
-                <div className="p-stat">
-                    <span className="p-stat-value font-mono">{user?.trust_score || 100}%</span>
-                    <span className="label">Trust Score</span>
-                </div>
-                <div className="p-stat">
-                    <span className="p-stat-value font-mono">{user?.completed_trades || 0}</span>
-                    <span className="label">Trades</span>
-                </div>
-                <div className="p-stat">
-                    <span className="p-stat-value font-mono">{user?.trade_count || 0}</span>
-                    <span className="label">Total</span>
-                </div>
-                <div className="p-stat">
-                    <span className="p-stat-value">
-                        {user?.is_verified
-                            ? <IconCheck size={20} color="var(--green)" />
-                            : <IconWarning size={20} color="var(--red)" />
-                        }
+                {/* Verification Badges */}
+                <div className="prof-badges">
+                    <span className={`prof-badge ${user?.is_verified ? 'verified' : ''}`}>
+                        {user?.is_verified ? '✓' : '○'} KYC
                     </span>
-                    <span className="label">Verified</span>
+                    <span className="prof-badge verified">✓ Telegram</span>
                 </div>
             </div>
 
-            {/* Order History Quick Link */}
-            <div className="p-section card tappable" onClick={() => { haptic('light'); navigate('/my-ads'); }}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-icon-circle bg-blue">
-                            <IconHistory size={20} color="var(--blue)" />
-                        </div>
-                        <div>
-                            <h3 className="mb-0">Order History</h3>
-                            <p className="text-xs text-muted mb-0">View past deals and activity</p>
-                        </div>
-                    </div>
-                    <IconArrowRight size={20} color="var(--text-muted)" />
+            {/* ═══ Stats Grid ═══ */}
+            <div className="prof-stats-grid">
+                <div className="prof-stat-box">
+                    <span className="prof-stat-num">{user?.completed_trades || 0}</span>
+                    <span className="prof-stat-label">30d Trades</span>
+                </div>
+                <div className="prof-stat-box">
+                    <span className="prof-stat-num">{completionRate}%</span>
+                    <span className="prof-stat-label">Completion Rate</span>
+                </div>
+                <div className="prof-stat-box">
+                    <span className="prof-stat-num">{user?.trust_score || 100}%</span>
+                    <span className="prof-stat-label">Trust Score</span>
                 </div>
             </div>
 
-            {/* ═══ PAYMENT METHODS ═══ */}
-            <div className="p-section card" style={{ borderLeft: '3px solid var(--green)' }}>
-                <h3 className="mb-3" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--green)' }}>
-                    💳 Payment Methods
-                </h3>
-                <p className="text-xs text-muted mb-3">Set up your payment details. Buyers will see these when paying you.</p>
+            {/* ═══ Menu Sections ═══ */}
+            <div className="prof-menu">
+                {/* Payment Methods */}
+                <div className="prof-section">
+                    <div className="prof-section-header">
+                        <span className="prof-section-icon">💳</span>
+                        <span className="prof-section-title">Payment Methods</span>
+                    </div>
 
-                {/* UPI Section */}
-                <div className="p-payment-block">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="p-payment-label">📱 UPI ID</span>
-                        {!editingUpi && (
-                            <button className="btn btn-xs btn-outline" onClick={() => { haptic('light'); setEditingUpi(true); setMessage(''); }}>
-                                {user?.upi_id ? 'Change' : 'Set Up'}
+                    {/* UPI */}
+                    <div className="prof-payment-item">
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">📱 UPI ID</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingUpi(!editingUpi); setMessage(''); }}>
+                                {editingUpi ? 'Cancel' : (user?.upi_id ? 'Edit' : 'Add')}
                             </button>
+                        </div>
+                        {editingUpi ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} autoFocus />
+                                <button className="prof-save-btn" onClick={saveUpi} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
                         )}
                     </div>
-                    {editingUpi ? (
-                        <div>
-                            <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} className="mb-2" autoFocus />
-                            <div className="flex gap-2">
-                                <button className="btn btn-primary flex-1 btn-sm" onClick={saveUpi} disabled={saving}>
-                                    {saving ? <span className="spinner" /> : 'Save'}
-                                </button>
-                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingUpi(false)}>Cancel</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="font-mono text-sm">{user?.upi_id || <span className="text-muted">Not set</span>}</p>
-                    )}
-                </div>
 
-                {/* Phone Section */}
-                <div className="p-payment-block">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="p-payment-label">📞 Phone Number</span>
-                        {!editingPhone && (
-                            <button className="btn btn-xs btn-outline" onClick={() => { haptic('light'); setEditingPhone(true); setMessage(''); }}>
-                                {user?.phone_number ? 'Change' : 'Set Up'}
+                    {/* Phone */}
+                    <div className="prof-payment-item">
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">📞 Phone Number</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingPhone(!editingPhone); setMessage(''); }}>
+                                {editingPhone ? 'Cancel' : (user?.phone_number ? 'Edit' : 'Add')}
                             </button>
+                        </div>
+                        {editingPhone ? (
+                            <div className="prof-edit-form">
+                                <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} autoFocus />
+                                <button className="prof-save-btn" onClick={savePhone} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">{user?.phone_number || 'Not set'}</span>
                         )}
                     </div>
-                    {editingPhone ? (
-                        <div>
-                            <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} className="mb-2" autoFocus />
-                            <div className="flex gap-2">
-                                <button className="btn btn-primary flex-1 btn-sm" onClick={savePhone} disabled={saving}>
-                                    {saving ? <span className="spinner" /> : 'Save'}
-                                </button>
-                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingPhone(false)}>Cancel</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="font-mono text-sm">{user?.phone_number || <span className="text-muted">Not set</span>}</p>
-                    )}
-                </div>
 
-                {/* Bank Details Section */}
-                <div className="p-payment-block" style={{ borderBottom: 'none' }}>
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="p-payment-label">🏦 Bank Transfer (IMPS)</span>
-                        {!editingBank && (
-                            <button className="btn btn-xs btn-outline" onClick={() => { haptic('light'); setEditingBank(true); setMessage(''); }}>
-                                {user?.bank_account_number ? 'Change' : 'Set Up'}
+                    {/* Bank */}
+                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">🏦 Bank Transfer</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingBank(!editingBank); setMessage(''); }}>
+                                {editingBank ? 'Cancel' : (user?.bank_account_number ? 'Edit' : 'Add')}
                             </button>
+                        </div>
+                        {editingBank ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} autoFocus />
+                                <input placeholder="IFSC Code" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} />
+                                <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} />
+                                <button className="prof-save-btn" onClick={saveBank} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : user?.bank_account_number ? (
+                            <div className="prof-bank-info">
+                                <span className="prof-payment-value">{user.bank_account_number}</span>
+                                <span className="prof-bank-sub">IFSC: {user.bank_ifsc} {user.bank_name && `• ${user.bank_name}`}</span>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">Not set</span>
                         )}
                     </div>
-                    {editingBank ? (
-                        <div>
-                            <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} className="mb-2" autoFocus />
-                            <input placeholder="IFSC Code (e.g. SBIN0001234)" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} className="mb-2" />
-                            <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} className="mb-2" />
-                            <div className="flex gap-2">
-                                <button className="btn btn-primary flex-1 btn-sm" onClick={saveBank} disabled={saving}>
-                                    {saving ? <span className="spinner" /> : 'Save'}
-                                </button>
-                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingBank(false)}>Cancel</button>
+                </div>
+
+                {/* Status Message */}
+                {message && (
+                    <div className={`prof-message ${message.startsWith('success:') ? 'success' : 'error'}`}>
+                        {message.replace(/^(success|error):/, '')}
+                    </div>
+                )}
+
+                {/* Navigation Items */}
+                <div className="prof-nav-list">
+                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/orders'); }}>
+                        <span className="prof-nav-icon">📋</span>
+                        <span className="prof-nav-text">Order History</span>
+                        <span className="prof-nav-chevron">›</span>
+                    </div>
+                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/ads'); }}>
+                        <span className="prof-nav-icon">📢</span>
+                        <span className="prof-nav-text">My Ads</span>
+                        <span className="prof-nav-chevron">›</span>
+                    </div>
+                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/wallet'); }}>
+                        <span className="prof-nav-icon">💰</span>
+                        <span className="prof-nav-text">Wallet</span>
+                        <span className="prof-nav-chevron">›</span>
+                    </div>
+                </div>
+
+                {/* Wallet Type */}
+                <div className="prof-section">
+                    <div className="prof-nav-item" style={{ borderBottom: 'none' }}>
+                        <span className="prof-nav-icon">🔗</span>
+                        <div style={{ flex: 1 }}>
+                            <div className="prof-nav-text">
+                                {user?.wallet_address
+                                    ? `${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-6)}`
+                                    : 'No wallet'}
                             </div>
+                            <span className="prof-wallet-type">
+                                {user?.wallet_type === 'external' ? 'External Wallet' : 'Bot Wallet'}
+                            </span>
                         </div>
-                    ) : user?.bank_account_number ? (
-                        <div className="text-sm">
-                            <p className="font-mono mb-1">{user.bank_account_number}</p>
-                            <p className="text-muted text-xs">IFSC: <span className="font-mono">{user.bank_ifsc}</span> {user.bank_name && `• ${user.bank_name}`}</p>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted">Not set</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Status Message */}
-            {message && (
-                <div className={`mt-2 text-sm ${message.startsWith('success:') ? 'text-green' : 'text-red'}`} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 16px' }}>
-                    {message.startsWith('success:')
-                        ? <><IconCheck size={14} color="var(--green)" /> {message.replace('success:', '')}</>
-                        : <>{message.replace('error:', '')}</>
-                    }
-                </div>
-            )}
-
-            {/* Wallet Type */}
-            <div className="p-section card">
-                <div className="flex items-center justify-between mb-2">
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <IconLock size={18} /> Wallet Type
-                    </h3>
-                    <button
-                        className="btn btn-sm btn-outline"
-                        style={{ color: '#ff4d4d', borderColor: '#ff4d4d33' }}
-                        onClick={() => {
-                            if (window.confirm('Switch wallet? This will return you to the wallet selection screen.')) {
+                        <button className="prof-switch-btn" onClick={() => {
+                            if (window.confirm('Switch wallet?')) {
                                 haptic('medium');
                                 onSwitchWallet();
                             }
-                        }}
-                    >
-                        Switch
-                    </button>
+                        }}>
+                            Switch
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-sm">
-                        {user?.wallet_address
-                            ? `${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-6)}`
-                            : 'No wallet connected'
-                        }
-                    </span>
-                    <span className={`badge ${user?.wallet_type === 'external' ? 'badge-blue' : 'badge-green'} text-xs`}>
-                        {user?.wallet_type === 'external' ? 'External Wallet' : 'Bot Wallet'}
-                    </span>
-                </div>
-            </div>
 
-            {/* Account Info */}
-            <div className="p-section card">
-                <h3 className="mb-2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <IconInfo size={18} /> Account
-                </h3>
-                <div className="p-account-rows">
-                    <div className="p-account-row">
-                        <span className="text-muted">Telegram ID</span>
-                        <span className="font-mono text-sm">{user?.telegram_id}</span>
+                {/* Account Info */}
+                <div className="prof-section">
+                    <div className="prof-account-row">
+                        <span className="prof-account-label">Telegram ID</span>
+                        <span className="prof-account-value">{user?.telegram_id}</span>
                     </div>
-                    <div className="p-account-row">
-                        <span className="text-muted">Member Since</span>
-                        <span className="text-sm">
-                            {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
-                        </span>
+                    <div className="prof-account-row">
+                        <span className="prof-account-label">Member Since</span>
+                        <span className="prof-account-value">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</span>
                     </div>
-                    <div className="p-account-row">
-                        <span className="text-muted">Network</span>
-                        <span className="text-sm">Base (Mainnet)</span>
+                    <div className="prof-account-row" style={{ borderBottom: 'none' }}>
+                        <span className="prof-account-label">Network</span>
+                        <span className="prof-account-value">Base (Mainnet)</span>
                     </div>
                 </div>
             </div>

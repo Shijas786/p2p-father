@@ -6,42 +6,42 @@
 
 /* ---- CSS Variables ---- */
 :root {
-  /* Core Colors */
-  --bg-primary: #050505;
-  --bg-secondary: #0a0a0a;
-  --bg-card: #111111;
-  --bg-card-hover: #161616;
-  --bg-elevated: #1a1a1a;
-  --bg-input: #0d0d0d;
+  /* Core Colors — Binance Dark Theme */
+  --bg-primary: #0b0e11;
+  --bg-secondary: #181a20;
+  --bg-card: #1e2026;
+  --bg-card-hover: #262930;
+  --bg-elevated: #2b2f36;
+  --bg-input: #181a20;
 
-  /* Green Accent */
-  --green: #84cc16;
-  --green-rgb: 132, 204, 22;
-  --green-dim: #65a30d;
-  --green-bright: #a3e635;
-  --green-bg: rgba(132, 204, 22, 0.08);
-  --green-bg-hover: rgba(132, 204, 22, 0.12);
-  --green-border: rgba(132, 204, 22, 0.2);
+  /* Green Accent — Binance Green */
+  --green: #0ecb81;
+  --green-rgb: 14, 203, 129;
+  --green-dim: #0bb674;
+  --green-bright: #2ed29d;
+  --green-bg: rgba(14, 203, 129, 0.08);
+  --green-bg-hover: rgba(14, 203, 129, 0.12);
+  --green-border: rgba(14, 203, 129, 0.2);
 
   /* Status Colors */
-  --red: #ef4444;
-  --red-bg: rgba(239, 68, 68, 0.1);
-  --orange: #f97316;
-  --orange-bg: rgba(249, 115, 22, 0.1);
-  --blue: #3b82f6;
-  --blue-bg: rgba(59, 130, 246, 0.1);
-  --yellow: #eab308;
-  --yellow-bg: rgba(234, 179, 8, 0.1);
+  --red: #f6465d;
+  --red-bg: rgba(246, 70, 93, 0.1);
+  --orange: #f0b90b;
+  --orange-bg: rgba(240, 185, 11, 0.1);
+  --blue: #1e9cf4;
+  --blue-bg: rgba(30, 156, 244, 0.1);
+  --yellow: #f0b90b;
+  --yellow-bg: rgba(240, 185, 11, 0.1);
 
   /* Text */
-  --text-primary: #f5f5f5;
-  --text-secondary: #a3a3a3;
-  --text-muted: #636363;
-  --text-inverse: #050505;
+  --text-primary: #eaecef;
+  --text-secondary: #b7bdc6;
+  --text-muted: #5e6673;
+  --text-inverse: #181a20;
 
   /* Borders */
-  --border: #1f1f1f;
-  --border-hover: #2a2a2a;
+  --border: #2b2f36;
+  --border-hover: #3a3f47;
 
   /* Spacing */
   --nav-height: 56px;

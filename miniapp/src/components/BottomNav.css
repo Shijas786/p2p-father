@@ -1,3 +1,4 @@
+/* ═══ Bottom Nav — Binance Style ═══ */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -8,68 +9,60 @@
     justify-content: space-around;
     height: var(--bottom-nav-height);
     padding-bottom: var(--safe-bottom);
-    background: rgba(10, 10, 10, 0.9);
+    background: #181a20;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 100;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
-    z-index: 100;
 }
 
 .nav-tab {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    padding: 8px 0;
-    min-width: 56px;
+    padding: 6px 10px;
     text-decoration: none;
-    color: var(--text-muted);
-    transition: color var(--transition-fast);
-    -webkit-tap-highlight-color: transparent;
+    color: #5e6673;
+    transition: color 0.2s ease;
+    position: relative;
+    min-width: 50px;
 }
 
 .nav-tab.active {
-    color: var(--green);
+    color: #f0b90b;
 }
 
 .nav-icon {
-    font-size: 1.25rem;
-    line-height: 1;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 .nav-badge {
     position: absolute;
     top: -4px;
-    right: -8px;
+    right: -10px;
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    font-size: 9px;
-    font-weight: 800;
-    line-height: 16px;
-    text-align: center;
+    border-radius: 8px;
+    background: #f6465d;
     color: #fff;
-    background: var(--red);
-    border-radius: 999px;
-    border: 2px solid rgba(10, 10, 10, 0.9);
-    animation: badge-pulse 2s infinite;
-}
-
-@keyframes badge-pulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.1);
-    }
-}
-
-.nav-label {
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }

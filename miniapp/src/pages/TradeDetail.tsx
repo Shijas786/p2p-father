@@ -52,6 +52,12 @@ export function TradeDetail({ user }: Props) {
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
     const prevStatusRef = useRef<string | null>(null);
     const actionSectionRef = useRef<HTMLDivElement>(null);
 
@@ -179,18 +185,48 @@ export function TradeDetail({ user }: Props) {
     }
 
     async function handleSendMessage() {
-        if (!id || !newMessage.trim()) return;
+        if (!id || (!newMessage.trim() && !selectedImage)) return;
         setSendingMessage(true);
         try {
-            await api.trades.sendMessage(id, newMessage);
+            if (selectedImage) {
+                // Upload image
+                setUploadingImage(true);
+                await api.trades.uploadImage(id, selectedImage, newMessage.trim() || undefined);
+                setSelectedImage(null);
+                setImagePreview(null);
+                setUploadingImage(false);
+            } else {
+                await api.trades.sendMessage(id, newMessage);
+            }
             setNewMessage('');
             haptic('light');
-            loadMessages();
+            await loadMessages();
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         } catch (err: any) {
             setError(err.message);
+            setUploadingImage(false);
         } finally {
             setSendingMessage(false);
         }
+    }
+
+    function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Image must be under 5MB');
+            return;
+        }
+        setSelectedImage(file);
+        const reader = new FileReader();
+        reader.onload = () => setImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+    }
+
+    function clearSelectedImage() {
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     }
 
     async function handleCreateTrade() {
@@ -763,41 +799,79 @@ export function TradeDetail({ user }: Props) {
                     {/* Trade Chat */}
                 </div>{/* end actionSectionRef */}
                 {trade && (
-                    <div className="td-chat mt-6 card-glass p-0 overflow-hidden">
-                        <div className="p-3 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                            <h4 className="m-0 text-sm font-bold">Trade Chat</h4>
-                            <span className="text-[10px] text-muted">Active</span>
+                    <div className="td-chat">
+                        <div className="chat-header">
+                            <h4>💬 Trade Chat</h4>
+                            <span className="chat-badge">Active</span>
                         </div>
-                        <div className="chat-messages p-3 flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                        <div className="chat-messages">
                             {messages.length === 0 && (
-                                <p className="text-center text-xs text-muted py-4">No messages yet. Start the conversation!</p>
+                                <p className="chat-empty">No messages yet. Start the conversation!</p>
                             )}
                             {messages.map(m => (
                                 <div key={m.id} className={`chat-msg ${m.user_id === user.id ? 'msg-me' : 'msg-them'}`}>
                                     <div className="msg-bubble">
                                         <div className="msg-sender">{m.username || 'User'}</div>
-                                        <div className="msg-text">{m.message}</div>
+                                        {/* Image message */}
+                                        {m.type === 'image' && m.image_url && (
+                                            <div className="msg-image" onClick={() => setFullscreenImage(m.image_url)}>
+                                                <img src={m.image_url} alt="Payment proof" />
+                                                <div className="msg-image-label">📸 Tap to view</div>
+                                            </div>
+                                        )}
+                                        {/* Text message */}
+                                        {m.message && <div className="msg-text">{m.message}</div>}
                                         <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
                                 </div>
                             ))}
+                            <div ref={chatEndRef} />
                         </div>
-                        <div className="chat-input p-2 bg-black/20 flex gap-2 border-t border-white/5">
+
+                        {/* Image Preview */}
+                        {imagePreview && (
+                            <div className="chat-preview">
+                                <img src={imagePreview} alt="Preview" className="chat-preview-img" />
+                                <button className="chat-preview-close" onClick={clearSelectedImage}>✕</button>
+                            </div>
+                        )}
+
+                        {/* Chat Input */}
+                        <div className="chat-input">
                             <input
-                                placeholder="Type a message..."
+                                type="file"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleImageSelect}
+                                style={{ display: 'none' }}
+                            />
+                            <button className="chat-attach-btn" onClick={() => fileInputRef.current?.click()} title="Attach photo">
+                                📎
+                            </button>
+                            <input
+                                placeholder={selectedImage ? 'Add caption...' : 'Type a message...'}
                                 value={newMessage}
                                 onChange={e => setNewMessage(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                                className="flex-1 bg-transparent border-0 text-sm outline-none px-2"
+                                className="chat-text-input"
                             />
                             <button
-                                className="btn btn-primary btn-sm px-4"
+                                className="chat-send-btn"
                                 onClick={handleSendMessage}
-                                disabled={sendingMessage || !newMessage.trim()}
+                                disabled={sendingMessage || uploadingImage || (!newMessage.trim() && !selectedImage)}
                             >
-                                Send
+                                {uploadingImage ? '⏳' : selectedImage ? '📤' : '➤'}
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {/* Fullscreen Image Viewer */}
+                {fullscreenImage && (
+                    <div className="chat-fullscreen" onClick={() => setFullscreenImage(null)}>
+                        <img src={fullscreenImage} alt="Full size" />
+                        <button className="chat-fullscreen-close">✕ Close</button>
                     </div>
                 )}
             </div>

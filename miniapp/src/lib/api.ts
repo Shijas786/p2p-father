@@ -153,6 +153,22 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ message }),
             }),
+        uploadImage: async (id: string, file: File, caption?: string) => {
+            const initData = getInitData();
+            const formData = new FormData();
+            formData.append('image', file);
+            if (caption) formData.append('caption', caption);
+            const res = await fetch(`${API_BASE}/trades/${id}/messages/upload`, {
+                method: 'POST',
+                headers: { 'X-Telegram-Init-Data': initData },
+                body: formData,
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Upload failed');
+            }
+            return res.json();
+        },
     },
 
     // ---- Profile ----

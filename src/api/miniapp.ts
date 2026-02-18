@@ -4,11 +4,19 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import multer from "multer";
+import { createClient } from "@supabase/supabase-js";
 import { env } from "../config/env";
 import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
 import { bot, broadcastTradeSuccess } from "../bot";
+
+// Multer for in-memory file uploads (max 5MB)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// Supabase client for storage
+const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
 const router = Router();
 
@@ -1131,6 +1139,69 @@ router.post("/trades/:id/messages", async (req: Request, res: Response) => {
             `💬 <b>New message from ${user.username || user.first_name || 'Partner'}</b>\n\n"${message}"`
         );
     } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TRADE MESSAGES — Image Upload
+// ═══════════════════════════════════════════════════════════════
+
+router.post("/trades/:id/messages/upload", upload.single("image"), async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+            return res.status(403).json({ error: "Not a party to this trade" });
+        }
+
+        if (!req.file) return res.status(400).json({ error: "No image file provided" });
+
+        // Upload to Supabase Storage
+        const ext = req.file.originalname.split(".").pop() || "jpg";
+        const fileName = `${trade.id}/${Date.now()}_${user.id}.${ext}`;
+
+        const { error: uploadError } = await supabaseStorage.storage
+            .from("trade-proofs")
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: false,
+            });
+
+        if (uploadError) {
+            console.error("[Storage] Upload error:", uploadError);
+            return res.status(500).json({ error: "Failed to upload image" });
+        }
+
+        // Get public URL
+        const { data: urlData } = supabaseStorage.storage
+            .from("trade-proofs")
+            .getPublicUrl(fileName);
+
+        const imageUrl = urlData.publicUrl;
+
+        // Save message with type=image
+        const newMessage = await db.createTradeMessage({
+            trade_id: trade.id,
+            user_id: user.id,
+            message: req.body?.caption || "📸 Payment proof",
+            type: "image",
+            image_url: imageUrl,
+        });
+
+        res.json({ success: true, message: newMessage });
+
+        // Notify other party
+        const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+        await notifyTradeUpdate(otherPartyId,
+            `📸 <b>${user.username || user.first_name || 'Partner'} sent a payment proof</b>\n\nCheck trade chat for the screenshot.`
+        );
+    } catch (err: any) {
+        console.error("[Upload] Error:", err);
         res.status(500).json({ error: err.message });
     }
 });

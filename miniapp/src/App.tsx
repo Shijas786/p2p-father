@@ -10,7 +10,7 @@ import { api } from './lib/api';
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
 import { Home } from './pages/Home';
-import { Market } from './pages/Market';
+import { Orders } from './pages/Orders';
 import { CreateOrder } from './pages/CreateOrder';
 import { TradeDetail } from './pages/TradeDetail';
 import { Wallet } from './pages/Wallet';
@@ -200,13 +200,13 @@ function AppInner() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home user={user} />} />
-          <Route path="market" element={<Market user={user} />} />
+          <Route path="orders" element={<Orders user={user} />} />
           <Route path="create" element={<CreateOrder />} />
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
           <Route path="trade/new/:orderId" element={<TradeDetail user={user} />} />
           <Route path="wallet" element={<Wallet user={user} />} />
           <Route path="bridge" element={<Bridge />} />
-          <Route path="my-ads" element={<MyAds user={user} />} />
+          <Route path="ads" element={<MyAds user={user} />} />
           <Route path="admin" element={<Admin />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
         </Route>
