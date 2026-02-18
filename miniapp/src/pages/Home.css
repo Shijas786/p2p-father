@@ -38,6 +38,7 @@
 }
 
 /* ── Filters ── */
+/* ── Filters ── */
 .p2p-filters {
     display: flex;
     align-items: center;
@@ -45,7 +46,9 @@
     padding: 8px 16px 12px;
     background: #181a20;
     border-bottom: 1px solid #2b2f36;
-    overflow-x: auto;
+    /* Removed overflow-x: auto to allow dropdown to show */
+    position: relative;
+    z-index: 10;
 }
 
 .p2p-token-selector {
@@ -107,6 +110,16 @@
     display: flex;
     gap: 6px;
     overflow-x: auto;
+    flex: 1;
+    /* Allow it to take remaining space */
+    min-width: 0;
+    /* Enable internal scrolling */
+    scrollbar-width: none;
+    /* Hide scrollbar for cleaner look */
+}
+
+.p2p-payment-filters::-webkit-scrollbar {
+    display: none;
 }
 
 .p2p-filter-chip {
@@ -166,6 +179,13 @@
     font-weight: 700;
     color: #181a20;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.p2p-trader-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .p2p-trader-name {

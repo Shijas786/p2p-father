@@ -175,7 +175,7 @@ class Database {
         const db = this.getClient();
         let query = db
             .from("orders")
-            .select("*, users!inner(username, trust_score, completed_trades, wallet_address)")
+            .select("*, users!inner(username, trust_score, completed_trades, wallet_address, telegram_id)")
             .eq("status", "active")
             .order("rate", { ascending: type === "sell" })
             .limit(limit);
@@ -188,8 +188,6 @@ class Database {
             query = query.eq("type", type);
         }
 
-
-
         const { data, error } = await query;
         if (error) throw new Error(`Failed to get orders: ${error.message}`);
 
@@ -198,6 +196,7 @@ class Database {
             username: d.users?.username,
             trust_score: d.users?.trust_score,
             wallet_address: d.users?.wallet_address,
+            telegram_id: d.users?.telegram_id, // Added for avatar
         })) as Order[];
     }
 
@@ -368,7 +367,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id)")
             .eq("id", tradeId)
             .single();
 
@@ -382,6 +381,7 @@ class Database {
             seller_bank_account: data.seller?.bank_account_number,
             seller_bank_ifsc: data.seller?.bank_ifsc,
             seller_bank_name: data.seller?.bank_name,
+            seller_telegram_id: data.seller?.telegram_id, // Added for avatar
         } as any;
     }
 
@@ -499,14 +499,16 @@ class Database {
         const db = this.getClient();
         const { data, error } = await db
             .from("trade_messages")
-            .select("*, users(username)")
+            .select("*, users(username, telegram_id, first_name)")
             .eq("trade_id", tradeId)
             .order("created_at", { ascending: true });
 
         if (error) throw new Error(`Failed to get messages: ${error.message}`);
-        return (data || []).map(m => ({
+        return (data || []).map((m: any) => ({
             ...m,
-            username: m.users?.username
+            username: m.users?.username,
+            telegram_id: m.users?.telegram_id, // Added for avatar
+            first_name: m.users?.first_name,
         }));
     }
 

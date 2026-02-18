@@ -810,6 +810,19 @@ export function TradeDetail({ user }: Props) {
                             )}
                             {messages.map(m => (
                                 <div key={m.id} className={`chat-msg ${m.user_id === user.id ? 'msg-me' : 'msg-them'}`}>
+                                    {/* Them Avatar */}
+                                    {m.user_id !== user.id && (
+                                        <div className="chat-avatar">
+                                            {m.telegram_id ? (
+                                                <img src={api.users.getAvatarUrl(m.telegram_id)} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                            ) : (
+                                                <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
+                                                    {m.username?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div className="msg-bubble">
                                         <div className="msg-sender">{m.username || 'User'}</div>
                                         {/* Image message */}
@@ -823,6 +836,19 @@ export function TradeDetail({ user }: Props) {
                                         {m.message && <div className="msg-text">{m.message}</div>}
                                         <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
+
+                                    {/* Me Avatar */}
+                                    {m.user_id === user.id && (
+                                        <div className="chat-avatar">
+                                            {user.telegram_id ? (
+                                                <img src={api.users.getAvatarUrl(user.telegram_id)} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                            ) : (
+                                                <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
+                                                    {user.first_name?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             <div ref={chatEndRef} />

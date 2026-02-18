@@ -216,4 +216,9 @@ export const api = {
                 body: JSON.stringify({ releaseToBuyer }),
             }),
     },
+
+    // ---- Users ----
+    users: {
+        getAvatarUrl: (telegramId: number | string) => `${API_BASE}/users/${telegramId}/avatar`,
+    },
 };

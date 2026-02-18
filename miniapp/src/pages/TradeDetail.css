@@ -177,6 +177,9 @@
 /* ── Chat Bubbles ── */
 .chat-msg {
     display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 2px;
 }
 
 .chat-msg.msg-me {
@@ -185,6 +188,21 @@
 
 .chat-msg.msg-them {
     justify-content: flex-start;
+}
+
+.chat-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+}
+
+.chat-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2b2f36;
 }
 
 .msg-bubble {

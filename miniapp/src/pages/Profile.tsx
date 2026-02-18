@@ -92,11 +92,11 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             {/* ═══ Profile Header ═══ */}
             <div className="prof-header">
                 <div className="prof-avatar">
-                    {user?.photo_url ? (
-                        <img src={user.photo_url} alt="" className="prof-avatar-img" />
-                    ) : (
-                        <span className="prof-avatar-letter">{user?.first_name?.[0]?.toUpperCase() || '?'}</span>
-                    )}
+                    <img
+                        src={user?.telegram_id ? api.users.getAvatarUrl(user.telegram_id) : ''}
+                        alt={user?.first_name || 'User'}
+                        className="prof-avatar-img"
+                    />
                 </div>
                 <div className="prof-name-row">
                     <h2 className="prof-username">{user?.first_name || 'User'}</h2>

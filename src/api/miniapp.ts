@@ -1287,4 +1287,61 @@ router.get("/stats", async (req: Request, res: Response) => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════
+//              USER AVATAR PROXY
+// ═══════════════════════════════════════════════════════════════
+
+// Proxy Telegram avatar to avoid exposing bot token on client
+router.get("/users/:telegramId/avatar", async (req, res) => {
+    const telegramId = parseInt(req.params.telegramId);
+
+    if (isNaN(telegramId)) {
+        return res.redirect(`https://ui-avatars.com/api/?name=User&background=random&color=fff`);
+    }
+
+    try {
+        // Get user profile photos
+        const photos = await bot.api.getUserProfilePhotos(telegramId, { limit: 1 });
+
+        // If no photos, redirect to default avatar generator
+        if (photos.total_count === 0 || photos.photos.length === 0) {
+            // Use UI Avatars as fallback
+            const user = await db.getOrCreateUser(telegramId);
+            const name = user.username || user.first_name || "User";
+            return res.redirect(`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`);
+        }
+
+        // Get the largest photo (last in the array)
+        const photoGroups = photos.photos[0];
+        const bestPhoto = photoGroups[photoGroups.length - 1];
+
+        // Get file path from Telegram
+        const file = await bot.api.getFile(bestPhoto.file_id);
+
+        if (!file.file_path) {
+            throw new Error("No file path returned from Telegram");
+        }
+
+        // Construct download URL
+        const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+
+        // Fetch and stream the image
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+        // Set caching headers (1 hour)
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("Content-Type", response.headers.get("content-type") || "image/jpeg");
+
+        // Stream the response body
+        const arrayBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
+
+    } catch (err: any) {
+        console.error(`[Avatar Proxy] Error fetching avatar for ${telegramId}:`, err);
+        // Fallback to text avatar on error
+        res.redirect(`https://ui-avatars.com/api/?name=User&background=random&color=fff`);
+    }
+});
+
 export { router as miniappRouter };

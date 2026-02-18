@@ -159,7 +159,18 @@ export function Home({ user }: Props) {
                                 {/* Trader Info */}
                                 <div className="p2p-trader-header">
                                     <div className="p2p-trader-avatar">
-                                        {order.username?.[0]?.toUpperCase() || '?'}
+                                        {order.telegram_id ? (
+                                            <img
+                                                src={api.users.getAvatarUrl(order.telegram_id)}
+                                                alt=""
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                    e.currentTarget.parentElement!.innerText = order.username?.[0]?.toUpperCase() || '?';
+                                                }}
+                                            />
+                                        ) : (
+                                            order.username?.[0]?.toUpperCase() || '?'
+                                        )}
                                     </div>
                                     <div className="p2p-trader-name">
                                         <span className="p2p-username">{order.username || 'Anonymous'}</span>
