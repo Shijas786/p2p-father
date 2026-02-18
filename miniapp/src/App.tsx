@@ -87,6 +87,17 @@ function AppInner() {
 
   useEffect(() => {
     setupTelegramApp();
+
+    // Global click listener for sounds
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('.btn') || target.closest('a')) {
+        import('./lib/sounds').then(({ sounds }) => sounds.play('click'));
+      }
+    };
+
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
   }, []);
 
   // Only auto-skip selector for returning EXTERNAL wallet users

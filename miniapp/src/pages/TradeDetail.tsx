@@ -4,6 +4,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { parseUnits } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
+import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import './TradeDetail.css';
 
@@ -134,6 +135,11 @@ export function TradeDetail({ user }: Props) {
             // Detect status change and trigger feedback
             if (prevStatusRef.current && data.status !== prevStatusRef.current) {
                 haptic('success');
+                if (data.status === 'completed') {
+                    sounds.play('success');
+                } else {
+                    sounds.play('notification');
+                }
                 // Auto-scroll to action section
                 setTimeout(() => {
                     actionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -141,7 +147,15 @@ export function TradeDetail({ user }: Props) {
             }
             prevStatusRef.current = data.status;
             setTrade(data);
+
             const { messages: msgs } = await api.trades.getMessages(id);
+            // Play sound for new messages from counterparty
+            if (msgs.length > messages.length) {
+                const latest = msgs[msgs.length - 1];
+                if (latest.user_id !== user.id) {
+                    sounds.play('notification');
+                }
+            }
             setMessages(msgs);
         } catch (err) {
             console.error('Polling error:', err);

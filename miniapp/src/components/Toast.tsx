@@ -1,4 +1,5 @@
 import { useState, createContext, useContext, useCallback } from 'react';
+import { sounds } from '../lib/sounds';
 import './Toast.css';
 
 interface ToastItem {
@@ -25,6 +26,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
         const id = ++toastId;
         setToasts(prev => [...prev, { id, message, type }]);
+
+        // Play sound based on type
+        if (type === 'success') sounds.play('success');
+        else if (type === 'error' || type === 'warning') sounds.play('error');
+        else sounds.play('notification');
+
         setTimeout(() => {
             setToasts(prev => prev.filter(t => t.id !== id));
         }, 3000);
