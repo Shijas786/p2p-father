@@ -7,7 +7,7 @@
     background: linear-gradient(135deg, #1e2330 0%, #10141d 100%);
     border-radius: 12px;
     padding: 16px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     position: relative;
     overflow: hidden;
@@ -54,20 +54,22 @@
 
 /* ════ Sections ════ */
 .section-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     margin-bottom: 8px;
     color: var(--text-primary);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 4px;
 }
 
-/* ════ Asset List ════ */
+/* ════ Asset List (Hyper Compact) ════ */
 .asset-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    /* Tighter gap */
 }
 
 .asset-item {
@@ -75,8 +77,11 @@
     align-items: center;
     justify-content: space-between;
     background: var(--bg-card);
-    padding: 10px 14px;
-    border-radius: 10px;
+    /* Should match theme card bg */
+    padding: 8px 12px;
+    /* Smaller padding */
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .asset-left {
@@ -86,34 +91,34 @@
 }
 
 .asset-icon {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    /* Smaller icon */
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-elevated);
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .asset-info {
     display: flex;
     flex-direction: column;
+    gap: 1px;
 }
 
 .asset-symbol {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.2;
 }
 
 .asset-chain {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.1);
-    padding: 1px 4px;
-    border-radius: 3px;
-    width: fit-content;
-    margin-top: 2px;
+    /* No background badge, just text to be cleaner */
+    opacity: 0.7;
 }
 
 .asset-right {
@@ -122,21 +127,22 @@
 
 .asset-bal {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     display: block;
+    line-height: 1.2;
 }
 
 .asset-fiat {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-muted);
 }
 
-/* ════ Vault Card (Smaller) ════ */
+/* ════ Vault Card (Compact) ════ */
 .vault-card {
     background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
     border-radius: 12px;
     padding: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -144,9 +150,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    /* Removed border */
 }
 
 .vault-title {
@@ -185,85 +191,103 @@
 .vault-assets {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
 }
 
 .vault-asset-box {
     background: rgba(0, 0, 0, 0.3);
-    padding: 8px;
+    padding: 6px 8px;
     border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .v-asset-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2px;
+    margin-bottom: 0;
 }
 
 .v-symbol {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     color: #aaa;
 }
 
 .v-chain {
     font-size: 9px;
-    padding: 1px 3px;
+    padding: 0 3px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.1);
 }
 
 .v-bal {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #fff;
+    margin-top: 2px;
 }
 
 .v-reserved {
     font-size: 9px;
     color: #eab308;
-    margin-top: 1px;
 }
 
-/* ════ QR Modal / Actions (Bottom Sheet) ════ */
+/* ════ Centered Modal (Popup) ════ */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.7);
+    /* Darker backdrop */
     display: flex;
-    align-items: flex-end;
-    /* Mobile Bottom Sheet Style */
+    align-items: center;
+    /* CENTER Aligned */
     justify-content: center;
     z-index: 9999;
-    backdrop-filter: blur(2px);
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
-    background: #1e1e1e;
+    background: #1e2330;
+    /* Match header card */
     width: 100%;
-    max-width: 480px;
-    /* Tablet constraint */
-    border-radius: 20px 20px 0 0;
-    padding: 24px;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
-    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 85vh;
+    max-width: 340px;
+    /* Small Popup Width */
+    border-radius: 16px;
+    /* Fully rounded */
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 80vh;
     overflow-y: auto;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-@keyframes slideUp {
+/* Remove slideUp, add scaleIn */
+@keyframes fadeIn {
     from {
-        transform: translateY(100%);
         opacity: 0;
     }
 
     to {
-        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
         opacity: 1;
     }
 }
@@ -271,9 +295,10 @@
 .badge-chain-toggle {
     display: flex;
     gap: 4px;
-    background: #2a2a2a;
-    padding: 4px;
+    background: #151922;
+    padding: 3px;
     border-radius: 8px;
+    margin-bottom: 12px;
 }
 
 .btn-toggle {
@@ -284,10 +309,12 @@
     border-radius: 6px;
     background: transparent;
     color: #888;
+    transition: all 0.2s;
 }
 
 .btn-toggle.active {
     background: var(--bg-elevated);
     color: #fff;
     font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
