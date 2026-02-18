@@ -739,12 +739,12 @@ export function TradeDetail({ user }: Props) {
                             Admin has been notified. Please utilize the chat to provide evidence.
                         </p>
                         <a
-                            href={`https://t.me/P2PKeralaBot`}
+                            href={`https://t.me/cryptowolf07`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-outline btn-block"
                         >
-                            💬 Contact Support
+                            💬 Contact Admin (@cryptowolf07)
                         </a>
                     </div>
                 )}

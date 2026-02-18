@@ -964,7 +964,7 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
 
         // NOTIFY ADMINS
         await notifyAdmins(
-            `🚨 <b>DISPUTE RAISED!</b>\n\nTrade ID: <code>${trade.id}</code>\nRaised By: @${user.username || user.first_name}\nReason: ${reason || "No reason provided"}\n\n<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
+            `🚨 <b>DISPUTE RAISED!</b>\n\nTrade ID: <code>${trade.id}</code>\nRaised By: @${user.username || user.first_name}\nReason: ${reason || "No reason provided"}\n\nSupport: @cryptowolf07\n\n<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
         );
 
         res.json({ success: true });
