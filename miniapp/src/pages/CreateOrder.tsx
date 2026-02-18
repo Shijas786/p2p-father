@@ -187,7 +187,7 @@ export function CreateOrder() {
             });
 
             haptic('success');
-            navigate('/market');
+            navigate('/');
         } catch (err: any) {
             console.error(err);
             // Wagmi errors often have a shortMessage
