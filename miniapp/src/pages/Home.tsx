@@ -147,7 +147,7 @@ export function Home({ user }: Props) {
                 ) : filteredOrders.length > 0 ? (
                     filteredOrders.map(order => {
                         const available = (order.amount - (order.filled_amount || 0)) * (1 - feePercentage / 2);
-                        const totalFiat = available * order.rate;
+
                         const isMine = user?.id === order.user_id;
 
                         return (
@@ -193,10 +193,7 @@ export function Home({ user }: Props) {
                                             <span className="p2p-rate">{order.rate.toLocaleString()}</span>
                                             <span className="p2p-per">/{order.token}</span>
                                         </div>
-                                        <div className="p2p-limits">
-                                            <span className="p2p-limit-label">Limit</span>
-                                            <span className="p2p-limit-value">₹{Math.floor(available * order.rate * 0.1).toLocaleString()} - ₹{Math.floor(totalFiat).toLocaleString()}</span>
-                                        </div>
+
                                         <div className="p2p-available">
                                             <span className="p2p-avail-label">Available</span>
                                             <span className="p2p-avail-value">{available.toFixed(2)} {order.token}</span>

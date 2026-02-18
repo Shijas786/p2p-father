@@ -67,8 +67,16 @@ export const api = {
             address: string;
             vault_base_usdc?: string;
             vault_bsc_usdc?: string;
+            vault_base_usdt?: string;
+            vault_bsc_usdt?: string;
             vault_base_reserved?: string;
             vault_bsc_reserved?: string;
+
+            reserved_base_usdc?: string;
+            reserved_base_usdt?: string;
+            reserved_bsc_usdc?: string;
+            reserved_bsc_usdt?: string;
+
             wallet_type?: string;
         }>('/wallet/balances'),
         send: (data: { to: string; amount: number; token: string; chain?: string }) =>

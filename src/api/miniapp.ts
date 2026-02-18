@@ -177,6 +177,8 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
         const balances = await wallet.getBalances(user.wallet_address);
         const vaultBaseUsdc = await escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base');
         const vaultBscUsdc = await escrow.getVaultBalance(user.wallet_address, "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 'bsc');
+        const vaultBaseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, 'base');
+        const vaultBscUsdt = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", 'bsc');
 
         const reservedBaseUsdc = await db.getReservedAmount(user.id, 'USDC', 'base');
         const reservedBscUsdc = await db.getReservedAmount(user.id, 'USDC', 'bsc');
@@ -187,8 +189,17 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             ...balances,
             vault_base_usdc: vaultBaseUsdc,
             vault_bsc_usdc: vaultBscUsdc,
+            vault_base_usdt: vaultBaseUsdt,
+            vault_bsc_usdt: vaultBscUsdt,
             vault_base_reserved: (reservedBaseUsdc + reservedBaseUsdt).toString(),
             vault_bsc_reserved: (reservedBscUsdc + reservedBscUsdt).toString(),
+
+            // Detailed reserved breakdown for UI
+            reserved_base_usdc: reservedBaseUsdc.toString(),
+            reserved_base_usdt: reservedBaseUsdt.toString(),
+            reserved_bsc_usdc: reservedBscUsdc.toString(),
+            reserved_bsc_usdt: reservedBscUsdt.toString(),
+
             wallet_type: (user as any).wallet_type || 'bot'
         });
     } catch (err: any) {
