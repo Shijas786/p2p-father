@@ -813,8 +813,8 @@ export function TradeDetail({ user }: Props) {
                                     {/* Them Avatar */}
                                     {m.user_id !== user.id && (
                                         <div className="chat-avatar">
-                                            {m.telegram_id ? (
-                                                <img src={api.users.getAvatarUrl(m.telegram_id)} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                            {m.photo_url ? (
+                                                <img src={m.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
                                             ) : (
                                                 <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
                                                     {m.username?.[0]?.toUpperCase() || '?'}
@@ -840,8 +840,8 @@ export function TradeDetail({ user }: Props) {
                                     {/* Me Avatar */}
                                     {m.user_id === user.id && (
                                         <div className="chat-avatar">
-                                            {user.telegram_id ? (
-                                                <img src={api.users.getAvatarUrl(user.telegram_id)} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                            {user.photo_url ? (
+                                                <img src={user.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
                                             ) : (
                                                 <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
                                                     {user.first_name?.[0]?.toUpperCase() || '?'}

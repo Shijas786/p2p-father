@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
@@ -29,6 +29,30 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setSaving(true);
+            setMessage('');
+            await api.users.uploadAvatar(file);
+            haptic('success');
+            setMessage('success:Avatar updated!');
+            onUpdate();
+        } catch (err: any) {
+            setMessage(`error:${err.message}`);
+            haptic('error');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     async function saveField(updates: Record<string, any>, successMsg: string) {
         haptic('medium');
@@ -91,12 +115,28 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         <div className="page profile-page animate-in">
             {/* ═══ Profile Header ═══ */}
             <div className="prof-header">
-                <div className="prof-avatar">
-                    <img
-                        src={user?.telegram_id ? api.users.getAvatarUrl(user.telegram_id) : ''}
-                        alt={user?.first_name || 'User'}
-                        className="prof-avatar-img"
+                <div className="prof-avatar" onClick={handleAvatarClick} style={{ cursor: 'pointer', position: 'relative' }}>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        style={{ display: 'none' }}
                     />
+                    {user?.photo_url ? (
+                        <img src={user.photo_url} alt="" className="prof-avatar-img" />
+                    ) : (
+                        <span className="prof-avatar-letter">{user?.first_name?.[0]?.toUpperCase() || '?'}</span>
+                    )}
+                    <div className="prof-avatar-edit-icon" style={{
+                        position: 'absolute', bottom: 0, right: 0,
+                        background: '#0ecb81', borderRadius: '50%',
+                        width: '24px', height: '24px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '12px', border: '2px solid #181a20'
+                    }}>
+                        📷
+                    </div>
                 </div>
                 <div className="prof-name-row">
                     <h2 className="prof-username">{user?.first_name || 'User'}</h2>

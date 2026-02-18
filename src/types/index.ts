@@ -44,6 +44,7 @@ export interface User {
     is_verified: boolean;
     is_banned: boolean;
     created_at: string;
+    photo_url?: string; // Manual PFP
 }
 
 export interface BankDetails {

@@ -159,9 +159,9 @@ export function Home({ user }: Props) {
                                 {/* Trader Info */}
                                 <div className="p2p-trader-header">
                                     <div className="p2p-trader-avatar">
-                                        {order.telegram_id ? (
+                                        {order.photo_url ? (
                                             <img
-                                                src={api.users.getAvatarUrl(order.telegram_id)}
+                                                src={order.photo_url}
                                                 alt=""
                                                 onError={(e) => {
                                                     e.currentTarget.style.display = 'none';

@@ -1288,59 +1288,63 @@ router.get("/stats", async (req: Request, res: Response) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-//              USER AVATAR PROXY
+
+// ═══════════════════════════════════════════════════════════════
+//              USER AVATAR UPLOAD (Manual)
 // ═══════════════════════════════════════════════════════════════
 
-// Proxy Telegram avatar to avoid exposing bot token on client
-router.get("/users/:telegramId/avatar", async (req, res) => {
-    const telegramId = parseInt(req.params.telegramId);
-
-    if (isNaN(telegramId)) {
-        return res.redirect(`https://ui-avatars.com/api/?name=User&background=random&color=fff`);
-    }
-
+router.post("/profile/avatar", upload.single('avatar'), async (req: Request, res: Response) => {
     try {
-        // Get user profile photos
-        const photos = await bot.api.getUserProfilePhotos(telegramId, { limit: 1 });
-
-        // If no photos, redirect to default avatar generator
-        if (photos.total_count === 0 || photos.photos.length === 0) {
-            // Use UI Avatars as fallback
-            const user = await db.getOrCreateUser(telegramId);
-            const name = user.username || user.first_name || "User";
-            return res.redirect(`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`);
+        if (!req.file) {
+            return res.status(400).json({ error: "No image file provided" });
         }
 
-        // Get the largest photo (last in the array)
-        const photoGroups = photos.photos[0];
-        const bestPhoto = photoGroups[photoGroups.length - 1];
-
-        // Get file path from Telegram
-        const file = await bot.api.getFile(bestPhoto.file_id);
-
-        if (!file.file_path) {
-            throw new Error("No file path returned from Telegram");
+        // Check file type
+        if (!req.file.mimetype.startsWith('image/')) {
+            return res.status(400).json({ error: "Only image files are allowed" });
         }
 
-        // Construct download URL
-        const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        // Fetch and stream the image
-        const response = await fetch(fileUrl);
-        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+        // optimize/resize image if needed? For now just upload.
+        // File path: avatars/{user_id}/{timestamp}.ext
+        const fileExt = req.file.mimetype.split('/')[1] || 'jpg';
+        const filePath = `avatars/${user.id}/${Date.now()}.${fileExt}`;
 
-        // Set caching headers (1 hour)
-        res.setHeader("Cache-Control", "public, max-age=3600");
-        res.setHeader("Content-Type", response.headers.get("content-type") || "image/jpeg");
+        // Upload to Supabase Storage
+        const { data, error } = await supabaseStorage
+            .storage
+            .from('avatars')
+            .upload(filePath, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: true
+            });
 
-        // Stream the response body
-        const arrayBuffer = await response.arrayBuffer();
-        res.send(Buffer.from(arrayBuffer));
+        if (error) {
+            console.error("Supabase storage upload error:", error);
+            throw new Error("Failed to upload image to storage");
+        }
+
+        // Get Public URL
+        const { data: publicData } = supabaseStorage
+            .storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        const photoUrl = publicData.publicUrl;
+
+        // Update User Profile in DB
+        await (db as any).getClient()
+            .from("users")
+            .update({ photo_url: photoUrl, updated_at: new Date().toISOString() })
+            .eq("id", user.id);
+
+        res.json({ success: true, photo_url: photoUrl });
 
     } catch (err: any) {
-        console.error(`[Avatar Proxy] Error fetching avatar for ${telegramId}:`, err);
-        // Fallback to text avatar on error
-        res.redirect(`https://ui-avatars.com/api/?name=User&background=random&color=fff`);
+        console.error("[Profile] Avatar upload error:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 

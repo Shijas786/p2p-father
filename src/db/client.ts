@@ -175,7 +175,7 @@ class Database {
         const db = this.getClient();
         let query = db
             .from("orders")
-            .select("*, users!inner(username, trust_score, completed_trades, wallet_address, telegram_id)")
+            .select("*, users!inner(username, trust_score, completed_trades, wallet_address, telegram_id, photo_url)")
             .eq("status", "active")
             .order("rate", { ascending: type === "sell" })
             .limit(limit);
@@ -196,7 +196,8 @@ class Database {
             username: d.users?.username,
             trust_score: d.users?.trust_score,
             wallet_address: d.users?.wallet_address,
-            telegram_id: d.users?.telegram_id, // Added for avatar
+            telegram_id: d.users?.telegram_id,
+            photo_url: d.users?.photo_url, // Added for manual avatar
         })) as Order[];
     }
 
@@ -367,7 +368,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id, photo_url)")
             .eq("id", tradeId)
             .single();
 
@@ -381,7 +382,8 @@ class Database {
             seller_bank_account: data.seller?.bank_account_number,
             seller_bank_ifsc: data.seller?.bank_ifsc,
             seller_bank_name: data.seller?.bank_name,
-            seller_telegram_id: data.seller?.telegram_id, // Added for avatar
+            seller_telegram_id: data.seller?.telegram_id,
+            seller_photo_url: data.seller?.photo_url, // Added for manual avatar
         } as any;
     }
 
@@ -499,7 +501,7 @@ class Database {
         const db = this.getClient();
         const { data, error } = await db
             .from("trade_messages")
-            .select("*, users(username, telegram_id, first_name)")
+            .select("*, users(username, telegram_id, first_name, photo_url)")
             .eq("trade_id", tradeId)
             .order("created_at", { ascending: true });
 
@@ -507,7 +509,8 @@ class Database {
         return (data || []).map((m: any) => ({
             ...m,
             username: m.users?.username,
-            telegram_id: m.users?.telegram_id, // Added for avatar
+            telegram_id: m.users?.telegram_id,
+            photo_url: m.users?.photo_url, // Added for manual avatar
             first_name: m.users?.first_name,
         }));
     }

@@ -219,6 +219,20 @@ export const api = {
 
     // ---- Users ----
     users: {
-        getAvatarUrl: (telegramId: number | string) => `${API_BASE}/users/${telegramId}/avatar`,
+        uploadAvatar: async (file: File) => {
+            const initData = getInitData();
+            const formData = new FormData();
+            formData.append('avatar', file);
+            const res = await fetch(`${API_BASE}/profile/avatar`, {
+                method: 'POST',
+                headers: { 'X-Telegram-Init-Data': initData },
+                body: formData,
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Upload failed');
+            }
+            return res.json();
+        },
     },
 };
