@@ -502,23 +502,67 @@ export function TradeDetail({ user }: Props) {
                 </div>
 
                 {/* Fee Breakdown */}
-                <div className="text-[10px] bg-black/20 p-2 rounded border border-white/5">
-                    <div className="flex justify-between text-muted mb-1">
-                        <span>Commission ({(feePercentage * 100).toFixed(1)}%)</span>
-                        <span>{(feePercentage * 50).toFixed(1)}% Buyer + {(feePercentage * 50).toFixed(1)}% Seller</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-orange">Seller Locked:</span>
-                        <span className="font-mono">{parseFloat(disp.amount).toFixed(4)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted">You ({disp.type === 'sell' ? 'Buyer' : 'Seller'}) Pay Fiat for:</span>
-                        <span className="font-mono">{(parseFloat(disp.amount) * (1 - (feePercentage / 2))).toFixed(4)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                        <span className="text-green">You ({disp.type === 'sell' ? 'Buyer' : 'Seller'}) Receive Crypto:</span>
-                        <span className="font-mono">{(parseFloat(disp.amount) * (1 - feePercentage)).toFixed(4)}</span>
-                    </div>
+                {/* Fee Breakdown (Dynamic) */}
+                <div className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-3">
+                    {(() => {
+                        const amount = parseFloat(disp.amount);
+                        const rate = parseFloat(disp.rate || 0);
+                        const feePercent = feePercentage || 0.01;
+
+                        const sellerLock = amount.toFixed(4);
+                        // Fiat Amount is what Buyer sends and Seller receives
+                        // It corresponds to 99.5% of the crypto amount
+                        const fiatValue = (amount * (1 - (feePercent / 2)) * rate).toLocaleString('en-IN', {
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                        });
+
+                        const buyerGets = (amount * (1 - feePercent)).toFixed(4);
+
+                        const isUserSeller = trade
+                            ? user?.id === trade.seller_id
+                            : (order ? (order.type === 'sell' ? user?.id === order.user_id : user?.id !== order.user_id) : false);
+
+                        return (
+                            <>
+                                {isUserSeller ? (
+                                    // SELLER VIEW
+                                    <>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted">You Sell</span>
+                                            <span className="font-mono text-white">{sellerLock} {disp.token}</span>
+                                        </div>
+                                        <div className="pt-2 border-t border-white/5">
+                                            <div className="text-secondary text-xs mb-1">You Receive</div>
+                                            <div className="text-2xl font-bold text-green font-mono">
+                                                ₹ {fiatValue}
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-gray-500 mt-1">
+                                            (0.5% fee deducted)
+                                        </div>
+                                    </>
+                                ) : (
+                                    // BUYER VIEW
+                                    <>
+                                        <div className="pt-2 pb-3 border-b border-white/5 mb-2">
+                                            <div className="text-secondary text-xs mb-1">You Pay</div>
+                                            <div className="text-2xl font-bold text-white font-mono">
+                                                ₹ {fiatValue}
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted">You Receive</span>
+                                            <span className="font-mono text-green font-bold">{buyerGets} {disp.token}</span>
+                                        </div>
+                                        <div className="text-[10px] text-right text-gray-500 mt-1">
+                                            (0.5% fee deducted)
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 {orderId && (
