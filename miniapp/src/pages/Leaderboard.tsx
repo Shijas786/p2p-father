@@ -53,10 +53,6 @@ export function Leaderboard() {
                 <div className="lb-rewards-content">
                     <h3>Earn Points. Unlock Rewards.</h3>
                     <p>Accumulate points to qualify for future <b>Foundation Incentives</b>. Consistent volume and new connections are key to maximizing your allocation.</p>
-                    <div className="lb-rules">
-                        <span className="lb-rule">🚀 1 Point per $1 Volume</span>
-                        <span className="lb-rule">⚡ 20 Points per New Unique Trade</span>
-                    </div>
                 </div>
             </div>
 

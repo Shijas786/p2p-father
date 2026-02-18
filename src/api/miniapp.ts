@@ -1059,6 +1059,8 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
         const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
         if (!isAdmin) return res.status(403).json({ error: "Admin only" });
 
+
+
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
@@ -1095,6 +1097,24 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
         }
     } catch (err: any) {
         console.error("[ADMIN] Resolve dispute error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+router.get("/admin/trades/:id/messages", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const messages = await db.getTradeMessages(req.params.id as string);
+        res.json({ messages });
+    } catch (err: any) {
+        console.error("[ADMIN] Get messages error:", err);
         res.status(500).json({ error: err.message });
     }
 });

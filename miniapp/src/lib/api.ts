@@ -220,6 +220,7 @@ export const api = {
     // ---- Admin ----
     admin: {
         getDisputes: () => request<{ disputes: any[] }>('/admin/disputes'),
+        getTradeMessages: (tradeId: string) => request<{ messages: any[] }>(`/admin/trades/${tradeId}/messages`),
         resolveDispute: (id: string, releaseToBuyer: boolean) =>
             request<{ success: boolean; txHash?: string }>(`/admin/trades/${id}/resolve`, {
                 method: 'POST',
