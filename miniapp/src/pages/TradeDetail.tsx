@@ -644,64 +644,75 @@ export function TradeDetail({ user }: Props) {
 
             {/* User Profile Section */}
             {(trade || order) && (
-                <div className="px-4 mb-4 flex items-center justify-between">
+                <div className="px-4 mb-4 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 mx-4">
                     <div className="flex items-center gap-3">
                         {/* Determine Counterparty */}
                         {(() => {
                             let cpName = 'Anonymous';
                             let cpPhoto = null;
+                            let cpUsername = null;
                             const isTradeSeller = trade ? user?.id === trade.seller_id : false;
 
                             if (trade) {
-                                if (isTradeSeller) {
+                                if (isTradeSeller) { // I am Seller, CP is Buyer
                                     cpName = trade.buyer_username || 'Buyer';
                                     cpPhoto = trade.buyer_photo_url;
-                                } else {
+                                    cpUsername = trade.buyer_username;
+                                } else { // I am Buyer, CP is Seller
                                     cpName = trade.seller_username || 'Seller';
                                     cpPhoto = trade.seller_photo_url;
+                                    cpUsername = trade.seller_username;
                                 }
                             } else if (order) {
-                                // Viewing Order
+                                // Viewing Order (I am potential Taker)
                                 if (user?.id === order.user_id) {
                                     cpName = 'You';
                                     cpPhoto = user.photo_url;
                                 } else {
                                     cpName = order.username || 'Maker';
                                     cpPhoto = order.photo_url;
+                                    cpUsername = order.username; // Does order has username? Yes from join.
                                 }
                             }
 
                             return (
                                 <>
-                                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden border border-white/10">
-                                        {cpPhoto ? (
-                                            <img src={cpPhoto} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="text-sm font-bold text-gray-400">{cpName[0]?.toUpperCase()}</span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-white">{cpName}</span>
-                                            {/* Optional Verified Badge */}
-                                            {/* <span className="text-blue-400 text-[10px]">Verified</span> */}
-                                        </div>
-                                        <div className="text-[10px] text-muted flex items-center gap-2">
-                                            {trade ? (
-                                                <span className={`status-badge px-1.5 py-0.5 rounded text-[9px] ${trade.status}`}>
-                                                    {trade.status.replace('_', ' ').toUpperCase()}
-                                                </span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden border border-white/10 relative">
+                                            {cpPhoto ? (
+                                                <img src={cpPhoto} alt="" className="w-full h-full object-cover" />
                                             ) : (
-                                                <span>Level 1 Trader</span>
+                                                <span className="text-sm font-bold text-gray-400">{cpName[0]?.toUpperCase()}</span>
                                             )}
+                                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-black ${trade ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-white text-sm">{cpName}</span>
+                                                {/* <span className="text-blue-400 text-[10px]">Verified</span> */}
+                                            </div>
+                                            <div className="text-[10px] text-muted flex items-center gap-1">
+                                                {trade ? (
+                                                    <span className={`status-badge px-1.5 py-0.5 rounded text-[9px] ${trade.status}`}>
+                                                        {trade.status.replace('_', ' ').toUpperCase()}
+                                                    </span>
+                                                ) : (
+                                                    <span>Level 1 Trader</span>
+                                                )}
+                                                {cpUsername && <span className="text-gray-600">@{cpUsername}</span>}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Call Button - REMOVED */}
                                 </>
+
                             );
                         })()}
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Standard Actions (Fiat Sent, Release, Dispute) */}
             <div ref={actionSectionRef}>
@@ -982,6 +993,6 @@ export function TradeDetail({ user }: Props) {
             </div>
             {/* Error Display */}
             {error && !showLockUI && <div className="co-error mt-3">{error}</div>}
-        </div>
+        </div >
     );
 }

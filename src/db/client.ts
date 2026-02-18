@@ -128,7 +128,7 @@ class Database {
             .eq("id", userId);
     }
 
-    async completeUserTrade(userId: string, isSuccessful: boolean): Promise<void> {
+    async completeUserTrade(userId: string, isSuccessful: boolean, amount?: number, otherPartyId?: string): Promise<void> {
         const user = await this.getUserById(userId);
         if (!user) return;
 
@@ -142,11 +142,46 @@ class Database {
             newTrust = Math.max(0, newTrust - 20);
         }
 
+        // ═══ LEADERBOARD POINTS & VOLUME ═══
+        let additionalPoints = 0;
+        let newVolume = parseFloat(user.total_volume?.toString() || "0");
+
+        if (isSuccessful && amount && amount > 0) {
+            newVolume += amount;
+
+            // 1 Point per 1 Volume
+            additionalPoints += amount;
+
+            // Unique User Bonus (20 pts)
+            if (otherPartyId) {
+                const db = this.getClient();
+                // Check if this is the FIRST completed trade between these two
+                // valid trades are "completed"
+                const { count, error } = await db
+                    .from("trades")
+                    .select("id", { count: "exact", head: true })
+                    .or(`and(buyer_id.eq.${userId},seller_id.eq.${otherPartyId}),and(buyer_id.eq.${otherPartyId},seller_id.eq.${userId})`)
+                    .eq("status", "completed");
+
+                // If count is 1, it means this current trade is the ONLY one (or the first one found).
+                // Actually, this function is called AFTER status update to 'completed'.
+                // So count should be at least 1. If count == 1, it's the first time.
+                if (!error && count === 1) {
+                    console.log(`[POINTS] First trade bonus for ${userId} with ${otherPartyId}`);
+                    additionalPoints += 20;
+                }
+            }
+        }
+
+        const newPoints = parseFloat(user.points?.toString() || "0") + additionalPoints;
+
         await this.updateUser(userId, {
             trade_count: newTradeCount,
             completed_trades: newCompletedCount,
-            trust_score: newTrust
-        });
+            trust_score: newTrust,
+            total_volume: newVolume,
+            points: newPoints
+        } as any);
     }
 
     async getAllTelegramIds(): Promise<number[]> {

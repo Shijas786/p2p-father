@@ -18,6 +18,7 @@ import { Bridge } from './pages/Bridge';
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
+import { Leaderboard } from './pages/Leaderboard';
 import { ToastProvider } from './components/Toast';
 import './styles/global.css';
 
@@ -209,6 +210,7 @@ function AppInner() {
           <Route path="ads" element={<MyAds user={user} />} />
           <Route path="admin" element={<Admin />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
+          <Route path="leaderboard" element={<Leaderboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

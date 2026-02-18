@@ -903,8 +903,9 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         });
 
         // Update trust scores for both parties
-        await db.completeUserTrade(trade.buyer_id, true);
-        await db.completeUserTrade(trade.seller_id, true);
+        // Pass amount and other party ID for points calculation
+        await db.completeUserTrade(trade.buyer_id, true, trade.amount, trade.seller_id);
+        await db.completeUserTrade(trade.seller_id, true, trade.amount, trade.buyer_id);
 
         res.json({ success: true, release_tx_hash: releaseTxHash });
 
@@ -1355,6 +1356,43 @@ router.post("/profile/avatar", upload.single('avatar'), async (req: Request, res
 
     } catch (err: any) {
         console.error("[Profile] Avatar upload error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════════════════════════════
+
+router.get("/leaderboard", async (req: Request, res: Response) => {
+    try {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
+
+        const { data: users, error } = await supabase
+            .from("users")
+            .select("id, username, first_name, photo_url, wallet_address, points, total_volume, trade_count, telegram_id")
+            .order("points", { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        // Mask addresses for privacy if no username
+        // "Name": Show Username if available, else 0x12...34
+        const leaderboard = (users || []).map((u: any, index: number) => ({
+            rank: index + 1,
+            id: u.id,
+            name: u.username || (u.first_name ? u.first_name : (u.wallet_address ? `${u.wallet_address.slice(0, 6)}...${u.wallet_address.slice(-4)}` : "Anon")),
+            photo_url: u.photo_url,
+            points: u.points || 0,
+            volume: u.total_volume || 0,
+            trades: u.trade_count || 0,
+            is_me: req.telegramUser?.id === u.telegram_id
+        }));
+
+        res.json({ leaderboard });
+    } catch (err: any) {
+        console.error("[MINIAPP] Leaderboard error:", err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -45,6 +45,8 @@ export interface User {
     is_banned: boolean;
     created_at: string;
     photo_url?: string; // Manual PFP
+    total_volume?: number;
+    points?: number;
 }
 
 export interface BankDetails {

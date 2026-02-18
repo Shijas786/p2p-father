@@ -215,6 +215,8 @@ export const api = {
         }>('/stats'),
     },
 
+    getLeaderboard: () => request<{ leaderboard: any[] }>('/leaderboard'),
+
     // ---- Admin ----
     admin: {
         getDisputes: () => request<{ disputes: any[] }>('/admin/disputes'),

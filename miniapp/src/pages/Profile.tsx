@@ -107,9 +107,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }, 'Bank details updated!');
     }
 
-    const completionRate = user?.completed_trades && user?.trade_count
-        ? ((user.completed_trades / user.trade_count) * 100).toFixed(1)
-        : '0.0';
+
 
     return (
         <div className="page profile-page animate-in">
@@ -144,9 +142,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
                 {/* Verification Badges */}
                 <div className="prof-badges">
-                    <span className={`prof-badge ${user?.is_verified ? 'verified' : ''}`}>
-                        {user?.is_verified ? '✓' : '○'} KYC
-                    </span>
                     <span className="prof-badge verified">✓ Telegram</span>
                 </div>
             </div>
@@ -158,8 +153,8 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     <span className="prof-stat-label">30d Trades</span>
                 </div>
                 <div className="prof-stat-box">
-                    <span className="prof-stat-num">{completionRate}%</span>
-                    <span className="prof-stat-label">Completion Rate</span>
+                    <span className="prof-stat-num">{user?.points || 0}</span>
+                    <span className="prof-stat-label">Points</span>
                 </div>
                 <div className="prof-stat-box">
                     <span className="prof-stat-num">{user?.trust_score || 100}%</span>
@@ -169,6 +164,18 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
             {/* ═══ Menu Sections ═══ */}
             <div className="prof-menu">
+                {/* Leaderboard CTA */}
+                <div className="prof-section" style={{ padding: '0' }}>
+                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/leaderboard'); }} style={{ background: 'linear-gradient(45deg, rgba(240, 185, 11, 0.1), transparent)', border: '1px solid rgba(240, 185, 11, 0.2)' }}>
+                        <span className="prof-nav-icon">🏆</span>
+                        <div style={{ flex: 1 }}>
+                            <div className="prof-nav-text" style={{ color: '#f0b90b' }}>Leaderboard</div>
+                            <div className="prof-nav-sub" style={{ fontSize: '12px', color: '#848e9c' }}>Win rewards & incentives</div>
+                        </div>
+                        <span className="prof-nav-chevron">›</span>
+                    </div>
+                </div>
+
                 {/* Payment Methods */}
                 <div className="prof-section">
                     <div className="prof-section-header">
@@ -301,13 +308,9 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <span className="prof-account-label">Telegram ID</span>
                         <span className="prof-account-value">{user?.telegram_id}</span>
                     </div>
-                    <div className="prof-account-row">
+                    <div className="prof-account-row" style={{ borderBottom: 'none' }}>
                         <span className="prof-account-label">Member Since</span>
                         <span className="prof-account-value">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</span>
-                    </div>
-                    <div className="prof-account-row" style={{ borderBottom: 'none' }}>
-                        <span className="prof-account-label">Network</span>
-                        <span className="prof-account-value">Base (Mainnet)</span>
                     </div>
                 </div>
             </div>
