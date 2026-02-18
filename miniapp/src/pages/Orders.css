@@ -98,6 +98,14 @@
     gap: 8px;
 }
 
+.orders-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2b2f36;
+}
+
 .orders-type {
     font-size: 12px;
     font-weight: 700;

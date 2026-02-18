@@ -598,29 +598,64 @@ export function TradeDetail({ user }: Props) {
                 </div>
             )}
 
-            {/* Normal Trade Info (Status, etc) */}
-            {trade && (
-                <div className="td-info card">
-                    <div className="td-info-row">
-                        <span className="text-muted">Status</span>
-                        <span className={`font-semibold status-badge ${trade.status}`}>
-                            {trade.status.replace('_', ' ').toUpperCase()}
-                        </span>
+            {/* User Profile Section */}
+            {(trade || order) && (
+                <div className="px-4 mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        {/* Determine Counterparty */}
+                        {(() => {
+                            let cpName = 'Anonymous';
+                            let cpPhoto = null;
+                            const isTradeSeller = trade ? user?.id === trade.seller_id : false;
+
+                            if (trade) {
+                                if (isTradeSeller) {
+                                    cpName = trade.buyer_username || 'Buyer';
+                                    cpPhoto = trade.buyer_photo_url;
+                                } else {
+                                    cpName = trade.seller_username || 'Seller';
+                                    cpPhoto = trade.seller_photo_url;
+                                }
+                            } else if (order) {
+                                // Viewing Order
+                                if (user?.id === order.user_id) {
+                                    cpName = 'You';
+                                    cpPhoto = user.photo_url;
+                                } else {
+                                    cpName = order.username || 'Maker';
+                                    cpPhoto = order.photo_url;
+                                }
+                            }
+
+                            return (
+                                <>
+                                    <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden border border-white/10">
+                                        {cpPhoto ? (
+                                            <img src={cpPhoto} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-sm font-bold text-gray-400">{cpName[0]?.toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-white">{cpName}</span>
+                                            {/* Optional Verified Badge */}
+                                            {/* <span className="text-blue-400 text-[10px]">Verified</span> */}
+                                        </div>
+                                        <div className="text-[10px] text-muted flex items-center gap-2">
+                                            {trade ? (
+                                                <span className={`status-badge px-1.5 py-0.5 rounded text-[9px] ${trade.status}`}>
+                                                    {trade.status.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                            ) : (
+                                                <span>Level 1 Trader</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
-                    {trade.payment_proofs?.[0]?.utr && (
-                        <div className="td-info-row border-t pt-2 mt-2">
-                            <span className="text-muted">Submitted UTR</span>
-                            <span className="font-mono font-bold text-lg select-all">{trade.payment_proofs[0].utr}</span>
-                        </div>
-                    )}
-                    {trade.escrow_tx_hash && (
-                        <div className="td-info-row border-t pt-2 mt-2">
-                            <span className="text-muted">Escrow TX</span>
-                            <a href={`https://basescan.org/tx/${trade.escrow_tx_hash}`} target="_blank" rel="noopener" className="text-green text-sm font-mono truncate">
-                                {trade.escrow_tx_hash.slice(0, 12)}...
-                            </a>
-                        </div>
-                    )}
                 </div>
             )}
 

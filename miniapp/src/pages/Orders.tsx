@@ -141,6 +141,18 @@ export function Orders({ user }: Props) {
                                         <span className={`orders-type ${isBuyer ? 'buy' : 'sell'}`}>
                                             {isBuyer ? 'Buy' : 'Sell'}
                                         </span>
+                                        {/* Avatar */}
+                                        {(isBuyer ? trade.seller_photo_url : trade.buyer_photo_url) ? (
+                                            <img
+                                                src={isBuyer ? trade.seller_photo_url : trade.buyer_photo_url}
+                                                className="orders-avatar"
+                                                alt=""
+                                            />
+                                        ) : (
+                                            <div className="orders-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#fff', background: '#374151' }}>
+                                                {(counterparty?.[0] || '?').toUpperCase()}
+                                            </div>
+                                        )}
                                         <span className="orders-counterparty">
                                             {counterparty || 'Anonymous'}
                                         </span>

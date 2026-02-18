@@ -205,7 +205,7 @@ class Database {
         const db = this.getClient();
         const { data, error } = await db
             .from("orders")
-            .select("*, users!inner(username, trust_score, upi_id)")
+            .select("*, users!inner(username, trust_score, upi_id, photo_url)")
             .eq("id", orderId)
             .single();
         if (error) {
@@ -218,6 +218,7 @@ class Database {
             username: data.users?.username,
             trust_score: data.users?.trust_score,
             upi_id: data.users?.upi_id,
+            photo_url: data.users?.photo_url,
         } as Order;
     }
 
@@ -368,7 +369,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id, photo_url)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id, photo_url), buyer:users!trades_buyer_id_fkey(username, photo_url, telegram_id)")
             .eq("id", tradeId)
             .single();
 
@@ -383,7 +384,11 @@ class Database {
             seller_bank_ifsc: data.seller?.bank_ifsc,
             seller_bank_name: data.seller?.bank_name,
             seller_telegram_id: data.seller?.telegram_id,
-            seller_photo_url: data.seller?.photo_url, // Added for manual avatar
+            seller_photo_url: data.seller?.photo_url,
+
+            buyer_username: data.buyer?.username,
+            buyer_photo_url: data.buyer?.photo_url,
+            buyer_telegram_id: data.buyer?.telegram_id,
         } as any;
     }
 
@@ -391,11 +396,18 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*")
+            .select("*, seller:users!trades_seller_id_fkey(username, photo_url), buyer:users!trades_buyer_id_fkey(username, photo_url)")
             .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
             .order("created_at", { ascending: false })
             .limit(limit);
-        return (data || []) as Trade[];
+
+        return (data || []).map((t: any) => ({
+            ...t,
+            seller_username: t.seller?.username,
+            seller_photo_url: t.seller?.photo_url,
+            buyer_username: t.buyer?.username,
+            buyer_photo_url: t.buyer?.photo_url,
+        })) as any[];
     }
 
     async getActiveTrades(): Promise<Trade[]> {
