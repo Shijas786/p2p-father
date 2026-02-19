@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
+import { copyToClipboard } from '../lib/utils';
 import './TradeDetail.css';
 
 // createTrade ABI extension (not in shared contracts.ts)
@@ -760,9 +761,9 @@ export function TradeDetail({ user }: Props) {
                                     <div className="text-[10px] text-muted uppercase font-bold mb-1">📱 Pay to UPI ID</div>
                                     <div className="flex items-center justify-between">
                                         <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id}</span>
-                                        <button className="btn btn-xs btn-outline" onClick={() => {
-                                            navigator.clipboard.writeText(trade.seller_upi_id || '');
-                                            haptic('success');
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_upi_id || '');
+                                            if (success) haptic('success');
                                         }}>Copy</button>
                                     </div>
                                 </div>
@@ -773,9 +774,9 @@ export function TradeDetail({ user }: Props) {
                                     <div className="text-[10px] text-muted uppercase font-bold mb-1">📞 Phone Number</div>
                                     <div className="flex items-center justify-between">
                                         <span className="font-mono text-lg text-white select-all">{trade.seller_phone}</span>
-                                        <button className="btn btn-xs btn-outline" onClick={() => {
-                                            navigator.clipboard.writeText(trade.seller_phone || '');
-                                            haptic('success');
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_phone || '');
+                                            if (success) haptic('success');
                                         }}>Copy</button>
                                     </div>
                                 </div>
@@ -786,16 +787,16 @@ export function TradeDetail({ user }: Props) {
                                     <div className="text-[10px] text-muted uppercase font-bold mb-1">🏦 Bank Transfer (IMPS)</div>
                                     <div className="flex items-center justify-between mb-1">
                                         <span className="font-mono text-sm text-white select-all">{trade.seller_bank_account}</span>
-                                        <button className="btn btn-xs btn-outline" onClick={() => {
-                                            navigator.clipboard.writeText(trade.seller_bank_account || '');
-                                            haptic('success');
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_bank_account || '');
+                                            if (success) haptic('success');
                                         }}>Copy</button>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-muted">IFSC: <span className="font-mono text-white select-all">{trade.seller_bank_ifsc}</span></span>
-                                        <button className="btn btn-xs btn-outline" onClick={() => {
-                                            navigator.clipboard.writeText(trade.seller_bank_ifsc || '');
-                                            haptic('success');
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_bank_ifsc || '');
+                                            if (success) haptic('success');
                                         }}>Copy</button>
                                     </div>
                                     {trade.seller_bank_name && (

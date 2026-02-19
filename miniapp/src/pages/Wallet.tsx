@@ -7,6 +7,7 @@ import { parseUnits } from 'viem';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
+import { copyToClipboard } from '../lib/utils';
 import './Wallet.css';
 
 interface Props {
@@ -77,10 +78,12 @@ export function Wallet({ user }: Props) {
         }
     }
 
-    function copyAddress() {
+    async function copyAddress() {
         if (!balances?.address) return;
-        navigator.clipboard.writeText(balances.address);
-        haptic('success');
+        const success = await copyToClipboard(balances.address);
+        if (success) {
+            haptic('success');
+        }
     }
 
     // ═══ SEND ═══
