@@ -20,7 +20,6 @@ export function Home({ user }: Props) {
     const [tokenFilter, setTokenFilter] = useState('USDC');
     const [confirmOrder, setConfirmOrder] = useState<any>(null);
     const [tokenDropdown, setTokenDropdown] = useState(false);
-    const [showHelp, setShowHelp] = useState(false);
 
     useEffect(() => {
         api.stats.get().then(data => {
@@ -129,10 +128,6 @@ export function Home({ user }: Props) {
                     ))}
                 </div>
 
-                {/* Help Button */}
-                <button className="p2p-help-btn" onClick={() => { haptic('light'); setShowHelp(true); }}>
-                    ❓
-                </button>
             </div>
 
             {/* Trader List */}
@@ -281,50 +276,6 @@ export function Home({ user }: Props) {
                 </div>
             )}
 
-            {/* ═══ Onboarding / Help Modal ═══ */}
-            {showHelp && (
-                <div className="p2p-modal-overlay" onClick={() => setShowHelp(false)}>
-                    <div className="p2p-modal help animate-in" onClick={e => e.stopPropagation()}>
-                        <div className="p2p-modal-close" onClick={() => setShowHelp(false)}>✕</div>
-                        <h3 className="p2p-modal-title center">🚀 How to Trade</h3>
-
-                        <div className="p2p-help-steps">
-                            <div className="p2p-help-step">
-                                <div className="p2p-help-icon">🔍</div>
-                                <div className="p2p-help-text">
-                                    <h4>Browse</h4>
-                                    <p>Find a buyer or seller with a good rate.</p>
-                                </div>
-                            </div>
-                            <div className="p2p-help-step">
-                                <div className="p2p-help-icon">⚖️</div>
-                                <div className="p2p-help-text">
-                                    <h4>Secure</h4>
-                                    <p>The Bot acts as a <b>Digital Locker</b> 🔐. It locks the crypto safely until payment is done.</p>
-                                </div>
-                            </div>
-                            <div className="p2p-help-step">
-                                <div className="p2p-help-icon">📲</div>
-                                <div className="p2p-help-text">
-                                    <h4>Pay Directly</h4>
-                                    <p>Send money to the seller's UPI. No middleman handles your cash.</p>
-                                </div>
-                            </div>
-                            <div className="p2p-help-step">
-                                <div className="p2p-help-icon">✅</div>
-                                <div className="p2p-help-text">
-                                    <h4>Done</h4>
-                                    <p>Once the seller confirms receipt, the locker opens and you get your crypto! 🔓</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button className="p2p-help-gotit" onClick={() => setShowHelp(false)}>
-                            Got it!
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

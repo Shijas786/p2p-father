@@ -70,14 +70,14 @@ export const ERC20_ABI = [
 
 export const CONTRACTS = {
     base: {
-        escrow: "0x78c2B85759C5F7d58fEea82D0Be098E540272245",
+        escrow: "0xf20872C359788a53958a048413D64F183403B1f1",
         tokens: {
             USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
             USDT: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
         }
     },
     bsc: {
-        escrow: "0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260",
+        escrow: "0xe9B4936673BDa2F4899225A0a82E2fdAF456eCA6",
         tokens: {
             USDC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
             USDT: "0x55d398326f99059fF775485246999027B3197955",

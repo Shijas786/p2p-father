@@ -162,26 +162,34 @@ class WalletService {
         }
 
         // 2. Deposit with Retry/Buffer for gas estimation lag
-        try {
-            const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
-            await depositTx.wait();
-            return depositTx.hash;
-        } catch (err: any) {
-            // If estimateGas fails with allowance error despite approve, try one more time after a longer sleep
-            if (err.message.includes("allowance") || err.message.includes("estimateGas")) {
-                console.warn("[WALLET] Deposit estimation failed, retrying after delay...", err.message);
-                await new Promise(r => setTimeout(r, 3000));
+        let depositAttempts = 0;
+        const maxDepositAttempts = 3;
 
-                // One more check
-                const allowanceAfterSleep = await tokenContract.allowance(signer.address, contractAddress);
-                console.log(`[WALLET] Retrying. Allowance: ${ethers.formatUnits(allowanceAfterSleep, decimals)}`);
-
+        while (depositAttempts < maxDepositAttempts) {
+            depositAttempts++;
+            try {
                 const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
                 await depositTx.wait();
                 return depositTx.hash;
+            } catch (err: any) {
+                console.warn(`[WALLET] Deposit attempt ${depositAttempts} failed:`, err.message);
+
+                if (depositAttempts >= maxDepositAttempts) throw err;
+
+                // Transient Errors: Nonce, gas price spikes, or RPC state lag
+                const isTransient = err.message.includes("allowance") ||
+                    err.message.includes("estimateGas") ||
+                    err.message.includes("nonce") ||
+                    err.message.includes("replacement fee");
+
+                if (isTransient) {
+                    await new Promise(r => setTimeout(r, 2000 * depositAttempts));
+                } else {
+                    throw err;
+                }
             }
-            throw err;
         }
+        throw new Error("Deposit failed after max retries");
     }
 
     async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {

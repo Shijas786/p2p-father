@@ -177,24 +177,50 @@ class EscrowService {
      * Release funds to buyer (called by Relayer when Seller confirms)
      */
     async release(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
-        const contract = this.getEscrowContract(chain);
-        console.log(`[ESCROW] Releasing trade ${tradeId} on ${chain}...`);
-        const tx = await contract.release(tradeId);
-        await tx.wait();
-        console.log(`[ESCROW] Released: ${tx.hash}`);
-        return tx.hash;
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                const contract = this.getEscrowContract(chain);
+                console.log(`[ESCROW] Releasing trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
+                const tx = await contract.release(tradeId);
+                await tx.wait();
+                console.log(`[ESCROW] Released: ${tx.hash}`);
+                return tx.hash;
+            } catch (err: any) {
+                console.error(`[ESCROW] Release attempt ${attempts} failed:`, err.message);
+                if (attempts >= maxAttempts) throw err;
+                await new Promise(r => setTimeout(r, 2000 * attempts));
+            }
+        }
+        throw new Error("Release failed after max retries");
     }
 
     /**
      * Refund funds to seller (called by Relayer if timeout or Seller cancels)
      */
     async refund(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
-        const contract = this.getEscrowContract(chain);
-        console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain}...`);
-        const tx = await contract.refund(tradeId);
-        await tx.wait();
-        console.log(`[ESCROW] Refunded: ${tx.hash}`);
-        return tx.hash;
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                const contract = this.getEscrowContract(chain);
+                console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
+                const tx = await contract.refund(tradeId);
+                await tx.wait();
+                console.log(`[ESCROW] Refunded: ${tx.hash}`);
+                return tx.hash;
+            } catch (err: any) {
+                console.error(`[ESCROW] Refund attempt ${attempts} failed:`, err.message);
+                if (attempts >= maxAttempts) throw err;
+                await new Promise(r => setTimeout(r, 2000 * attempts));
+            }
+        }
+        throw new Error("Refund failed after max retries");
     }
 
     /**

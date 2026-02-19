@@ -708,8 +708,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Default escrow duration (1 hour)
     uint256 public constant DEFAULT_ESCROW_DURATION = 1 hours;
 
-    /// @notice Default escrow duration (1 hour)
-    uint256 public constant DEFAULT_ESCROW_DURATION = 1 hours;
+
 
     // ═══════════════════════════════════════════════════════════════
     //                          TYPES
@@ -741,6 +740,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         uint256 createdAt;
         uint256 deadline;             // Auto-refund after this (if fiat NOT sent)
         uint256 fiatSentAt;           // Timestamp when buyer marked fiat as sent
+
         
         // Dispute
         address disputeInitiator;
@@ -796,6 +796,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     );
 
     event FiatMarkedSent(uint256 indexed tradeId, address indexed buyer);
+
+
 
     event TradeReleased(
         uint256 indexed tradeId,
@@ -897,8 +899,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         uint256 _amount,
         uint256 _duration
     ) external nonReentrant returns (uint256 tradeId) {
-        // Only Fee Collector (Relayer) or Owner can match trades
-        require(msg.sender == feeCollector || msg.sender == owner(), "Caller not Relayer");
+        // Only Fee Collector (Relayer), Approved Relayer, or Owner can match trades
+        require(approvedRelayers[msg.sender] || msg.sender == owner(), "Caller not Relayer");
         require(_buyer != address(0), "Invalid buyer");
         require(_seller != _buyer, "Self trade");
         require(_amount >= MIN_TRADE_AMOUNT, "Too small");
@@ -1023,6 +1025,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
 
         trade.status = TradeStatus.FiatSent;
         trade.fiatSentAt = block.timestamp;
+        // No auto-release deadline (Legacy)
 
         emit FiatMarkedSent(_tradeId, msg.sender);
     }
@@ -1094,7 +1097,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
 
         if (isTimeout) {
             // Timeout refund ONLY allowed if buyer hasn't sent fiat yet
-            // If buyer already sent fiat → use autoRelease() instead!
             require(
                 trade.status == TradeStatus.Active,
                 "Fiat already sent - use autoRelease for buyer protection"
@@ -1129,8 +1131,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         emit TradeRefunded(_tradeId, trade.seller, trade.amount);
     }
 
-    // Auto-release removed to prevent buyer scams.
-    // Trades must now be Released by seller or Resolved by Admin.
+
 
     // ═══════════════════════════════════════════════════════════════
     //                      DISPUTE FUNCTIONS

@@ -1,4 +1,4 @@
-import { Bot, Context, session, InlineKeyboard } from "grammy";
+import { Bot, Context, session, InlineKeyboard, InputFile } from "grammy";
 import { env } from "../config/env";
 import { db } from "../db/client";
 import { ai } from "../services/ai";
@@ -376,33 +376,42 @@ bot.command("start", async (ctx) => {
     const hasPayment = user.upi_id || user.phone_number || user.bank_account_number;
 
     const welcome = [
-        `👋 *Welcome to P2P Kerala, ${ctx.from?.first_name || "Trader"}!* 🌴`,
+        `👋 *Welcome to the P2P Kerala Platform*`,
         "",
-        "The safest way to buy & sell crypto in Kerala.",
+        "Secure, decentralized settlement at your fingertips.",
         "",
-        "💳 *Your Deposit Wallet:*",
+        "🔐 *Settlement Address:*",
         `\`${user.wallet_address}\``,
         "",
-        "🚀 *How it Works:*",
-        "🔍 *Browse*: Find the best price in `/ads`.",
-        "🤝 *Match*: Start a trade – crypto is safely locked 🔒.",
-        "📲 *Pay*: Send money directly to the seller's UPI.",
-        "💰 *Receive*: Seller confirms and you get the crypto! ✅",
+        "*P2P Trading*",
+        "📖 /newad — Create buy/sell ad",
+        "🔍 /ads — Browse live ads",
+        "📂 /myads — Manage your ads",
         "",
-        "What would you like to do?",
+        "*Wallet & Profile*",
+        "💰 /portfolio — Check balance & send",
+        "⚙️ /wallet — Wallet settings",
+        "💳 /payment — Set payment methods",
+        "📊 /profile — Your stats",
+        "",
+        "Ready to begin?",
     ].join("\n");
 
     const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
+    const bannerPath = "/Users/shijas/.gemini/antigravity/brain/833cef4e-104f-4436-aa65-0196eeeaa9d5/bot_hero_banner_1771531748984.png";
 
     const startKeyboard = new InlineKeyboard()
-        .webApp("📱 Open Mini App", miniAppUrl)
+        .webApp("📱 Launch Application", miniAppUrl)
         .row()
-        .text("🛒 Buy Crypto", "newad:buy")
-        .text("💰 Sell Crypto", "newad:sell")
-        .row()
-        .text("❓ How to Trade", "how_to_trade");
+        .text("🛒 Buy Assets", "newad:buy")
+        .text("💰 Sell Assets", "newad:sell");
 
-    await ctx.reply(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
+    // Send hero banner with the welcome text
+    await ctx.replyWithPhoto(new InputFile(bannerPath), {
+        caption: welcome,
+        parse_mode: "Markdown",
+        reply_markup: startKeyboard
+    });
 
     // If new user, immediately ask for UPI
     if (isNewUser && !user.upi_id) {
@@ -1374,60 +1383,37 @@ bot.on("callback_query:data", async (ctx) => {
             await ctx.answerCallbackQuery();
         }
 
-        // Handle "How to Trade" guide
-        if (data === "how_to_trade") {
-            const guide = [
-                "👋 *Is it safe? YES!*",
-                "",
-                "Think of the bot as a *digital locker*. 🔐",
-                "",
-                "1️⃣ *Lock*: When a trade starts, the crypto is moved into the locker.",
-                "2️⃣ *Secure*: The locker stays shut while the buyer sends the money.",
-                "3️⃣ *Release*: Once the seller says \"I got the money\", the locker opens for the buyer! 🔓",
-                "",
-                "_No one can steal, and no one can run away._",
-                "",
-                "Want to try? Tap a button below!",
-            ].join("\n");
-
-            const keyboard = new InlineKeyboard()
-                .text("🛒 Buy Crypto", "newad:buy")
-                .text("💰 Sell Crypto", "newad:sell")
-                .row()
-                .text("🔙 Back", "start_over");
-
-            await ctx.editMessageText(guide, { parse_mode: "Markdown", reply_markup: keyboard });
-            await ctx.answerCallbackQuery();
-        }
-
         // Handle "Back" to Start
         if (data === "start_over") {
             const user = await ensureUser(ctx);
             const welcome = [
-                `👋 *Welcome to P2P Kerala, ${ctx.from?.first_name || "Trader"}!* 🌴`,
+                `👋 *Welcome to the P2P Kerala Platform*`,
                 "",
-                "The safest way to buy & sell crypto in Kerala.",
+                "Secure, decentralized settlement at your fingertips.",
                 "",
-                "💳 *Your Deposit Wallet:*",
+                "🔐 *Settlement Address:*",
                 `\`${user.wallet_address}\``,
                 "",
-                "🚀 *How it Works:*",
-                "🔍 *Browse*: Find the best price in `/ads`.",
-                "🤝 *Match*: Start a trade – crypto is safely locked 🔒.",
-                "📲 *Pay*: Send money directly to the seller's UPI.",
-                "💰 *Receive*: Seller confirms and you get the crypto! ✅",
+                "*P2P Trading*",
+                "📖 /newad — Create buy/sell ad",
+                "🔍 /ads — Browse live ads",
+                "📂 /myads — Manage your ads",
                 "",
-                "What would you like to do?",
+                "*Wallet & Profile*",
+                "💰 /portfolio — Check balance & send",
+                "⚙️ /wallet — Wallet settings",
+                "💳 /payment — Set payment methods",
+                "📊 /profile — Your stats",
+                "",
+                "Ready to begin?",
             ].join("\n");
 
             const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
             const startKeyboard = new InlineKeyboard()
-                .webApp("📱 Open Mini App", miniAppUrl)
+                .webApp("📱 Launch Application", miniAppUrl)
                 .row()
-                .text("🛒 Buy Crypto", "newad:buy")
-                .text("💰 Sell Crypto", "newad:sell")
-                .row()
-                .text("❓ How to Trade", "how_to_trade");
+                .text("🛒 Buy Assets", "newad:buy")
+                .text("💰 Sell Assets", "newad:sell");
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
