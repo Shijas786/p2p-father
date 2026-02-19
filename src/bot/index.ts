@@ -399,7 +399,7 @@ bot.command("start", async (ctx) => {
     ].join("\n");
 
     const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
-    const bannerPath = path.join(process.cwd(), "assets/hero_banner.png");
+    const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
         .webApp("📱 Launch Application", miniAppUrl)
