@@ -47,10 +47,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Default escrow duration (1 hour)
     uint256 public constant DEFAULT_ESCROW_DURATION = 1 hours;
 
-    /// @notice Time seller has to confirm fiat receipt before auto-release to buyer (45 min)
-    /// After buyer marks fiat as sent, seller has this long to confirm or dispute.
-    /// If seller does nothing → crypto auto-releases to buyer.
-    uint256 public constant AUTO_RELEASE_DURATION = 45 minutes;
+
 
     // ═══════════════════════════════════════════════════════════════
     //                          TYPES
@@ -82,7 +79,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         uint256 createdAt;
         uint256 deadline;             // Auto-refund after this (if fiat NOT sent)
         uint256 fiatSentAt;           // Timestamp when buyer marked fiat as sent
-        uint256 autoReleaseDeadline;  // Auto-release to buyer after this (if fiat sent)
         
         // Dispute
         address disputeInitiator;
@@ -137,14 +133,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         uint256 deadline
     );
 
-    event FiatMarkedSent(uint256 indexed tradeId, address indexed buyer, uint256 autoReleaseDeadline);
-
-    event AutoReleased(
-        uint256 indexed tradeId,
-        address indexed buyer,
-        uint256 buyerReceives,
-        uint256 feeAmount
-    );
+    event FiatMarkedSent(uint256 indexed tradeId, address indexed buyer);
 
     event TradeReleased(
         uint256 indexed tradeId,
@@ -276,7 +265,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             createdAt: block.timestamp,
             deadline: block.timestamp + _duration,
             fiatSentAt: 0,
-            autoReleaseDeadline: 0,
             disputeInitiator: address(0),
             disputeReason: ""
         });
@@ -335,7 +323,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             createdAt: block.timestamp,
             deadline: block.timestamp + _duration,
             fiatSentAt: 0,
-            autoReleaseDeadline: 0,
             disputeInitiator: address(0),
             disputeReason: ""
         });
@@ -374,9 +361,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
 
         trade.status = TradeStatus.FiatSent;
         trade.fiatSentAt = block.timestamp;
-        trade.autoReleaseDeadline = block.timestamp + AUTO_RELEASE_DURATION;
 
-        emit FiatMarkedSent(_tradeId, msg.sender, trade.autoReleaseDeadline);
+        emit FiatMarkedSent(_tradeId, msg.sender);
     }
 
     /**
@@ -481,48 +467,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         emit TradeRefunded(_tradeId, trade.seller, trade.amount);
     }
 
-    /**
-     * @notice Auto-release USDC to buyer when seller doesn't respond after fiat sent
-     * @param _tradeId ID of the trade
-     *
-     * THIS IS THE KEY ANTI-SCAM FUNCTION:
-     * After buyer marks fiat as sent, seller has 45 minutes to either:
-     *   a) Confirm receipt → release() is called → normal flow
-     *   b) Raise a dispute → dispute flow
-     *   c) Do NOTHING → anyone can call autoRelease() → buyer gets the crypto
-     *
-     * This prevents the scam where seller receives fiat but ghosts the buyer.
-     * Can be called by ANYONE (buyer, bot, or any address) after autoReleaseDeadline.
-     */
-    function autoRelease(uint256 _tradeId)
-        external
-        nonReentrant
-        tradeExists(_tradeId)
-    {
-        Trade storage trade = trades[_tradeId];
-
-        require(trade.status == TradeStatus.FiatSent, "Fiat not marked as sent");
-        require(trade.autoReleaseDeadline > 0, "Auto-release not set");
-        require(
-            block.timestamp > trade.autoReleaseDeadline,
-            "Auto-release timer not expired yet"
-        );
-
-        // Release to buyer — seller had their chance!
-        trade.status = TradeStatus.Completed;
-        activeTradeCount[trade.seller]--;
-
-        // Transfer to buyer (amount - fee)
-        IERC20(trade.token).safeTransfer(trade.buyer, trade.buyerReceives);
-
-        // Transfer fee to admin
-        if (trade.feeAmount > 0) {
-            IERC20(trade.token).safeTransfer(feeCollector, trade.feeAmount);
-            totalFeesCollected[trade.token] += trade.feeAmount;
-        }
-
-        emit AutoReleased(_tradeId, trade.buyer, trade.buyerReceives, trade.feeAmount);
-    }
+    // Auto-release removed to prevent buyer scams.
+    // Trades must now be Released by seller or Resolved by Admin.
 
     // ═══════════════════════════════════════════════════════════════
     //                      DISPUTE FUNCTIONS

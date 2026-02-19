@@ -21,12 +21,11 @@ const ESCROW_ABI = [
     "function markFiatSent(uint256 tradeId)",
     "function release(uint256 tradeId)",
     "function refund(uint256 tradeId)",
-    "function autoRelease(uint256 tradeId)",
     "function raiseDispute(uint256 tradeId, string reason)",
     "function resolveDispute(uint256 tradeId, bool releaseToBuyer)",
 
     // View functions
-    "function getTrade(uint256 tradeId) view returns (tuple(address seller, address buyer, address token, uint256 amount, uint256 feeAmount, uint256 buyerReceives, uint8 status, uint256 createdAt, uint256 deadline, uint256 fiatSentAt, uint256 autoReleaseDeadline, address disputeInitiator, string disputeReason))",
+    "function getTrade(uint256 tradeId) view returns (tuple(address seller, address buyer, address token, uint256 amount, uint256 feeAmount, uint256 buyerReceives, uint8 status, uint256 createdAt, uint256 deadline, uint256 fiatSentAt, address disputeInitiator, string disputeReason))",
     "function tradeCounter() view returns (uint256)",
     "function calculateFee(uint256 amount) view returns (uint256 fee, uint256 netAmount)",
     "function isExpired(uint256 tradeId) view returns (bool)",

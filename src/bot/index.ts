@@ -633,7 +633,6 @@ bot.command("help", async (ctx) => {
         "",
         "*Safety Features:*",
         "🔒 Smart contract escrow (trustless)",
-        "⏰ Auto-release to buyer if seller ghosts (45 min)",
         "⏰ Auto-refund to seller if buyer doesn't pay (1 hr)",
         "📸 Payment proof required",
         "⚖️ Dispute resolution system",
@@ -3430,7 +3429,7 @@ bot.on("message:photo", async (ctx) => {
                 verificationText,
                 "",
                 "The seller has been notified to check their account.",
-                "If they don't respond within 45 minutes, crypto will be auto-released.",
+                "If they don't respond, you can open a dispute via the Mini App.",
             ].join("\n"),
             { parse_mode: "Markdown" }
         );

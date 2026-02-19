@@ -21,6 +21,7 @@ export interface TelegramWebApp {
             language_code?: string;
             photo_url?: string;
         };
+        start_param?: string;
         auth_date: number;
         hash: string;
     };

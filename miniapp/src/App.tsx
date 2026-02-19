@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, Component, ReactNode } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { WagmiProvider } from 'wagmi';
 import { useAccount } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig, appKit } from './lib/wagmi';
-import { setupTelegramApp } from './lib/telegram';
+import { getTelegramWebApp, setupTelegramApp } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
 import { Layout } from './components/Layout';
@@ -128,9 +128,35 @@ function AppInner() {
           setWalletChosen(true); // show app anyway
         });
     }
-  }, [isConnected, address, walletMode, walletChosen, savingAddress]);
+  }, [walletMode, isConnected, address, savingAddress, walletChosen]);
 
-  if (loading) {
+  const DeepLinkHandler = () => {
+    const navigate = useNavigate();
+    const processed = useRef(false);
+
+    useEffect(() => {
+      if (processed.current) return;
+
+      const webapp = getTelegramWebApp();
+      const startParam = webapp?.initDataUnsafe?.start_param;
+
+      if (startParam) {
+        console.log('[P2P] Deep link detected:', startParam);
+        if (startParam.startsWith('trade_')) {
+          const tradeId = startParam.replace('trade_', '');
+          navigate(`/trade/${tradeId}`);
+        } else if (startParam.startsWith('buy_')) {
+          const orderId = startParam.replace('buy_', '');
+          navigate(`/trade/new/${orderId}`);
+        }
+      }
+      processed.current = true;
+    }, [navigate]);
+
+    return null;
+  };
+
+  if (loading || (walletChosen && !user)) {
     return (
       <div className="loading-screen">
         <div className="logo">P2P KERALA</div>
@@ -197,7 +223,8 @@ function AppInner() {
   };
 
   return (
-    <BrowserRouter basename="/app">
+    <>
+      <DeepLinkHandler />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home user={user} />} />
@@ -213,7 +240,7 @@ function AppInner() {
           <Route path="leaderboard" element={<Leaderboard />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 
@@ -223,7 +250,9 @@ function App() {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
-            <AppInner />
+            <BrowserRouter basename="/app">
+              <AppInner />
+            </BrowserRouter>
           </ToastProvider>
         </QueryClientProvider>
       </WagmiProvider>
