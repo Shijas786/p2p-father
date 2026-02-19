@@ -4,11 +4,9 @@ import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import './MyAds.css';
 
-interface Props {
-    user: any;
-}
 
-export function MyAds({ user }: Props) {
+
+export function MyAds() {
     const navigate = useNavigate();
     const [tab, setTab] = useState<'active' | 'history'>('active');
     const [orders, setOrders] = useState<any[]>([]);
