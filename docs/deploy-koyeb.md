@@ -31,7 +31,7 @@ Scroll down to the **"Environment Variables"** section and add all the keys from
 | `TELEGRAM_BOT_TOKEN` | *Your Token* |
 | `SUPABASE_URL` | *Your URL* |
 | `SUPABASE_SERVICE_KEY` | *Your Key* |
-| `ESCROW_CONTRACT_ADDRESS` | `0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260` |
+| `ESCROW_CONTRACT_ADDRESS` | `0xe9B4936673BDa2F4899225A0a82E2fdAF456eCA6` |
 | `ADMIN_WALLET_ADDRESS` | `0x3A5668F8B3E167771d503F0321c42a7B082789Ef` |
 | `RELAYER_PRIVATE_KEY` | *Your Private Key* |
 | `MASTER_WALLET_SEED` | *Your 12-word Seed* |

@@ -17,7 +17,8 @@ async function main() {
     // Deploy
     const Escrow = await ethers.getContractFactory("P2PEscrow");
     // Set feeCollector as deployer (or env variable if you prefer)
-    const feeCollector = deployer.address;
+    // Set feeCollector as deployer (or env variable if you prefer)
+    const feeCollector = process.env.ADMIN_WALLET_ADDRESS || deployer.address;
     console.log("🏦 Fee Collector set as:", feeCollector);
 
     const usdcAddress = process.env.USDC_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -32,6 +33,13 @@ async function main() {
     const address = await escrow.getAddress();
 
     console.log("✅ Escrow Contract Deployed to:", address);
+
+    // If fee collector is different, or just for safety, approve deployer as relayer
+    if (deployer.address !== feeCollector) {
+        console.log("🔗 Adding deployer as approved relayer...");
+        await (await escrow.setRelayer(deployer.address, true)).wait();
+        console.log("✅ Deployer added as Relayer");
+    }
     console.log("\n IMPORTANT: Update .env with ESCROW_CONTRACT_ADDRESS=" + address);
 }
 

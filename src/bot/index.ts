@@ -13,6 +13,7 @@ import {
     formatTradeStatus,
     formatTimeRemaining,
     truncateAddress,
+    formatShortDate,
 } from "../utils/formatters";
 import type { SessionData, User } from "../types";
 
@@ -375,41 +376,31 @@ bot.command("start", async (ctx) => {
     const hasPayment = user.upi_id || user.phone_number || user.bank_account_number;
 
     const welcome = [
-        "🤖 *Welcome to P2P Kerala Bot!*",
+        `👋 *Welcome to P2P Kerala, ${ctx.from?.first_name || "Trader"}!* 🌴`,
         "",
-        "Buy & sell crypto with INR — powered by AI 🧠",
-        walletInfo,
+        "The safest way to buy & sell crypto in Kerala.",
         "",
-        "━━━━━━━━━━━━━━━━━━━",
-        "📢 *P2P Trading*",
-        "  /newad — Create buy/sell ad",
-        "  /ads — Browse live ads",
-        "  /myads — Manage your ads",
+        "💳 *Your Deposit Wallet:*",
+        `\`${user.wallet_address}\``,
         "",
-        "💰 *Wallet & Profile*",
-        "  /portfolio — Check balance & send",
-        "  /wallet — Wallet settings",
-        "  /payment — Set payment methods",
-        "  /profile — Your stats",
+        "🚀 *How it Works:*",
+        "🔍 *Browse*: Find the best price in `/ads`.",
+        "🤝 *Match*: Start a trade – crypto is safely locked 🔒.",
+        "📲 *Pay*: Send money directly to the seller's UPI.",
+        "💰 *Receive*: Seller confirms and you get the crypto! ✅",
         "",
-        "💡 *Or chat naturally!*",
-        '  \"sell 100 usdc at 88\"',
-        '  \"show me buy orders\"',
-        "",
-        "━━━━━━━━━━━━━━━━━━━",
-        `🆔 Your ID: \`${user.id.slice(0, 8)}\``,
-        `⭐ Trust: ${user.trust_score}% | 📈 Trades: ${user.completed_trades}`,
-        paymentStatus,
-        !hasPayment ? "\n⚠️ *Set up payment methods:* /payment" : "",
+        "What would you like to do?",
     ].join("\n");
 
-    const miniAppUrl = "https://distant-angelita-highphaus-3207b925.koyeb.app/app";
+    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
 
     const startKeyboard = new InlineKeyboard()
         .webApp("📱 Open Mini App", miniAppUrl)
         .row()
-        .text("🔴 Sell Crypto", "newad:sell")
-        .text("🟢 Buy Crypto", "newad:buy");
+        .text("🛒 Buy Crypto", "newad:buy")
+        .text("💰 Sell Crypto", "newad:sell")
+        .row()
+        .text("❓ How to Trade", "how_to_trade");
 
     await ctx.reply(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
 
@@ -479,7 +470,7 @@ bot.command("payment", async (ctx) => {
         "Or use the Mini App for the easiest setup! 📱",
     ].join("\n");
 
-    const miniAppUrl = "https://distant-angelita-highphaus-3207b925.koyeb.app/app/profile";
+    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app/profile";
     const keyboard = new InlineKeyboard()
         .webApp("📱 Open Profile", miniAppUrl)
         .row()
@@ -899,7 +890,8 @@ bot.command("mytrades", async (ctx) => {
             const amt = formatUSDC(t.amount, t.token);
             const status = statusMap[t.status] || t.status;
 
-            keyboard.text(`${role} ${amt} (${status})`, `trade_view:${t.id}`).row();
+            const date = formatShortDate(t.created_at);
+            keyboard.text(`${role} ${amt} (${status}) | ${date}`, `trade_view:${t.id}`).row();
         });
 
         await ctx.reply("📋 *Your Trades*\nSelect a trade to view actions:", {
@@ -1379,6 +1371,65 @@ bot.on("callback_query:data", async (ctx) => {
                 ].join("\n"),
                 { parse_mode: "Markdown", reply_markup: keyboard }
             );
+            await ctx.answerCallbackQuery();
+        }
+
+        // Handle "How to Trade" guide
+        if (data === "how_to_trade") {
+            const guide = [
+                "👋 *Is it safe? YES!*",
+                "",
+                "Think of the bot as a *digital locker*. 🔐",
+                "",
+                "1️⃣ *Lock*: When a trade starts, the crypto is moved into the locker.",
+                "2️⃣ *Secure*: The locker stays shut while the buyer sends the money.",
+                "3️⃣ *Release*: Once the seller says \"I got the money\", the locker opens for the buyer! 🔓",
+                "",
+                "_No one can steal, and no one can run away._",
+                "",
+                "Want to try? Tap a button below!",
+            ].join("\n");
+
+            const keyboard = new InlineKeyboard()
+                .text("🛒 Buy Crypto", "newad:buy")
+                .text("💰 Sell Crypto", "newad:sell")
+                .row()
+                .text("🔙 Back", "start_over");
+
+            await ctx.editMessageText(guide, { parse_mode: "Markdown", reply_markup: keyboard });
+            await ctx.answerCallbackQuery();
+        }
+
+        // Handle "Back" to Start
+        if (data === "start_over") {
+            const user = await ensureUser(ctx);
+            const welcome = [
+                `👋 *Welcome to P2P Kerala, ${ctx.from?.first_name || "Trader"}!* 🌴`,
+                "",
+                "The safest way to buy & sell crypto in Kerala.",
+                "",
+                "💳 *Your Deposit Wallet:*",
+                `\`${user.wallet_address}\``,
+                "",
+                "🚀 *How it Works:*",
+                "🔍 *Browse*: Find the best price in `/ads`.",
+                "🤝 *Match*: Start a trade – crypto is safely locked 🔒.",
+                "📲 *Pay*: Send money directly to the seller's UPI.",
+                "💰 *Receive*: Seller confirms and you get the crypto! ✅",
+                "",
+                "What would you like to do?",
+            ].join("\n");
+
+            const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
+            const startKeyboard = new InlineKeyboard()
+                .webApp("📱 Open Mini App", miniAppUrl)
+                .row()
+                .text("🛒 Buy Crypto", "newad:buy")
+                .text("💰 Sell Crypto", "newad:sell")
+                .row()
+                .text("❓ How to Trade", "how_to_trade");
+
+            await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
         }
 

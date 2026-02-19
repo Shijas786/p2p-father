@@ -71,6 +71,18 @@ export function formatTimeRemaining(deadline: string | Date): string {
 }
 
 /**
+ * Format date to short string (DD/MM HH:mm)
+ */
+export function formatShortDate(date: string | Date): string {
+    const d = new Date(date);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${day}/${month} ${hours}:${minutes}`;
+}
+
+/**
  * Escape markdown special characters for Telegram
  */
 export function escapeMarkdown(text: string): string {
