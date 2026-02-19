@@ -1,4 +1,5 @@
 import { Bot, Context, session, InlineKeyboard, InputFile } from "grammy";
+import path from "path";
 import { env } from "../config/env";
 import { db } from "../db/client";
 import { ai } from "../services/ai";
@@ -398,7 +399,7 @@ bot.command("start", async (ctx) => {
     ].join("\n");
 
     const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
-    const bannerPath = "/Users/shijas/.gemini/antigravity/brain/833cef4e-104f-4436-aa65-0196eeeaa9d5/bot_hero_banner_1771531748984.png";
+    const bannerPath = path.join(process.cwd(), "assets/hero_banner.png");
 
     const startKeyboard = new InlineKeyboard()
         .webApp("📱 Launch Application", miniAppUrl)
