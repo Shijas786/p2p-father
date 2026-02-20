@@ -41,6 +41,7 @@ interface TelegramUser {
     first_name: string;
     last_name?: string;
     username?: string;
+    is_admin?: boolean;
 }
 
 declare global {
@@ -61,7 +62,9 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
             id: 123456789,
             first_name: "Cryptowolf07",
             username: "Cryptowolf07",
-        };
+            // Added for dev mode mock user
+            is_admin: true,
+        } as TelegramUser;
         return next();
     }
 
@@ -154,9 +157,14 @@ router.post("/auth", async (req: Request, res: Response) => {
             } catch (walletErr: any) {
                 console.error("[AUTH] Failed to derive wallet:", walletErr);
             }
-        }
+        } // Fix: Missing closing brace for the if statement
 
-        res.json({ user });
+        res.json({
+            user: {
+                ...user,
+                is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id))
+            }
+        });
     } catch (err: any) {
         console.error("[MINIAPP] Auth error:", err);
         res.status(500).json({ error: err.message });
@@ -1246,7 +1254,12 @@ router.get("/profile", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
-        res.json({ user });
+        res.json({
+            user: {
+                ...user,
+                is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id))
+            }
+        });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

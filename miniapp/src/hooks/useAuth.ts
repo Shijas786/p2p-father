@@ -15,6 +15,7 @@ export interface AppUser {
     trust_score: number;
     tier: string;
     is_verified: boolean;
+    is_admin: boolean;
 }
 
 export function useAuth() {
@@ -46,6 +47,7 @@ export function useAuth() {
                     trust_score: 100,
                     tier: 'standard',
                     is_verified: false,
+                    is_admin: false,
                 });
             }
         } catch (err: any) {

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { haptic, getTelegramUser } from '../lib/telegram';
+import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
 import './BottomNav.css';
 
-const ADMIN_IDS = [123456789];
+
 
 // Binance-style SVG icons
 function IconP2P({ size = 22 }: { size?: number }) {
@@ -69,10 +69,13 @@ const baseTabs = [
     { path: '/profile', Icon: IconProfile, label: 'Profile' },
 ];
 
-export function BottomNav() {
+interface Props {
+    user: any;
+}
+
+export function BottomNav({ user }: Props) {
     const [activeTrades, setActiveTrades] = useState(0);
-    const tgUser = getTelegramUser();
-    const isAdmin = tgUser && ADMIN_IDS.includes(tgUser.id);
+    const isAdmin = user?.is_admin;
 
     const tabs = isAdmin
         ? [...baseTabs, { path: '/admin', Icon: IconAdmin, label: 'Admin' }]
