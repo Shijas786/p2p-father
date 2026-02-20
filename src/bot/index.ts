@@ -230,17 +230,6 @@ bot.command("ping", async (ctx) => {
     await ctx.reply(`🏓 Pong! (Bot Version: ${new Date().toISOString()})`);
 });
 
-bot.command("id", async (ctx) => {
-    const fromId = ctx.from?.id;
-    const replyToId = ctx.message?.reply_to_message?.from?.id;
-
-    if (replyToId) {
-        await ctx.reply(`👤 Target User ID: \`${replyToId}\`\n🛡️ Your ID: \`${fromId}\``, { parse_mode: "Markdown" });
-    } else {
-        await ctx.reply(`🆔 Your Telegram ID is: \`${fromId}\``, { parse_mode: "Markdown" });
-    }
-});
-
 bot.command("start", async (ctx) => {
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
