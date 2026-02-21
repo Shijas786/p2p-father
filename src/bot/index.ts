@@ -381,7 +381,7 @@ bot.command("start", async (ctx) => {
         "",
         "Secure, decentralized settlement at your fingertips.",
         "",
-        "🔐 *Settlement Address:*",
+        "🔐 *Your Wallet Address:*",
         `\`${user.wallet_address}\``,
         "",
         "*P2P Trading*",
@@ -402,10 +402,7 @@ bot.command("start", async (ctx) => {
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
-        .webApp("📱 Launch Application", miniAppUrl)
-        .row()
-        .text("🛒 Buy Assets", "newad:buy")
-        .text("💰 Sell Assets", "newad:sell");
+        .webApp("📱 Launch Application", miniAppUrl);
 
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -1392,7 +1389,7 @@ bot.on("callback_query:data", async (ctx) => {
                 "",
                 "Secure, decentralized settlement at your fingertips.",
                 "",
-                "🔐 *Settlement Address:*",
+                "🔐 *Your Wallet Address:*",
                 `\`${user.wallet_address}\``,
                 "",
                 "*P2P Trading*",
@@ -1411,10 +1408,7 @@ bot.on("callback_query:data", async (ctx) => {
 
             const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
             const startKeyboard = new InlineKeyboard()
-                .webApp("📱 Launch Application", miniAppUrl)
-                .row()
-                .text("🛒 Buy Assets", "newad:buy")
-                .text("💰 Sell Assets", "newad:sell");
+                .webApp("📱 Launch Application", miniAppUrl);
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
