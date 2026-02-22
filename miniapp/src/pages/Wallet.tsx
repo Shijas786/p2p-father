@@ -379,17 +379,20 @@ export function Wallet({ user }: Props) {
                 </div>
 
                 {/* Legacy Warning */}
-                {(parseFloat(legacyBalances?.base_usdc || '0') > 0 || parseFloat(legacyBalances?.bsc_usdc || '0') > 0) && (
-                    <div className="legacy-banner">
-                        <div className="legacy-text">
-                            ⚠️ <b>Legacy Funds Detected!</b><br />
-                            You have funds in the old vault contract.
+                {legacyBalances && (
+                    parseFloat(legacyBalances.base_usdc) > 0 ||
+                    parseFloat(legacyBalances.bsc_usdc) > 0 ||
+                    parseFloat(legacyBalances.bsc_usdt || '0') > 0
+                ) && (
+                        <div className="legacy-banner clickable mb-6" onClick={() => navigate('/migration')}>
+                            <div className="icon">🛡️</div>
+                            <div className="content">
+                                <div className="title">Migrate your Funds</div>
+                                <div className="desc">We've upgraded our contracts. Move your old vault funds to the new system.</div>
+                            </div>
+                            <div className="arrow">→</div>
                         </div>
-                        <button className="btn btn-sm btn-primary" onClick={() => navigate('/migration')}>
-                            Withdraw
-                        </button>
-                    </div>
-                )}
+                    )}
             </div>
 
             {/* Asset List */}

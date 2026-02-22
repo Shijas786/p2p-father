@@ -229,11 +229,15 @@ router.get("/wallet/balances/legacy", async (req: Request, res: Response) => {
 
         const baseLegacy = await escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base', true);
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-        const bscLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdc, 'bsc', true);
+        const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
+
+        const bscUsdcLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdc, 'bsc', true);
+        const bscUsdtLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdt, 'bsc', true);
 
         res.json({
             base_usdc: baseLegacy,
-            bsc_usdc: bscLegacy
+            bsc_usdc: bscUsdcLegacy,
+            bsc_usdt: bscUsdtLegacy
         });
     } catch (err: any) {
         console.error("[MINIAPP] Legacy balances error:", err);
