@@ -97,18 +97,18 @@ export function Home({ user }: Props) {
             <div className="p2p-filters">
                 {/* Token Selector */}
                 <div className="p2p-token-selector" onClick={() => setTokenDropdown(!tokenDropdown)}>
-                    <span className="p2p-token-icon">{tokenFilter === 'USDC' ? '🔵' : '🟢'}</span>
+                    <span className="p2p-token-icon">{tokenFilter === 'USDC' ? '🔵' : tokenFilter === 'USDT' ? '🟢' : '🟡'}</span>
                     <span>{tokenFilter}</span>
                     <span className="p2p-chevron">▼</span>
                     {tokenDropdown && (
                         <div className="p2p-dropdown">
-                            {['USDC', 'USDT'].map(t => (
+                            {['USDC', 'USDT', 'BNB'].map(t => (
                                 <div
                                     key={t}
                                     className={`p2p-dropdown-item ${tokenFilter === t ? 'active' : ''}`}
                                     onClick={(e) => { e.stopPropagation(); setTokenFilter(t); setTokenDropdown(false); }}
                                 >
-                                    {t === 'USDC' ? '🔵' : '🟢'} {t}
+                                    {t === 'USDC' ? '🔵' : t === 'USDT' ? '🟢' : '🟡'} {t}
                                 </div>
                             ))}
                         </div>

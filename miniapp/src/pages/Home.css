@@ -378,7 +378,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
-    z-index: 999;
+    z-index: 9999;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -388,7 +388,7 @@
 .p2p-modal {
     background: #1e2026;
     border-radius: 16px 16px 0 0;
-    padding: 24px 20px;
+    padding: 24px 20px calc(24px + var(--bottom-nav-height, 60px) + var(--safe-bottom, 0px));
     width: 100%;
     max-width: 480px;
     border-top: 1px solid #2b2f36;
