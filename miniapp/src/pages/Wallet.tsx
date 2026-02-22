@@ -553,15 +553,22 @@ export function Wallet({ user }: Props) {
                             <div className="flex-1">
                                 <label className="text-xs text-muted mb-1 block">Chain</label>
                                 <div className="flex gap-1">
-                                    <button className={`btn btn-sm flex-1 ${vaultChain === 'base' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setVaultChain('base')}>Base</button>
+                                    <button className={`btn btn-sm flex-1 ${vaultChain === 'base' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}>Base</button>
                                     <button className={`btn btn-sm flex-1 ${vaultChain === 'bsc' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setVaultChain('bsc')}>BSC</button>
                                 </div>
                             </div>
                             <div className="flex-1">
                                 <label className="text-xs text-muted mb-1 block">Token</label>
                                 <div className="flex gap-1">
-                                    <button className={`btn btn-sm flex-1 ${vaultToken === 'USDC' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setVaultToken('USDC')}>USDC</button>
-                                    <button className={`btn btn-sm flex-1 ${vaultToken === 'USDT' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setVaultToken('USDT')}>USDT</button>
+                                    {['USDC', 'USDT', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
+                                        <button
+                                            key={t}
+                                            className={`btn btn-sm flex-1 ${vaultToken === t ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={() => setVaultToken(t as any)}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -576,13 +583,18 @@ export function Wallet({ user }: Props) {
                                     // Wallet Balance
                                     (vaultChain === 'base'
                                         ? (vaultToken === 'USDC' ? balances?.usdc : balances?.usdt)
-                                        : (vaultToken === 'USDC' ? balances?.bsc_usdc : balances?.bsc_usdt)
+                                        : (vaultToken === 'USDC' ? balances?.bsc_usdc : vaultToken === 'USDT' ? balances?.bsc_usdt : balances?.bnb)
                                     ) || '0.00'
                                 ) : (
                                     // Vault Available
                                     (vaultChain === 'base'
                                         ? (vaultToken === 'USDC' ? (parseFloat(vaultBaseUsdc) - parseFloat(reservedBaseUsdc)).toFixed(2) : (parseFloat(vaultBaseUsdt) - parseFloat(reservedBaseUsdt)).toFixed(2))
-                                        : (vaultToken === 'USDC' ? (parseFloat(vaultBscUsdc) - parseFloat(reservedBscUsdc)).toFixed(2) : (parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt)).toFixed(2))
+                                        : (vaultToken === 'USDC'
+                                            ? (parseFloat(vaultBscUsdc) - parseFloat(reservedBscUsdc)).toFixed(2)
+                                            : vaultToken === 'USDT'
+                                                ? (parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt)).toFixed(2)
+                                                : (parseFloat(vaultBscBnb) - parseFloat(reservedBscBnb)).toFixed(4)
+                                        )
                                     )
                                 )}
                             </div>
