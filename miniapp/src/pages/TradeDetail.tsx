@@ -7,6 +7,7 @@ import { haptic } from '../lib/telegram';
 import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import { copyToClipboard } from '../lib/utils';
+import { appKit } from '../lib/wagmi';
 import './TradeDetail.css';
 
 // createTrade ABI extension (not in shared contracts.ts)
@@ -65,6 +66,14 @@ export function TradeDetail({ user }: Props) {
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
+    const { chain: walletChain } = useAccount();
+
+    const formatBal = (val: any, decs = 2) => {
+        const num = parseFloat(val || '0');
+        if (num > 0 && num < 0.0001) return '0.00';
+        if (num === 0) return '0.00';
+        return num.toFixed(decs);
+    };
 
     // Chain-aware contract addresses
     const tradeChain = (trade?.chain || order?.chain || 'base') as 'base' | 'bsc';
@@ -88,7 +97,7 @@ export function TradeDetail({ user }: Props) {
     const isNative = trade?.token === 'BNB' || order?.token === 'BNB';
     const tradeDecimals = (tradeChain === 'bsc') ? 18 : 6;
     const tradeAmountBigInt = (trade || order) ? parseUnits((trade || order).amount.toString(), tradeDecimals) : BigInt(0);
-    const needsApproval = allowance !== undefined && allowance < tradeAmountBigInt;
+    const needsApproval = !isNative && allowance !== undefined && allowance < tradeAmountBigInt;
 
     useEffect(() => {
         if (id) {
@@ -270,7 +279,13 @@ export function TradeDetail({ user }: Props) {
 
     // 1. Approve Token
     async function handleApprove() {
-        if (!trade) return;
+        const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
+        if (walletChain?.id !== targetChainId) {
+            setError(`Please switch to ${tradeChain.toUpperCase()} network`);
+            appKit.open({ view: 'Networks' });
+            return;
+        }
+
         haptic('medium');
         setActionLoading(true);
         setError('');
@@ -300,7 +315,13 @@ export function TradeDetail({ user }: Props) {
 
     // 2. Lock Funds (Create Trade on Chain)
     async function handleLockFunds() {
-        if (!trade) return;
+        const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
+        if (walletChain?.id !== targetChainId) {
+            setError(`Please switch to ${tradeChain.toUpperCase()} network`);
+            appKit.open({ view: 'Networks' });
+            return;
+        }
+
         haptic('heavy');
         setActionLoading(true);
         setError('');
@@ -474,7 +495,7 @@ export function TradeDetail({ user }: Props) {
             {/* Amount Card */}
             <div className="td-amount-card card-glass glow-green">
                 <div className="td-amount font-mono">
-                    {disp.amount} <span className="text-muted">{disp.token}</span>
+                    {formatBal(disp.amount, disp.token === 'BNB' ? 4 : 2)} <span className="text-muted">{disp.token}</span>
                 </div>
                 <div className="td-fiat font-mono text-secondary mb-2">
                     ₹{disp.fiat_amount?.toLocaleString() || (disp.amount * disp.rate).toLocaleString()} @ ₹{disp.rate?.toLocaleString()}
