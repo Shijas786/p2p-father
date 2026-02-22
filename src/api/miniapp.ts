@@ -519,8 +519,9 @@ router.post("/orders", async (req: Request, res: Response) => {
         const parsedRate = parseFloat(rate);
 
         // Input validation
-        if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100000) {
-            return res.status(400).json({ error: "Amount must be between 0.01 and 100,000" });
+        const minAmount = token === 'BNB' ? 0.001 : 0.01;
+        if (isNaN(parsedAmount) || parsedAmount < minAmount || parsedAmount > 100000) {
+            return res.status(400).json({ error: `Amount must be between ${minAmount} and 100,000` });
         }
         if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 1000) {
             return res.status(400).json({ error: "Rate must be between 0.01 and 1,000 INR per token" });

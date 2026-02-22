@@ -257,8 +257,9 @@ export function TradeDetail({ user }: Props) {
 
     async function handleCreateTrade() {
         if (!order) return;
-        if (order.amount < 1.0) {
-            setError("Minimum trade amount is 1.0 USDC/USDT");
+        const minAmount = order.token === 'BNB' ? 0.001 : 1.0;
+        if (order.amount < minAmount) {
+            setError(`Minimum trade amount is ${minAmount} ${order.token}`);
             haptic('error');
             return;
         }
