@@ -409,6 +409,7 @@ export function Wallet({ user }: Props) {
                             <span className="v-symbol">USDT</span>
                             <span className="v-chain">BSC</span>
                         </div>
+                        <div className="v-bal">{parseFloat(vaultBscUsdt).toFixed(2)}</div>
                         {parseFloat(reservedBscUsdt) > 0 && <div className="v-reserved">🔒 {reservedBscUsdt}</div>}
                     </div>
                     <div className="vault-asset-box">
