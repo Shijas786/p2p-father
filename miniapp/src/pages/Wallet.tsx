@@ -63,6 +63,13 @@ export function Wallet({ user }: Props) {
         loadBalances();
     }, []);
 
+    const formatBal = (val: any, decs = 2) => {
+        const num = parseFloat(val || '0');
+        if (num > 0 && num < 0.0001) return '0.00'; // Hide dust strictly
+        if (num === 0) return '0.00';
+        return num.toFixed(decs);
+    };
+
     async function loadBalances() {
         // setLoading(true);
         try {
@@ -155,14 +162,23 @@ export function Wallet({ user }: Props) {
         try {
             const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
             if (walletChain?.id !== targetChainId) {
-                setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
+                setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}... Please confirm in your wallet app.`);
                 try {
+                    let switchTimeout = setTimeout(() => {
+                        setVaultError(`Your wallet app hasn't responded. Please open it manually and switch to ${vaultChain.toUpperCase()}.`);
+                        setVaultSuccess('');
+                        setVaultLoading(false);
+                    }, 5000);
+
                     await switchChainAsync({ chainId: targetChainId });
+                    clearTimeout(switchTimeout);
+
                     setVaultSuccess(`Switched! Click Approve again.`);
                     setVaultLoading(false);
                     return;
                 } catch (err: any) {
-                    setVaultError(`Please switch to ${vaultChain.toUpperCase()} in your wallet`);
+                    setVaultError(`Please switch to ${vaultChain.toUpperCase()} manually in your wallet`);
+                    setVaultSuccess('');
                     setVaultLoading(false);
                     return;
                 }
@@ -234,14 +250,23 @@ export function Wallet({ user }: Props) {
                 }
 
                 if (walletChain?.id !== targetChainId) {
-                    setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
+                    setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}... Please confirm in your wallet app.`);
                     try {
+                        let switchTimeout = setTimeout(() => {
+                            setVaultError(`Your wallet app hasn't responded. Please open it manually and switch to ${vaultChain.toUpperCase()}.`);
+                            setVaultSuccess('');
+                            setVaultLoading(false);
+                        }, 5000);
+
                         await switchChainAsync({ chainId: targetChainId });
+                        clearTimeout(switchTimeout);
+
                         setVaultSuccess(`Switched! Please click ${showVaultAction === 'deposit' ? 'Deposit' : 'Withdraw'} again.`);
                         setVaultLoading(false);
                         return;
                     } catch (err: any) {
-                        setVaultError(`Please switch to ${vaultChain.toUpperCase()} in your wallet`);
+                        setVaultError(`Please switch to ${vaultChain.toUpperCase()} manually in your wallet`);
+                        setVaultSuccess('');
                         setVaultLoading(false);
                         return;
                     }
@@ -581,20 +606,22 @@ export function Wallet({ user }: Props) {
                                 {/* Display correct available balance hint */}
                                 {showVaultAction === 'deposit' ? (
                                     // Wallet Balance
-                                    (vaultChain === 'base'
+                                    formatBal(vaultChain === 'base'
                                         ? (vaultToken === 'USDC' ? balances?.usdc : balances?.usdt)
-                                        : (vaultToken === 'USDC' ? balances?.bsc_usdc : vaultToken === 'USDT' ? balances?.bsc_usdt : balances?.bnb)
-                                    ) || '0.00'
+                                        : (vaultToken === 'USDC' ? balances?.bsc_usdc : vaultToken === 'USDT' ? balances?.bsc_usdt : balances?.bnb),
+                                        vaultToken === 'BNB' ? 4 : 2
+                                    )
                                 ) : (
                                     // Vault Available
-                                    (vaultChain === 'base'
-                                        ? (vaultToken === 'USDC' ? (parseFloat(vaultBaseUsdc) - parseFloat(reservedBaseUsdc)).toFixed(2) : (parseFloat(vaultBaseUsdt) - parseFloat(reservedBaseUsdt)).toFixed(2))
+                                    formatBal(vaultChain === 'base'
+                                        ? (vaultToken === 'USDC' ? (parseFloat(vaultBaseUsdc) - parseFloat(reservedBaseUsdc)).toString() : (parseFloat(vaultBaseUsdt) - parseFloat(reservedBaseUsdt)).toString())
                                         : (vaultToken === 'USDC'
-                                            ? (parseFloat(vaultBscUsdc) - parseFloat(reservedBscUsdc)).toFixed(2)
+                                            ? (parseFloat(vaultBscUsdc) - parseFloat(reservedBscUsdc)).toString()
                                             : vaultToken === 'USDT'
-                                                ? (parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt)).toFixed(2)
-                                                : (parseFloat(vaultBscBnb) - parseFloat(reservedBscBnb)).toFixed(4)
-                                        )
+                                                ? (parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt)).toString()
+                                                : (parseFloat(vaultBscBnb) - parseFloat(reservedBscBnb)).toString()
+                                        ),
+                                        vaultToken === 'BNB' ? 4 : 2
                                     )
                                 )}
                             </div>
