@@ -47,7 +47,7 @@ export function startLiquiditySyncJob(escrowService: any) {
                 const user = await db.getUserById(userId as string);
                 if (!user || !user.wallet_address) continue;
 
-                const tokens = ["USDC", "USDT"];
+                const tokens = ["USDC", "USDT", "BNB"];
                 const chains = ["base", "bsc"];
 
                 for (const chain of chains) {
@@ -60,7 +60,11 @@ export function startLiquiditySyncJob(escrowService: any) {
                             // Get physical balance
                             let tokenAddress = "";
                             if (chain === 'bsc') {
-                                tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                                if (token === 'BNB') {
+                                    tokenAddress = "0x0000000000000000000000000000000000000000";
+                                } else {
+                                    tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                                }
                             } else {
                                 tokenAddress = (token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
                             }

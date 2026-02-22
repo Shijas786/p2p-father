@@ -179,7 +179,14 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user?.wallet_address) {
-            return res.json({ eth: "0", usdc: "0.00", usdt: "0.00", address: null, wallet_type: (user as any)?.wallet_type || 'bot' });
+            return res.json({
+                eth: "0",
+                usdc: "0.00",
+                usdt: "0.00",
+                bnb: "0.0000",
+                address: null,
+                wallet_type: (user as any)?.wallet_type || 'bot'
+            });
         }
 
         const balances = await wallet.getBalances(user.wallet_address);
@@ -515,8 +522,8 @@ router.post("/orders", async (req: Request, res: Response) => {
         if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100000) {
             return res.status(400).json({ error: "Amount must be between 0.01 and 100,000" });
         }
-        if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 500) {
-            return res.status(400).json({ error: "Rate must be between 0.01 and 500 INR/USDC" });
+        if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 1000) {
+            return res.status(400).json({ error: "Rate must be between 0.01 and 1,000 INR per token" });
         }
         let expiresAt: string | undefined;
         if (expires_in) {
@@ -664,8 +671,9 @@ router.post("/trades", async (req: Request, res: Response) => {
         }
 
         const tradeAmount = amount || order.amount;
-        if (tradeAmount < 1.0) {
-            return res.status(400).json({ error: "Minimum trade amount is 1.0 USDC/USDT" });
+        const minAmount = order.token === 'BNB' ? 0.001 : 1.0;
+        if (tradeAmount < minAmount) {
+            return res.status(400).json({ error: `Minimum trade amount is ${minAmount} ${order.token}` });
         }
         if (tradeAmount <= 0 || tradeAmount > order.amount - (order.filled_amount || 0)) {
             return res.status(400).json({ error: "Invalid trade amount" });
@@ -1339,7 +1347,8 @@ router.get("/stats", async (req: Request, res: Response) => {
         const stats = await db.getStats();
         res.json({
             total_users: stats.total_users,
-            total_volume_usdc: stats.total_volume_usdc || 0,
+            total_volume_usdc: stats.total_volume_generic || 0,
+            total_fees_amount: stats.total_fees_amount || 0,
             active_orders: stats.active_orders,
             fee_percentage: env.FEE_PERCENTAGE,
             fee_bps: parseInt(env.FEE_BPS),

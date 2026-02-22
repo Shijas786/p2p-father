@@ -523,13 +523,13 @@ class Database {
     //              FEES
     // ═══════════════════════════════════════
 
-    async recordFee(tradeId: string, amount: number, txHash?: string): Promise<void> {
+    async recordFee(tradeId: string, amount: number, token: string, chain: string, txHash?: string): Promise<void> {
         const db = this.getClient();
         await db.from("fees").insert({
             trade_id: tradeId,
             amount,
-            token: "USDC",
-            chain: "base",
+            token,
+            chain,
             tx_hash: txHash,
         });
     }
@@ -601,8 +601,8 @@ class Database {
             completed_trades: completedTrades.length,
             active_orders: orders.count || 0,
             total_users: users.count || 0,
-            total_volume_usdc: totalVolume,
-            total_fees_collected: fees,
+            total_volume_generic: totalVolume,
+            total_fees_amount: fees,
             active_disputes: disputes.count || 0,
         };
     }
