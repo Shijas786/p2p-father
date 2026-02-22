@@ -93,16 +93,17 @@ class EscrowService {
         return this.relayers[chain]!;
     }
 
-    private getContractAddress(chain: Chain, legacy: boolean = false): string {
+    private getContractAddress(chain: Chain, legacy: boolean = false): string | null {
         if (legacy) {
-            return chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+            const addr = chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+            return addr || null;
         }
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
-    private getEscrowContract(chain: Chain = 'base', legacy: boolean = false): ethers.Contract {
+    private getEscrowContract(chain: Chain = 'base', legacy: boolean = false): ethers.Contract | null {
         const address = this.getContractAddress(chain, legacy);
-        if (!address) throw new Error(`Escrow contract address not configured for ${chain}${legacy ? ' (legacy)' : ''}`);
+        if (!address) return null;
 
         return new ethers.Contract(address, ESCROW_ABI, this.getRelayer(chain));
     }
@@ -114,6 +115,7 @@ class EscrowService {
     async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
         try {
             const contract = this.getEscrowContract(chain, legacy);
+            if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
             const balance: bigint = await contract.balances(userAddress, tokenAddress);
 
             let decimals = 18;
@@ -156,6 +158,9 @@ class EscrowService {
             txOptions.gasLimit = 250000;
         }
 
+        const contract = this.getEscrowContract(chain, false);
+        if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
+
         const tx = await contract.createTradeByRelayer(
             seller,
             buyer,
@@ -194,6 +199,7 @@ class EscrowService {
             attempts++;
             try {
                 const contract = this.getEscrowContract(chain);
+                if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Releasing trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
 
                 const txOptions: any = {};
@@ -225,6 +231,7 @@ class EscrowService {
             attempts++;
             try {
                 const contract = this.getEscrowContract(chain);
+                if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
 
                 const txOptions: any = {};

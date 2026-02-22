@@ -59,9 +59,10 @@ class WalletService {
         return new ethers.Wallet(privateKey, this.getProvider(chain));
     }
 
-    getContractAddress(chain: Chain, legacy: boolean = false): string {
+    getContractAddress(chain: Chain, legacy: boolean = false): string | null {
         if (legacy) {
-            return chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+            const addr = chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+            return addr || null;
         }
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
@@ -200,6 +201,7 @@ class WalletService {
         const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const contractAddress = this.getContractAddress(chain);
+        if (!contractAddress) throw new Error(`Escrow contract not configured for ${chain}`);
 
         const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
@@ -274,6 +276,7 @@ class WalletService {
         const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
         const contractAddress = this.getContractAddress(chain, legacy);
+        if (!contractAddress) throw new Error(`Escrow contract not configured for ${chain}${legacy ? ' (legacy)' : ''}`);
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
         const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";

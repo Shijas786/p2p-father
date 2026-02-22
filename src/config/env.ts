@@ -5,10 +5,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const addressSchema = z.string().transform((val) => {
+    if (!val || val === "") return "";
     try {
-        return ethers.getAddress(val);
+        // Lowercase first to bypass ethers checksum check and force a new one
+        return ethers.getAddress(val.toLowerCase());
     } catch (e) {
-        return val; // Fallback to raw if it's not a valid address yet (Zod will still pass it)
+        console.warn(`[CONFIG] Invalid address format for: ${val}`);
+        return val;
     }
 });
 
