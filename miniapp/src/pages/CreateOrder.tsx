@@ -80,15 +80,22 @@ export function CreateOrder() {
     useEffect(() => {
         if (type === 'sell') {
             api.wallet.getBalances().then(data => {
-                const res = chain === 'base' ? data.vault_base_reserved : data.vault_bsc_reserved;
-                setReserved(parseFloat(res || '0'));
+                let res = '0';
+                if (chain === 'base') {
+                    res = (token === 'USDC' ? data.reserved_base_usdc : data.reserved_base_usdt) || '0';
+                } else {
+                    res = (token === 'USDC' ? data.reserved_bsc_usdc :
+                        token === 'USDT' ? data.reserved_bsc_usdt :
+                            token === 'BNB' ? data.reserved_bsc_bnb : '0') || '0';
+                }
+                setReserved(parseFloat(res));
             }).catch(console.error);
         }
         // Fetch fee from stats
         api.stats.get().then(data => {
             if (data.fee_percentage) setFeePercentage(data.fee_percentage);
         }).catch(console.error);
-    }, [type, chain]);
+    }, [type, chain, token]);
 
     const physicalBalance = vaultBalance !== undefined ? parseFloat(formatUnits(vaultBalance as bigint, decimals)) : 0;
     const availableBalance = physicalBalance - reserved;
