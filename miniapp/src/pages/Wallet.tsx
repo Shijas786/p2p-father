@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
-import { useAccount, useWriteContract, useConfig } from 'wagmi';
+import { useAccount, useWriteContract, useConfig, useSwitchChain } from 'wagmi';
 import { parseUnits } from 'viem';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
@@ -51,8 +51,9 @@ export function Wallet({ user }: Props) {
     const [vaultError, setVaultError] = useState('');
     const [vaultSuccess, setVaultSuccess] = useState('');
 
-    const { address: wagmiAddress, isConnected } = useAccount();
+    const { address: wagmiAddress, isConnected, chain: walletChain } = useAccount();
     const { writeContractAsync } = useWriteContract();
+    const { switchChainAsync } = useSwitchChain();
     const config = useConfig();
 
     useEffect(() => {
@@ -164,6 +165,19 @@ export function Wallet({ user }: Props) {
                 }
 
                 const parsedAmount = parseUnits(vaultAmount, decimals);
+
+                // ─── CHAIN CHECK ───
+                if (walletChain?.id !== chainId) {
+                    setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
+                    try {
+                        await switchChainAsync({ chainId });
+                        // Wait a bit for wagmi state to sync
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (err: any) {
+                        setVaultError(`Please switch to ${vaultChain.toUpperCase()} in your wallet`);
+                        return;
+                    }
+                }
 
                 if (showVaultAction === 'deposit') {
                     // 1. Approve

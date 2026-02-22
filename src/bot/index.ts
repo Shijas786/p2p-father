@@ -3474,7 +3474,7 @@ bot.on("message:photo", async (ctx) => {
                 parse_mode: "Markdown"
             });
         }
-    } else {
+    } else if (ctx.chat?.type === "private") {
         await ctx.reply(
             "📸 Got your photo! If this is a payment proof, first open the trade in /mytrades and then send the proof."
         );
