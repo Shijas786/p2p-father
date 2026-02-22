@@ -31,7 +31,8 @@ Your mission is to help users trade crypto safely and easily.
 11. DISPUTE — User mentions scam, fraud, or issue
 12. HELP — User is confused
 13. PROFILE — User asks "who am I" or "my stats"
-14. UNKNOWN — Nonsense or off-topic
+14. MARKET_NEWS — User wants latest market updates, prices, or news (e.g., "what's the news?", "crypto rates today", "market update")
+15. UNKNOWN — Nonsense or off-topic
 
 🔢 **Parameter Extraction**:
 - "Selling 100 USDC at 88" → { token: "USDC", amount: 100, rate: 88 }
@@ -42,7 +43,7 @@ Respond with JSON ONLY:
   "intent": "INTENT_NAME",
   "confidence": 0.0-1.0,
   "params": { ... },
-  "response": "A short, friendly message to the user confirming understanding."
+  "response": "A short, friendly message or summary of what you are doing."
 }`;
 
 class AIService {
@@ -201,6 +202,21 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
     }
 
     /**
+     * Generate a raw text response using Gemini
+     */
+    async generateText(prompt: string, modelType: "flash" | "pro" = "flash"): Promise<string> {
+        try {
+            const genAI = this.getClient();
+            const model = genAI.getGenerativeModel({ model: modelType === "flash" ? "gemini-1.5-flash" : "gemini-1.5-pro" });
+            const result = await model.generateContent(prompt);
+            return result.response.text();
+        } catch (error) {
+            console.error("AI generateText error:", error);
+            return "";
+        }
+    }
+
+    /**
      * Fallback: parse intent without AI using simple keyword matching
      */
     private fallbackParse(message: string): ParsedIntent {
@@ -287,6 +303,10 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
 
         if (/\b(profile|stats|my|account)\b/.test(lower)) {
             return { intent: "PROFILE", confidence: 0.6, params: {}, response: "Here's your profile." };
+        }
+
+        if (/\b(news|market|rates?|price|update|today|happening)\b/.test(lower)) {
+            return { intent: "MARKET_NEWS", confidence: 0.7, params: {}, response: "Fetching the latest market updates..." };
         }
 
         return {

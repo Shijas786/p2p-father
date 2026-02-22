@@ -6,6 +6,7 @@ import { ai } from "../services/ai";
 import { escrow } from "../services/escrow";
 import { bridge } from "../services/bridge";
 import { wallet } from "../services/wallet";
+import { market } from "../services/market";
 import { groupManager } from "../utils/groupManager";
 import {
     formatOrder,
@@ -614,6 +615,16 @@ bot.command("bank", async (ctx) => {
 
 
 // ═══════════════════════════════════════════════════════════════
+//                     /market COMMAND
+// ═══════════════════════════════════════════════════════════════
+
+bot.command("market", async (ctx) => {
+    await ctx.reply("📰 *Fetching Market Digest...*", { parse_mode: "Markdown" });
+    const digest = await market.getMarketDigest();
+    await ctx.reply(digest, { parse_mode: "Markdown" });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //                     /help COMMAND
 // ═══════════════════════════════════════════════════════════════
 
@@ -646,6 +657,7 @@ bot.command("help", async (ctx) => {
         "/mytrades — Your trade history",
         "/portfolio — View all token balances & send",
         "/send — Withdraw crypto to external wallet",
+        "/market — Live crypto news & top rates",
         "/wallet — Wallet settings",
         "/payment — Set up payment methods (UPI/Phone/Bank)",
         "/export — Export private key",
@@ -3406,6 +3418,12 @@ bot.on("message:text", async (ctx) => {
             case "PROFILE":
                 // Trigger profile command
                 await ctx.api.sendMessage(ctx.chat.id, "Loading profile...");
+                break;
+
+            case "MARKET_NEWS":
+                await ctx.reply("📰 *Fetching Market Digest...*", { parse_mode: "Markdown" });
+                const digest = await market.getMarketDigest();
+                await ctx.reply(digest, { parse_mode: "Markdown" });
                 break;
 
             default:

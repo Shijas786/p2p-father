@@ -170,6 +170,7 @@ export type IntentType =
     | "DISPUTE"
     | "HELP"
     | "PROFILE"
+    | "MARKET_NEWS"
     | "UNKNOWN";
 
 export interface ParsedIntent {

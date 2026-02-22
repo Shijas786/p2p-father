@@ -6,10 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy all source files (Invalidate Cache: 2026-02-23 V12)
+# Copy all source files (Invalidate Cache: 2026-02-23 V13)
 COPY . .
 
-# Build Version: V12 (Switch to Gemini AI)
+# Build Version: V13 (Market News Feature)
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps
 RUN npx vite build
