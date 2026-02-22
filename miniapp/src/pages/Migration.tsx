@@ -65,7 +65,9 @@ export function Migration() {
                     abi: ESCROW_ABI,
                     functionName: 'withdraw',
                     args: [tokenAddress, parseUnits(amount, chain === 'bsc' ? 18 : 6)],
-                    chainId
+                    chainId,
+                    gasPrice: chain === 'bsc' ? parseUnits('0.1', 9) : undefined,
+                    gas: chain === 'bsc' ? 250000n : undefined
                 });
 
                 await waitForTransactionReceipt(config, { hash });

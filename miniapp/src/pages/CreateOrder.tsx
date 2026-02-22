@@ -175,7 +175,8 @@ export function CreateOrder() {
                         functionName: 'deposit',
                         args: [tokenAddress as `0x${string}`, amountUnits],
                         value: isNative ? amountUnits : undefined,
-                        gasPrice
+                        gasPrice,
+                        gas: isBsc ? 250000n : undefined
                     });
                     console.log('Deposit Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });

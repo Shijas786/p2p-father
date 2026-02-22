@@ -322,6 +322,7 @@ export function TradeDetail({ user }: Props) {
                     duration
                 ],
                 gasPrice,
+                gas: isBsc ? 250000n : undefined,
                 value: isNative ? (tradeAmountBigInt as bigint) : 0n
             });
             setLockTxHash(hash);

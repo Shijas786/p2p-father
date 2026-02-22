@@ -216,6 +216,7 @@ export function Wallet({ user }: Props) {
                         functionName: 'deposit',
                         args: [tokenAddress as `0x${string}`, parsedAmount],
                         gasPrice,
+                        gas: isBsc ? 250000n : undefined,
                         value: vaultToken === 'BNB' ? parsedAmount : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
@@ -227,7 +228,8 @@ export function Wallet({ user }: Props) {
                         abi: ESCROW_ABI,
                         functionName: 'withdraw',
                         args: [tokenAddress as `0x${string}`, parsedAmount],
-                        gasPrice: vaultChain === 'bsc' ? parseUnits('0.1', 9) : undefined
+                        gasPrice: vaultChain === 'bsc' ? parseUnits('0.1', 9) : undefined,
+                        gas: vaultChain === 'bsc' ? 250000n : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }
