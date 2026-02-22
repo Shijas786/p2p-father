@@ -7,8 +7,9 @@ export function formatINR(amount: number): string {
     return `₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export function formatUSDC(amount: number, token: string = "USDC"): string {
-    return `${amount.toFixed(2)} ${token}`;
+export function formatTokenAmount(amount: number, token: string = "USDC"): string {
+    const decimals = token === 'BNB' ? 4 : 2;
+    return `${amount.toFixed(decimals)} ${token}`;
 }
 
 /**
@@ -20,7 +21,7 @@ export function formatOrder(order: Order, index?: number): string {
     const available = order.amount - (order.filled_amount || 0);
 
     return [
-        `${prefix} ${emoji} *${order.type.toUpperCase()}* ${formatUSDC(available, order.token)}`,
+        `${prefix} ${emoji} *${order.type.toUpperCase()}* ${formatTokenAmount(available, order.token)}`,
         `   Rate: ${formatINR(order.rate)}/${order.token || "USDC"}`,
         `   Total: ${formatINR(available * order.rate)}`,
         `   Payment: ${order.payment_methods?.join(", ") || "UPI"}`,

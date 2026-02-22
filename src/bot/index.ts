@@ -10,7 +10,7 @@ import { groupManager } from "../utils/groupManager";
 import {
     formatOrder,
     formatINR,
-    formatUSDC,
+    formatTokenAmount,
     formatTradeStatus,
     formatTimeRemaining,
     truncateAddress,
@@ -98,7 +98,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         if (targetGroup) {
             await bot.api.sendMessage(
                 String(targetGroup),
-                `🔥 *JUST SOLD!* 🚀\n\nSomeone just bought *${formatUSDC(trade.amount * 0.995)}* from @${trade.seller_username || "Seller"}!\n\n⚡ P2P Kerala is active. /start to trade.`,
+                `🔥 *JUST SOLD!* 🚀\n\nSomeone just bought *${formatTokenAmount(trade.amount * 0.995, trade.token)}* from @${trade.seller_username || "Seller"}!\n\n⚡ P2P Kerala is active. /start to trade.`,
                 { parse_mode: "Markdown" }
             ).catch(e => console.error(`Group FOMO Broadcast failed:`, e));
         }
@@ -118,7 +118,7 @@ export async function broadcastAd(order: any, user: any) {
             // Post ONLY to that group
             await bot.api.sendMessage(
                 String(targetGroup),
-                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatUSDC(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
+                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, order.token)}*\n📈 Rate: *${formatINR(order.rate)}/${order.token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
                 { parse_mode: "Markdown" }
             ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
 
@@ -126,7 +126,7 @@ export async function broadcastAd(order: any, user: any) {
             // Fallback: Post to Main Channel for Direct DM ads
             await bot.api.sendMessage(
                 env.BROADCAST_CHANNEL_ID,
-                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatUSDC(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
+                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, order.token)}*\n📈 Rate: *${formatINR(order.rate)}/${order.token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
                 { parse_mode: "Markdown" }
             ).catch(e => console.error("Main Channel Broadcast failed:", e));
         }
@@ -305,17 +305,17 @@ bot.command("start", async (ctx) => {
                     [
                         `📝 *Create ${typeLabel} Order*`,
                         "",
-                        `Amount: ${formatUSDC(amount)}`,
+                        `Amount: ${formatTokenAmount(amount)}`,
                         `Rate: ${formatINR(rate)}/USDC`,
                         `Total: ${formatINR(amount * 0.995 * rate)}`,
                         "",
                         `⚖️ *Commission (${(env.FEE_PERCENTAGE * 100).toFixed(0)}%)*:`,
-                        `• Seller: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatUSDC(sideFee)})`,
-                        `• Buyer: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatUSDC(sideFee)})`,
+                        `• Seller: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatTokenAmount(sideFee)})`,
+                        `• Buyer: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatTokenAmount(sideFee)})`,
                         "",
                         isSell
-                            ? `🔐 *You Lock:* ${formatUSDC(amount)}\n💰 *You Get Paid for:* ${formatUSDC(amount - sideFee)}\n📥 *Buyer Gets:* ${formatUSDC(amount - totalFee)}`
-                            : `🔐 *Seller Locks:* ${formatUSDC(amount)}\n💰 *You Pay for:* ${formatUSDC(amount - sideFee)}\n📥 *You Get:* ${formatUSDC(amount - totalFee)}`,
+                            ? `🔐 *You Lock:* ${formatTokenAmount(amount)}\n💰 *You Get Paid for:* ${formatTokenAmount(amount - sideFee)}\n📥 *Buyer Gets:* ${formatTokenAmount(amount - totalFee)}`
+                            : `🔐 *Seller Locks:* ${formatTokenAmount(amount)}\n💰 *You Pay for:* ${formatTokenAmount(amount - sideFee)}\n📥 *You Get:* ${formatTokenAmount(amount - totalFee)}`,
                         "",
                         " Confirm to list this order?",
                     ].join("\n"),
@@ -832,7 +832,7 @@ bot.command("myads", async (ctx) => {
                 const emoji = o.type === "sell" ? "🔴" : "🟢";
                 const available = o.amount - (o.filled_amount || 0);
                 sections.push([
-                    `${i + 1}. ${emoji} *${o.type.toUpperCase()}* ${formatUSDC(available)}`,
+                    `${i + 1}. ${emoji} *${o.type.toUpperCase()}* ${formatTokenAmount(available)}`,
                     `   Rate: ${formatINR(o.rate)}/USDC | Total: ${formatINR(available * o.rate)}`,
                     `   Payment: ${o.payment_methods?.join(", ") || "UPI"}`,
                     `   ID: \`${o.id.slice(0, 8)}\``,
@@ -844,7 +844,7 @@ bot.command("myads", async (ctx) => {
         if (pausedOrders.length > 0) {
             sections.push(`⏸️ *Paused Ads (${pausedOrders.length})*`);
             pausedOrders.forEach((o: any, i: number) => {
-                sections.push(`  ${i + 1}. ${o.type.toUpperCase()} ${formatUSDC(o.amount)} at ${formatINR(o.rate)}`);
+                sections.push(`  ${i + 1}. ${o.type.toUpperCase()} ${formatTokenAmount(o.amount)} at ${formatINR(o.rate)}`);
             });
             sections.push("");
         }
@@ -894,7 +894,7 @@ bot.command("mytrades", async (ctx) => {
         trades.forEach((t: any) => {
             const isBuyer = t.buyer_id === user.id;
             const role = isBuyer ? "🟢 Buying" : "🔴 Selling";
-            const amt = formatUSDC(t.amount, t.token);
+            const amt = formatTokenAmount(t.amount, t.token);
             const status = statusMap[t.status] || t.status;
 
             const date = formatShortDate(t.created_at);
@@ -920,7 +920,7 @@ bot.command("buy", async (ctx) => {
 
     // Show available sell orders
     try {
-        const orders = await db.getActiveOrders("sell", "USDC", 10);
+        const orders = await db.getActiveOrders("sell", undefined, 10);
 
         if (orders.length === 0) {
             await ctx.reply(
@@ -939,7 +939,7 @@ bot.command("buy", async (ctx) => {
 
         const keyboard = new InlineKeyboard();
         orders.slice(0, 5).forEach((o) => {
-            keyboard.text(`Buy ${formatUSDC(o.amount - o.filled_amount)}`, `buy:${o.id}`).row();
+            keyboard.text(`Buy ${formatTokenAmount(o.amount - o.filled_amount)}`, `buy:${o.id}`).row();
         });
 
         await ctx.reply(
@@ -978,7 +978,7 @@ bot.command("orders", async (ctx) => {
             sellOrders.forEach((o, i) => {
                 sections.push(formatOrder(o, i));
                 const available = o.amount - (o.filled_amount || 0);
-                keyboard.text(`🟢 Buy ${formatUSDC(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
+                keyboard.text(`🟢 Buy ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
         } else {
             sections.push("🔴 *SELL ORDERS* — None available");
@@ -992,7 +992,7 @@ bot.command("orders", async (ctx) => {
             buyOrders.forEach((o, i) => {
                 sections.push(formatOrder(o, i));
                 const available = o.amount - (o.filled_amount || 0);
-                keyboard.text(`🔴 Sell ${formatUSDC(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
+                keyboard.text(`🔴 Sell ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
         } else {
             sections.push("🟢 *BUY ORDERS* — None available");
@@ -1216,7 +1216,7 @@ bot.command("admin", async (ctx) => {
                 `Users: ${stats.total_users}`,
                 `Ads: ${stats.active_orders} active`,
                 `Trades: ${stats.total_trades} (${stats.completed_trades} ok)`,
-                `Volume: ${formatUSDC(stats.total_volume_generic)}`,
+                `Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
                 "",
                 "💰 *Relayer Wallet*",
                 `Address: \`${truncateAddress(env.ADMIN_WALLET_ADDRESS)}\``,
@@ -1284,8 +1284,8 @@ bot.command("admin", async (ctx) => {
                 `📊 Total Trades: ${stats.total_trades}`,
                 `✅ Completed: ${stats.completed_trades}`,
                 `📋 Active Orders: ${stats.active_orders}`,
-                `💰 Volume: ${formatUSDC(stats.total_volume_generic)}`,
-                `💸 Fees Collected: ${formatUSDC(stats.total_fees_amount)}`,
+                `💰 Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
+                `💸 Fees Collected: ${formatTokenAmount(stats.total_fees_amount)}`,
                 `⚠️ Active Disputes: ${stats.active_disputes}`,
                 "",
                 "━━━━ *Actions* ━━━━",
@@ -1328,7 +1328,7 @@ bot.command("disputes", async (ctx) => {
                 [
                     `⚠️ *Dispute — Trade ${trade.id.slice(0, 8)}*`,
                     "",
-                    `Amount: ${formatUSDC(trade.amount)}`,
+                    `Amount: ${formatTokenAmount(trade.amount)}`,
                     `Fiat: ${formatINR(trade.fiat_amount)}`,
                     `Status: ${formatTradeStatus(trade.status)}`,
                     `Reason: ${trade.dispute_reason || "Not specified"}`,
@@ -1487,7 +1487,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const text = [
                     "📢 *Create Sell Ad — Step 3/3*",
                     "",
-                    `Amount: *${formatUSDC(amount)}*`,
+                    `Amount: *${formatTokenAmount(amount)}*`,
                     `Rate: *${formatINR(rate)}/USDC*`,
                     "",
                     "How do you want to receive payment?",
@@ -1544,7 +1544,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const text = [
                     "📢 *Create Buy Ad — Step 3/3*",
                     "",
-                    `Amount: *${formatUSDC(amount)}*`,
+                    `Amount: *${formatTokenAmount(amount)}*`,
                     `Rate: *${formatINR(rate)}/USDC*`,
                     "",
                     "How do you want to pay the seller?",
@@ -1638,7 +1638,7 @@ bot.on("callback_query:data", async (ctx) => {
                         (o.trust_score ?? 0) >= 70 ? "⭐" : "🟢";
 
                     return [
-                        `${i + 1}. ${emoji} *${formatUSDC(sellable, o.token)}*`,
+                        `${i + 1}. ${emoji} *${formatTokenAmount(sellable, o.token)}*`,
                         `   💰 Rate: ${formatINR(o.rate)}/${o.token}`,
                         `   💵 Total: ${formatINR(sellable * o.rate)}`,
                         `   💳 ${o.payment_methods?.join(", ") || "UPI"}`,
@@ -1654,7 +1654,7 @@ bot.on("callback_query:data", async (ctx) => {
                     const sellable = totalAvailable * 0.995;
                     const action = o.type === "sell" ? "Buy" : "Sell";
                     keyboard.text(
-                        `${action} ${formatUSDC(sellable, o.token)} @ ${formatINR(o.rate)}`,
+                        `${action} ${formatTokenAmount(sellable, o.token)} @ ${formatINR(o.rate)}`,
                         `trade_ad:${o.id}`
                     ).row();
                 });
@@ -1727,13 +1727,13 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     `🤝 *${action} this trader?*`,
                     "",
-                    `Amount: *${formatUSDC(sellable, order.token)}*`,
+                    `Amount: *${formatTokenAmount(sellable, order.token)}*`,
                     `Rate: *${formatINR(order.rate)}/${order.token}*`,
                     `Total Fiat: *${formatINR(sellable * order.rate)}*`,
                     "",
                     `⚖️ *Symmetry Fee Split (1%)*:`,
-                    `• Your Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatUSDC(buyerFee, order.token)}`,
-                    `• You Receive: *${formatUSDC(buyerReceives, order.token)}*`,
+                    `• Your Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(buyerFee, order.token)}`,
+                    `• You Receive: *${formatTokenAmount(buyerReceives, order.token)}*`,
                     "",
                     `Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
                     `Trader: ${order.username ? "@" + order.username.replace(/_/g, "\\_") : "anon"} (⭐ ${order.trust_score ?? 0}%)`,
@@ -1808,8 +1808,8 @@ bot.on("callback_query:data", async (ctx) => {
                                     "",
                                     `Since you are using an External Wallet, you must deposit funds to the Vault *before* creating a Sell Ad.`,
                                     "",
-                                    `Required: *${formatUSDC(amount, tokenSymbol)}*`,
-                                    `Vault Balance: *${formatUSDC(balanceNum, tokenSymbol)}*`,
+                                    `Required: *${formatTokenAmount(amount, tokenSymbol)}*`,
+                                    `Vault Balance: *${formatTokenAmount(balanceNum, tokenSymbol)}*`,
                                     "",
                                     `📥 *Please deposit funds via the Mini App.*`,
                                 ].join("\n"),
@@ -1837,9 +1837,9 @@ bot.on("callback_query:data", async (ctx) => {
                                 [
                                     `❌ *Insufficient Balance*`,
                                     "",
-                                    `You want to sell: *${formatUSDC(amount, tokenSymbol)}*`,
-                                    `Vault Balance: *${formatUSDC(balanceNum, tokenSymbol)}*`,
-                                    `Hot Wallet: *${formatUSDC(hotBalanceNum, tokenSymbol)}*`,
+                                    `You want to sell: *${formatTokenAmount(amount, tokenSymbol)}*`,
+                                    `Vault Balance: *${formatTokenAmount(balanceNum, tokenSymbol)}*`,
+                                    `Hot Wallet: *${formatTokenAmount(hotBalanceNum, tokenSymbol)}*`,
                                     "",
                                     `📥 *Please deposit funds to your wallet.*`,
                                 ].join("\n"),
@@ -1898,7 +1898,7 @@ bot.on("callback_query:data", async (ctx) => {
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatUSDC(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
+                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
                             { parse_mode: "Markdown", reply_markup: groupKeyboard }
                         ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
 
@@ -1909,7 +1909,7 @@ bot.on("callback_query:data", async (ctx) => {
 
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatUSDC(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
+                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
                             { parse_mode: "Markdown", reply_markup: channelKeyboard }
                         ).catch(e => console.error("Main Channel Broadcast failed:", e));
                     }
@@ -1926,11 +1926,11 @@ bot.on("callback_query:data", async (ctx) => {
                             "",
                             "🔴 *SELL Ad*",
                             "",
-                            `💰 Amount: *${formatUSDC(draft.amount)}*`,
+                            `💰 Amount: *${formatTokenAmount(draft.amount)}*`,
                             `📈 Rate: *${formatINR(draft.rate)}/USDC*`,
                             `💵 Total: *${formatINR(totalFiat)}*`,
                             `💳 Payment: ${paymentMethods.join(", ")}`,
-                            `🏷️ Fee: ${formatUSDC(feeAmount)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
+                            `🏷️ Fee: ${formatTokenAmount(feeAmount)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
                             "",
                             `🔒 *Vault Backed* ✅`,
                             `🔗 [View Vault Balance](${explorerUrl})`,
@@ -1980,7 +1980,7 @@ bot.on("callback_query:data", async (ctx) => {
                             "",
                             `🟢 *BUY Ad*`,
                             "",
-                            `💰 Want to buy: *${formatUSDC(amount, token)}*`,
+                            `💰 Want to buy: *${formatTokenAmount(amount, token)}*`,
                             `📈 Rate: *${formatINR(draft.rate)}/${token}*`,
                             `💵 Will pay: *${formatINR(totalFiat)}*`,
                             `💳 Payment: ${paymentMethods.join(", ")}`,
@@ -2074,7 +2074,7 @@ bot.on("callback_query:data", async (ctx) => {
                         [
                             "✅ *Ad Cancelled & Funds Unlocked*",
                             "",
-                            `Refunded: *${formatUSDC(order.amount)}*`,
+                            `Refunded: *${formatTokenAmount(order.amount)}*`,
                             `To: \`${truncateAddress(user.wallet_address!)}\``,
                             "",
                             `🔗 [View Refund Tx](${getExplorerUrl(refundTx)})`,
@@ -2240,7 +2240,7 @@ bot.on("callback_query:data", async (ctx) => {
                         if (seller.telegram_id) {
                             await ctx.api.sendMessage(
                                 seller.telegram_id,
-                                `🔔 *New Trade Started!*\n\nBuyer matches your ad for ${formatUSDC(order.amount, order.token)}.\nThey will send payment soon.\n\nCheck /mytrades to monitor status.`,
+                                `🔔 *New Trade Started!*\n\nBuyer matches your ad for ${formatTokenAmount(order.amount, order.token)}.\nThey will send payment soon.\n\nCheck /mytrades to monitor status.`,
                                 { parse_mode: "Markdown" }
                             );
                         }
@@ -2263,7 +2263,7 @@ bot.on("callback_query:data", async (ctx) => {
                     const totalRequired = order.amount;
                     if (parseFloat(balance) < totalRequired) {
                         await ctx.editMessageText(
-                            `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${formatUSDC(totalRequired, tokenSymbol)}* but have *${formatUSDC(parseFloat(balance), tokenSymbol)}*.\n\nDeposit funds to your wallet: \`${seller.wallet_address}\``,
+                            `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${formatTokenAmount(totalRequired, tokenSymbol)}* but have *${formatTokenAmount(parseFloat(balance), tokenSymbol)}*.\n\nDeposit funds to your wallet: \`${seller.wallet_address}\``,
                             { parse_mode: "Markdown" }
                         );
                         return;
@@ -2321,7 +2321,7 @@ bot.on("callback_query:data", async (ctx) => {
                         if (buyerUser && buyerUser.telegram_id) {
                             await ctx.api.sendMessage(
                                 buyerUser.telegram_id,
-                                `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${formatUSDC(order.amount, tokenSymbol)}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
+                                `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${formatTokenAmount(order.amount, tokenSymbol)}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
                                 { parse_mode: "Markdown" }
                             );
                         }
@@ -2366,11 +2366,11 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "🤝 *Confirm Trade*",
                     "",
-                    `Amount: ${formatUSDC(available)}`,
+                    `Amount: ${formatTokenAmount(available)}`,
                     `Rate: ${formatINR(order.rate)}/USDC`,
                     `Total Fiat: ${formatINR(available * order.rate)}`,
-                    `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatUSDC(feeAmount)}`,
-                    `You receive: ${formatUSDC(buyerReceives)}`,
+                    `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmount)}`,
+                    `You receive: ${formatTokenAmount(buyerReceives)}`,
                     "",
                     `Payment: ${order.payment_methods.join(", ")}`,
                     `Seller: @${order.username || "anon"}`,
@@ -2419,17 +2419,17 @@ bot.on("callback_query:data", async (ctx) => {
                 `Status: *${trade.status.toUpperCase()}*`,
                 `ℹ️ ${statusDescriptions[trade.status] || ""}`,
                 "",
-                `Amount: *${formatUSDC(trade.amount, trade.token)}*`,
+                `Amount: *${formatTokenAmount(trade.amount, trade.token)}*`,
                 `Fiat: *${formatINR(trade.fiat_amount)}*`,
                 `Rate: ${formatINR(trade.rate)}/${trade.token}`,
                 "",
                 `⚖️ Fee Split (1%):`,
                 isSeller
-                    ? `🔐 You Locked: *${formatUSDC(trade.amount * 1.005, trade.token)}*`
-                    : `🔐 Seller Locked: *${formatUSDC(trade.amount * 1.005, trade.token)}*`,
+                    ? `🔐 You Locked: *${formatTokenAmount(trade.amount * 1.005, trade.token)}*`
+                    : `🔐 Seller Locked: *${formatTokenAmount(trade.amount * 1.005, trade.token)}*`,
                 isBuyer
-                    ? `📥 You Receive: *${formatUSDC(trade.amount * 0.995, trade.token)}*`
-                    : `📥 Buyer Receives: *${formatUSDC(trade.amount * 0.995, trade.token)}*`,
+                    ? `📥 You Receive: *${formatTokenAmount(trade.amount * 0.995, trade.token)}*`
+                    : `📥 Buyer Receives: *${formatTokenAmount(trade.amount * 0.995, trade.token)}*`,
                 "",
                 `Partner: ${partner?.username ? "@" + partner.username.replace(/_/g, "\\_") : "anon"}`,
                 `Payment Method: ${trade.payment_method}`,
@@ -2536,14 +2536,14 @@ bot.on("callback_query:data", async (ctx) => {
                     if (targetGroup) {
                         await ctx.api.sendMessage(
                             String(targetGroup),
-                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatUSDC(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
+                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatTokenAmount(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
                             { parse_mode: "Markdown" }
                         ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
 
                     } else if (env.BROADCAST_CHANNEL_ID) {
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
-                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatUSDC(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
+                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatTokenAmount(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
                             { parse_mode: "Markdown" }
                         ).catch(e => console.error("Admin Broadcast failed:", e));
                     }
@@ -2556,7 +2556,7 @@ bot.on("callback_query:data", async (ctx) => {
                 if (buyer && buyer.telegram_id) {
                     await ctx.api.sendMessage(
                         buyer.telegram_id,
-                        `✅ *Trade Completed!*\n\nSeller has released ${formatUSDC(trade.amount, trade.token)}.\nThe funds are now in your wallet (smart contract release).\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
+                        `✅ *Trade Completed!*\n\nSeller has released ${formatTokenAmount(trade.amount, trade.token)}.\nThe funds are now in your wallet (smart contract release).\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
                         { parse_mode: "Markdown" }
                     );
                 }
@@ -2680,7 +2680,7 @@ bot.on("callback_query:data", async (ctx) => {
                         `Users: ${stats.total_users}`,
                         `Ads: ${stats.active_orders} active`,
                         `Trades: ${stats.total_trades} (${stats.completed_trades} ok)`,
-                        `Volume: ${formatUSDC(stats.total_volume_generic)}`,
+                        `Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
                         "",
                         "💰 *Relayer Wallet*",
                         `Address: \`${truncateAddress(env.ADMIN_WALLET_ADDRESS)}\``,
@@ -2726,7 +2726,7 @@ bot.on("callback_query:data", async (ctx) => {
                 trades.forEach((t: any) => {
                     const isBuyer = t.buyer_id === user.id;
                     const role = isBuyer ? "🟢 Buying" : "🔴 Selling";
-                    const amt = formatUSDC(t.amount, t.token);
+                    const amt = formatTokenAmount(t.amount, t.token);
                     const status = statusMap[t.status] || t.status;
 
                     keyboard.text(`${role} ${amt} (${status})`, `trade_view:${t.id}`).row();
@@ -3117,7 +3117,7 @@ bot.on("message:text", async (ctx) => {
             [
                 `📢 *Create ${adType.toUpperCase()} Ad — Step 2/3*`,
                 "",
-                `Amount: *${formatUSDC(amount, token)}*  ✅`,
+                `Amount: *${formatTokenAmount(amount, token)}*  ✅`,
                 "",
                 `What's your rate in INR per ${token}?`,
                 "",
@@ -3162,7 +3162,7 @@ bot.on("message:text", async (ctx) => {
             [
                 `📢 *Create ${adType.toUpperCase()} Ad — Step 3/3*`,
                 "",
-                `Amount: *${formatUSDC(draft.amount ?? 0, token)}*  ✅`,
+                `Amount: *${formatTokenAmount(draft.amount ?? 0, token)}*  ✅`,
                 `Rate: *${formatINR(rate)}/${token}*  ✅`,
                 `Total: *${formatINR((draft.amount ?? 0) * rate)}*`,
                 "",
@@ -3228,11 +3228,11 @@ bot.on("message:text", async (ctx) => {
                         [
                             "📝 *Create Sell Order*",
                             "",
-                            `Amount: ${formatUSDC(intent.params.amount)}`,
+                            `Amount: ${formatTokenAmount(intent.params.amount)}`,
                             `Rate: ${formatINR(intent.params.rate)}/USDC`,
                             `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
-                            `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatUSDC(feeAmt)}`,
-                            `Buyer receives: ${formatUSDC(intent.params.amount - feeAmt)}`,
+                            `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmt)}`,
+                            `Buyer receives: ${formatTokenAmount(intent.params.amount - feeAmt)}`,
                             `Payment: ${intent.params.paymentMethod || "UPI"}`,
                             "",
                             "Confirm to list this order?",
@@ -3259,7 +3259,7 @@ bot.on("message:text", async (ctx) => {
                         [
                             "📝 *Create Buy Order*",
                             "",
-                            `Amount: ${formatUSDC(intent.params.amount)}`,
+                            `Amount: ${formatTokenAmount(intent.params.amount)}`,
                             `Rate: ${formatINR(intent.params.rate)}/USDC`,
                             `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
                             `Payment: ${intent.params.paymentMethod || "UPI"}`,
@@ -3283,7 +3283,7 @@ bot.on("message:text", async (ctx) => {
                 await ctx.reply("📊 Loading orders...");
                 // Re-use orders command
                 try {
-                    const orders = await db.getActiveOrders(undefined, "USDC", 10);
+                    const orders = await db.getActiveOrders(undefined, undefined, 10);
                     if (orders.length === 0) {
                         await ctx.reply("No orders available right now. Be the first! /sell");
                     } else {
