@@ -115,7 +115,7 @@ class EscrowService {
     async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
         try {
             const contract = this.getEscrowContract(chain, legacy);
-            if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
+            if (!contract) return "0";
             const balance: bigint = await contract.balances(userAddress, tokenAddress);
 
             let decimals = 18;

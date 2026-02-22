@@ -90,7 +90,11 @@ class WalletService {
         const bscUsdtBal = await this.getTokenBalance(address, bscUsdt, 'bsc');
 
         // Vault Balances
+        const vaultBaseUsdc = await this.getVaultBalance(address, env.USDC_ADDRESS, 'base');
+        const vaultBaseUsdt = await this.getVaultBalance(address, env.USDT_ADDRESS, 'base');
         const vaultBscBnb = await this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc');
+        const vaultBscUsdc = await this.getVaultBalance(address, bscUsdc, 'bsc');
+        const vaultBscUsdt = await this.getVaultBalance(address, bscUsdt, 'bsc');
 
         return {
             address,
@@ -100,7 +104,11 @@ class WalletService {
             bnb: ethers.formatEther(bnbBal),
             bsc_usdc: bscUsdcBal,
             bsc_usdt: bscUsdtBal,
-            vault_bnb: vaultBscBnb
+            vault_usdc: vaultBaseUsdc,
+            vault_usdt: vaultBaseUsdt,
+            vault_bnb: vaultBscBnb,
+            vault_bsc_usdc: vaultBscUsdc,
+            vault_bsc_usdt: vaultBscUsdt
         };
     }
 
