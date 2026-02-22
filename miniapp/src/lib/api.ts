@@ -102,7 +102,6 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount, token, chain, legacy }),
             }),
-        getLegacyBalances: () => request<{ base_usdc: string; bsc_usdc: string }>('/wallet/balances/legacy'),
     },
 
     // ---- Orders ----

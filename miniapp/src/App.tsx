@@ -19,7 +19,6 @@ import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
 import { Leaderboard } from './pages/Leaderboard';
-import { Migration } from './pages/Migration';
 import { ToastProvider } from './components/Toast';
 import './styles/global.css';
 
@@ -239,7 +238,6 @@ function AppInner() {
           <Route path="admin" element={<Admin />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
           <Route path="leaderboard" element={<Leaderboard />} />
-          <Route path="migration" element={<Migration />} />
         </Route>
       </Routes>
     </>

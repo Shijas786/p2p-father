@@ -93,18 +93,12 @@ class EscrowService {
         return this.relayers[chain]!;
     }
 
-    private getContractAddress(chain: Chain, legacy: boolean = false): string | null {
-        if (legacy) {
-            const addr = chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
-            return addr || null;
-        }
+    private getContractAddress(chain: Chain): string {
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
-    private getEscrowContract(chain: Chain = 'base', legacy: boolean = false): ethers.Contract | null {
-        const address = this.getContractAddress(chain, legacy);
-        if (!address) return null;
-
+    private getEscrowContract(chain: Chain = 'base'): ethers.Contract {
+        const address = this.getContractAddress(chain);
         return new ethers.Contract(address, ESCROW_ABI, this.getRelayer(chain));
     }
 
@@ -112,10 +106,9 @@ class EscrowService {
     //          VAULT & RELAYER FUNCTIONS
     // ═══════════════════════════════════════
 
-    async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
+    async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         try {
-            const contract = this.getEscrowContract(chain, legacy);
-            if (!contract) return "0";
+            const contract = this.getEscrowContract(chain);
             const balance: bigint = await contract.balances(userAddress, tokenAddress);
 
             let decimals = 18;
@@ -125,7 +118,7 @@ class EscrowService {
 
             return ethers.formatUnits(balance, decimals);
         } catch (err) {
-            console.error(`[ESCROW] Failed to get ${legacy ? 'legacy ' : ''}vault balance on ${chain}:`, err);
+            console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err);
             return "0";
         }
     }
@@ -141,8 +134,7 @@ class EscrowService {
         duration: number,
         chain: Chain = 'base'
     ): Promise<string> {
-        const contract = this.getEscrowContract(chain, false);
-        if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
+        const contract = this.getEscrowContract(chain);
 
         let decimals = 18;
         if (chain === 'base' && (token === env.USDC_ADDRESS || token === env.USDT_ADDRESS)) {

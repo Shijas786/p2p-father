@@ -86,11 +86,3 @@ export const CONTRACTS = {
     }
 };
 
-export const LEGACY_CONTRACTS = {
-    base: {
-        escrow: "0xf20872C359788a53958a048413D64F183403B1f1",
-    },
-    bsc: {
-        escrow: "0xe9B4936673BDa2F4899225A0a82E2fdAF456eCA6",
-    }
-};

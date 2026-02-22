@@ -220,30 +220,6 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
     }
 });
 
-router.get("/wallet/balances/legacy", async (req: Request, res: Response) => {
-    try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user?.wallet_address) {
-            return res.json({ base_usdc: "0.00", bsc_usdc: "0.00" });
-        }
-
-        const baseLegacy = await escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base', true);
-        const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-        const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
-
-        const bscUsdcLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdc, 'bsc', true);
-        const bscUsdtLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdt, 'bsc', true);
-
-        res.json({
-            base_usdc: baseLegacy,
-            bsc_usdc: bscUsdcLegacy,
-            bsc_usdt: bscUsdtLegacy
-        });
-    } catch (err: any) {
-        console.error("[MINIAPP] Legacy balances error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 router.post("/wallet/send", async (req: Request, res: Response) => {
     try {
@@ -378,7 +354,6 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
         if (!amount || !token) return res.status(400).json({ error: "Missing amount/token" });
 
         const targetChain = chain || 'base';
-        const isLegacy = req.body.legacy === true;
         let tokenAddress = env.USDC_ADDRESS;
         if (targetChain === 'bsc') {
             if (token === 'BNB') {
@@ -390,22 +365,20 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
             tokenAddress = token === 'USDT' ? env.USDT_ADDRESS : env.USDC_ADDRESS;
         }
 
-        // ════ VALIDATION: Prevent Withdrawal of Reserved Funds (Only for non-legacy) ════
-        if (!isLegacy) {
-            const balanceStr = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, targetChain as any);
-            const physicalBalance = parseFloat(balanceStr);
-            const reserved = await db.getReservedAmount(user.id, token, targetChain);
-            const available = physicalBalance - reserved;
+        // ════ VALIDATION: Prevent Withdrawal of Reserved Funds ════
+        const balanceStr = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, targetChain as any);
+        const physicalBalance = parseFloat(balanceStr);
+        const reserved = await db.getReservedAmount(user.id, token, targetChain);
+        const available = physicalBalance - reserved;
 
-            const withdrawAmount = parseFloat(amount.toString());
-            if (withdrawAmount > available) {
-                return res.status(400).json({
-                    error: `Insufficient Available Balance! You have ${physicalBalance} ${token}, but ${reserved} ${token} is reserved for your active ads. Max withdrawable: ${available.toFixed(2)} ${token}.`
-                });
-            }
+        const withdrawAmount = parseFloat(amount.toString());
+        if (withdrawAmount > available) {
+            return res.status(400).json({
+                error: `Insufficient Available Balance! You have ${physicalBalance} ${token}, but ${reserved} ${token} is reserved for your active ads. Max withdrawable: ${available.toFixed(2)} ${token}.`
+            });
         }
 
-        const txHash = await wallet.withdrawFromVault(user.wallet_index, amount.toString(), tokenAddress, targetChain, isLegacy);
+        const txHash = await wallet.withdrawFromVault(user.wallet_index, amount.toString(), tokenAddress, targetChain);
 
         res.json({ txHash });
     } catch (err: any) {

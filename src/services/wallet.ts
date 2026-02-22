@@ -59,11 +59,7 @@ class WalletService {
         return new ethers.Wallet(privateKey, this.getProvider(chain));
     }
 
-    getContractAddress(chain: Chain, legacy: boolean = false): string | null {
-        if (legacy) {
-            const addr = chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
-            return addr || null;
-        }
+    getContractAddress(chain: Chain): string {
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
@@ -132,9 +128,9 @@ class WalletService {
         }
     }
 
-    async getVaultBalance(address: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
+    async getVaultBalance(address: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         const provider = this.getProvider(chain);
-        const contractAddress = this.getContractAddress(chain, legacy);
+        const contractAddress = this.getContractAddress(chain);
         if (!contractAddress) return "0.0";
 
         const contract = new ethers.Contract(contractAddress, ESCROW_ABI, provider);
@@ -149,18 +145,6 @@ class WalletService {
         } catch (e) {
             return "0.0";
         }
-    }
-
-    async getLegacyBalances(address: string) {
-        const baseLegacy = await this.getVaultBalance(address, env.USDC_ADDRESS, 'base', true);
-
-        const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-        const bscLegacy = await this.getVaultBalance(address, bscUsdc, 'bsc', true);
-
-        return {
-            base_usdc: baseLegacy,
-            bsc_usdc: bscLegacy
-        };
     }
 
     // ═══════════════════════════════════════
@@ -280,11 +264,11 @@ class WalletService {
         throw new Error("Deposit failed after max retries");
     }
 
-    async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
+    async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
-        const contractAddress = this.getContractAddress(chain, legacy);
-        if (!contractAddress) throw new Error(`Escrow contract not configured for ${chain}${legacy ? ' (legacy)' : ''}`);
+        const contractAddress = this.getContractAddress(chain);
+        if (!contractAddress) throw new Error(`Escrow contract not configured for ${chain}`);
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
         const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";

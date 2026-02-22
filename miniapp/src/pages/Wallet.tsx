@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
@@ -16,7 +15,6 @@ interface Props {
 }
 
 export function Wallet({ user }: Props) {
-    const navigate = useNavigate();
     const [balances, setBalances] = useState<any>(null);
     // const [loading, setLoading] = useState(true);
 
@@ -45,8 +43,6 @@ export function Wallet({ user }: Props) {
     const [reservedBscUsdt, setReservedBscUsdt] = useState('0.00');
     const [vaultBscBnb, setVaultBscBnb] = useState('0.00');
     const [reservedBscBnb, setReservedBscBnb] = useState('0.00');
-
-    const [legacyBalances, setLegacyBalances] = useState<any>(null);
 
     // Vault Action State
     const [showVaultAction, setShowVaultAction] = useState<'deposit' | 'withdraw' | null>(null);
@@ -83,10 +79,6 @@ export function Wallet({ user }: Props) {
             setReservedBaseUsdt(data.reserved_base_usdt || '0.00');
             setReservedBscUsdt(data.reserved_bsc_usdt || '0.00');
             setReservedBscBnb(data.reserved_bsc_bnb || '0.00');
-
-            // Check Legacy
-            const legacy = await api.wallet.getLegacyBalances();
-            setLegacyBalances(legacy);
         } catch { } finally {
             // setLoading(false);
         }
@@ -428,22 +420,6 @@ export function Wallet({ user }: Props) {
                         {parseFloat(reservedBscBnb) > 0 && <div className="v-reserved">🔒 {reservedBscBnb}</div>}
                     </div>
                 </div>
-
-                {/* Legacy Warning */}
-                {legacyBalances && (
-                    parseFloat(legacyBalances.base_usdc) > 0 ||
-                    parseFloat(legacyBalances.bsc_usdc) > 0 ||
-                    parseFloat(legacyBalances.bsc_usdt || '0') > 0
-                ) && (
-                        <div className="legacy-banner clickable mb-6" onClick={() => navigate('/migration')}>
-                            <div className="icon">🛡️</div>
-                            <div className="content">
-                                <div className="title">Migrate your Funds</div>
-                                <div className="desc">We've upgraded our contracts. Move your old vault funds to the new system.</div>
-                            </div>
-                            <div className="arrow">→</div>
-                        </div>
-                    )}
             </div>
 
             {/* Asset List */}
