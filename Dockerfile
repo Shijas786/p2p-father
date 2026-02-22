@@ -6,10 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy all source files (Invalidate Cache: 2026-02-23 V13)
+# Copy all source files (Invalidate Cache: 2026-02-23 V14)
 COPY . .
 
-# Build Version: V13 (Market News Feature)
+# Build Version: V14 (Smart Price Queries)
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps
 RUN npx vite build

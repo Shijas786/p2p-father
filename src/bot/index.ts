@@ -3421,8 +3421,9 @@ bot.on("message:text", async (ctx) => {
                 break;
 
             case "MARKET_NEWS":
-                await ctx.reply("📰 *Fetching Market Digest...*", { parse_mode: "Markdown" });
-                const digest = await market.getMarketDigest();
+                await ctx.reply("📰 *Checking Market Data...*", { parse_mode: "Markdown" });
+                const queryText = cleanText.startsWith("/") ? "" : cleanText;
+                const digest = await market.getMarketDigest(queryText);
                 await ctx.reply(digest, { parse_mode: "Markdown" });
                 break;
 

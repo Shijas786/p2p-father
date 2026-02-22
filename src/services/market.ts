@@ -8,7 +8,7 @@ class MarketService {
     /**
      * Fetch latest news and prices and format them into a catchy digest using AI
      */
-    async getMarketDigest(): Promise<string> {
+    async getMarketDigest(userQuery?: string): Promise<string> {
         try {
             // Fetch both in parallel
             const [newsRes, priceRes] = await Promise.all([
@@ -29,7 +29,7 @@ class MarketService {
             const ethChange = prices.ethereum?.inr_24h_change || 0;
             const bnbChange = prices.binancecoin?.inr_24h_change || 0;
 
-            const prompt = `You are P2PFather Bot 🤖. Create a professional, catchy "Daily Crypto Digest" for your users.
+            const basePrompt = `You are P2PFather Bot 🤖. 
             
 Current Rates (INR):
 - 💰 BTC: ₹${btc.toLocaleString()} (${btcChange > 0 ? '🟢 +' : '🔴 '}${btcChange.toFixed(2)}%)
@@ -40,16 +40,22 @@ Current Rates (INR):
 Top Crypto Headlines:
 ${headlines.length > 0
                     ? headlines.map((h: string, i: number) => `${i + 1}. ${h}`).join("\n")
-                    : "No major updates in the last few hours."}
+                    : "No major updates in the last few hours."}`;
 
-**Instructions**:
-1. Use bold headings and clean Telegram Markdown formatting.
-2. Provide a short, easy-to-read summary of the top news.
-3. Add a section called "Father's Take" at the end in **Malayalam or Manglish** giving a quick vibe check of the market (is it bullish? bearish? good time to trade?).
-4. Keep it friendly and professional.
-5. End with "🚀 Stay active on /market for live updates.\n⚡ P2PFather - Trade Safe."`;
+            const instructionPrompt = userQuery
+                ? `The user asked: "${userQuery}". 
+                   Using the data above, answer their question directly. 
+                   If they asked for a specific price, give it to them clearly.
+                   You can still provide a bit of context or other prices if relevant, but prioritize answering the user.
+                   Use bold headings and clean Telegram Markdown.
+                   Add a "Father's Take" in Malayalam/Manglish at the end.`
+                : `Create a professional, catchy "Daily Crypto Digest" for your users.
+                   1. Use bold headings and clean Telegram Markdown formatting.
+                   2. Provide a short, easy-to-read summary of the top news.
+                   3. Add a section called "Father's Take" in **Malayalam or Manglish** giving a quick vibe check of the market.
+                   4. End with "🚀 Stay active on /market for live updates.\n⚡ P2PFather - Trade Safe."`;
 
-            const digest = await ai.generateText(prompt, "flash");
+            const digest = await ai.generateText(`${basePrompt}\n\n**Instructions**:\n${instructionPrompt}`, "flash");
 
             if (!digest) {
                 return this.getHardcodedFallback(btc, eth, bnb, usdc);
