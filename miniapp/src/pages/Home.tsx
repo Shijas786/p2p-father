@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
@@ -238,9 +239,9 @@ export function Home({ user }: Props) {
             </div>
 
             {/* ═══ Confirmation Modal ═══ */}
-            {confirmOrder && (
+            {confirmOrder && createPortal(
                 <div className="p2p-modal-overlay" onClick={() => setConfirmOrder(null)}>
-                    <div className="p2p-modal animate-in" onClick={e => e.stopPropagation()}>
+                    <div className="p2p-modal animate-slide-up" onClick={e => e.stopPropagation()}>
                         <h3 className="p2p-modal-title">
                             {tab === 'buy' ? '🛒 Buy from this seller?' : '💰 Sell to this buyer?'}
                         </h3>
@@ -273,7 +274,8 @@ export function Home({ user }: Props) {
                             <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
         </div>
