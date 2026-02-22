@@ -65,7 +65,7 @@ export function Wallet({ user }: Props) {
 
     const formatBal = (val: any, decs = 2) => {
         const num = parseFloat(val || '0');
-        if (num > 0 && num < 0.0001) return '0.00'; // Hide dust strictly
+        if (num > 0 && num < 0.0001) return '0.0000';
         if (num === 0) return '0.00';
         return num.toFixed(decs);
     };
@@ -208,7 +208,9 @@ export function Wallet({ user }: Props) {
             } else {
                 available = vaultToken === 'USDC'
                     ? parseFloat(vaultBscUsdc) - parseFloat(reservedBscUsdc)
-                    : parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt);
+                    : vaultToken === 'USDT'
+                        ? parseFloat(vaultBscUsdt) - parseFloat(reservedBscUsdt)
+                        : parseFloat(vaultBscBnb) - parseFloat(reservedBscBnb);
             }
 
             if (parseFloat(vaultAmount) > available) {
@@ -318,7 +320,7 @@ export function Wallet({ user }: Props) {
         totalValue += parseFloat(a.balance) * a.price;
     });
     // Add Vault value
-    totalValue += (parseFloat(vaultBaseUsdc) + parseFloat(vaultBaseUsdt) + parseFloat(vaultBscUsdc) + parseFloat(vaultBscUsdt));
+    totalValue += (parseFloat(vaultBaseUsdc) + parseFloat(vaultBaseUsdt) + parseFloat(vaultBscUsdc) + parseFloat(vaultBscUsdt) + parseFloat(vaultBscBnb));
 
     return (
         <div className="page wallet-page animate-in">
