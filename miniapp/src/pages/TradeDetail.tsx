@@ -20,7 +20,7 @@ const ESCROW_CREATE_TRADE_ABI = [
         ],
         "name": "createTrade",
         "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-        "stateMutability": "nonpayable",
+        "stateMutability": "payable",
         "type": "function"
     }
 ] as const;
@@ -85,7 +85,9 @@ export function TradeDetail({ user }: Props) {
     const isExternalWallet = user?.wallet_type === 'external';
     // const needsApproval = trade && allowance !== undefined && allowance < parseUnits(trade.amount.toString(), 6);
     // TypeScript fix for allowance comparison:
-    const tradeAmountBigInt = (trade || order) ? parseUnits((trade || order).amount.toString(), 6) : BigInt(0);
+    const isNative = trade?.token === 'BNB' || order?.token === 'BNB';
+    const tradeDecimals = (tradeChain === 'bsc') ? 18 : 6;
+    const tradeAmountBigInt = (trade || order) ? parseUnits((trade || order).amount.toString(), tradeDecimals) : BigInt(0);
     const needsApproval = allowance !== undefined && allowance < tradeAmountBigInt;
 
     useEffect(() => {
@@ -273,19 +275,19 @@ export function TradeDetail({ user }: Props) {
         setActionLoading(true);
         setError('');
         try {
+            const isBsc = tradeChain === 'bsc';
+            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+
             const hash = await writeContractAsync({
                 address: tokenAddress,
                 abi: ERC20_ABI,
                 functionName: 'approve',
-                // Approve Amount
                 args: [escrowAddress, tradeAmountBigInt],
+                gasPrice,
+                gas: isBsc ? 50000n : undefined
             });
             setApproveTxHash(hash);
             console.log('Approve TX:', hash);
-            // Wait for it? usually we let the UI show "Pending" or just proceed
-            // Ideally we wait. But useWaitForTransactionReceipt hook is top-level.
-            // We can just poll or wait for the user to click "Lock" after approval confirms.
-            // For simplicity, we'll wait for receipt in logic if possible, or just return.
             haptic('success');
         } catch (err: any) {
             console.error(err);
@@ -305,46 +307,9 @@ export function TradeDetail({ user }: Props) {
         try {
             // Duration: 1 hour (3600 seconds)
             const duration = BigInt(3600);
-            // Buyer address needs to be known. 
-            // If buyer is external wallet, use their wallet_address.
-            // If buyer is bot wallet, we ideally use their wallet_address (if reliable) or a relayer proxy?
-            // Wait, Escrow contract assigns trade to `buyer` address.
-            // If buyer is using Bot Wallet, does he have access to that key? YES.
-            // So we can use `trade.buyer_wallet_address` (Wait, trade object has `buyer_id`, need to fetch buyer details or it's in joined data?)
-            // `api.trades.getById` returns `trade` joined with `buyer`?
-            // Let's assume trade object has buyer details. If not, we might be stuck.
-            // `Trade` interface doesn't show joined buyer address.
-            // BAD ASSUMPTION.
 
-            // CHECK: fetch trade returns `trade` and `buyer`?
-            // `api/miniapp.ts` -> `getTradeById` -> checks db.
-            // `db/client.ts` -> `getTradeById` -> joins?
-
-            // I'll proceed assuming I can get buyer address. If not, I'll need to fetch it.
-            // Assuming `trade.buyer_wallet_address` or similar exists on the response.
-
-            // Actually, if I can't get buyer address, I can't lock properly.
-            // Let's assume `trade.buyer_address` is available or I fetch it.
-            // For now, I'll use a placeholder or verify `trade` structure.
-
-            // FIX: The API `getById` returns `trade` explicitly.
-            // I will add a backend update to include buyer address if needed.
-            // But let's assume `trade` has it or I can get it.
-
-            // ... proceeding with writeContractAsync ...
-
-            // Wait, for this to work, I need the Buyer's EVM address.
-            // If the buyer is a Bot User, `wallet_address` is in `users` table.
-            // The `getTradeById` response MUST include it.
-
-            // For now, let's assume for this turn that `trade.buyer_id` is available, but I might need to fetch `buyer`.
-            // I'll check `trade` object in console or I can just fetch it if missing.
-            // But wait, `getById` returns `{ trade, buyer, seller }`?
-            // `api/miniapp.ts`: `res.json({ trade })`.
-            // `db/client.ts` `getTradeById` joins?
-
-            // I'll check `db/client.ts` `getTradeById` in a sec.
-            // Proceeding with code skeleton.
+            const isBsc = tradeChain === 'bsc';
+            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
             const hash = await writeContractAsync({
                 address: escrowAddress,
@@ -356,14 +321,16 @@ export function TradeDetail({ user }: Props) {
                     tradeAmountBigInt,
                     duration
                 ],
+                gasPrice,
+                value: isNative ? (tradeAmountBigInt as bigint) : 0n
             });
             setLockTxHash(hash);
             console.log('Lock TX:', hash);
-            // We'll update backend only after receipt confirms (watched by hook)
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Lock failed');
             haptic('error');
+        } finally {
             setActionLoading(false);
         }
     }
@@ -423,10 +390,6 @@ export function TradeDetail({ user }: Props) {
             setActionLoading(false);
         }
     }
-
-    // ... inside return ...
-    // Update Trade Info Section with UTR if exists
-    // Update Actions section with UTR input for buyer
 
     async function confirmReceipt() {
         if (!id) return;

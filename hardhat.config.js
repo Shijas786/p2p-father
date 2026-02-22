@@ -31,7 +31,6 @@ module.exports = {
     etherscan: {
         apiKey: {
             base: process.env.BASESCAN_API_KEY || "",
-            baseSepolia: process.env.BASESCAN_API_KEY || "",
             bsc: process.env.BSCSCAN_API_KEY || "",
         },
         customChains: [
@@ -49,14 +48,6 @@ module.exports = {
                 urls: {
                     apiURL: "https://api-sepolia.basescan.org/api",
                     browserURL: "https://sepolia.basescan.org"
-                }
-            },
-            {
-                network: "bsc",
-                chainId: 56,
-                urls: {
-                    apiURL: "https://api.bscscan.com/api",
-                    browserURL: "https://bscscan.com"
                 }
             }
         ]

@@ -149,12 +149,19 @@ class EscrowService {
         const amountUnits = ethers.parseUnits(amount, decimals);
 
         console.log(`[ESCROW] Relayer creating trade on ${chain}...`);
+
+        const txOptions: any = {};
+        if (chain === 'bsc') {
+            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+        }
+
         const tx = await contract.createTradeByRelayer(
             seller,
             buyer,
             token,
             amountUnits,
-            duration
+            duration,
+            txOptions
         );
 
         const receipt = await tx.wait();
@@ -187,7 +194,13 @@ class EscrowService {
             try {
                 const contract = this.getEscrowContract(chain);
                 console.log(`[ESCROW] Releasing trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
-                const tx = await contract.release(tradeId);
+
+                const txOptions: any = {};
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                }
+
+                const tx = await contract.release(tradeId, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Released: ${tx.hash}`);
                 return tx.hash;
@@ -212,7 +225,13 @@ class EscrowService {
             try {
                 const contract = this.getEscrowContract(chain);
                 console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
-                const tx = await contract.refund(tradeId);
+
+                const txOptions: any = {};
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                }
+
+                const tx = await contract.refund(tradeId, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Refunded: ${tx.hash}`);
                 return tx.hash;

@@ -195,13 +195,16 @@ export function Wallet({ user }: Props) {
                 const parsedAmount = parseUnits(vaultAmount, decimals);
 
                 if (showVaultAction === 'deposit') {
-                    // 1. Approve
-                    setVaultSuccess('Approve pending...');
+                    const isBsc = vaultChain === 'bsc';
+                    const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+
                     const approveHash = await writeContractAsync({
                         address: tokenAddress as `0x${string}`,
                         abi: ERC20_ABI,
                         functionName: 'approve',
-                        args: [escrowAddress as `0x${string}`, parsedAmount]
+                        args: [escrowAddress as `0x${string}`, parsedAmount],
+                        gasPrice,
+                        gas: isBsc ? 50000n : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: approveHash });
 
@@ -211,7 +214,9 @@ export function Wallet({ user }: Props) {
                         address: escrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'deposit',
-                        args: [tokenAddress as `0x${string}`, parsedAmount]
+                        args: [tokenAddress as `0x${string}`, parsedAmount],
+                        gasPrice,
+                        value: vaultToken === 'BNB' ? parsedAmount : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
                 } else {
@@ -221,7 +226,8 @@ export function Wallet({ user }: Props) {
                         address: escrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'withdraw',
-                        args: [tokenAddress as `0x${string}`, parsedAmount]
+                        args: [tokenAddress as `0x${string}`, parsedAmount],
+                        gasPrice: vaultChain === 'bsc' ? parseUnits('0.1', 9) : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }

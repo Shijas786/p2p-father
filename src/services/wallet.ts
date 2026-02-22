@@ -161,9 +161,16 @@ class WalletService {
     async sendNative(userIndex: number, to: string, amount: string | number, chain: Chain = 'base'): Promise<string> {
         const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
+        const isBsc = chain === 'bsc';
+        const txOptions: any = {};
+        if (isBsc) {
+            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+        }
+
         const tx = await signer.sendTransaction({
             to,
-            value: ethers.parseEther(amountStr)
+            value: ethers.parseUnits(amountStr, "ether"),
+            ...txOptions
         });
         await tx.wait();
         return tx.hash;
@@ -174,7 +181,13 @@ class WalletService {
         const signer = this.getUserSigner(userIndex, chain);
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
         const decimals = await contract.decimals();
-        const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals));
+        const isBsc = chain === 'bsc';
+        const txOptions: any = {};
+        if (isBsc) {
+            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+        }
+
+        const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals), txOptions);
         await tx.wait();
         return tx.hash;
     }
@@ -203,7 +216,14 @@ class WalletService {
             const currentAllowance = await tokenContract.allowance(signer.address, contractAddress);
             if (currentAllowance < amountUnits) {
                 console.log(`[WALLET] Insufficient allowance (${ethers.formatUnits(currentAllowance, decimals)}). Approving ${amount} ${tokenAddress}...`);
-                const approveTx = await tokenContract.approve(contractAddress, amountUnits);
+
+                const approveOptions: any = {};
+                if (chain === 'bsc') {
+                    approveOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                    approveOptions.gasLimit = 50000;
+                }
+
+                const approveTx = await tokenContract.approve(contractAddress, amountUnits, approveOptions);
                 await approveTx.wait();
 
                 // Small Sleep to mitigate RPC state lag on L2s like Base
@@ -218,9 +238,14 @@ class WalletService {
         while (depositAttempts < maxDepositAttempts) {
             depositAttempts++;
             try {
-                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, {
+                const txOptions: any = {
                     value: isNative ? amountUnits : 0
-                });
+                };
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                }
+
+                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, txOptions);
                 await depositTx.wait();
                 return depositTx.hash;
             } catch (err: any) {
@@ -258,7 +283,12 @@ class WalletService {
         }
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
-        const tx = await escrowContract.withdraw(tokenAddress, amountUnits);
+        const txOptions: any = {};
+        if (chain === 'bsc') {
+            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+        }
+
+        const tx = await escrowContract.withdraw(tokenAddress, amountUnits, txOptions);
         await tx.wait();
 
         return tx.hash;

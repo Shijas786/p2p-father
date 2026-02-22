@@ -23,7 +23,7 @@ async function main() {
 
     // Explicit gas settings for tight budget
     const gasLimit = 2500000; // Hardcoded safety
-    const gasPrice = ethers.parseUnits("1", "gwei"); // Budget price
+    const gasPrice = ethers.parseUnits("0.1", "gwei"); // Budget price
 
     try {
         const escrow = await Escrow.deploy(feeCollector, usdcAddress, {

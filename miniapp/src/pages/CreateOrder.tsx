@@ -148,14 +148,19 @@ export function CreateOrder() {
                 console.log('[DEBUG] Allowance:', allowance ? formatUnits(allowance as bigint, decimals) : 'N/A');
                 console.log('[DEBUG] Target:', amount);
 
+                const isBsc = chain === 'bsc';
+                const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+
                 // 1. Approve if needed
                 if (needsApproval && !isNative) {
                     setTxStep('approving');
                     const hash = await writeContractAsync({
-                        address: tokenAddress,
+                        address: tokenAddress as `0x${string}`,
                         abi: ERC20_ABI,
                         functionName: 'approve',
-                        args: [currentEscrow, amountUnits]
+                        args: [currentEscrow as `0x${string}`, amountUnits],
+                        gasPrice,
+                        gas: isBsc ? 50000n : undefined
                     });
                     console.log('Approval Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });
@@ -165,11 +170,12 @@ export function CreateOrder() {
                 if (needsDeposit) {
                     setTxStep('depositing');
                     const hash = await writeContractAsync({
-                        address: currentEscrow,
+                        address: currentEscrow as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'deposit',
-                        args: [tokenAddress, amountUnits],
-                        value: isNative ? amountUnits : undefined
+                        args: [tokenAddress as `0x${string}`, amountUnits],
+                        value: isNative ? amountUnits : undefined,
+                        gasPrice
                     });
                     console.log('Deposit Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });
