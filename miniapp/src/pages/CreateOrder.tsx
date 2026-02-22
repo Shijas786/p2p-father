@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { waitForTransactionReceipt } from '@wagmi/core';
 import { parseUnits, formatUnits } from 'viem';
 import { api } from '../lib/api';
@@ -16,7 +16,6 @@ export function CreateOrder() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { address, isConnected, chain: walletChain } = useAccount();
-    const { switchChainAsync } = useSwitchChain();
     const [step, setStep] = useState(1);
     const [type, setType] = useState<'sell' | 'buy'>('sell');
     const [token, setToken] = useState('USDC');
@@ -121,15 +120,9 @@ export function CreateOrder() {
         try {
             if (!isCorrectChain) {
                 setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
-                try {
-                    await switchChainAsync({ chainId: targetChainId });
-                    setSubmitting(false);
-                    return;
-                } catch (err: any) {
-                    setError(`Failed to switch chain: ${err.message}`);
-                    setSubmitting(false);
-                    return;
-                }
+                appKit.open({ view: 'Networks' });
+                setSubmitting(false);
+                return;
             }
 
             const amountUnits = parseUnits(amount, decimals);
@@ -182,15 +175,9 @@ export function CreateOrder() {
 
                 if (!isCorrectChain) {
                     setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
-                    try {
-                        await switchChainAsync({ chainId: targetChainId });
-                        setSubmitting(false);
-                        return;
-                    } catch (err: any) {
-                        setError(`Failed to switch chain: ${err.message}`);
-                        setSubmitting(false);
-                        return;
-                    }
+                    appKit.open({ view: 'Networks' });
+                    setSubmitting(false);
+                    return;
                 }
 
                 const isBsc = chain === 'bsc';
