@@ -5,10 +5,10 @@ import { base, bsc } from '@reown/appkit/networks';
 const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
 
 const metadata = {
-    name: 'P2P Kerala',
+    name: 'P2PFather',
     description: 'Telegram P2P Crypto Exchange',
-    url: 'https://p2pkerala.com',
-    icons: ['https://p2pkerala.com/favicon.ico'],
+    url: 'https://p2pfather.com',
+    icons: ['https://p2pfather.com/favicon.ico'],
 };
 
 // Create Wagmi adapter for Reown

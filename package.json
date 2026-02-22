@@ -1,7 +1,7 @@
 {
   "name": "p2pkerala",
   "version": "1.0.0",
-  "description": "P2P Kerala — Telegram P2P Crypto Exchange Bot",
+  "description": "P2PFather — Telegram P2P Crypto Exchange Bot",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

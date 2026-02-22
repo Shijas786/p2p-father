@@ -945,7 +945,7 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
 
         // NOTIFY BUYER
         await notifyTradeUpdate(trade.buyer_id,
-            `🎉 <b>Trade Completed!</b>\n\nSeller <b>${user.first_name || 'User'}</b> has released <b>${trade.amount} ${trade.token}</b> to your Vault.\n\nThank you for trading with P2P Kerala! 🚀`
+            `🎉 <b>Trade Completed!</b>\n\nSeller <b>${user.first_name || 'User'}</b> has released <b>${trade.amount} ${trade.token}</b> to your Vault.\n\nThank you for trading with P2PFather! 🚀`
         );
 
         // NOTIFY GROUP (FOMO)

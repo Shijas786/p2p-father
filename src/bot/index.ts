@@ -98,7 +98,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         if (targetGroup) {
             await bot.api.sendMessage(
                 String(targetGroup),
-                `🔥 *JUST SOLD!* 🚀\n\nSomeone just bought *${formatTokenAmount(trade.amount * 0.995, trade.token)}* from @${trade.seller_username || "Seller"}!\n\n⚡ P2P Kerala is active. /start to trade.`,
+                `🔥 *JUST SOLD!* 🚀\n\nSomeone just bought *${formatTokenAmount(trade.amount * 0.995, trade.token)}* from @${trade.seller_username || "Seller"}!\n\n⚡ P2PFather is active. /start to trade.`,
                 { parse_mode: "Markdown" }
             ).catch(e => console.error(`Group FOMO Broadcast failed:`, e));
         }
@@ -194,7 +194,7 @@ bot.on("my_chat_member", async (ctx) => {
         if (oldStatus === "left" || oldStatus === "kicked" || oldStatus === "restricted") {
             groupManager.addGroup(chat.id);
             await ctx.reply(
-                "🚀 *P2P Kerala Bot Activated!*\n\nI will post live buy/sell ads here.",
+                "🚀 *P2PFather Bot Activated!*\n\nI will post live buy/sell ads here.",
                 { parse_mode: "Markdown" }
             );
         }
@@ -377,7 +377,7 @@ bot.command("start", async (ctx) => {
     const hasPayment = user.upi_id || user.phone_number || user.bank_account_number;
 
     const welcome = [
-        `👋 *Welcome to the P2P Kerala Platform*`,
+        `👋 *Welcome to the P2PFather Platform*`,
         "",
         "Secure, decentralized settlement at your fingertips.",
         "",
@@ -619,7 +619,7 @@ bot.command("bank", async (ctx) => {
 
 bot.command("help", async (ctx) => {
     const help = [
-        "📚 *P2P Kerala Bot — Help*",
+        "📚 *P2PFather Bot — Help*",
         "",
         "*How P2P Trading Works:*",
         "1️⃣ Seller lists crypto (e.g., 100 USDC at ₹88)",
@@ -1385,7 +1385,7 @@ bot.on("callback_query:data", async (ctx) => {
         if (data === "start_over") {
             const user = await ensureUser(ctx);
             const welcome = [
-                `👋 *Welcome to the P2P Kerala Platform*`,
+                `👋 *Welcome to the P2PFather Platform*`,
                 "",
                 "Secure, decentralized settlement at your fingertips.",
                 "",

@@ -43,7 +43,7 @@ class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: any) {
-    console.error('[P2P Kerala] Crash:', error, info.componentStack);
+    console.error('[P2PFather] Crash:', error, info.componentStack);
   }
 
   render() {
@@ -159,7 +159,7 @@ function AppInner() {
   if (loading || (walletChosen && !user)) {
     return (
       <div className="loading-screen">
-        <div className="logo">P2P KERALA</div>
+        <div className="logo">P2PFather</div>
         <div className="spinner spinner-lg" />
         <span className="text-xs text-muted">Initializing...</span>
       </div>
@@ -170,7 +170,7 @@ function AppInner() {
   if (connecting) {
     return (
       <div className="loading-screen">
-        <div className="logo">P2P KERALA</div>
+        <div className="logo">P2PFather</div>
         <div className="spinner spinner-lg" />
         <span className="text-xs text-muted">Connecting wallet...</span>
       </div>

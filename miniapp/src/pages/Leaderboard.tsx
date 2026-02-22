@@ -41,7 +41,7 @@ export function Leaderboard() {
             {/* Header */}
             <div className="lb-header">
                 <button className="lb-back-btn" onClick={() => { haptic('light'); navigate(-1); }}>
-                    ← Only on P2P Kerala
+                    ← Only on P2PFather
                 </button>
                 <h1>Leaderboard</h1>
                 <p className="lb-subtitle">Top Traders & Rewards</p>

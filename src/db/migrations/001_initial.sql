@@ -1,5 +1,5 @@
 -- =============================================
--- P2P Kerala Bot — Database Schema
+-- P2PFather Bot — Database Schema
 -- Run this in your Supabase SQL Editor
 -- =============================================
 

@@ -7,7 +7,7 @@ import { miniappRouter } from "./api/miniapp";
 
 async function main() {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("  🤖 P2P Kerala Bot Starting...");
+    console.log("  🤖 P2PFather Bot Starting...");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("");
     console.log(`  Environment: ${env.NODE_ENV}`);

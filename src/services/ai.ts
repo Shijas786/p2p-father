@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { env } from "../config/env";
 import type { ParsedIntent } from "../types";
 
-const SYSTEM_PROMPT = `You are P2P Kerala Bot 🤖, a friendly and vigilant crypto P2P trading assistant.
+const SYSTEM_PROMPT = `You are P2PFather Bot 🤖, a friendly and vigilant crypto P2P trading assistant.
 Your mission is to help users trade crypto safely and easily.
 
 🌍 **Persona**: Helpful, direct, and safety-first. Use emojis!
@@ -231,7 +231,16 @@ Evidence: ${context.evidence.join("\n")}`,
         }
 
         if (/\b(orders?|listings?|available|market|ads?)\b/.test(lower)) {
-            return { intent: "VIEW_ORDERS", confidence: 0.7, params: {}, response: "Here are the available orders." };
+            const isSell = /\bsell\b/.test(lower);
+            const isBuy = /\bbuy\b/.test(lower);
+            return {
+                intent: "VIEW_ORDERS",
+                confidence: 0.7,
+                params: {
+                    type: isSell ? "sell" : (isBuy ? "buy" : undefined)
+                },
+                response: isSell ? "Here are the live sell ads." : (isBuy ? "Here are the live buy ads." : "Here are the available orders.")
+            };
         }
 
         if (/\b(balance|how much|wallet)\b/.test(lower)) {
