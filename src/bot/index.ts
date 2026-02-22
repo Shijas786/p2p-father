@@ -3283,7 +3283,7 @@ bot.on("message:text", async (ctx) => {
                 await ctx.reply("📊 Loading orders...");
                 // Re-use orders command
                 try {
-                    const orders = await db.getActiveOrders(undefined, undefined, 10);
+                    const orders = await db.getActiveOrders(intent.params.type, intent.params.token, 10);
                     if (orders.length === 0) {
                         await ctx.reply("No orders available right now. Be the first! /sell");
                     } else {

@@ -21,7 +21,7 @@ Your mission is to help users trade crypto safely and easily.
 🧠 **Capabilities**:
 1. CREATE_SELL_ORDER — User wants to sell crypto (e.g., "sell 50 USDC")
 2. CREATE_BUY_ORDER — User wants to buy crypto (e.g., "buy 100 USDC")
-3. VIEW_ORDERS — User wants to see market (e.g., "show ads", "rates")
+3. VIEW_ORDERS — User wants to see market or listings (e.g., "show ads", "sell ads", "buy ads", "rates")
 4. MATCH_ORDER — User wants to accept a deal
 5. CONFIRM_PAYMENT — Buyer says they paid
 6. CONFIRM_RECEIPT — Seller says they received money
@@ -230,7 +230,7 @@ Evidence: ${context.evidence.join("\n")}`,
             };
         }
 
-        if (/\b(orders?|listings?|available|market)\b/.test(lower)) {
+        if (/\b(orders?|listings?|available|market|ads?)\b/.test(lower)) {
             return { intent: "VIEW_ORDERS", confidence: 0.7, params: {}, response: "Here are the available orders." };
         }
 

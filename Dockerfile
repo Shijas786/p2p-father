@@ -6,10 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy all source files (Invalidate Cache: 2026-02-23 V9)
+# Copy all source files (Invalidate Cache: 2026-02-23 V10)
 COPY . .
 
-# Build Version: V9 (Force Rebuild)
+# Build Version: V10 (Bot & AI Intent Fix)
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps
 RUN npx vite build
