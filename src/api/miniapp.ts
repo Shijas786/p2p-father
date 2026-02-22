@@ -187,11 +187,13 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
         const vaultBscUsdc = await escrow.getVaultBalance(user.wallet_address, "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 'bsc');
         const vaultBaseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, 'base');
         const vaultBscUsdt = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", 'bsc');
+        const vaultBscBnb = await escrow.getVaultBalance(user.wallet_address, "0x0000000000000000000000000000000000000000", 'bsc');
 
         const reservedBaseUsdc = await db.getReservedAmount(user.id, 'USDC', 'base');
         const reservedBscUsdc = await db.getReservedAmount(user.id, 'USDC', 'bsc');
         const reservedBaseUsdt = await db.getReservedAmount(user.id, 'USDT', 'base');
         const reservedBscUsdt = await db.getReservedAmount(user.id, 'USDT', 'bsc');
+        const reservedBscBnb = await db.getReservedAmount(user.id, 'BNB', 'bsc');
 
         res.json({
             ...balances,
@@ -199,19 +201,42 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             vault_bsc_usdc: vaultBscUsdc,
             vault_base_usdt: vaultBaseUsdt,
             vault_bsc_usdt: vaultBscUsdt,
+            vault_bsc_bnb: vaultBscBnb,
             vault_base_reserved: (reservedBaseUsdc + reservedBaseUsdt).toString(),
-            vault_bsc_reserved: (reservedBscUsdc + reservedBscUsdt).toString(),
+            vault_bsc_reserved: (reservedBscUsdc + reservedBscUsdt + reservedBscBnb).toString(),
 
             // Detailed reserved breakdown for UI
             reserved_base_usdc: reservedBaseUsdc.toString(),
             reserved_base_usdt: reservedBaseUsdt.toString(),
             reserved_bsc_usdc: reservedBscUsdc.toString(),
             reserved_bsc_usdt: reservedBscUsdt.toString(),
+            reserved_bsc_bnb: reservedBscBnb.toString(),
 
             wallet_type: (user as any).wallet_type || 'bot'
         });
     } catch (err: any) {
         console.error("[MINIAPP] Wallet balances error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/wallet/balances/legacy", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user?.wallet_address) {
+            return res.json({ base_usdc: "0.00", bsc_usdc: "0.00" });
+        }
+
+        const baseLegacy = await escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base', true);
+        const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+        const bscLegacy = await escrow.getVaultBalance(user.wallet_address, bscUsdc, 'bsc', true);
+
+        res.json({
+            base_usdc: baseLegacy,
+            bsc_usdc: bscLegacy
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Legacy balances error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -349,27 +374,34 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
         if (!amount || !token) return res.status(400).json({ error: "Missing amount/token" });
 
         const targetChain = chain || 'base';
+        const isLegacy = req.body.legacy === true;
         let tokenAddress = env.USDC_ADDRESS;
         if (targetChain === 'bsc') {
-            tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+            if (token === 'BNB') {
+                tokenAddress = "0x0000000000000000000000000000000000000000";
+            } else {
+                tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+            }
         } else {
             tokenAddress = token === 'USDT' ? env.USDT_ADDRESS : env.USDC_ADDRESS;
         }
 
-        // ════ VALIDATION: Prevent Withdrawal of Reserved Funds ════
-        const balanceStr = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, targetChain as any);
-        const physicalBalance = parseFloat(balanceStr);
-        const reserved = await db.getReservedAmount(user.id, token, targetChain);
-        const available = physicalBalance - reserved;
+        // ════ VALIDATION: Prevent Withdrawal of Reserved Funds (Only for non-legacy) ════
+        if (!isLegacy) {
+            const balanceStr = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, targetChain as any);
+            const physicalBalance = parseFloat(balanceStr);
+            const reserved = await db.getReservedAmount(user.id, token, targetChain);
+            const available = physicalBalance - reserved;
 
-        const withdrawAmount = parseFloat(amount.toString());
-        if (withdrawAmount > available) {
-            return res.status(400).json({
-                error: `Insufficient Available Balance! You have ${physicalBalance} ${token}, but ${reserved} ${token} is reserved for your active ads. Max withdrawable: ${available.toFixed(2)} ${token}.`
-            });
+            const withdrawAmount = parseFloat(amount.toString());
+            if (withdrawAmount > available) {
+                return res.status(400).json({
+                    error: `Insufficient Available Balance! You have ${physicalBalance} ${token}, but ${reserved} ${token} is reserved for your active ads. Max withdrawable: ${available.toFixed(2)} ${token}.`
+                });
+            }
         }
 
-        const txHash = await wallet.withdrawFromVault(user.wallet_index, withdrawAmount.toString(), tokenAddress, targetChain);
+        const txHash = await wallet.withdrawFromVault(user.wallet_index, amount.toString(), tokenAddress, targetChain, isLegacy);
 
         res.json({ txHash });
     } catch (err: any) {
@@ -521,15 +553,19 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         // ═══ VALIDATION: Sell Orders ═══
         if (type === 'sell') {
-            // 1. Vault only supports ERC20 (USDC/USDT)
-            if (token !== 'USDC' && token !== 'USDT') {
-                return res.status(400).json({ error: "Only USDC/USDT sell ads are supported on Mini App currently." });
+            // 1. Supported tokens
+            if (token !== 'USDC' && token !== 'USDT' && token !== 'BNB') {
+                return res.status(400).json({ error: "Only USDC, USDT, and BNB sell ads are supported." });
             }
 
             // 2. Check Vault Balance (Anti-Scam / liquidity check)
             let tokenAddress = env.USDC_ADDRESS;
             if (orderChain === 'bsc') {
-                tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                if (token === 'BNB') {
+                    tokenAddress = "0x0000000000000000000000000000000000000000";
+                } else {
+                    tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                }
             } else {
                 tokenAddress = (token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
             }
@@ -673,9 +709,9 @@ router.post("/trades", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Seller has no wallet configured" });
         }
 
-        // Vault only supports ERC20
-        if (order.token !== 'USDC' && order.token !== 'USDT') {
-            return res.status(400).json({ error: "Only USDC/USDT trades are supported via Vault." });
+        // Vault support
+        if (order.token !== 'USDC' && order.token !== 'USDT' && order.token !== 'BNB') {
+            return res.status(400).json({ error: "Unsupported token for trade via Vault." });
         }
 
 
@@ -705,7 +741,11 @@ router.post("/trades", async (req: Request, res: Response) => {
             try {
                 let tokenAddress = env.USDC_ADDRESS;
                 if (order.chain === 'bsc') {
-                    tokenAddress = (order.token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                    if (order.token === 'BNB') {
+                        tokenAddress = "0x0000000000000000000000000000000000000000";
+                    } else {
+                        tokenAddress = (order.token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                    }
                 } else {
                     tokenAddress = (order.token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
                 }

@@ -93,13 +93,16 @@ class EscrowService {
         return this.relayers[chain]!;
     }
 
-    private getContractAddress(chain: Chain): string {
+    private getContractAddress(chain: Chain, legacy: boolean = false): string {
+        if (legacy) {
+            return chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+        }
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
-    private getEscrowContract(chain: Chain = 'base'): ethers.Contract {
-        const address = this.getContractAddress(chain);
-        if (!address) throw new Error(`Escrow contract address not configured for ${chain}`);
+    private getEscrowContract(chain: Chain = 'base', legacy: boolean = false): ethers.Contract {
+        const address = this.getContractAddress(chain, legacy);
+        if (!address) throw new Error(`Escrow contract address not configured for ${chain}${legacy ? ' (legacy)' : ''}`);
 
         return new ethers.Contract(address, ESCROW_ABI, this.getRelayer(chain));
     }
@@ -108,10 +111,9 @@ class EscrowService {
     //          VAULT & RELAYER FUNCTIONS
     // ═══════════════════════════════════════
 
-    async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
         try {
-            const contract = this.getEscrowContract(chain);
-            // Default to 6 decimals for USDC/USDT on Base, 18 elsewhere unless specified
+            const contract = this.getEscrowContract(chain, legacy);
             const balance: bigint = await contract.balances(userAddress, tokenAddress);
 
             let decimals = 18;
@@ -121,7 +123,7 @@ class EscrowService {
 
             return ethers.formatUnits(balance, decimals);
         } catch (err) {
-            console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err);
+            console.error(`[ESCROW] Failed to get ${legacy ? 'legacy ' : ''}vault balance on ${chain}:`, err);
             return "0";
         }
     }

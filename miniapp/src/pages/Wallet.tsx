@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function Wallet({ user }: Props) {
+    const navigate = useNavigate();
     const [balances, setBalances] = useState<any>(null);
     // const [loading, setLoading] = useState(true);
 
@@ -41,12 +43,16 @@ export function Wallet({ user }: Props) {
     const [reservedBscUsdc, setReservedBscUsdc] = useState('0.00');
     const [reservedBaseUsdt, setReservedBaseUsdt] = useState('0.00');
     const [reservedBscUsdt, setReservedBscUsdt] = useState('0.00');
+    const [vaultBscBnb, setVaultBscBnb] = useState('0.00');
+    const [reservedBscBnb, setReservedBscBnb] = useState('0.00');
+
+    const [legacyBalances, setLegacyBalances] = useState<any>(null);
 
     // Vault Action State
     const [showVaultAction, setShowVaultAction] = useState<'deposit' | 'withdraw' | null>(null);
     const [vaultAmount, setVaultAmount] = useState('');
     const [vaultChain, setVaultChain] = useState<'base' | 'bsc'>('base');
-    const [vaultToken, setVaultToken] = useState<'USDC' | 'USDT'>('USDC');
+    const [vaultToken, setVaultToken] = useState<'USDC' | 'USDT' | 'BNB'>('USDC');
     const [vaultLoading, setVaultLoading] = useState(false);
     const [vaultError, setVaultError] = useState('');
     const [vaultSuccess, setVaultSuccess] = useState('');
@@ -69,11 +75,17 @@ export function Wallet({ user }: Props) {
             setVaultBscUsdc(data.vault_bsc_usdc || '0.00');
             setVaultBaseUsdt(data.vault_base_usdt || '0.00');
             setVaultBscUsdt(data.vault_bsc_usdt || '0.00');
+            setVaultBscBnb(data.vault_bsc_bnb || '0.00');
 
             setReservedBaseUsdc(data.reserved_base_usdc || '0.00');
             setReservedBscUsdc(data.reserved_bsc_usdc || '0.00');
             setReservedBaseUsdt(data.reserved_base_usdt || '0.00');
             setReservedBscUsdt(data.reserved_bsc_usdt || '0.00');
+            setReservedBscBnb(data.reserved_bsc_bnb || '0.00');
+
+            // Check Legacy
+            const legacy = await api.wallet.getLegacyBalances();
+            setLegacyBalances(legacy);
         } catch { } finally {
             // setLoading(false);
         }
@@ -150,13 +162,13 @@ export function Wallet({ user }: Props) {
         try {
             const amount = parseFloat(vaultAmount);
             const isExternal = user?.wallet_type === 'external';
-            const chainId = vaultChain === 'bsc' ? bsc.id : base.id;
-            const decimals = vaultChain === 'bsc' ? 18 : 6;
-            // NOTE: USDT on Base is 6 decimals? Yes. USDT on BSC is 18. USDC on Base is 6. USDC on BSC is 18.
+            const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
+            const decimals = (vaultChain === 'bsc') ? 18 : 6;
 
             const contracts = (CONTRACTS as any)[vaultChain];
             const tokenAddress = contracts.tokens[vaultToken];
-            const escrowAddress = contracts.escrow;
+            // Force V2 for BSC to avoid any potential stale config issues
+            const escrowAddress = vaultChain === 'bsc' ? "0x74EdacD5fEfFE2fb59b7b0942Ed99e49a3AB853A" : contracts.escrow;
 
             if (isExternal) {
                 if (!isConnected || !wagmiAddress) {
@@ -164,20 +176,23 @@ export function Wallet({ user }: Props) {
                     return;
                 }
 
-                const parsedAmount = parseUnits(vaultAmount, decimals);
-
                 // ─── CHAIN CHECK ───
-                if (walletChain?.id !== chainId) {
+                if (walletChain?.id !== targetChainId) {
                     setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
                     try {
-                        await switchChainAsync({ chainId });
-                        // Wait a bit for wagmi state to sync
-                        await new Promise(r => setTimeout(r, 1000));
+                        await switchChainAsync({ chainId: targetChainId });
+                        // Don't proceed immediately, let the user click again or wait for state sync
+                        setVaultSuccess(`Switched! Please click ${showVaultAction === 'deposit' ? 'Deposit' : 'Withdraw'} again.`);
+                        setVaultLoading(false);
+                        return;
                     } catch (err: any) {
                         setVaultError(`Please switch to ${vaultChain.toUpperCase()} in your wallet`);
+                        setVaultLoading(false);
                         return;
                     }
                 }
+
+                const parsedAmount = parseUnits(vaultAmount, decimals);
 
                 if (showVaultAction === 'deposit') {
                     // 1. Approve
@@ -186,8 +201,7 @@ export function Wallet({ user }: Props) {
                         address: tokenAddress as `0x${string}`,
                         abi: ERC20_ABI,
                         functionName: 'approve',
-                        args: [escrowAddress as `0x${string}`, parsedAmount],
-                        chainId
+                        args: [escrowAddress as `0x${string}`, parsedAmount]
                     });
                     await waitForTransactionReceipt(config, { hash: approveHash });
 
@@ -197,8 +211,7 @@ export function Wallet({ user }: Props) {
                         address: escrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'deposit',
-                        args: [tokenAddress as `0x${string}`, parsedAmount],
-                        chainId
+                        args: [tokenAddress as `0x${string}`, parsedAmount]
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
                 } else {
@@ -208,8 +221,7 @@ export function Wallet({ user }: Props) {
                         address: escrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'withdraw',
-                        args: [tokenAddress as `0x${string}`, parsedAmount],
-                        chainId
+                        args: [tokenAddress as `0x${string}`, parsedAmount]
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }
@@ -346,10 +358,30 @@ export function Wallet({ user }: Props) {
                             <span className="v-symbol">USDT</span>
                             <span className="v-chain">BSC</span>
                         </div>
-                        <div className="v-bal">{parseFloat(vaultBscUsdt).toFixed(2)}</div>
                         {parseFloat(reservedBscUsdt) > 0 && <div className="v-reserved">🔒 {reservedBscUsdt}</div>}
                     </div>
+                    <div className="vault-asset-box">
+                        <div className="v-asset-row">
+                            <span className="v-symbol">BNB</span>
+                            <span className="v-chain">BSC</span>
+                        </div>
+                        <div className="v-bal">{parseFloat(vaultBscBnb).toFixed(4)}</div>
+                        {parseFloat(reservedBscBnb) > 0 && <div className="v-reserved">🔒 {reservedBscBnb}</div>}
+                    </div>
                 </div>
+
+                {/* Legacy Warning */}
+                {(parseFloat(legacyBalances?.base_usdc || '0') > 0 || parseFloat(legacyBalances?.bsc_usdc || '0') > 0) && (
+                    <div className="legacy-banner">
+                        <div className="legacy-text">
+                            ⚠️ <b>Legacy Funds Detected!</b><br />
+                            You have funds in the old vault contract.
+                        </div>
+                        <button className="btn btn-sm btn-primary" onClick={() => navigate('/migration')}>
+                            Withdraw
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Asset List */}
@@ -529,13 +561,23 @@ export function Wallet({ user }: Props) {
                         {vaultError && <div className="text-red text-sm mb-3">{vaultError}</div>}
                         {vaultSuccess && <div className="text-green text-sm mb-3">{vaultSuccess}</div>}
 
-                        <button
-                            className="btn btn-primary btn-block"
-                            onClick={handleVaultAction}
-                            disabled={vaultLoading}
-                        >
-                            {vaultLoading ? <span className="spinner" /> : 'Confirm'}
-                        </button>
+                        {user?.wallet_type === 'external' && walletChain?.id !== (vaultChain === 'bsc' ? bsc.id : base.id) ? (
+                            <button
+                                className="btn btn-primary btn-block"
+                                onClick={handleVaultAction}
+                                disabled={vaultLoading}
+                            >
+                                {vaultLoading ? <span className="spinner" /> : `Switch to ${vaultChain.toUpperCase()}`}
+                            </button>
+                        ) : (
+                            <button
+                                className="btn btn-primary btn-block"
+                                onClick={handleVaultAction}
+                                disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
+                            >
+                                {vaultLoading ? <span className="spinner" /> : (showVaultAction === 'deposit' ? 'Deposit' : 'Withdraw')}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

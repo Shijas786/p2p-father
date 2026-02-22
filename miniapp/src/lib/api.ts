@@ -69,6 +69,7 @@ export const api = {
             vault_bsc_usdc?: string;
             vault_base_usdt?: string;
             vault_bsc_usdt?: string;
+            vault_bsc_bnb?: string;
             vault_base_reserved?: string;
             vault_bsc_reserved?: string;
 
@@ -76,6 +77,7 @@ export const api = {
             reserved_base_usdt?: string;
             reserved_bsc_usdc?: string;
             reserved_bsc_usdt?: string;
+            reserved_bsc_bnb?: string;
 
             wallet_type?: string;
         }>('/wallet/balances'),
@@ -95,11 +97,12 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount, token, chain }),
             }),
-        withdrawFromVault: (amount: number, token: string, chain: string) =>
+        withdrawFromVault: (amount: number, token: string, chain: string, legacy?: boolean) =>
             request<{ txHash: string }>('/wallet/vault/withdraw', {
                 method: 'POST',
-                body: JSON.stringify({ amount, token, chain }),
+                body: JSON.stringify({ amount, token, chain, legacy }),
             }),
+        getLegacyBalances: () => request<{ base_usdc: string; bsc_usdc: string }>('/wallet/balances/legacy'),
     },
 
     // ---- Orders ----

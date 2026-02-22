@@ -1,0 +1,84 @@
+.migration-page {
+    padding: 20px;
+}
+
+.migration-banner-full {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+}
+
+.migration-banner-full .icon {
+    font-size: 24px;
+}
+
+.migration-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: #f59e0b;
+}
+
+.migration-desc {
+    font-size: 14px;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.migration-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.migration-item {
+    background: #111;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #222;
+}
+
+.m-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.m-chain {
+    font-size: 12px;
+    color: #6366f1;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.m-token {
+    font-weight: 600;
+}
+
+.m-amount {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.m-label {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.m-footer {
+    border-top: 1px solid #222;
+    padding-top: 12px;
+}
+
+.loading-box {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+}

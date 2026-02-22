@@ -10,10 +10,11 @@ const ERC20_ABI = [
 ];
 
 const ESCROW_ABI = [
-    "function deposit(address token, uint256 amount)",
+    "function deposit(address token, uint256 amount) payable",
     "function withdraw(address token, uint256 amount)",
     "function release(uint256 tradeId)",
-    "function createTradeByRelayer(address seller, address buyer, address token, uint256 amount, uint256 duration) returns (uint256)"
+    "function createTradeByRelayer(address seller, address buyer, address token, uint256 amount, uint256 duration) returns (uint256)",
+    "function balances(address user, address token) view returns (uint256)"
 ];
 
 type Chain = 'base' | 'bsc';
@@ -58,7 +59,10 @@ class WalletService {
         return new ethers.Wallet(privateKey, this.getProvider(chain));
     }
 
-    getContractAddress(chain: Chain): string {
+    getContractAddress(chain: Chain, legacy: boolean = false): string {
+        if (legacy) {
+            return chain === 'base' ? (env as any).ESCROW_CONTRACT_ADDRESS_LEGACY : (env as any).ESCROW_CONTRACT_ADDRESS_BSC_LEGACY;
+        }
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
@@ -84,6 +88,9 @@ class WalletService {
         const bscUsdcBal = await this.getTokenBalance(address, bscUsdc, 'bsc');
         const bscUsdtBal = await this.getTokenBalance(address, bscUsdt, 'bsc');
 
+        // Vault Balances
+        const vaultBscBnb = await this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc');
+
         return {
             address,
             eth: ethers.formatEther(ethBal),
@@ -91,11 +98,17 @@ class WalletService {
             usdt: usdtBal,
             bnb: ethers.formatEther(bnbBal),
             bsc_usdc: bscUsdcBal,
-            bsc_usdt: bscUsdtBal
+            bsc_usdt: bscUsdtBal,
+            vault_bnb: vaultBscBnb
         };
     }
 
     async getTokenBalance(address: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        if (tokenAddress === "0x0000000000000000000000000000000000000000") {
+            const provider = this.getProvider(chain);
+            const balance = await provider.getBalance(address);
+            return ethers.formatEther(balance);
+        }
         const provider = this.getProvider(chain);
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
         try {
@@ -108,6 +121,37 @@ class WalletService {
             console.error(`Failed to get token balance for ${tokenAddress} on ${chain}`, e);
             return "0.0";
         }
+    }
+
+    async getVaultBalance(address: string, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
+        const provider = this.getProvider(chain);
+        const contractAddress = this.getContractAddress(chain, legacy);
+        if (!contractAddress) return "0.0";
+
+        const contract = new ethers.Contract(contractAddress, ESCROW_ABI, provider);
+        try {
+            const balance = await contract.balances(address, tokenAddress);
+            let decimals = 18;
+            if (tokenAddress !== "0x0000000000000000000000000000000000000000") {
+                const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+                decimals = await tokenContract.decimals();
+            }
+            return ethers.formatUnits(balance, decimals);
+        } catch (e) {
+            return "0.0";
+        }
+    }
+
+    async getLegacyBalances(address: string) {
+        const baseLegacy = await this.getVaultBalance(address, env.USDC_ADDRESS, 'base', true);
+
+        const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+        const bscLegacy = await this.getVaultBalance(address, bscUsdc, 'bsc', true);
+
+        return {
+            base_usdc: baseLegacy,
+            bsc_usdc: bscLegacy
+        };
     }
 
     // ═══════════════════════════════════════
@@ -147,18 +191,24 @@ class WalletService {
         const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
-        const decimals = await tokenContract.decimals();
+        const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";
+        let decimals = 18;
+        if (!isNative) {
+            decimals = await tokenContract.decimals();
+        }
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
-        // 1. Smart Approve: Check existing allowance first
-        const currentAllowance = await tokenContract.allowance(signer.address, contractAddress);
-        if (currentAllowance < amountUnits) {
-            console.log(`[WALLET] Insufficient allowance (${ethers.formatUnits(currentAllowance, decimals)}). Approving ${amount} ${tokenAddress}...`);
-            const approveTx = await tokenContract.approve(contractAddress, amountUnits);
-            await approveTx.wait();
+        if (!isNative) {
+            // 1. Smart Approve: Check existing allowance first
+            const currentAllowance = await tokenContract.allowance(signer.address, contractAddress);
+            if (currentAllowance < amountUnits) {
+                console.log(`[WALLET] Insufficient allowance (${ethers.formatUnits(currentAllowance, decimals)}). Approving ${amount} ${tokenAddress}...`);
+                const approveTx = await tokenContract.approve(contractAddress, amountUnits);
+                await approveTx.wait();
 
-            // Small Sleep to mitigate RPC state lag on L2s like Base
-            await new Promise(r => setTimeout(r, 1000));
+                // Small Sleep to mitigate RPC state lag on L2s like Base
+                await new Promise(r => setTimeout(r, 1000));
+            }
         }
 
         // 2. Deposit with Retry/Buffer for gas estimation lag
@@ -168,7 +218,9 @@ class WalletService {
         while (depositAttempts < maxDepositAttempts) {
             depositAttempts++;
             try {
-                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits);
+                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, {
+                    value: isNative ? amountUnits : 0
+                });
                 await depositTx.wait();
                 return depositTx.hash;
             } catch (err: any) {
@@ -192,15 +244,18 @@ class WalletService {
         throw new Error("Deposit failed after max retries");
     }
 
-    async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async withdrawFromVault(userIndex: number, amount: string | number, tokenAddress: string, chain: Chain = 'base', legacy: boolean = false): Promise<string> {
         const amountStr = amount.toString();
         const signer = this.getUserSigner(userIndex, chain);
-        const contractAddress = this.getContractAddress(chain);
-
-        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer); // For decimals
+        const contractAddress = this.getContractAddress(chain, legacy);
         const escrowContract = new ethers.Contract(contractAddress, ESCROW_ABI, signer);
 
-        const decimals = await tokenContract.decimals();
+        const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";
+        let decimals = 18;
+        if (!isNative) {
+            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+            decimals = await tokenContract.decimals();
+        }
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         const tx = await escrowContract.withdraw(tokenAddress, amountUnits);

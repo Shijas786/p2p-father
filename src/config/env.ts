@@ -18,7 +18,9 @@ const envSchema = z.object({
 
     // Blockchain
     ESCROW_CONTRACT_ADDRESS: z.string().default(""),
+    ESCROW_CONTRACT_ADDRESS_LEGACY: z.string().default(""),
     ESCROW_CONTRACT_ADDRESS_BSC: z.string().default(""),
+    ESCROW_CONTRACT_ADDRESS_BSC_LEGACY: z.string().default(""),
     ADMIN_WALLET_ADDRESS: z.string().default(""),
     RELAYER_PRIVATE_KEY: z.string().default(""),
     MASTER_WALLET_SEED: z.string().default(""),

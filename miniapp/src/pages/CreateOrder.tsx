@@ -16,7 +16,7 @@ export function CreateOrder() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { address, isConnected, chain: walletChain } = useAccount();
-    const { switchChain } = useSwitchChain();
+    const { switchChainAsync } = useSwitchChain();
     const [step, setStep] = useState(1);
     const [type, setType] = useState<'sell' | 'buy'>('sell');
     const [token, setToken] = useState('USDC');
@@ -73,7 +73,7 @@ export function CreateOrder() {
 
     const TOKENS_BY_CHAIN: Record<string, string[]> = {
         base: ['USDC', 'USDT'],
-        bsc: ['USDC', 'USDT']
+        bsc: ['USDC', 'USDT', 'BNB']
     };
 
     const [reserved, setReserved] = useState(0);
@@ -93,10 +93,11 @@ export function CreateOrder() {
     const physicalBalance = vaultBalance !== undefined ? parseFloat(formatUnits(vaultBalance as bigint, decimals)) : 0;
     const availableBalance = physicalBalance - reserved;
 
+    const isNative = (chain === 'bsc' && token === 'BNB') || (chain === 'base' && token === 'ETH');
     const needsDeposit = type === 'sell' && vaultBalance !== undefined && amount &&
         availableBalance < parseFloat(amount);
 
-    const needsApproval = needsDeposit && isExternalUser && allowance !== undefined && amount &&
+    const needsApproval = !isNative && needsDeposit && isExternalUser && allowance !== undefined && amount &&
         parseFloat(formatUnits(allowance as bigint, decimals)) < parseFloat(amount);
 
     // Guard: Wait for balance info if sell, AND wait for connection if we know we are an external user
@@ -126,52 +127,52 @@ export function CreateOrder() {
                     return;
                 }
 
+                const amountUnits = parseUnits(amount, decimals);
+                // Force V2 for BSC
+                const currentEscrow = chain === 'bsc' ? "0x74EdacD5fEfFE2fb59b7b0942Ed99e49a3AB853A" : escrowAddress;
+
                 if (!isCorrectChain) {
                     setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
-                    await switchChain({ chainId: targetChainId });
-                    setSubmitting(false);
-                    return;
+                    try {
+                        await switchChainAsync({ chainId: targetChainId });
+                        // Let state sync, user clicks again
+                        setSubmitting(false);
+                        return;
+                    } catch (err: any) {
+                        setError(`Failed to switch chain: ${err.message}`);
+                        setSubmitting(false);
+                        return;
+                    }
                 }
-
-                // Security check: Match backend account address with connected wallet
-                if (user?.wallet_address && user.wallet_address.toLowerCase() !== address?.toLowerCase()) {
-                    setError(`Wallet mismatch! Account uses: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}. Switch wallet to use these funds.`);
-                    setSubmitting(false);
-                    return;
-                }
-
-                const amountUnits = parseUnits(amount, decimals);
                 console.log('[DEBUG] VaultBalance:', vaultBalance ? formatUnits(vaultBalance as bigint, decimals) : 'N/A');
                 console.log('[DEBUG] Allowance:', allowance ? formatUnits(allowance as bigint, decimals) : 'N/A');
                 console.log('[DEBUG] Target:', amount);
 
                 // 1. Approve if needed
-                if (needsApproval) {
+                if (needsApproval && !isNative) {
                     setTxStep('approving');
                     const hash = await writeContractAsync({
                         address: tokenAddress,
                         abi: ERC20_ABI,
                         functionName: 'approve',
-                        args: [escrowAddress, amountUnits],
-                        chainId: targetChainId,
+                        args: [currentEscrow, amountUnits]
                     });
                     console.log('Approval Sent:', hash);
-                    await waitForTransactionReceipt(wagmiConfig, { hash, chainId: targetChainId });
-                    // Allowance might not update instantly in hooks, so we might need a manual refetch or trust logic
+                    await waitForTransactionReceipt(wagmiConfig, { hash });
                 }
 
                 // 2. Deposit if needed
                 if (needsDeposit) {
                     setTxStep('depositing');
                     const hash = await writeContractAsync({
-                        address: escrowAddress,
+                        address: currentEscrow,
                         abi: ESCROW_ABI,
                         functionName: 'deposit',
                         args: [tokenAddress, amountUnits],
-                        chainId: targetChainId,
+                        value: isNative ? amountUnits : undefined
                     });
                     console.log('Deposit Sent:', hash);
-                    await waitForTransactionReceipt(wagmiConfig, { hash, chainId: targetChainId });
+                    await waitForTransactionReceipt(wagmiConfig, { hash });
                 }
             }
 
@@ -387,6 +388,8 @@ export function CreateOrder() {
                                     </div>
                                 ) : (isExternalUser && !isConnected) ? (
                                     'CONNECT WALLET'
+                                ) : (isExternalUser && !isCorrectChain) ? (
+                                    `SWITCH TO ${chain.toUpperCase()}`
                                 ) : (
                                     (type === 'sell' && availableBalance < (parseFloat(amount || '0') * 1.005))
                                         ? (isExternalUser ? `DEPOSIT & PUBLISH` : 'INSUFFICIENT BALANCE')
