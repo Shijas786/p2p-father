@@ -300,7 +300,7 @@ export function TradeDetail({ user }: Props) {
                 functionName: 'approve',
                 args: [escrowAddress, tradeAmountBigInt],
                 gasPrice,
-                gas: isBsc ? 50000n : undefined
+                gas: isBsc ? 100000n : undefined
             });
             setApproveTxHash(hash);
             console.log('Approve TX:', hash);
@@ -344,7 +344,7 @@ export function TradeDetail({ user }: Props) {
                     duration
                 ],
                 gasPrice,
-                gas: isBsc ? 250000n : undefined,
+                gas: isBsc ? 500000n : undefined,
                 value: isNative ? (tradeAmountBigInt as bigint) : 0n
             });
             setLockTxHash(hash);

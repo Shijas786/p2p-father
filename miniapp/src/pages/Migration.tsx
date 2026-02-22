@@ -71,7 +71,7 @@ export function Migration() {
                     args: [tokenAddress, parseUnits(amount, chain === 'base' ? 6 : 18)],
                     chainId,
                     gasPrice: chain === 'bsc' ? parseUnits('0.1', 9) : undefined,
-                    gas: chain === 'bsc' ? 250000n : undefined
+                    gas: chain === 'bsc' ? 500000n : undefined
                 });
 
                 await waitForTransactionReceipt(config, { hash });

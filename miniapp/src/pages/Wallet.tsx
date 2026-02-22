@@ -178,7 +178,7 @@ export function Wallet({ user }: Props) {
                 functionName: 'approve',
                 args: [vaultEscrowAddress as `0x${string}`, parsedAmount],
                 gasPrice,
-                gas: isBsc ? 50000n : undefined
+                gas: isBsc ? 100000n : undefined
             });
             await waitForTransactionReceipt(config, { hash: approveHash });
 
@@ -254,7 +254,7 @@ export function Wallet({ user }: Props) {
                         functionName: 'deposit',
                         args: [vaultTokenAddress as `0x${string}`, parsedAmount],
                         gasPrice,
-                        gas: isBsc ? 250000n : undefined,
+                        gas: isBsc ? 500000n : undefined,
                         value: isNativeVault ? parsedAmount : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
@@ -266,7 +266,7 @@ export function Wallet({ user }: Props) {
                         functionName: 'withdraw',
                         args: [vaultTokenAddress as `0x${string}`, parsedAmount],
                         gasPrice: isBsc ? parseUnits('0.1', 9) : undefined,
-                        gas: isBsc ? 250000n : undefined
+                        gas: isBsc ? 500000n : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }

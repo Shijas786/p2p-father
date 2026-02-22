@@ -214,7 +214,7 @@ class WalletService {
                 const approveOptions: any = {};
                 if (chain === 'bsc') {
                     approveOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-                    approveOptions.gasLimit = 50000;
+                    approveOptions.gasLimit = 100000;
                 }
 
                 const approveTx = await tokenContract.approve(contractAddress, amountUnits, approveOptions);
@@ -237,7 +237,7 @@ class WalletService {
                 };
                 if (chain === 'bsc') {
                     txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-                    txOptions.gasLimit = 250000;
+                    txOptions.gasLimit = 500000;
                 }
 
                 const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, txOptions);
@@ -282,7 +282,7 @@ class WalletService {
         const txOptions: any = {};
         if (chain === 'bsc') {
             txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-            txOptions.gasLimit = 250000;
+            txOptions.gasLimit = 500000;
         }
 
         const tx = await escrowContract.withdraw(tokenAddress, amountUnits, txOptions);

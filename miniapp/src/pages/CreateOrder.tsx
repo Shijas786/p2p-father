@@ -151,7 +151,7 @@ export function CreateOrder() {
                 functionName: 'approve',
                 args: [currentEscrow as `0x${string}`, amountUnits],
                 gasPrice,
-                gas: isBsc ? 50000n : undefined
+                gas: isBsc ? 100000n : undefined
             });
             console.log('Approval Sent:', hash);
             await waitForTransactionReceipt(wagmiConfig, { hash });
@@ -207,7 +207,7 @@ export function CreateOrder() {
                         args: [tokenAddress as `0x${string}`, amountUnits],
                         value: isNative ? amountUnits : undefined,
                         gasPrice,
-                        gas: isBsc ? 250000n : undefined
+                        gas: isBsc ? 500000n : undefined
                     });
                     console.log('Deposit Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });

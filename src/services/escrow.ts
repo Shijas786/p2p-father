@@ -150,7 +150,7 @@ class EscrowService {
         const txOptions: any = {};
         if (chain === 'bsc') {
             txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-            txOptions.gasLimit = 250000;
+            txOptions.gasLimit = 500000;
         }
 
         const tx = await contract.createTradeByRelayer(
