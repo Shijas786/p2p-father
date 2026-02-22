@@ -13,6 +13,13 @@ export function MyAds() {
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState<string | null>(null);
 
+    const formatBal = (val: any, decs = 2) => {
+        const num = parseFloat(val || '0');
+        if (num > 0 && num < 0.0001) return '0.0000';
+        if (num === 0) return '0.00';
+        return num.toFixed(decs);
+    };
+
     useEffect(() => {
         loadOrders();
     }, []);
@@ -101,7 +108,7 @@ export function MyAds() {
                                     </div>
                                     <div className="ads-detail-row">
                                         <span className="ads-detail-label">Available</span>
-                                        <span className="ads-detail-value">{available.toFixed(2)} {order.token}</span>
+                                        <span className="ads-detail-value">{formatBal(available, order.token === 'BNB' ? 4 : 2)} {order.token}</span>
                                     </div>
                                     <div className="ads-detail-row">
                                         <span className="ads-detail-label">Methods</span>

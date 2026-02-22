@@ -19,6 +19,13 @@ export function Home({ user }: Props) {
     const [feePercentage, setFeePercentage] = useState(0.01);
     const [paymentFilter, setPaymentFilter] = useState('All');
     const [tokenFilter, setTokenFilter] = useState('USDC');
+
+    const formatBal = (val: any, decs = 2) => {
+        const num = parseFloat(val || '0');
+        if (num > 0 && num < 0.0001) return '0.0000';
+        if (num === 0) return '0.00';
+        return num.toFixed(decs);
+    };
     const [confirmOrder, setConfirmOrder] = useState<any>(null);
     const [tokenDropdown, setTokenDropdown] = useState(false);
 
@@ -198,7 +205,7 @@ export function Home({ user }: Props) {
 
                                         <div className="p2p-available">
                                             <span className="p2p-avail-label">Available</span>
-                                            <span className="p2p-avail-value">{available.toFixed(2)} {order.token}</span>
+                                            <span className="p2p-avail-value">{formatBal(available, order.token === 'BNB' ? 4 : 2)} {order.token}</span>
                                         </div>
                                     </div>
 
@@ -249,7 +256,7 @@ export function Home({ user }: Props) {
                             <div className="p2p-modal-row">
                                 <span>Amount</span>
                                 <span className="font-mono font-bold">
-                                    {((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2)).toFixed(2)} {confirmOrder.token}
+                                    {formatBal((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2), confirmOrder.token === 'BNB' ? 4 : 2)} {confirmOrder.token}
                                 </span>
                             </div>
                             <div className="p2p-modal-row">

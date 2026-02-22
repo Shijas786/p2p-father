@@ -29,6 +29,13 @@ export function CreateOrder() {
     const [feePercentage, setFeePercentage] = useState<number>(0.01); // Default to 1%
     const [approvalDone, setApprovalDone] = useState(false);
 
+    const formatBal = (val: any, decs = 2) => {
+        const num = parseFloat(val || '0');
+        if (num > 0 && num < 0.0001) return '0.0000';
+        if (num === 0) return '0.00';
+        return num.toFixed(decs);
+    };
+
     // Decimal logic synchronized with backend EscrowService
     const getDecimals = () => {
         if (chain === 'base' && (token === 'USDC' || token === 'USDT')) return 6;
@@ -385,7 +392,7 @@ export function CreateOrder() {
                                 <div className="flex justify-between items-center text-[10px]">
                                     <span className="text-muted uppercase">Vault Balance</span>
                                     <span className={availableBalance < parseFloat(amount || '0') ? 'text-orange' : 'text-green'}>
-                                        {vaultBalance !== undefined ? availableBalance.toFixed(2) : '...'} {token}
+                                        {vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...'} {token}
                                     </span>
                                 </div>
                             </div>

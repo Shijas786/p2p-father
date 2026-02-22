@@ -114,6 +114,10 @@ class EscrowService {
             let decimals = 18;
             if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
                 decimals = 6;
+            } else if (chain === 'bsc' && tokenAddress !== "0x0000000000000000000000000000000000000000") {
+                // BSC tokens (USDC/USDT) are 18 decimals, BNB is also 18.
+                // If there's ever a 6 decimal token on BSC, add it here.
+                decimals = 18;
             }
 
             return ethers.formatUnits(balance, decimals);
@@ -256,7 +260,11 @@ class EscrowService {
             try {
                 let tokenAddress = "";
                 if (order.chain === 'bsc') {
-                    tokenAddress = (order.token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                    if (order.token === 'BNB') {
+                        tokenAddress = "0x0000000000000000000000000000000000000000";
+                    } else {
+                        tokenAddress = (order.token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+                    }
                 } else {
                     tokenAddress = (order.token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
                 }
