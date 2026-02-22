@@ -129,7 +129,7 @@ export function CreateOrder() {
 
                 const amountUnits = parseUnits(amount, decimals);
                 // Force V2 for BSC
-                const currentEscrow = chain === 'bsc' ? "0x74EdacD5fEfFE2fb59b7b0942Ed99e49a3AB853A" : escrowAddress;
+                const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
 
                 if (!isCorrectChain) {
                     setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);

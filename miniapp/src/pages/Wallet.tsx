@@ -168,7 +168,7 @@ export function Wallet({ user }: Props) {
             const contracts = (CONTRACTS as any)[vaultChain];
             const tokenAddress = contracts.tokens[vaultToken];
             // Force V2 for BSC to avoid any potential stale config issues
-            const escrowAddress = vaultChain === 'bsc' ? "0x74EdacD5fEfFE2fb59b7b0942Ed99e49a3AB853A" : contracts.escrow;
+            const escrowAddress = vaultChain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : contracts.escrow;
 
             if (isExternal) {
                 if (!isConnected || !wagmiAddress) {
