@@ -272,7 +272,7 @@ export function Home({ user }: Props) {
                     document.body
                 )}
             </div>
-            <div style={{ textAlign: 'center', opacity: 0.3, fontSize: 10, padding: '10px 0 20px', color: 'white' }}>P2P Kerala v4.1 (BNB Fixed)</div>
+            <div style={{ textAlign: 'center', opacity: 0.3, fontSize: 10, padding: '10px 0 20px', color: 'white' }}>P2P Kerala v4.1 (BNB Fixed - Feb 23 02:07)</div>
         </div>
     );
 }
