@@ -141,7 +141,8 @@ class EscrowService {
         duration: number,
         chain: Chain = 'base'
     ): Promise<string> {
-        const contract = this.getEscrowContract(chain);
+        const contract = this.getEscrowContract(chain, false);
+        if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
 
         let decimals = 18;
         if (chain === 'base' && (token === env.USDC_ADDRESS || token === env.USDT_ADDRESS)) {
@@ -150,16 +151,11 @@ class EscrowService {
 
         const amountUnits = ethers.parseUnits(amount, decimals);
 
-        console.log(`[ESCROW] Relayer creating trade on ${chain}...`);
-
         const txOptions: any = {};
         if (chain === 'bsc') {
             txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
             txOptions.gasLimit = 250000;
         }
-
-        const contract = this.getEscrowContract(chain, false);
-        if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
 
         const tx = await contract.createTradeByRelayer(
             seller,
