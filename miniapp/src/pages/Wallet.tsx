@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
-import { useAccount, useWriteContract, useConfig, useSwitchChain } from 'wagmi';
-import { parseUnits } from 'viem';
+import { useAccount, useWriteContract, useConfig, useSwitchChain, useReadContract } from 'wagmi';
+import { parseUnits, formatUnits } from 'viem';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
@@ -56,6 +56,7 @@ export function Wallet({ user }: Props) {
     const [vaultLoading, setVaultLoading] = useState(false);
     const [vaultError, setVaultError] = useState('');
     const [vaultSuccess, setVaultSuccess] = useState('');
+    const [vaultStep, setVaultStep] = useState<'idle' | 'approved'>('idle');
 
     const { address: wagmiAddress, isConnected, chain: walletChain } = useAccount();
     const { writeContractAsync } = useWriteContract();
@@ -130,14 +131,84 @@ export function Wallet({ user }: Props) {
         }
     }
 
+    // ═══ VAULT: Allowance check for external wallets ═══
+    const vaultContracts = (CONTRACTS as any)[vaultChain];
+    const vaultTokenAddress = vaultContracts?.tokens?.[vaultToken] as `0x${string}` | undefined;
+    const vaultEscrowAddress = (vaultChain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : vaultContracts?.escrow) as `0x${string}` | undefined;
+    const vaultDecimals = (vaultChain === 'bsc') ? 18 : 6;
+    const isNativeVault = vaultToken === 'BNB';
+
+    const { data: vaultAllowance, refetch: refetchVaultAllowance } = useReadContract({
+        address: vaultTokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: wagmiAddress && vaultEscrowAddress ? [wagmiAddress, vaultEscrowAddress] : undefined,
+        chainId: vaultChain === 'bsc' ? bsc.id : base.id,
+        query: {
+            enabled: !!wagmiAddress && !!vaultTokenAddress && !!vaultEscrowAddress && user?.wallet_type === 'external' && showVaultAction === 'deposit' && !isNativeVault
+        }
+    });
+
+    const vaultNeedsApproval = !isNativeVault && showVaultAction === 'deposit' && user?.wallet_type === 'external' && vaultAmount && parseFloat(vaultAmount) > 0 && (
+        vaultAllowance === undefined || parseFloat(formatUnits(vaultAllowance as bigint, vaultDecimals)) < parseFloat(vaultAmount)
+    );
+
     // ═══ VAULT OPERATIONS ═══
+    async function handleVaultApprove() {
+        if (!vaultAmount || parseFloat(vaultAmount) <= 0) return;
+        setVaultLoading(true);
+        setVaultError('');
+        setVaultSuccess('');
+
+        try {
+            const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
+            if (walletChain?.id !== targetChainId) {
+                setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
+                try {
+                    await switchChainAsync({ chainId: targetChainId });
+                    setVaultSuccess(`Switched! Click Approve again.`);
+                    setVaultLoading(false);
+                    return;
+                } catch (err: any) {
+                    setVaultError(`Please switch to ${vaultChain.toUpperCase()} in your wallet`);
+                    setVaultLoading(false);
+                    return;
+                }
+            }
+
+            const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
+            const isBsc = vaultChain === 'bsc';
+            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+
+            const approveHash = await writeContractAsync({
+                address: vaultTokenAddress as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: 'approve',
+                args: [vaultEscrowAddress as `0x${string}`, parsedAmount],
+                gasPrice,
+                gas: isBsc ? 50000n : undefined
+            });
+            await waitForTransactionReceipt(config, { hash: approveHash });
+
+            haptic('success');
+            setVaultSuccess('✅ Approved! Now click Deposit.');
+            setVaultStep('approved');
+            await refetchVaultAllowance();
+        } catch (err: any) {
+            console.error(err);
+            setVaultError(err.message || 'Approval failed');
+            haptic('error');
+        } finally {
+            setVaultLoading(false);
+        }
+    }
+
     async function handleVaultAction() {
         if (!vaultAmount || parseFloat(vaultAmount) <= 0) return;
 
         // Validation for Withdraw
         if (showVaultAction === 'withdraw') {
             let available = 0;
-            // Determine available balance based on chain/token
             if (vaultChain === 'base') {
                 available = vaultToken === 'USDC'
                     ? parseFloat(vaultBaseUsdc) - parseFloat(reservedBaseUsdc)
@@ -163,12 +234,6 @@ export function Wallet({ user }: Props) {
             const amount = parseFloat(vaultAmount);
             const isExternal = user?.wallet_type === 'external';
             const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
-            const decimals = (vaultChain === 'bsc') ? 18 : 6;
-
-            const contracts = (CONTRACTS as any)[vaultChain];
-            const tokenAddress = contracts.tokens[vaultToken];
-            // Force V2 for BSC to avoid any potential stale config issues
-            const escrowAddress = vaultChain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : contracts.escrow;
 
             if (isExternal) {
                 if (!isConnected || !wagmiAddress) {
@@ -176,12 +241,10 @@ export function Wallet({ user }: Props) {
                     return;
                 }
 
-                // ─── CHAIN CHECK ───
                 if (walletChain?.id !== targetChainId) {
                     setVaultSuccess(`Switching to ${vaultChain.toUpperCase()}...`);
                     try {
                         await switchChainAsync({ chainId: targetChainId });
-                        // Don't proceed immediately, let the user click again or wait for state sync
                         setVaultSuccess(`Switched! Please click ${showVaultAction === 'deposit' ? 'Deposit' : 'Withdraw'} again.`);
                         setVaultLoading(false);
                         return;
@@ -192,44 +255,31 @@ export function Wallet({ user }: Props) {
                     }
                 }
 
-                const parsedAmount = parseUnits(vaultAmount, decimals);
+                const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
+                const isBsc = vaultChain === 'bsc';
+                const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
                 if (showVaultAction === 'deposit') {
-                    const isBsc = vaultChain === 'bsc';
-                    const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
-
-                    const approveHash = await writeContractAsync({
-                        address: tokenAddress as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: 'approve',
-                        args: [escrowAddress as `0x${string}`, parsedAmount],
-                        gasPrice,
-                        gas: isBsc ? 50000n : undefined
-                    });
-                    await waitForTransactionReceipt(config, { hash: approveHash });
-
-                    // 2. Deposit
                     setVaultSuccess('Deposit pending...');
                     const depositHash = await writeContractAsync({
-                        address: escrowAddress as `0x${string}`,
+                        address: vaultEscrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'deposit',
-                        args: [tokenAddress as `0x${string}`, parsedAmount],
+                        args: [vaultTokenAddress as `0x${string}`, parsedAmount],
                         gasPrice,
                         gas: isBsc ? 250000n : undefined,
-                        value: vaultToken === 'BNB' ? parsedAmount : undefined
+                        value: isNativeVault ? parsedAmount : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
                 } else {
-                    // Withdraw
                     setVaultSuccess('Withdraw pending...');
                     const txHash = await writeContractAsync({
-                        address: escrowAddress as `0x${string}`,
+                        address: vaultEscrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
                         functionName: 'withdraw',
-                        args: [tokenAddress as `0x${string}`, parsedAmount],
-                        gasPrice: vaultChain === 'bsc' ? parseUnits('0.1', 9) : undefined,
-                        gas: vaultChain === 'bsc' ? 250000n : undefined
+                        args: [vaultTokenAddress as `0x${string}`, parsedAmount],
+                        gasPrice: isBsc ? parseUnits('0.1', 9) : undefined,
+                        gas: isBsc ? 250000n : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }
@@ -246,6 +296,7 @@ export function Wallet({ user }: Props) {
 
             haptic('success');
             setVaultAmount('');
+            setVaultStep('idle');
             setTimeout(() => {
                 setShowVaultAction(null);
                 loadBalances();
@@ -580,13 +631,21 @@ export function Wallet({ user }: Props) {
                             >
                                 {vaultLoading ? <span className="spinner" /> : `Switch to ${vaultChain.toUpperCase()}`}
                             </button>
+                        ) : showVaultAction === 'deposit' && user?.wallet_type === 'external' && vaultNeedsApproval && vaultStep !== 'approved' ? (
+                            <button
+                                className="btn btn-primary btn-block"
+                                onClick={handleVaultApprove}
+                                disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
+                            >
+                                {vaultLoading ? <span className="spinner" /> : `Step 1: Approve ${vaultToken}`}
+                            </button>
                         ) : (
                             <button
                                 className="btn btn-primary btn-block"
                                 onClick={handleVaultAction}
                                 disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
                             >
-                                {vaultLoading ? <span className="spinner" /> : (showVaultAction === 'deposit' ? 'Deposit' : 'Withdraw')}
+                                {vaultLoading ? <span className="spinner" /> : (showVaultAction === 'deposit' ? (user?.wallet_type === 'external' ? 'Step 2: Deposit' : 'Deposit') : 'Withdraw')}
                             </button>
                         )}
                     </div>

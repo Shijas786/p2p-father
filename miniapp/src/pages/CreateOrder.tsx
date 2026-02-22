@@ -28,6 +28,7 @@ export function CreateOrder() {
     const [error, setError] = useState('');
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
     const [feePercentage, setFeePercentage] = useState<number>(0.01); // Default to 1%
+    const [approvalDone, setApprovalDone] = useState(false);
 
     // Decimal logic synchronized with backend EscrowService
     const getDecimals = () => {
@@ -111,6 +112,55 @@ export function CreateOrder() {
     }
 
 
+    async function handleApprove() {
+        if (!amount || !isExternalUser || !isConnected || !address) return;
+        haptic('medium');
+        setSubmitting(true);
+        setError('');
+
+        try {
+            if (!isCorrectChain) {
+                setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
+                try {
+                    await switchChainAsync({ chainId: targetChainId });
+                    setSubmitting(false);
+                    return;
+                } catch (err: any) {
+                    setError(`Failed to switch chain: ${err.message}`);
+                    setSubmitting(false);
+                    return;
+                }
+            }
+
+            const amountUnits = parseUnits(amount, decimals);
+            const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
+            const isBsc = chain === 'bsc';
+            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+
+            setTxStep('approving');
+            const hash = await writeContractAsync({
+                address: tokenAddress as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: 'approve',
+                args: [currentEscrow as `0x${string}`, amountUnits],
+                gasPrice,
+                gas: isBsc ? 50000n : undefined
+            });
+            console.log('Approval Sent:', hash);
+            await waitForTransactionReceipt(wagmiConfig, { hash });
+
+            haptic('success');
+            setApprovalDone(true);
+        } catch (err: any) {
+            console.error(err);
+            setError(err.shortMessage || err.message || 'Approval failed');
+            haptic('error');
+        } finally {
+            setSubmitting(false);
+            setTxStep('idle');
+        }
+    }
+
     async function submit() {
         if (isDataLoading) return;
         haptic('medium');
@@ -128,14 +178,12 @@ export function CreateOrder() {
                 }
 
                 const amountUnits = parseUnits(amount, decimals);
-                // Force V2 for BSC
                 const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
 
                 if (!isCorrectChain) {
                     setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
                     try {
                         await switchChainAsync({ chainId: targetChainId });
-                        // Let state sync, user clicks again
                         setSubmitting(false);
                         return;
                     } catch (err: any) {
@@ -144,29 +192,11 @@ export function CreateOrder() {
                         return;
                     }
                 }
-                console.log('[DEBUG] VaultBalance:', vaultBalance ? formatUnits(vaultBalance as bigint, decimals) : 'N/A');
-                console.log('[DEBUG] Allowance:', allowance ? formatUnits(allowance as bigint, decimals) : 'N/A');
-                console.log('[DEBUG] Target:', amount);
 
                 const isBsc = chain === 'bsc';
                 const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
-                // 1. Approve if needed
-                if (needsApproval && !isNative) {
-                    setTxStep('approving');
-                    const hash = await writeContractAsync({
-                        address: tokenAddress as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: 'approve',
-                        args: [currentEscrow as `0x${string}`, amountUnits],
-                        gasPrice,
-                        gas: isBsc ? 50000n : undefined
-                    });
-                    console.log('Approval Sent:', hash);
-                    await waitForTransactionReceipt(wagmiConfig, { hash });
-                }
-
-                // 2. Deposit if needed
+                // Deposit if needed (approval should already be done)
                 if (needsDeposit) {
                     setTxStep('depositing');
                     const hash = await writeContractAsync({
@@ -198,12 +228,12 @@ export function CreateOrder() {
             navigate('/');
         } catch (err: any) {
             console.error(err);
-            // Wagmi errors often have a shortMessage
             setError(err.shortMessage || err.message || 'Failed to create order');
             haptic('error');
         } finally {
             setSubmitting(false);
             setTxStep('idle');
+            setApprovalDone(false);
         }
     }
 
@@ -376,7 +406,13 @@ export function CreateOrder() {
                                     const needsDep = type === 'sell' && availableBalance < reqBalance;
 
                                     if (isExternalUser) {
-                                        if (!isConnected) appKit.open(); else submit();
+                                        if (!isConnected) {
+                                            appKit.open();
+                                        } else if (needsApproval && !isNative && !approvalDone) {
+                                            handleApprove();
+                                        } else {
+                                            submit();
+                                        }
                                     } else {
                                         if (needsDep) navigate('/wallet'); else submit();
                                     }
@@ -397,9 +433,11 @@ export function CreateOrder() {
                                     'CONNECT WALLET'
                                 ) : (isExternalUser && !isCorrectChain) ? (
                                     `SWITCH TO ${chain.toUpperCase()}`
+                                ) : (isExternalUser && needsApproval && !isNative && !approvalDone) ? (
+                                    `STEP 1: APPROVE ${token}`
                                 ) : (
                                     (type === 'sell' && availableBalance < (parseFloat(amount || '0') * 1.005))
-                                        ? (isExternalUser ? `DEPOSIT & PUBLISH` : 'INSUFFICIENT BALANCE')
+                                        ? (isExternalUser ? `STEP 2: DEPOSIT & PUBLISH` : 'INSUFFICIENT BALANCE')
                                         : '🚀 PUBLISH'
                                 )}
                             </button>
