@@ -1,6 +1,7 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { env } from "../config/env";
 import type { ParsedIntent } from "../types";
+import axios from "axios";
 
 const SYSTEM_PROMPT = `You are P2PFather Bot 🤖, a friendly and vigilant crypto P2P trading assistant.
 Your mission is to help users trade crypto safely and easily.
@@ -15,8 +16,6 @@ Your mission is to help users trade crypto safely and easily.
    - "Use /newad to Buy/Sell"
    - "Use /mytrades to see active trades"
    - "Use /wallet to check funds"
-
-🧠 **Capabilities**:
 
 🧠 **Capabilities**:
 1. CREATE_SELL_ORDER — User wants to sell crypto (e.g., "sell 50 USDC")
@@ -47,16 +46,17 @@ Respond with JSON ONLY:
 }`;
 
 class AIService {
-    private client: OpenAI | null = null;
+    private genAI: GoogleGenerativeAI | null = null;
 
-    private getClient(): OpenAI {
-        if (!this.client) {
-            if (!env.OPENAI_API_KEY) {
-                throw new Error("OpenAI API key not configured");
+    private getClient(): GoogleGenerativeAI {
+        if (!this.genAI) {
+            const apiKey = env.GEMINI_API_KEY || env.OPENAI_API_KEY; // Fallback to OpenAI key if user provided it by mistake
+            if (!apiKey) {
+                throw new Error("Gemini API key not configured");
             }
-            this.client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+            this.genAI = new GoogleGenerativeAI(apiKey);
         }
-        return this.client;
+        return this.genAI;
     }
 
     /**
@@ -67,26 +67,29 @@ class AIService {
         conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
     ): Promise<ParsedIntent> {
         try {
-            const client = this.getClient();
-
-            const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-                { role: "system", content: SYSTEM_PROMPT },
-                ...(conversationHistory || []).slice(-6).map((m) => ({
-                    role: m.role as "user" | "assistant",
-                    content: m.content,
-                })),
-                { role: "user", content: message },
-            ];
-
-            const completion = await client.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages,
-                response_format: { type: "json_object" },
-                temperature: 0.1,
-                max_tokens: 500,
+            const genAI = this.getClient();
+            const model = genAI.getGenerativeModel({
+                model: "gemini-1.5-flash",
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
             });
 
-            const content = completion.choices[0]?.message?.content;
+            const chat = model.startChat({
+                history: [
+                    { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
+                    { role: "model", parts: [{ text: "Understood. I am P2PFather Bot. I will provide JSON responses based on user intents." }] },
+                    ...(conversationHistory || []).slice(-6).map((m) => ({
+                        role: m.role === "assistant" ? "model" as const : "user" as const,
+                        parts: [{ text: m.content }],
+                    })),
+                ],
+            });
+
+            const result = await chat.sendMessage(message);
+            const response = result.response;
+            const content = response.text();
+
             if (!content) {
                 return this.fallbackParse(message);
             }
@@ -99,7 +102,7 @@ class AIService {
     }
 
     /**
-     * Analyze a payment screenshot using GPT-4o Vision
+     * Analyze a payment screenshot using Gemini 1.5 Pro Vision
      */
     async analyzePaymentProof(
         imageUrl: string,
@@ -107,14 +110,19 @@ class AIService {
         expectedReceiver: string
     ) {
         try {
-            const client = this.getClient();
+            const genAI = this.getClient();
+            const model = genAI.getGenerativeModel({
+                model: "gemini-1.5-pro",
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            });
 
-            const completion = await client.chat.completions.create({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a professional P2P payment verification expert for the Indian market. 
+            // Fetch image data
+            const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+            const imageData = Buffer.from(response.data).toString('base64');
+
+            const prompt = `You are a professional P2P payment verification expert for the Indian market. 
 Analyze this UPI/bank payment screenshot (Common apps: GPay, PhonePe, Paytm).
 
 **Extraction Guidelines**:
@@ -128,21 +136,21 @@ Analyze this UPI/bank payment screenshot (Common apps: GPay, PhonePe, Paytm).
 - Verify the details against the expected values provided.
 
 Expected: ₹${expectedAmount} to ${expectedReceiver}.
-Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, receiverMatch, tamperingDetected, confidence, reasoning }`,
-                    },
-                    {
-                        role: "user",
-                        content: [
-                            { type: "image_url", image_url: { url: imageUrl } },
-                            { type: "text", text: "Verify this payment proof." },
-                        ],
-                    },
-                ],
-                response_format: { type: "json_object" },
-                max_tokens: 500,
-            });
 
-            return JSON.parse(completion.choices[0]?.message?.content || "{}");
+Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, receiverMatch, tamperingDetected, confidence, reasoning }`;
+
+            const result = await model.generateContent([
+                prompt,
+                {
+                    inlineData: {
+                        data: imageData,
+                        mimeType: "image/jpeg" // Default to jpeg, handles most Telegram photos
+                    }
+                }
+            ]);
+
+            const text = result.response.text();
+            return JSON.parse(text || "{}");
         } catch (error) {
             console.error("AI vision error:", error);
             return { error: "Failed to analyze image", confidence: 0 };
@@ -165,30 +173,27 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
         evidence: string[];
     }) {
         try {
-            const client = this.getClient();
+            const genAI = this.getClient();
+            const model = genAI.getGenerativeModel({
+                model: "gemini-1.5-pro",
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            });
 
-            const completion = await client.chat.completions.create({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a fair P2P dispute arbitrator. Analyze the evidence and recommend a resolution.
+            const prompt = `You are a fair P2P dispute arbitrator. Analyze the evidence and recommend a resolution.
 Consider timestamps, payment proofs, user history, trade terms.
-Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "needs_admin", confidence, reasoning }`,
-                    },
-                    {
-                        role: "user",
-                        content: `Trade: ${context.tradeAmount} USDC / ₹${context.fiatAmount}
+
+Trade: ${context.tradeAmount} USDC / ₹${context.fiatAmount}
 Buyer: ${context.buyerName} (${context.buyerTrades} trades, ${context.buyerTrustScore}% trust)
 Seller: ${context.sellerName} (${context.sellerTrades} trades, ${context.sellerTrustScore}% trust)
 Dispute reason: ${context.reason}
-Evidence: ${context.evidence.join("\n")}`,
-                    },
-                ],
-                response_format: { type: "json_object" },
-            });
+Evidence summary: ${context.evidence.join("\n")}
 
-            return JSON.parse(completion.choices[0]?.message?.content || "{}");
+Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "needs_admin", confidence, reasoning }`;
+
+            const result = await model.generateContent(prompt);
+            return JSON.parse(result.response.text() || "{}");
         } catch (error) {
             console.error("AI dispute error:", error);
             return { recommendation: "needs_admin", confidence: 0, reasoning: "AI analysis failed" };
@@ -203,7 +208,7 @@ Evidence: ${context.evidence.join("\n")}`,
 
         // Simple keyword matching
         if (/\b(sell|selling)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt)?/);
+            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
             const rateMatch = lower.match(/(?:at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/);
             return {
                 intent: "CREATE_SELL_ORDER",
@@ -218,7 +223,7 @@ Evidence: ${context.evidence.join("\n")}`,
         }
 
         if (/\b(buy|buying|purchase)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt)?/);
+            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
             return {
                 intent: "CREATE_BUY_ORDER",
                 confidence: 0.7,
@@ -252,7 +257,7 @@ Evidence: ${context.evidence.join("\n")}`,
         }
 
         if (/\b(send)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt)?/);
+            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
             return {
                 intent: "SEND_CRYPTO",
                 confidence: 0.7,

@@ -22,6 +22,7 @@ const envSchema = z.object({
 
     // OpenAI
     OPENAI_API_KEY: z.string().default(""),
+    GEMINI_API_KEY: z.string().default(""),
 
     // Supabase
     SUPABASE_URL: z.string().default(""),
