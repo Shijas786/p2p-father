@@ -66,7 +66,8 @@ async function main() {
             const stats = await db.getStats();
             res.json({
                 total_users: stats.total_users,
-                total_volume_usdc: stats.total_volume_usdc || 0,
+                total_volume_usdc: stats.total_volume_generic || 0,
+                total_fees_amount: stats.total_fees_amount || 0,
                 active_orders: stats.active_orders,
                 fee_percentage: env.FEE_PERCENTAGE,
                 fee_bps: parseInt(env.FEE_BPS)
