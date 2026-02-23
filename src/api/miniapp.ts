@@ -1002,14 +1002,30 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
         }
 
         const { reason } = req.body;
+        const previousStatus = trade.status; // capture before updating
         await db.updateTrade(req.params.id as string, {
             status: "disputed",
             dispute_reason: reason || "Dispute raised via Mini App",
         });
 
-        // NOTIFY ADMINS
+        // Human-readable stage info for admin
+        const stageLabel = previousStatus === 'in_escrow'
+            ? '🔒 Escrow Locked — Buyer never sent fiat'
+            : '💸 Fiat Sent — Buyer claims payment sent';
+        const isSeller = trade.seller_id === user.id;
+        const role = isSeller ? 'Seller' : 'Buyer';
+        const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+        // NOTIFY ADMINS with full context
         await notifyAdmins(
-            `🚨 <b>DISPUTE RAISED!</b>\n\nTrade ID: <code>${trade.id}</code>\nRaised By: @${user.username || user.first_name}\nReason: ${reason || "No reason provided"}\n\nSupport: @cryptowolf07\n\n<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
+            `🚨 <b>DISPUTE RAISED!</b>\n\n` +
+            `Trade: <code>${trade.id}</code>\n` +
+            `Amount: <b>${trade.amount} ${trade.token}</b> (₹${totalFiat})\n\n` +
+            `📍 Stage: ${stageLabel}\n` +
+            `👤 Raised by: ${role} @${user.username || user.first_name}\n` +
+            `👥 Seller: @${(trade as any).seller_username || 'Unknown'} | Buyer: @${(trade as any).buyer_username || 'Unknown'}\n` +
+            `📝 Reason: ${reason || "No reason provided"}\n\n` +
+            `<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
         );
 
         res.json({ success: true });
