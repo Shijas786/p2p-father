@@ -962,9 +962,13 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         // NOTIFY GROUP (FOMO)
         try {
             const originalOrder = await db.getOrderById(trade.order_id);
+            const buyerUser = await db.getUserById(trade.buyer_id);
             if (originalOrder) {
-                // Add seller username to trade object for the broadcast msg
-                const tradeWithUsername = { ...trade, seller_username: user.username };
+                const tradeWithUsername = {
+                    ...trade,
+                    seller_username: user.username,
+                    buyer_username: buyerUser?.username || buyerUser?.first_name || 'Buyer',
+                };
                 await broadcastTradeSuccess(tradeWithUsername, originalOrder);
             }
         } catch (e) {
