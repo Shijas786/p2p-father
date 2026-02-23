@@ -1863,6 +1863,17 @@ bot.on("callback_query:data", async (ctx) => {
                         }
                     }
 
+                    // Require payment method before creating ad
+                    if (!user.upi_id && !user.phone_number) {
+                        await ctx.editMessageText(
+                            "❌ *Payment Method Required*\n\nPlease set up your UPI ID or Phone Number in /profile before creating an ad.",
+                            { parse_mode: "Markdown" }
+                        );
+                        ctx.session.ad_draft = undefined;
+                        await ctx.answerCallbackQuery();
+                        return;
+                    }
+
                     // No need to manually "lock" now - it stays in Vault or Hot Wallet until matched
                     const escrowTxHash = fundingSource === "vault" ? "vault_backed" : "hot_wallet_backed";
 
@@ -1958,6 +1969,17 @@ bot.on("callback_query:data", async (ctx) => {
 
                 } else {
                     // ═══ FOR BUY ADS: No escrow needed (buyer wants to buy crypto) ═══
+                    // Require payment method before creating ad
+                    if (!user.upi_id && !user.phone_number) {
+                        await ctx.editMessageText(
+                            "❌ *Payment Method Required*\n\nPlease set up your UPI ID or Phone Number in /profile before creating an ad.",
+                            { parse_mode: "Markdown" }
+                        );
+                        ctx.session.ad_draft = undefined;
+                        await ctx.answerCallbackQuery();
+                        return;
+                    }
+
                     const amount = draft.amount!;
                     const token = draft.token! || "USDC";
 

@@ -509,6 +509,13 @@ router.post("/orders", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
+        // Require at least one payment method set up
+        if (!user.upi_id && !user.phone_number) {
+            return res.status(400).json({
+                error: "Please set up your UPI ID or Phone Number in your Profile before creating an ad."
+            });
+        }
+
         const { type, token, amount, rate, payment_methods, expires_in, chain } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
