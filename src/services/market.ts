@@ -23,7 +23,6 @@ class MarketService {
             const btc = prices.bitcoin?.usd || 0;
             const eth = prices.ethereum?.usd || 0;
             const bnb = prices.binancecoin?.usd || 0;
-            const usdc = prices['usd-coin']?.usd || 1;
 
             const btcChange = prices.bitcoin?.usd_24h_change || 0;
             const ethChange = prices.ethereum?.usd_24h_change || 0;
@@ -35,7 +34,6 @@ Current Rates (USD):
 - 💰 BTC: $${btc.toLocaleString()} (${btcChange > 0 ? '🟢 +' : '🔴 '}${btcChange.toFixed(2)}%)
 - 💰 ETH: $${eth.toLocaleString()} (${ethChange > 0 ? '🟢 +' : '🔴 '}${ethChange.toFixed(2)}%)
 - 💰 BNB: $${bnb.toLocaleString()} (${bnbChange > 0 ? '🟢 +' : '🔴 '}${bnbChange.toFixed(2)}%)
-- 💰 USDC: $${usdc.toLocaleString()}
 
 Top Crypto Headlines:
 ${headlines.length > 0
@@ -59,7 +57,7 @@ ${headlines.length > 0
 
             if (!digest || digest.trim().length < 10) {
                 console.warn("AI returned empty or too short digest, using fallback.");
-                return this.getHardcodedFallback(btc, eth, bnb, usdc);
+                return this.getHardcodedFallback(btc, eth, bnb);
             }
 
             return digest;
@@ -69,12 +67,11 @@ ${headlines.length > 0
         }
     }
 
-    private getHardcodedFallback(btc: number, eth: number, bnb: number, usdc: number): string {
+    private getHardcodedFallback(btc: number, eth: number, bnb: number): string {
         return `📊 *P2PFather Quick Market Check*\n\n` +
             `💰 *BTC:* $${btc.toLocaleString()}\n` +
             `💰 *ETH:* $${eth.toLocaleString()}\n` +
-            `💰 *BNB:* $${bnb.toLocaleString()}\n` +
-            `💰 *USDC:* $${usdc.toLocaleString()}\n\n` +
+            `💰 *BNB:* $${bnb.toLocaleString()}\n\n` +
             `AI news service is currently busy. Trading is still active! 🚀\n\n` +
             `⚡ P2PFather - Trade Safe.`;
     }
