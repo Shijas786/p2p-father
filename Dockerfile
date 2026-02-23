@@ -9,10 +9,10 @@ RUN npm install
 # Copy all source files (Invalidate Cache: 2026-02-23 V15)
 COPY . .
 
-# Build Version: V15 (Market USD & Reliability)
+# Build Version: V15b (Force clean miniapp build)
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps
-RUN npx vite build
+RUN rm -rf dist && npx vite build
 
 # Build the backend
 WORKDIR /app
