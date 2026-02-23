@@ -530,8 +530,9 @@ router.post("/orders", async (req: Request, res: Response) => {
         if (isNaN(parsedAmount) || parsedAmount < minAmount || parsedAmount > 100000) {
             return res.status(400).json({ error: `Amount must be between ${minAmount} and 100,000` });
         }
-        if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 1000) {
-            return res.status(400).json({ error: "Rate must be between 0.01 and 1,000 INR per token" });
+        const maxRate = token === 'BNB' ? 100000 : 1000;
+        if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > maxRate) {
+            return res.status(400).json({ error: `Rate must be between 0.01 and ${maxRate.toLocaleString()} INR per token` });
         }
         let expiresAt: string | undefined;
         if (expires_in) {
