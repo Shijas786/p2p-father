@@ -55,13 +55,16 @@ async function main() {
     app.use(express.static(path.join(process.cwd(), "public")));
 
     // Serve Mini App frontend — NO CACHING so Koyeb CDN always passes through
-    app.use("/app", express.static(path.join(process.cwd(), "miniapp", "dist"), {
-        setHeaders: (res) => {
-            res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-            res.setHeader("Pragma", "no-cache");
-            res.setHeader("Surrogate-Control", "no-store");
-        }
-    }));
+    const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
+    const noCacheHeaders = (res: any) => {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Surrogate-Control", "no-store");
+    };
+    app.use("/app", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
+
+    // NEW PATH — bypasses Koyeb CDN cache entirely (fresh URL = no cached version)
+    app.use("/app2", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
 
     // Mount Mini App API
     app.use("/api/miniapp", miniappRouter);
@@ -87,9 +90,12 @@ async function main() {
     // Health Check (Koyeb needs a 200 OK)
     app.get("/health", (req, res) => res.send("OK"));
 
-    // Mini App SPA fallback — serves index.html for all /app/* routes so React Router works
+    // Mini App SPA fallback
     app.get("/app/{*path}", (req, res) => {
-        res.sendFile(path.join(process.cwd(), "miniapp", "dist", "index.html"));
+        res.sendFile(path.join(miniAppDist, "index.html"));
+    });
+    app.get("/app2/{*path}", (req, res) => {
+        res.sendFile(path.join(miniAppDist, "index.html"));
     });
 
     // Fallback file serving (Express v5 uses {*path} instead of *)
