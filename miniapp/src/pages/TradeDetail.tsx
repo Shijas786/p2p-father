@@ -729,9 +729,17 @@ export function TradeDetail({ user }: Props) {
                             href={`https://t.me/cryptowolf07`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn btn-outline btn-block"
+                            className="btn btn-outline btn-block mb-2"
                         >
                             💬 Contact Admin (@cryptowolf07)
+                        </a>
+                        <a
+                            href={`https://t.me/orusmon`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-outline btn-block"
+                        >
+                            💬 Contact Admin (@orusmon)
                         </a>
                     </div>
                 )}
