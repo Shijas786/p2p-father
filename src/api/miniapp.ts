@@ -1003,17 +1003,20 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
 
         const { reason } = req.body;
         const previousStatus = trade.status; // capture before updating
+        const stageInfo = previousStatus === 'in_escrow' ? '[Escrow Locked - No fiat sent]' : '[Fiat Sent]';
+        const isSeller = trade.seller_id === user.id;
+        const role = isSeller ? 'Seller' : 'Buyer';
+        const disputeReason = `${stageInfo} ${role} @${user.username || user.first_name}: ${reason || "No reason provided"}`;
+
         await db.updateTrade(req.params.id as string, {
             status: "disputed",
-            dispute_reason: reason || "Dispute raised via Mini App",
+            dispute_reason: disputeReason,
         });
 
-        // Human-readable stage info for admin
+        // Human-readable stage info for admin notification
         const stageLabel = previousStatus === 'in_escrow'
             ? '🔒 Escrow Locked — Buyer never sent fiat'
             : '💸 Fiat Sent — Buyer claims payment sent';
-        const isSeller = trade.seller_id === user.id;
-        const role = isSeller ? 'Seller' : 'Buyer';
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
         // NOTIFY ADMINS with full context
