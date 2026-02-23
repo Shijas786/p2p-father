@@ -9,10 +9,10 @@ RUN npm install
 # Copy all source files (Invalidate Cache: 2026-02-23 V15)
 COPY . .
 
-# Build Version: V15b (Force clean miniapp build)
+# NUCLEAR: Force Docker to rebuild from here (change string to bust)
+RUN echo "FORCE_REBUILD_20260223_0600"
 WORKDIR /app/miniapp
-RUN npm install --legacy-peer-deps
-RUN rm -rf dist && npx vite build
+RUN npm install --legacy-peer-deps && rm -rf dist && npx vite build && ls -la dist/assets/*.css
 
 # Build the backend
 WORKDIR /app
