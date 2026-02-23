@@ -186,6 +186,14 @@ bot.use(async (ctx, next) => {
 });
 
 
+// Auto-register groups on any message (so groups survive deploys without re-adding bot)
+bot.use(async (ctx, next) => {
+    if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+        groupManager.addGroup(ctx.chat.id).catch(console.error);
+    }
+    await next();
+});
+
 // 🤖 Handle Groups: Automatically track where bot is added
 bot.on("my_chat_member", async (ctx) => {
     const status = ctx.myChatMember.new_chat_member.status;
