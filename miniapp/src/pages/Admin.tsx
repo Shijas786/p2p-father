@@ -12,6 +12,7 @@ interface Dispute {
     buyer: { username: string; first_name: string };
     seller: { username: string; first_name: string };
     created_at: string;
+    chatMessages?: any[];
 }
 
 export function Admin() {
@@ -29,8 +30,21 @@ export function Admin() {
     async function loadDisputes() {
         setLoading(true);
         try {
-            const { disputes } = await api.admin.getDisputes();
-            setDisputes(disputes || []);
+            const { disputes: loaded } = await api.admin.getDisputes();
+            const disputeList = loaded || [];
+
+            // Auto-load chat messages for each dispute
+            const withChats = await Promise.all(
+                disputeList.map(async (d: Dispute) => {
+                    try {
+                        const { messages } = await api.admin.getTradeMessages(d.id);
+                        return { ...d, chatMessages: messages || [] };
+                    } catch {
+                        return { ...d, chatMessages: [] };
+                    }
+                })
+            );
+            setDisputes(withChats);
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Failed to load disputes');
@@ -40,12 +54,8 @@ export function Admin() {
     }
 
     async function viewMessages(tradeId: string) {
-        // Use a separate loading state or actionLoading if preferred. 
-        // For now, let's just fetch without blocking global UI or use local state.
-        // Or re-use loading? If we re-use loading, the whole page spinner shows up.
-        // Let's use actionLoading for now or just set selectedTrade immediately and show loader in modal.
         setSelectedTrade(tradeId);
-        setChatMessages([]); // Clear previous
+        setChatMessages([]);
         try {
             const { messages } = await api.admin.getTradeMessages(tradeId);
             setChatMessages(messages);
@@ -84,10 +94,9 @@ export function Admin() {
             {selectedTrade && (
                 <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-[#0f172a] rounded-xl w-full max-w-md h-[80vh] flex flex-col border border-gray-800 shadow-2xl overflow-hidden">
-                        {/* Header */}
                         <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-[#1e293b]">
                             <div>
-                                <h3 className="font-bold text-white">Using Dispute Chat</h3>
+                                <h3 className="font-bold text-white">Dispute Chat</h3>
                                 <p className="text-xs text-gray-400">Trade #{selectedTrade.slice(0, 8)}</p>
                             </div>
                             <button onClick={() => setSelectedTrade(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -95,7 +104,6 @@ export function Admin() {
                             </button>
                         </div>
 
-                        {/* Chat Body */}
                         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#0B1120]">
                             {chatMessages.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
@@ -104,40 +112,25 @@ export function Admin() {
                                 </div>
                             ) : (
                                 chatMessages.map((msg, idx) => {
-                                    // Determine alignment
                                     const isBuyer = msg.sender_role === 'buyer' || msg.user_id === disputes.find(d => d.id === selectedTrade)?.buyer?.username;
                                     const isMe = msg.user_id === 'ME' || msg.is_admin;
-
                                     const alignRight = isMe;
 
                                     return (
                                         <div key={msg.id || idx} className={`flex flex-col max-w-[85%] ${alignRight ? 'self-end items-end' : 'self-start items-start'}`}>
                                             <div className="flex items-center gap-2 mb-1 px-1">
-                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${alignRight ? 'text-blue-400' : (isBuyer ? 'text-green-400' : 'text-orange-400')
-                                                    }`}>
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${alignRight ? 'text-blue-400' : (isBuyer ? 'text-green-400' : 'text-orange-400')}`}>
                                                     {msg.first_name || msg.username || (isMe ? 'You' : (isBuyer ? 'Buyer' : 'Seller'))}
                                                 </span>
                                                 <span className="text-[10px] text-gray-600">
                                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-
-                                            <div className={`p-3 rounded-2xl text-sm shadow-sm ${alignRight
-                                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                                    : 'bg-[#1e293b] text-gray-200 rounded-tl-none border border-gray-700'
-                                                }`}>
+                                            <div className={`p-3 rounded-2xl text-sm shadow-sm ${alignRight ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1e293b] text-gray-200 rounded-tl-none border border-gray-700'}`}>
                                                 {msg.type === 'image' || msg.image_url ? (
                                                     <div className="flex flex-col gap-2">
                                                         <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg">
-                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                                                <span className="opacity-0 group-hover:opacity-100 bg-black/50 text-white text-xs px-2 py-1 rounded backdrop-blur">View full</span>
-                                                            </div>
-                                                            <img
-                                                                src={msg.image_url}
-                                                                alt="Proof"
-                                                                className="max-w-[200px] max-h-[200px] w-full h-auto object-cover rounded-lg bg-black/50"
-                                                                loading="lazy"
-                                                            />
+                                                            <img src={msg.image_url} alt="Proof" className="max-w-[200px] max-h-[200px] w-full h-auto object-cover rounded-lg bg-black/50" loading="lazy" />
                                                         </a>
                                                         {msg.message && <p className="pt-1 border-t border-white/10 mt-1">{msg.message}</p>}
                                                     </div>
@@ -168,10 +161,16 @@ export function Admin() {
                             </div>
 
                             <div className="mb-3">
-                                <div className="text-lg font-bold">
-                                    {d.amount} {d.token}
-                                </div>
+                                <div className="text-lg font-bold">{d.amount} {d.token}</div>
                                 <div className="text-sm text-muted">Value: ₹{d.fiat_amount}</div>
+                            </div>
+
+                            {/* Escrow Lock Info */}
+                            <div className="p-2 bg-orange-500/10 border border-orange-500/30 rounded mb-3 text-xs">
+                                <span className="font-bold" style={{ color: '#f97316' }}>🔒 Seller's {d.amount} {d.token} locked in escrow</span>
+                                <div className="text-muted mt-1">
+                                    Release → goes to buyer | Refund → returns to seller's vault
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-xs mb-3 bg-black/20 p-2 rounded">
@@ -182,23 +181,44 @@ export function Admin() {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-muted">Seller</div>
-                                    <div className="font-bold text-orange">{d.seller?.first_name}</div>
+                                    <div className="font-bold" style={{ color: '#f97316' }}>{d.seller?.first_name}</div>
                                     <div className="opacity-50">@{d.seller?.username || 'no_user'}</div>
                                 </div>
                             </div>
 
-                            <div className="mb-4">
+                            <div className="mb-3">
                                 <div className="text-xs text-muted uppercase font-bold mb-1">Reason</div>
                                 <div className="p-2 bg-red/5 rounded text-sm italic">
                                     "{d.dispute_reason}"
                                 </div>
                             </div>
 
+                            {/* Inline Chat Preview */}
+                            {d.chatMessages && d.chatMessages.length > 0 && (
+                                <div className="mb-3">
+                                    <div className="text-xs text-muted uppercase font-bold mb-1">💬 Trade Chat ({d.chatMessages.length} messages)</div>
+                                    <div className="bg-black/20 rounded p-2 max-h-[150px] overflow-y-auto flex flex-col gap-1">
+                                        {d.chatMessages.slice(-5).map((msg: any, idx: number) => (
+                                            <div key={idx} className="text-xs">
+                                                <span className={`font-bold ${msg.sender_role === 'buyer' ? 'text-green' : ''}`} style={msg.sender_role !== 'buyer' ? { color: '#f97316' } : {}}>
+                                                    {msg.first_name || msg.username || msg.sender_role}:
+                                                </span>
+                                                {msg.image_url ? (
+                                                    <span className="text-blue-400 ml-1">📷 [Image]</span>
+                                                ) : (
+                                                    <span className="text-gray-300 ml-1">{msg.message}</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <button
                                 className="btn bg-blue-500/20 text-blue-400 w-full mb-3 text-sm py-2"
                                 onClick={() => viewMessages(d.id)}
                             >
-                                👁️ View Proofs & Chat
+                                👁️ View Full Chat & Proofs
                             </button>
 
                             <div className="flex gap-2">
