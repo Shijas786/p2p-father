@@ -10,7 +10,7 @@ RUN npm install
 COPY . .
 
 # NUCLEAR: Force Docker to rebuild from here (change string to bust)
-RUN echo "FORCE_REBUILD_20260223_0600"
+RUN echo "FORCE_REBUILD_APP2_BASE"
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps && rm -rf dist && npx vite build && ls -la dist/assets/*.css
 
