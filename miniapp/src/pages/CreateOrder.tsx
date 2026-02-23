@@ -216,12 +216,16 @@ export function CreateOrder() {
 
             // ─── BACKEND API CALL ───
             setTxStep('creating');
+            // For BNB: user enters total INR, calculate rate per coin
+            const effectiveRate = token === 'BNB'
+                ? parseFloat(rate) / parseFloat(amount)
+                : parseFloat(rate);
             await api.orders.create({
                 type,
                 token,
                 chain,
                 amount: parseFloat(amount),
-                rate: parseFloat(rate),
+                rate: effectiveRate,
                 payment_methods: methods,
             });
 
@@ -331,17 +335,17 @@ export function CreateOrder() {
                                 ))}
                             </div>
 
-                            <div className="co-section-title">5. Rate</div>
+                            <div className="co-section-title">{token === 'BNB' ? '5. Total INR' : '5. Rate'}</div>
                             <div className="co-input-group mb-4">
                                 <span className="co-input-label">₹</span>
                                 <input
                                     type="number"
-                                    placeholder="Rate"
+                                    placeholder={token === 'BNB' ? 'Total INR you want' : 'Rate'}
                                     value={rate}
                                     onChange={e => setRate(e.target.value)}
                                     className="co-input-flat font-mono"
                                 />
-                                <span className="co-input-label">/ {token}</span>
+                                {token !== 'BNB' && <span className="co-input-label">/ {token}</span>}
                             </div>
 
                             <div className="co-section-title">6. Payment Methods</div>
@@ -364,7 +368,9 @@ export function CreateOrder() {
                                 <div className="flex justify-between items-center text-xs mb-1">
                                     <span className="text-muted uppercase">Total Fiat</span>
                                     <span className="font-mono font-bold text-green text-lg">
-                                        ₹{(parseFloat(amount) * (1 - (feePercentage / 2)) * parseFloat(rate)).toLocaleString()}
+                                        ₹{token === 'BNB'
+                                            ? (parseFloat(rate) * (1 - (feePercentage / 2))).toLocaleString()
+                                            : (parseFloat(amount) * (1 - (feePercentage / 2)) * parseFloat(rate)).toLocaleString()}
                                     </span>
                                 </div>
                                 <div className="border-t border-white/10 my-2"></div>
