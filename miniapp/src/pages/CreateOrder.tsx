@@ -28,6 +28,30 @@ export function CreateOrder() {
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
     const [feePercentage, setFeePercentage] = useState<number>(0.01); // Default to 1%
     const [approvalDone, setApprovalDone] = useState(false);
+    const [bnbPriceInr, setBnbPriceInr] = useState<number>(0);
+
+    // Fetch BNB price in INR when token is BNB
+    useEffect(() => {
+        if (token === 'BNB') {
+            fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=inr')
+                .then(r => r.json())
+                .then(data => {
+                    const price = data?.binancecoin?.inr || 0;
+                    setBnbPriceInr(price);
+                })
+                .catch(() => setBnbPriceInr(0));
+        }
+    }, [token]);
+
+    // Auto-fill total INR for BNB when amount changes
+    useEffect(() => {
+        if (token === 'BNB' && bnbPriceInr > 0 && amount) {
+            const total = parseFloat(amount) * bnbPriceInr;
+            if (!isNaN(total) && total > 0) {
+                setRate(Math.round(total).toString());
+            }
+        }
+    }, [amount, bnbPriceInr, token]);
 
     const formatBal = (val: any, decs = 2) => {
         const num = parseFloat(val || '0');
