@@ -93,16 +93,21 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
-        const groupVal = (order.payment_details as any)?.group_id;
-        const targetGroup = typeof groupVal === 'number' ? groupVal : undefined;
+        const buyer = trade.buyer_username ? `@${trade.buyer_username}` : "Buyer";
+        const seller = trade.seller_username ? `@${trade.seller_username}` : "Seller";
+        const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-        if (targetGroup) {
-            await bot.api.sendMessage(
-                String(targetGroup),
-                `🔥 *JUST SOLD!* 🚀\n\nSomeone just bought *${formatTokenAmount(trade.amount * 0.995, trade.token)}* from @${trade.seller_username || "Seller"}!\n\n⚡ P2PFather is active. /start to trade.`,
-                { parse_mode: "Markdown" }
-            ).catch(e => console.error(`Group FOMO Broadcast failed:`, e));
-        }
+        const msg = [
+            "🎉 *Trade Completed!*",
+            "",
+            `${seller} sold *${formatTokenAmount(trade.amount, trade.token)}* to ${buyer}`,
+            `💰 Deal: ₹${totalFiat}`,
+            "",
+            "✅ Escrowed & settled on-chain",
+            "⚡ Trade safe with P2PFather → /start",
+        ].join("\n");
+
+        await broadcast(msg);
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
@@ -111,26 +116,22 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await bot.api.getMe();
-        // Explicitly cast to prevent lint errors
-        const groupVal = (order.payment_details as any)?.group_id;
-        const targetGroup = typeof groupVal === 'number' ? groupVal : undefined;
+        const username = user.username ? `@${user.username}` : "Someone";
+        const typeEmoji = order.type === 'sell' ? '🔴' : '🟢';
+        const typeLabel = order.type === 'sell' ? 'SELL' : 'BUY';
+        const totalFiat = (order.amount * order.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-        if (targetGroup !== undefined) {
-            // Post ONLY to that group
-            await bot.api.sendMessage(
-                String(targetGroup),
-                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, order.token)}*\n📈 Rate: *${formatINR(order.rate)}/${order.token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
-                { parse_mode: "Markdown" }
-            ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
+        const msg = [
+            `📢 *New ${typeLabel} Ad!*`,
+            "",
+            `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${formatTokenAmount(order.amount, order.token)}*`,
+            `💰 Rate: ₹${order.rate.toLocaleString()}/${order.token}`,
+            `🧾 Total: ₹${totalFiat}`,
+            "",
+            `👉 [Open P2PFather](https://t.me/${botUser.username}?start=trade)`,
+        ].join("\n");
 
-        } else if (env.BROADCAST_CHANNEL_ID) {
-            // Fallback: Post to Main Channel for Direct DM ads
-            await bot.api.sendMessage(
-                env.BROADCAST_CHANNEL_ID,
-                `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, order.token)}*\n📈 Rate: *${formatINR(order.rate)}/${order.token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👉 [Buy Now](https://t.me/${botUser.username}?start=buy_${order.id})`,
-                { parse_mode: "Markdown" }
-            ).catch(e => console.error("Main Channel Broadcast failed:", e));
-        }
+        await broadcast(msg);
     } catch (e) {
         console.error("BroadcastAd error:", e);
     }

@@ -10,7 +10,7 @@ import { env } from "../config/env";
 import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
-import { bot, broadcastTradeSuccess } from "../bot";
+import { bot, broadcastTradeSuccess, broadcastAd } from "../bot";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -592,6 +592,9 @@ router.post("/orders", async (req: Request, res: Response) => {
         });
 
         res.json({ order });
+
+        // Broadcast new ad to all groups
+        broadcastAd(order, user).catch(console.error);
     } catch (err: any) {
         console.error("[MINIAPP] Create order error:", err);
         res.status(500).json({ error: err.message });
