@@ -853,13 +853,9 @@ export function TradeDetail({ user }: Props) {
                     {trade && ['fiat_sent', 'in_escrow'].includes(trade.status) && (
                         <div className="mt-4 animate-in">
                             <button
-                                className={`btn btn-danger btn-block ${disputeTimer > 0 || trade.status === 'in_escrow' ? 'opacity-50' : ''}`}
+                                className={`btn btn-danger btn-block ${disputeTimer > 0 && trade.status === 'fiat_sent' ? 'opacity-50' : ''}`}
                                 onClick={() => {
-                                    if (trade.status === 'in_escrow') {
-                                        alert("You can only raise a dispute after confirming payment.");
-                                        return;
-                                    }
-                                    if (disputeTimer > 0) {
+                                    if (disputeTimer > 0 && trade.status === 'fiat_sent') {
                                         const minutes = Math.floor(disputeTimer / 60000);
                                         const seconds = (Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0');
                                         alert(`The dispute button is meditating 🧘‍♂️\n\nAppeal available in ${minutes}:${seconds}`);
