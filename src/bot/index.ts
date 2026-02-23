@@ -399,7 +399,7 @@ bot.command("start", async (ctx) => {
         "Ready to begin?",
     ].join("\n");
 
-    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
+    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2";
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
@@ -478,7 +478,7 @@ bot.command("payment", async (ctx) => {
         "Or use the Mini App for the easiest setup! 📱",
     ].join("\n");
 
-    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app/profile";
+    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2/profile";
     const keyboard = new InlineKeyboard()
         .webApp("📱 Open Profile", miniAppUrl)
         .row()
@@ -1418,7 +1418,7 @@ bot.on("callback_query:data", async (ctx) => {
                 "Ready to begin?",
             ].join("\n");
 
-            const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app";
+            const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2";
             const startKeyboard = new InlineKeyboard()
                 .webApp("📱 Launch Application", miniAppUrl);
 
