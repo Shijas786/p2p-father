@@ -120,9 +120,24 @@ async function main() {
         }
 
         bot.start({
-            onStart: (botInfo) => {
+            onStart: async (botInfo) => {
                 console.log(`  ✅ Bot started! @${botInfo.username}`);
                 console.log(`  💬 Send /start to @${botInfo.username} to begin`);
+
+                // Update the Telegram Menu Button to point to /app2
+                try {
+                    await bot.api.setChatMenuButton({
+                        menu_button: {
+                            type: "web_app",
+                            text: "Open App",
+                            web_app: { url: "https://registered-adi-highphaus-d016d815.koyeb.app/app2" }
+                        }
+                    });
+                    console.log("  ✅ Menu button updated to /app2");
+                } catch (e: any) {
+                    console.log("  ⚠️ Menu button update failed:", e.message);
+                }
+
                 console.log("");
                 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 console.log("  Bot is running. Press Ctrl+C to stop.");
