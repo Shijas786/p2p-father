@@ -54,8 +54,14 @@ async function main() {
     // Uses process.cwd() to be safe across dev/prod (Docker)
     app.use(express.static(path.join(process.cwd(), "public")));
 
-    // Serve Mini App frontend (production build)
-    app.use("/app", express.static(path.join(process.cwd(), "miniapp", "dist")));
+    // Serve Mini App frontend — NO CACHING so Koyeb CDN always passes through
+    app.use("/app", express.static(path.join(process.cwd(), "miniapp", "dist"), {
+        setHeaders: (res) => {
+            res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+            res.setHeader("Pragma", "no-cache");
+            res.setHeader("Surrogate-Control", "no-store");
+        }
+    }));
 
     // Mount Mini App API
     app.use("/api/miniapp", miniappRouter);
