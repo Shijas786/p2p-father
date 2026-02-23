@@ -190,8 +190,16 @@ export function Home({ user }: Props) {
                                         <div className="p2p-price-section">
                                             <div className="p2p-price">
                                                 <span className="p2p-currency">₹</span>
-                                                <span className="p2p-rate">{order.rate.toLocaleString()}</span>
-                                                <span className="p2p-per">/{order.token}</span>
+                                                {order.token === 'BNB' ? (
+                                                    <>
+                                                        <span className="p2p-rate">{(order.rate * available).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="p2p-rate">{order.rate.toLocaleString()}</span>
+                                                        <span className="p2p-per">/{order.token}</span>
+                                                    </>
+                                                )}
                                             </div>
 
                                             <div className="p2p-available">
