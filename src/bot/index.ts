@@ -60,7 +60,7 @@ function getExplorerUrl(txHash: string, chain: 'base' | 'bsc' = 'base'): string 
 }
 
 async function broadcast(message: string, keyboard?: InlineKeyboard) {
-    const groups = groupManager.getGroups();
+    const groups = await groupManager.getGroups();
     // Include ENV broadcast channel if set
     if (env.BROADCAST_CHANNEL_ID) {
         const adminChannel = Number(env.BROADCAST_CHANNEL_ID);
@@ -83,7 +83,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
             // Remove group if bot was kicked
             if (error.description?.includes("kicked") || error.description?.includes("blocked") || error.description?.includes("not a member")) {
                 console.log(`❌ Removing invalid group ${chatId}`);
-                groupManager.removeGroup(chatId);
+                groupManager.removeGroup(chatId).catch(console.error);
             } else {
                 console.error(`⚠️ Broadcast failed to ${chatId}:`, error.message);
             }
@@ -194,14 +194,14 @@ bot.on("my_chat_member", async (ctx) => {
 
     if (status === "member" || status === "administrator") {
         if (oldStatus === "left" || oldStatus === "kicked" || oldStatus === "restricted") {
-            groupManager.addGroup(chat.id);
+            await groupManager.addGroup(chat.id);
             await ctx.reply(
                 "🚀 *P2PFather Bot Activated!*\n\nI will post live buy/sell ads here.",
                 { parse_mode: "Markdown" }
             );
         }
     } else if (status === "left" || status === "kicked") {
-        groupManager.removeGroup(chat.id);
+        await groupManager.removeGroup(chat.id);
     }
 });
 

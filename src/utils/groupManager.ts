@@ -1,39 +1,48 @@
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "../config/env";
 
-const GROUPS_FILE = path.join(__dirname, "../../data/groups.json");
-const DIR_PATH = path.join(__dirname, "../../data");
+const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
-// Ensure data dir exists
-if (!fs.existsSync(DIR_PATH)) {
-    fs.mkdirSync(DIR_PATH, { recursive: true });
-}
+// In-memory cache to avoid constant DB reads
+let cachedGroups: number[] | null = null;
 
 export const groupManager = {
     // Add group ID
-    addGroup: (chatId: number) => {
-        const groups = groupManager.getGroups();
-        if (!groups.includes(chatId)) {
-            groups.push(chatId);
-            fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups));
+    addGroup: async (chatId: number) => {
+        // Upsert into Supabase
+        await supabase
+            .from("bot_groups")
+            .upsert({ chat_id: chatId }, { onConflict: "chat_id" });
+
+        // Update cache
+        if (cachedGroups && !cachedGroups.includes(chatId)) {
+            cachedGroups.push(chatId);
+        } else {
+            cachedGroups = null; // Force refresh
         }
     },
 
     // Remove group ID
-    removeGroup: (chatId: number) => {
-        let groups = groupManager.getGroups();
-        groups = groups.filter(id => id !== chatId);
-        fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups));
+    removeGroup: async (chatId: number) => {
+        await supabase
+            .from("bot_groups")
+            .delete()
+            .eq("chat_id", chatId);
+
+        if (cachedGroups) {
+            cachedGroups = cachedGroups.filter(id => id !== chatId);
+        }
     },
 
     // Get all groups
-    getGroups: (): number[] => {
-        try {
-            if (!fs.existsSync(GROUPS_FILE)) return [];
-            const data = fs.readFileSync(GROUPS_FILE, "utf-8");
-            return JSON.parse(data) || [];
-        } catch {
-            return [];
-        }
+    getGroups: async (): Promise<number[]> => {
+        if (cachedGroups) return cachedGroups;
+
+        const { data } = await supabase
+            .from("bot_groups")
+            .select("chat_id");
+
+        cachedGroups = (data || []).map((r: any) => r.chat_id);
+        return cachedGroups!;
     }
 };
