@@ -103,14 +103,23 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         const buyer = buyerRaw !== "Buyer" ? `@${escapeMarkdown(buyerRaw)}` : "Buyer";
         const seller = sellerRaw !== "Seller" ? `@${escapeMarkdown(sellerRaw)}` : "Seller";
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        const chain = trade.chain || order?.chain || 'bsc';
+
+        // Build tx link
+        let txLine = "✅ Escrowed & settled on-chain";
+        if (trade.release_tx_hash && !trade.release_tx_hash.startsWith('relayed')) {
+            const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
+            txLine = `✅ [View Transaction](${explorer}${trade.release_tx_hash})`;
+        }
 
         const msg = [
             "🎉 *Trade Completed!*",
             "",
             `${seller} sold *${formatTokenAmount(trade.amount, trade.token)}* to ${buyer}`,
             `💰 Deal: ₹${totalFiat}`,
+            `🔗 Chain: ${chain.toUpperCase()}`,
             "",
-            "✅ Escrowed & settled on-chain",
+            txLine,
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 

@@ -967,6 +967,7 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
                 ...trade,
                 seller_username: user.username,
                 buyer_username: buyerUser?.username || buyerUser?.first_name || 'Buyer',
+                release_tx_hash: releaseTxHash || trade.release_tx_hash,
             };
             await broadcastTradeSuccess(tradeWithUsername, originalOrder || trade);
         } catch (e) {
