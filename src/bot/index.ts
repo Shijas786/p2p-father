@@ -1807,16 +1807,28 @@ bot.on("callback_query:data", async (ctx) => {
             }
 
             try {
-                // ═══ FOR SELL ADS: Check balance & lock USDC in escrow ═══
+                // ═══ FOR SELL ADS: Check balance & lock in escrow ═══
                 if (draft.type === "sell") {
-                    const tokenSymbol = draft.token || "USDC";
-                    const tokenAddress = (tokenSymbol === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+                    const tokenSymbol = draft.token || "USDT";
+                    const draftChain = (draft as any).chain || (tokenSymbol === "USDC" ? "base" : "bsc");
+
+                    // Resolve token address per chain
+                    let tokenAddress: string;
+                    if (draftChain === 'bsc') {
+                        if (tokenSymbol === 'BNB') {
+                            tokenAddress = '0x0000000000000000000000000000000000000000';
+                        } else {
+                            tokenAddress = (tokenSymbol === 'USDT') ? '0x55d398326f99059fF775485246999027B3197955' : '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d';
+                        }
+                    } else {
+                        tokenAddress = (tokenSymbol === 'USDT') ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+                    }
                     const amount = draft.amount!;
 
-                    await ctx.editMessageText(`⏳ Checking your Vault balance for ${tokenSymbol}...`);
+                    await ctx.editMessageText(`⏳ Checking your Vault balance for ${tokenSymbol} on ${draftChain.toUpperCase()}...`);
 
-                    // Use Vault balance instead of wallet balance
-                    const vaultBalance = await escrow.getVaultBalance(user.wallet_address!, tokenAddress);
+                    // Use Vault balance instead of wallet balance — pass chain!
+                    const vaultBalance = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, draftChain as any);
                     const balanceNum = parseFloat(vaultBalance);
 
                     let fundingSource = "vault"; // 'vault' or 'hot_wallet'
@@ -1888,13 +1900,13 @@ bot.on("callback_query:data", async (ctx) => {
                     // No need to manually "lock" now - it stays in Vault or Hot Wallet until matched
                     const escrowTxHash = fundingSource === "vault" ? "vault_backed" : "hot_wallet_backed";
 
-                    const token = draft.token! || "USDC";
+                    const token = draft.token! || "USDT";
 
                     const order = await db.createOrder({
                         user_id: user.id,
                         type: "sell",
                         token: token,
-                        chain: "base",
+                        chain: draftChain,
                         amount: amount,
 
                         rate: draft.rate,
@@ -1913,7 +1925,9 @@ bot.on("callback_query:data", async (ctx) => {
                     const feeAmount = amount * env.FEE_PERCENTAGE;
 
                     // Vault-backed ads don't have a specific lock tx yet (it happened during deposit)
-                    const explorerUrl = "https://basescan.org/address/" + env.ESCROW_CONTRACT_ADDRESS;
+                    const explorerUrl = draftChain === 'bsc'
+                        ? 'https://bscscan.com/address/' + env.ESCROW_CONTRACT_ADDRESS_BSC
+                        : 'https://basescan.org/address/' + env.ESCROW_CONTRACT_ADDRESS;
 
                     // Clear draft
                     ctx.session.ad_draft = undefined;
@@ -1960,8 +1974,8 @@ bot.on("callback_query:data", async (ctx) => {
                             "",
                             "🔴 *SELL Ad*",
                             "",
-                            `💰 Amount: *${formatTokenAmount(draft.amount)}*`,
-                            `📈 Rate: *${formatINR(draft.rate)}/USDC*`,
+                            `💰 Amount: *${formatTokenAmount(draft.amount, token)}*`,
+                            `📈 Rate: *${formatINR(draft.rate)}/${token}*`,
                             `💵 Total: *${formatINR(totalFiat)}*`,
                             `💳 Payment: ${paymentMethods.join(", ")}`,
                             `🏷️ Fee: ${formatTokenAmount(feeAmount)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
@@ -1992,13 +2006,14 @@ bot.on("callback_query:data", async (ctx) => {
                     }
 
                     const amount = draft.amount!;
-                    const token = draft.token! || "USDC";
+                    const token = draft.token! || "USDT";
+                    const draftChain = (draft as any).chain || (token === "USDC" ? "base" : "bsc");
 
                     const order = await db.createOrder({
                         user_id: user.id,
                         type: "buy",
                         token: token,
-                        chain: "base",
+                        chain: draftChain,
                         amount: amount,
                         rate: draft.rate,
                         fiat_currency: "INR",
