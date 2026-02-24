@@ -1837,7 +1837,7 @@ bot.on("callback_query:data", async (ctx) => {
                     // (We cannot auto-deposit from external wallets without a signature at trade time)
                     if (user.wallet_type === 'external') {
                         if (balanceNum < amount) {
-                            await ctx.reply(
+                            await ctx.editMessageText(
                                 [
                                     `❌ *Insufficient Vault Balance*`,
                                     "",
@@ -1868,7 +1868,7 @@ bot.on("callback_query:data", async (ctx) => {
                             fundingSource = "hot_wallet";
                         } else {
                             // Neither has enough
-                            await ctx.reply(
+                            await ctx.editMessageText(
                                 [
                                     `❌ *Insufficient Balance*`,
                                     "",
@@ -1946,7 +1946,7 @@ bot.on("callback_query:data", async (ctx) => {
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
+                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, token)}*\n📈 Rate: *${formatINR(order.rate)}/${token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
                             { parse_mode: "Markdown", reply_markup: groupKeyboard }
                         ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
 
@@ -1957,7 +1957,7 @@ bot.on("callback_query:data", async (ctx) => {
 
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount)}*\n📈 Rate: *${formatINR(order.rate)}/USDC*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
+                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, token)}*\n📈 Rate: *${formatINR(order.rate)}/${token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
                             { parse_mode: "Markdown", reply_markup: channelKeyboard }
                         ).catch(e => console.error("Main Channel Broadcast failed:", e));
                     }
@@ -1978,7 +1978,7 @@ bot.on("callback_query:data", async (ctx) => {
                             `📈 Rate: *${formatINR(draft.rate)}/${token}*`,
                             `💵 Total: *${formatINR(totalFiat)}*`,
                             `💳 Payment: ${paymentMethods.join(", ")}`,
-                            `🏷️ Fee: ${formatTokenAmount(feeAmount)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
+                            `🏷️ Fee: ${formatTokenAmount(feeAmount, token)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
                             "",
                             `🔒 *Vault Backed* ✅`,
                             `🔗 [View Vault Balance](${explorerUrl})`,
