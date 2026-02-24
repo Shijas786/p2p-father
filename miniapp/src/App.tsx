@@ -14,7 +14,7 @@ import { Orders } from './pages/Orders';
 import { CreateOrder } from './pages/CreateOrder';
 import { TradeDetail } from './pages/TradeDetail';
 import { Wallet } from './pages/Wallet';
-import { Bridge } from './pages/Bridge';
+
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
@@ -233,7 +233,7 @@ function AppInner() {
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
           <Route path="trade/new/:orderId" element={<TradeDetail user={user} />} />
           <Route path="wallet" element={<Wallet user={user} />} />
-          <Route path="bridge" element={<Bridge />} />
+
           <Route path="ads" element={<MyAds />} />
           <Route path="admin" element={<Admin />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />

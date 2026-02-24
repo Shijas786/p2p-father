@@ -1266,24 +1266,7 @@ bot.command("admin", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("bridge", async (ctx) => {
-    await ensureUser(ctx);
-
-    await ctx.reply(
-        [
-            "🌉 *Bridge Tokens*",
-            "",
-            "Move tokens across chains! Powered by LI.FI aggregator.",
-            "",
-            "Supported chains: Base, Ethereum, Arbitrum, Polygon, Optimism",
-            "",
-            "Tell me what to bridge:",
-            '  "bridge 50 usdc from base to ethereum"',
-            '  "bridge 0.1 eth to arbitrum"',
-            "",
-            "I'll find the best route with lowest fees! 🔍",
-        ].join("\n"),
-        { parse_mode: "Markdown" }
-    );
+    await ctx.reply("🛠 Bridge feature coming soon! Stay tuned.");
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -3459,17 +3442,7 @@ bot.on("message:text", async (ctx) => {
                 break;
 
             case "BRIDGE_TOKENS":
-                await ctx.reply(
-                    [
-                        "🌉 *Bridge Tokens*",
-                        "",
-                        intent.response,
-                        "",
-                        'Tell me the full details, e.g.:',
-                        '"bridge 50 usdc from base to ethereum"',
-                    ].join("\n"),
-                    { parse_mode: "Markdown" }
-                );
+                await ctx.reply("🛠 Bridge feature coming soon! Stay tuned.");
                 break;
 
             case "HELP":
@@ -3582,7 +3555,7 @@ bot.api.setMyCommands([
     { command: "profile", description: "Your stats & profile" },
     { command: "help", description: "How to use this bot" },
     { command: "send", description: "Withdraw crypto" },
-    { command: "bridge", description: "Bridge tokens" },
+
 ]).catch((err: any) => console.error("setMyCommands error:", err));
 
 export { bot, notifyTrader };
