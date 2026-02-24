@@ -1474,6 +1474,8 @@ bot.on("callback_query:data", async (ctx) => {
                 const amountStr = parts[1];
                 const rateStr = parts[2];
                 const creatorId = parseInt(parts[3]);
+                const token = parts[4] || "USDT";
+                const chain = parts[5] || (token === "USDC" ? "base" : "bsc");
 
                 if (ctx.from.id !== creatorId) {
                     await ctx.answerCallbackQuery({ text: "⚠️ Expected creator to confirm.", show_alert: true });
@@ -1491,7 +1493,8 @@ bot.on("callback_query:data", async (ctx) => {
                     type: "sell",
                     amount: amount,
                     rate: rate,
-                    token: "USDC"
+                    token: token,
+                    chain: chain,
                 };
 
                 const keyboard = new InlineKeyboard()
@@ -1502,8 +1505,9 @@ bot.on("callback_query:data", async (ctx) => {
                 const text = [
                     "📢 *Create Sell Ad — Step 3/3*",
                     "",
-                    `Amount: *${formatTokenAmount(amount)}*`,
-                    `Rate: *${formatINR(rate)}/USDC*`,
+                    `Amount: *${formatTokenAmount(amount, token)}*`,
+                    `Rate: *${formatINR(rate)}/${token}*`,
+                    `Chain: *${chain.toUpperCase()}*`,
                     "",
                     "How do you want to receive payment?",
                 ].join("\n");
@@ -1525,12 +1529,14 @@ bot.on("callback_query:data", async (ctx) => {
             handled = true;
             try {
                 const parts = data.split(":");
-                // confirm_buy:AMOUNT:RATE:USERID
+                // confirm_buy:AMOUNT:RATE:USERID:TOKEN:CHAIN
                 if (parts.length < 4) throw new Error("Invalid callback data format (missing user_id)");
 
                 const amountStr = parts[1];
                 const rateStr = parts[2];
                 const creatorId = parseInt(parts[3]);
+                const token = parts[4] || "USDT";
+                const chain = parts[5] || (token === "USDC" ? "base" : "bsc");
 
                 if (ctx.from.id !== creatorId) {
                     await ctx.answerCallbackQuery({ text: "⚠️ Expected creator to confirm.", show_alert: true });
@@ -1548,7 +1554,8 @@ bot.on("callback_query:data", async (ctx) => {
                     type: "buy",
                     amount: amount,
                     rate: rate,
-                    token: "USDC"
+                    token: token,
+                    chain: chain,
                 };
 
                 const keyboard = new InlineKeyboard()
@@ -1559,8 +1566,9 @@ bot.on("callback_query:data", async (ctx) => {
                 const text = [
                     "📢 *Create Buy Ad — Step 3/3*",
                     "",
-                    `Amount: *${formatTokenAmount(amount)}*`,
-                    `Rate: *${formatINR(rate)}/USDC*`,
+                    `Amount: *${formatTokenAmount(amount, token)}*`,
+                    `Rate: *${formatINR(rate)}/${token}*`,
+                    `Chain: *${chain.toUpperCase()}*`,
                     "",
                     "How do you want to pay the seller?",
                 ].join("\n");
@@ -3250,10 +3258,11 @@ bot.on("message:text", async (ctx) => {
         switch (intent.intent) {
             case "CREATE_SELL_ORDER":
                 if (intent.params.amount && intent.params.rate) {
+                    const token = intent.params.token || "USDT";
+                    const chain = intent.params.chain || (token === "USDC" ? "base" : "bsc");
 
-
-                    // Secure callback with UserID
-                    const callbackData = `confirm_sell:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}`;
+                    // Secure callback with UserID, token and chain
+                    const callbackData = `confirm_sell:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}:${token}:${chain}`;
                     console.log(`DEBUG: Creating SELL button with data: ${callbackData}`);
 
                     const keyboard = new InlineKeyboard()
@@ -3265,27 +3274,29 @@ bot.on("message:text", async (ctx) => {
                         [
                             "📝 *Create Sell Order*",
                             "",
-                            `Amount: ${formatTokenAmount(intent.params.amount)}`,
-                            `Rate: ${formatINR(intent.params.rate)}/USDC`,
+                            `Amount: ${formatTokenAmount(intent.params.amount, token)}`,
+                            `Rate: ${formatINR(intent.params.rate)}/${token}`,
                             `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
-                            `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmt)}`,
-                            `Buyer receives: ${formatTokenAmount(intent.params.amount - feeAmt)}`,
+                            `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmt, token)}`,
+                            `Buyer receives: ${formatTokenAmount(intent.params.amount - feeAmt, token)}`,
                             `Payment: ${intent.params.paymentMethod || "UPI"}`,
+                            `Chain: ${chain.toUpperCase()}`,
                             "",
                             "Confirm to list this order?",
                         ].join("\n"),
                         { parse_mode: "Markdown", reply_markup: keyboard }
                     );
                 } else {
-                    await ctx.reply(intent.response || "Please provide amount and rate.\n\nExample: *sell 100 usdc at 88*", { parse_mode: "Markdown" });
+                    await ctx.reply(intent.response || "Please provide amount and rate.\n\nExample: *sell 100 usdt at 93*", { parse_mode: "Markdown" });
                 }
                 break;
 
             case "CREATE_BUY_ORDER":
                 if (intent.params.amount && intent.params.rate) {
+                    const token = intent.params.token || "USDT";
+                    const chain = intent.params.chain || (token === "USDC" ? "base" : "bsc");
 
-
-                    const callbackData = `confirm_buy:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}`;
+                    const callbackData = `confirm_buy:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}:${token}:${chain}`;
                     console.log(`DEBUG: Creating BUY button with data: ${callbackData}`);
 
                     const keyboard = new InlineKeyboard()
@@ -3296,10 +3307,11 @@ bot.on("message:text", async (ctx) => {
                         [
                             "📝 *Create Buy Order*",
                             "",
-                            `Amount: ${formatTokenAmount(intent.params.amount)}`,
-                            `Rate: ${formatINR(intent.params.rate)}/USDC`,
+                            `Amount: ${formatTokenAmount(intent.params.amount, token)}`,
+                            `Rate: ${formatINR(intent.params.rate)}/${token}`,
                             `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
                             `Payment: ${intent.params.paymentMethod || "UPI"}`,
+                            `Chain: ${chain.toUpperCase()}`,
                             "",
                             "Confirm to list this order?",
                         ].join("\n"),

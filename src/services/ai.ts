@@ -35,8 +35,11 @@ Your mission is to help users trade crypto safely and easily.
 15. UNKNOWN — Nonsense or off-topic
 
 🔢 **Parameter Extraction**:
-- "Selling 100 USDC at 88" → { token: "USDC", amount: 100, rate: 88 }
+- "Selling 100 USDC at 88" → { token: "USDC", amount: 100, rate: 88, chain: "base" }
+- "sell 10 usdt on bsc rate 93" → { token: "USDT", amount: 10, rate: 93, chain: "bsc" }
 - "Need 5000 rupees worth" → { fiat: "INR", fiatAmount: 5000 }
+- Default token is USDT. Default chain for USDT is "bsc", for USDC is "base".
+- If user says "bsc" or "bnb chain", set chain to "bsc". If user says "base", set chain to "base".
 
 Respond with JSON ONLY:
 {
@@ -231,7 +234,7 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
                 confidence: 0.7,
                 params: {
                     amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDC",
+                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
                     rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
                 },
                 response: "Creating a sell order for you.",
@@ -245,7 +248,7 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
                 confidence: 0.7,
                 params: {
                     amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDC",
+                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
                 },
                 response: "Let me find buy orders for you.",
             };
@@ -279,7 +282,7 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
                 confidence: 0.7,
                 params: {
                     amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDC",
+                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
                 },
                 response: "Preparing to send crypto.",
             };
