@@ -132,10 +132,12 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await bot.api.getMe();
-        const username = user.username ? `@${user.username}` : "Someone";
+        const usernameRaw = user.username || "Someone";
+        const username = usernameRaw !== "Someone" ? `@${escapeMarkdown(usernameRaw)}` : "Someone";
         const typeEmoji = order.type === 'sell' ? '🔴' : '🟢';
         const typeLabel = order.type === 'sell' ? 'SELL' : 'BUY';
         const totalFiat = (order.amount * order.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        const chain = order.chain?.toUpperCase() || 'BSC';
 
         const msg = [
             `📢 *New ${typeLabel} Ad!*`,
@@ -143,11 +145,14 @@ export async function broadcastAd(order: any, user: any) {
             `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${formatTokenAmount(order.amount, order.token)}*`,
             `💰 Rate: ₹${order.rate.toLocaleString()}/${order.token}`,
             `🧾 Total: ₹${totalFiat}`,
-            "",
-            `👉 [Open P2PFather](https://t.me/${botUser.username}?start=trade)`,
+            `🔗 Chain: ${chain}`,
         ].join("\n");
 
-        await broadcast(msg);
+        const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
+        const deepLink = `https://t.me/${botUser.username}?start=buy_${order.id}`;
+        const keyboard = new InlineKeyboard().url(actionLabel, deepLink);
+
+        await broadcast(msg, keyboard);
     } catch (e) {
         console.error("BroadcastAd error:", e);
     }
