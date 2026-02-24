@@ -91,10 +91,17 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
     }));
 }
 
+// Escape Markdown special characters in text to prevent parse failures
+function escapeMarkdown(text: string): string {
+    return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
-        const buyer = trade.buyer_username ? `@${trade.buyer_username}` : "Buyer";
-        const seller = trade.seller_username ? `@${trade.seller_username}` : "Seller";
+        const buyerRaw = trade.buyer_username || "Buyer";
+        const sellerRaw = trade.seller_username || "Seller";
+        const buyer = buyerRaw !== "Buyer" ? `@${escapeMarkdown(buyerRaw)}` : "Buyer";
+        const seller = sellerRaw !== "Seller" ? `@${escapeMarkdown(sellerRaw)}` : "Seller";
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
         const msg = [

@@ -963,14 +963,12 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         try {
             const originalOrder = await db.getOrderById(trade.order_id);
             const buyerUser = await db.getUserById(trade.buyer_id);
-            if (originalOrder) {
-                const tradeWithUsername = {
-                    ...trade,
-                    seller_username: user.username,
-                    buyer_username: buyerUser?.username || buyerUser?.first_name || 'Buyer',
-                };
-                await broadcastTradeSuccess(tradeWithUsername, originalOrder);
-            }
+            const tradeWithUsername = {
+                ...trade,
+                seller_username: user.username,
+                buyer_username: buyerUser?.username || buyerUser?.first_name || 'Buyer',
+            };
+            await broadcastTradeSuccess(tradeWithUsername, originalOrder || trade);
         } catch (e) {
             console.error("FOMO Broadcast error:", e);
         }
