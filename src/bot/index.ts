@@ -1622,15 +1622,19 @@ bot.on("callback_query:data", async (ctx) => {
         // ─────── AD BROWSING HANDLERS ───────
 
         // Browse sell/buy/all ads
-        if (data === "ads:sell" || data === "ads:buy" || data === "ads:all") {
-            const filterType = data === "ads:all" ? undefined : data.replace("ads:", "");
-            const label = data === "ads:sell" ? "Sell" : data === "ads:buy" ? "Buy" : "All";
+        if (data.startsWith("ads:sell") || data.startsWith("ads:buy") || data.startsWith("ads:all")) {
+            const parts = data.split(":");
+            const filterKey = parts[1]; // sell, buy, all
+            const filterType = filterKey === "all" ? undefined : filterKey;
+            const label = filterKey === "sell" ? "Sell" : filterKey === "buy" ? "Buy" : "All";
+            const page = parseInt(parts[2] || "0");
+            const PAGE_SIZE = 6;
 
             try {
-                // Fetch all tokens by default in category view
-                const orders = await db.getActiveOrders(filterType, undefined, 10);
+                // Fetch more than needed to know if there's a next page
+                const allOrders = await db.getActiveOrders(filterType, undefined, 100);
 
-                if (orders.length === 0) {
+                if (allOrders.length === 0) {
                     await ctx.editMessageText(
                         [
                             `📢 *${label} Ads*`,
@@ -1645,6 +1649,10 @@ bot.on("callback_query:data", async (ctx) => {
                     return;
                 }
 
+                const totalPages = Math.ceil(allOrders.length / PAGE_SIZE);
+                const startIdx = page * PAGE_SIZE;
+                const orders = allOrders.slice(startIdx, startIdx + PAGE_SIZE);
+
                 const adList = orders.map((o, i) => {
                     const emoji = o.type === "sell" ? "🔴 SELL" : "🟢 BUY";
                     const totalAvailable = o.amount - (o.filled_amount || 0);
@@ -1653,7 +1661,7 @@ bot.on("callback_query:data", async (ctx) => {
                         (o.trust_score ?? 0) >= 70 ? "⭐" : "🟢";
 
                     return [
-                        `${i + 1}. ${emoji} *${formatTokenAmount(sellable, o.token)}*`,
+                        `${startIdx + i + 1}. ${emoji} *${formatTokenAmount(sellable, o.token)}*`,
                         `   💰 Rate: ${formatINR(o.rate)}/${o.token}`,
                         `   💵 Total: ${formatINR(sellable * o.rate)}`,
                         `   💳 ${o.payment_methods?.join(", ") || "UPI"}`,
@@ -1662,9 +1670,9 @@ bot.on("callback_query:data", async (ctx) => {
                     ].join("\n");
                 }).join("\n\n");
 
-                // Create inline buttons for top 5 ads
+                // Create inline buttons for ads on this page
                 const keyboard = new InlineKeyboard();
-                orders.slice(0, 5).forEach((o) => {
+                orders.forEach((o) => {
                     const totalAvailable = o.amount - (o.filled_amount || 0);
                     const sellable = totalAvailable * 0.995;
                     const action = o.type === "sell" ? "Buy" : "Sell";
@@ -1673,12 +1681,25 @@ bot.on("callback_query:data", async (ctx) => {
                         `trade_ad:${o.id}`
                     ).row();
                 });
-                keyboard.text("🔄 Refresh", data).text("⬅️ Back", "ads_back");
+
+                // Pagination buttons
+                const navRow: Array<{ text: string; data: string }> = [];
+                if (page > 0) {
+                    navRow.push({ text: "◀️ Previous", data: `ads:${filterKey}:${page - 1}` });
+                }
+                if (page < totalPages - 1) {
+                    navRow.push({ text: "Next ▶️", data: `ads:${filterKey}:${page + 1}` });
+                }
+                if (navRow.length > 0) {
+                    navRow.forEach(b => keyboard.text(b.text, b.data));
+                    keyboard.row();
+                }
+                keyboard.text("🔄 Refresh", `ads:${filterKey}:${page}`).text("⬅️ Back", "ads_back");
 
                 await ctx.editMessageText(
                     [
                         `📢 *Live ${label} Ads*`,
-                        `   _${orders.length} ads available_`,
+                        `   _${allOrders.length} ads  •  Page ${page + 1}/${totalPages}_`,
                         "",
                         adList,
                         "",
