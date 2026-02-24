@@ -963,7 +963,6 @@ export function TradeDetail({ user }: Props) {
                                 type="file"
                                 ref={fileInputRef}
                                 accept="image/*"
-                                capture="environment"
                                 onChange={handleImageSelect}
                                 style={{ display: 'none' }}
                             />
