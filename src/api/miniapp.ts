@@ -1463,18 +1463,28 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
 
+        const PAGE_SIZE = 50;
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const from = (page - 1) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+
+        // Get total count
+        const { count: totalCount } = await supabase
+            .from("users")
+            .select("id", { count: "exact", head: true });
+
         const { data: users, error } = await supabase
             .from("users")
             .select("id, username, first_name, photo_url, wallet_address, points, total_volume, trade_count, telegram_id")
             .order("points", { ascending: false })
-            .limit(50);
+            .range(from, to);
 
         if (error) throw error;
 
         // Mask addresses for privacy if no username
         // "Name": Show Username if available, else 0x12...34
         const leaderboard = (users || []).map((u: any, index: number) => ({
-            rank: index + 1,
+            rank: from + index + 1,
             id: u.id,
             name: u.username || (u.first_name ? u.first_name : (u.wallet_address ? `${u.wallet_address.slice(0, 6)}...${u.wallet_address.slice(-4)}` : "Anon")),
             photo_url: u.photo_url,
@@ -1484,7 +1494,12 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
             is_me: req.telegramUser?.id === u.telegram_id
         }));
 
-        res.json({ leaderboard });
+        res.json({
+            leaderboard,
+            page,
+            total_count: totalCount || 0,
+            has_more: (totalCount || 0) > page * PAGE_SIZE,
+        });
     } catch (err: any) {
         console.error("[MINIAPP] Leaderboard error:", err);
         res.status(500).json({ error: err.message });

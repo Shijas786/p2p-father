@@ -20,19 +20,42 @@ export function Leaderboard() {
     const [users, setUsers] = useState<LeaderboardUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
 
     useEffect(() => {
-        loadLeaderboard();
-    }, []);
+        loadLeaderboard(page);
+    }, [page]);
 
-    async function loadLeaderboard() {
+    async function loadLeaderboard(p: number) {
+        setLoading(true);
+        setError('');
         try {
-            const data = await api.getLeaderboard();
+            const data = await api.getLeaderboard(p);
             setUsers(data.leaderboard);
+            setTotalCount(data.total_count);
+            setHasMore(data.has_more);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    }
+
+    const totalPages = Math.ceil(totalCount / 50);
+
+    function goNext() {
+        if (hasMore) {
+            haptic('light');
+            setPage(p => p + 1);
+        }
+    }
+
+    function goPrev() {
+        if (page > 1) {
+            haptic('light');
+            setPage(p => p - 1);
         }
     }
 
@@ -55,6 +78,13 @@ export function Leaderboard() {
                     <p>Accumulate points to qualify for future <b>Foundation Incentives</b>. Consistent volume and new connections are key to maximizing your allocation.</p>
                 </div>
             </div>
+
+            {/* Page Info */}
+            {!loading && !error && totalCount > 0 && (
+                <div className="lb-page-info">
+                    Showing {(page - 1) * 50 + 1}–{Math.min(page * 50, totalCount)} of {totalCount} traders
+                </div>
+            )}
 
             {/* List */}
             <div className="lb-list">
@@ -91,6 +121,29 @@ export function Leaderboard() {
                     ))
                 )}
             </div>
+
+            {/* Pagination */}
+            {!loading && !error && totalCount > 50 && (
+                <div className="lb-pagination">
+                    <button
+                        className="lb-page-btn"
+                        onClick={goPrev}
+                        disabled={page <= 1}
+                    >
+                        ‹ Prev
+                    </button>
+                    <span className="lb-page-num">
+                        Page {page} / {totalPages}
+                    </span>
+                    <button
+                        className="lb-page-btn"
+                        onClick={goNext}
+                        disabled={!hasMore}
+                    >
+                        Next ›
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

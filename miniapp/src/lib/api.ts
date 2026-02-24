@@ -217,7 +217,7 @@ export const api = {
         }>('/stats'),
     },
 
-    getLeaderboard: () => request<{ leaderboard: any[] }>('/leaderboard'),
+    getLeaderboard: (page = 1) => request<{ leaderboard: any[]; page: number; total_count: number; has_more: boolean }>(`/leaderboard?page=${page}`),
 
     // ---- Admin ----
     admin: {
