@@ -17,6 +17,7 @@ interface Props {
 
 export function Wallet({ user }: Props) {
     const [balances, setBalances] = useState<any>(null);
+    const [trades, setTrades] = useState<any[]>([]);
     // const [loading, setLoading] = useState(true);
 
     // Actions
@@ -61,6 +62,7 @@ export function Wallet({ user }: Props) {
 
     useEffect(() => {
         loadBalances();
+        loadTrades();
     }, []);
 
     const formatBal = (val: any, decs = 2) => {
@@ -89,6 +91,24 @@ export function Wallet({ user }: Props) {
         } catch { } finally {
             // setLoading(false);
         }
+    }
+
+    async function loadTrades() {
+        try {
+            const data = await api.trades.mine();
+            setTrades(data.trades || []);
+        } catch { }
+    }
+
+    function timeAgo(dateStr: string) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        return `${days}d ago`;
     }
 
     async function copyAddress() {
@@ -448,6 +468,54 @@ export function Wallet({ user }: Props) {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Transaction History */}
+            <div className="section-title" style={{ marginTop: 16 }}>
+                Recent Transactions
+                <span onClick={() => { haptic('light'); loadTrades(); }} style={{ cursor: 'pointer', opacity: 0.7, display: 'flex', alignItems: 'center' }}>
+                    <IconRefresh size={16} />
+                </span>
+            </div>
+
+            <div className="asset-list">
+                {trades.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 14 }}>
+                        No transactions yet
+                    </div>
+                ) : (
+                    trades.slice(0, 10).map((t: any, i: number) => {
+                        const isBuyer = t.buyer_id === user?.id;
+                        const statusColor = t.status === 'completed' ? '#22c55e'
+                            : t.status === 'refunded' ? '#ef4444'
+                                : t.status === 'disputed' ? '#f59e0b'
+                                    : '#6366f1';
+                        const statusLabel = t.status === 'completed' ? '✅'
+                            : t.status === 'refunded' ? '↩️'
+                                : t.status === 'disputed' ? '⚠️'
+                                    : '⏳';
+                        const arrow = isBuyer ? '📥' : '📤';
+                        const label = isBuyer ? 'Bought' : 'Sold';
+                        return (
+                            <div className="asset-item" key={t.id || i} style={{ cursor: 'pointer' }}>
+                                <div className="asset-left">
+                                    <div className="asset-icon" style={{ fontSize: 20 }}>{arrow}</div>
+                                    <div className="asset-info">
+                                        <span className="asset-symbol">{label} {parseFloat(t.amount).toFixed(2)} {t.token || 'USDT'}</span>
+                                        <span className="asset-chain" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <span style={{ color: statusColor }}>{statusLabel} {t.status}</span>
+                                            <span>• {t.chain?.toUpperCase() || 'BSC'}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="asset-right">
+                                    <span className="asset-bal">₹{(t.amount * t.rate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                    <span className="asset-fiat">{timeAgo(t.created_at)}</span>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
             </div>
 
             {/* ═══ MODALS ═══ */}
