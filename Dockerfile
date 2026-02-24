@@ -21,5 +21,5 @@ RUN npm run build
 # Expose port
 EXPOSE 8000
 
-# Start the server
-CMD ["npm", "run", "start"]
+# Start the server (compiled JS, not tsx — saves ~100MB RAM)
+CMD ["node", "--max-old-space-size=384", "dist/index.js"]
