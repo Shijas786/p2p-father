@@ -1265,8 +1265,8 @@ bot.command("admin", async (ctx) => {
 //                     /bridge COMMAND
 // ═══════════════════════════════════════════════════════════════
 
-bot.command("bridge", async (ctx) => {
-    await ctx.reply("🛠 Bridge feature coming soon! Stay tuned.");
+bot.command("bridge", async (_ctx) => {
+    // Disabled — no response
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -3442,7 +3442,7 @@ bot.on("message:text", async (ctx) => {
                 break;
 
             case "BRIDGE_TOKENS":
-                await ctx.reply("🛠 Bridge feature coming soon! Stay tuned.");
+                // Disabled — silently ignore
                 break;
 
             case "HELP":
