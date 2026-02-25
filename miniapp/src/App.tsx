@@ -145,8 +145,8 @@ function AppInner() {
         if (startParam.startsWith('trade_')) {
           const tradeId = startParam.replace('trade_', '');
           navigate(`/trade/${tradeId}`);
-        } else if (startParam.startsWith('buy_')) {
-          const orderId = startParam.replace('buy_', '');
+        } else if (startParam.startsWith('buy_') || startParam.startsWith('order_')) {
+          const orderId = startParam.replace(/^(buy_|order_)/, '');
           navigate(`/trade/new/${orderId}`);
         }
       }

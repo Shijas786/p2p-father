@@ -149,8 +149,8 @@ export async function broadcastAd(order: any, user: any) {
         ].join("\n");
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
-        const miniAppTradeUrl = `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`;
-        const keyboard = new InlineKeyboard().webApp(actionLabel, miniAppTradeUrl);
+        const miniAppLink = `https://t.me/${botUser.username}/app2?startapp=order_${order.id}`;
+        const keyboard = new InlineKeyboard().url(actionLabel, miniAppLink);
 
         await broadcast(msg, keyboard);
     } catch (e) {
@@ -362,7 +362,8 @@ bot.command("start", async (ctx) => {
         const orderId = payload.replace("buy_", "");
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
-            const keyboard = new InlineKeyboard().text(`✅ View Ad & Buy`, `buy:${orderId}`);
+            const miniAppUrl = `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${orderId}`;
+            const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
             await ctx.reply(`🔍 *Viewing Ad #${orderId.slice(0, 8)}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
         } else {
@@ -1960,7 +1961,7 @@ bot.on("callback_query:data", async (ctx) => {
                     if (targetGroup !== undefined) {
                         // Post ONLY to that group
                         const groupKeyboard = new InlineKeyboard()
-                            .webApp("⚡ Buy Now", `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`);
+                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/app2?startapp=order_${order.id}`);
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
@@ -1971,7 +1972,7 @@ bot.on("callback_query:data", async (ctx) => {
                     } else if (env.BROADCAST_CHANNEL_ID) {
                         // Fallback: Post to Main Channel for Direct DM ads
                         const channelKeyboard = new InlineKeyboard()
-                            .webApp("⚡ Buy Now", `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`);
+                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/app2?startapp=order_${order.id}`);
 
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
