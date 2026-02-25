@@ -250,7 +250,7 @@ function App() {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
-            <BrowserRouter basename="/app2">
+            <BrowserRouter basename="/miniapp">
               <AppInner />
             </BrowserRouter>
           </ToastProvider>

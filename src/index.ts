@@ -64,7 +64,7 @@ async function main() {
     app.use("/app", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
 
     // NEW PATH — bypasses Koyeb CDN cache entirely (fresh URL = no cached version)
-    app.use("/app2", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
+    app.use("/miniapp", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
 
     // Mount Mini App API
     app.use("/api/miniapp", miniappRouter);
@@ -94,7 +94,7 @@ async function main() {
     app.get("/app/{*path}", (req, res) => {
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
-    app.get("/app2/{*path}", (req, res) => {
+    app.get("/miniapp/{*path}", (req, res) => {
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
 
@@ -124,16 +124,16 @@ async function main() {
                 console.log(`  ✅ Bot started! @${botInfo.username}`);
                 console.log(`  💬 Send /start to @${botInfo.username} to begin`);
 
-                // Update the Telegram Menu Button to point to /app2
+                // Update the Telegram Menu Button to point to /miniapp
                 try {
                     await bot.api.setChatMenuButton({
                         menu_button: {
                             type: "web_app",
                             text: "Open App",
-                            web_app: { url: "https://p2pfather.up.railway.app/app2" }
+                            web_app: { url: "https://p2pfather.up.railway.app/miniapp" }
                         }
                     });
-                    console.log("  ✅ Menu button updated to /app2");
+                    console.log("  ✅ Menu button updated to /miniapp");
                 } catch (e: any) {
                     console.log("  ⚠️ Menu button update failed:", e.message);
                 }
