@@ -94,7 +94,7 @@ export function Leaderboard() {
                     <div className="lb-error">Error: {error}</div>
                 ) : (
                     users.map((user) => (
-                        <div key={user.id} className={`lb-item ${user.is_me ? 'is-me' : ''}`}>
+                        <div key={user.id} className={`lb-item ${user.is_me ? 'is-me' : ''} ${user.rank <= 3 ? `rank-${user.rank}` : ''}`}>
                             <div className="lb-rank">#{user.rank}</div>
 
                             <div className="lb-avatar">
@@ -108,13 +108,13 @@ export function Leaderboard() {
                             <div className="lb-info">
                                 <div className="lb-name">{user.name} {user.is_me && '(You)'}</div>
                                 <div className="lb-stats-row">
-                                    <span className="lb-vol">${user.volume.toLocaleString()} Vol</span>
+                                    <span className="lb-vol">${parseFloat(user.volume.toFixed(1)).toLocaleString()} Vol</span>
                                     <span className="lb-trades">{user.trades} Trades</span>
                                 </div>
                             </div>
 
                             <div className="lb-points">
-                                <span className="lb-points-val">{user.points}</span>
+                                <span className="lb-points-val">{parseFloat(user.points.toFixed(1))}</span>
                                 <span className="lb-points-label">PTS</span>
                             </div>
                         </div>

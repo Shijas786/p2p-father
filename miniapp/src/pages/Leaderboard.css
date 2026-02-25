@@ -115,15 +115,15 @@
     width: 24px;
 }
 
-.lb-item:nth-child(1) .lb-rank {
+.lb-item.rank-1 .lb-rank {
     color: #fcd535;
 }
 
-.lb-item:nth-child(2) .lb-rank {
+.lb-item.rank-2 .lb-rank {
     color: #c0c0c0;
 }
 
-.lb-item:nth-child(3) .lb-rank {
+.lb-item.rank-3 .lb-rank {
     color: #cd7f32;
 }
 
