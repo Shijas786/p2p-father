@@ -2504,11 +2504,11 @@ bot.on("callback_query:data", async (ctx) => {
                 "",
                 `⚖️ Fee Split (1%):`,
                 isSeller
-                    ? `🔐 You Locked: *${formatTokenAmount(trade.amount * 1.005, trade.token)}*`
-                    : `🔐 Seller Locked: *${formatTokenAmount(trade.amount * 1.005, trade.token)}*`,
+                    ? `🔐 You Locked: *${formatTokenAmount(trade.amount, trade.token)}*`
+                    : `🔐 Seller Locked: *${formatTokenAmount(trade.amount, trade.token)}*`,
                 isBuyer
-                    ? `📥 You Receive: *${formatTokenAmount(trade.amount * 0.995, trade.token)}*`
-                    : `📥 Buyer Receives: *${formatTokenAmount(trade.amount * 0.995, trade.token)}*`,
+                    ? `📥 You Receive: *${formatTokenAmount(trade.amount * 0.99, trade.token)}*`
+                    : `📥 Buyer Receives: *${formatTokenAmount(trade.amount * 0.99, trade.token)}*`,
                 "",
                 `Partner: ${partner?.username ? "@" + partner.username.replace(/_/g, "\\_") : "anon"}`,
                 `Payment Method: ${trade.payment_method}`,

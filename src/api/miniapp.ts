@@ -572,7 +572,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             const reserved = await db.getReservedAmount(user.id, token, orderChain);
             const available = physicalBalance - reserved;
 
-            if (available < parsedAmount) {
+            if (available < (parsedAmount - 0.000001)) {
                 return res.status(400).json({
                     error: `Insufficient Available Vault Balance! You have ${physicalBalance} ${token}, but ${reserved} ${token} is already reserved for your other active ads. Available: ${available.toFixed(2)} ${token}.`
                 });
