@@ -11,7 +11,7 @@ async function main() {
     }
 
     const bot = new Bot(token);
-    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app/";
+    const miniAppUrl = "https://p2pfather.up.railway.app/app/";
 
     console.log("⏳ Configuring bot menu button via API...");
 

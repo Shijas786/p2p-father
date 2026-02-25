@@ -130,7 +130,7 @@ async function main() {
                         menu_button: {
                             type: "web_app",
                             text: "Open App",
-                            web_app: { url: "https://registered-adi-highphaus-d016d815.koyeb.app/app2" }
+                            web_app: { url: "https://p2pfather.up.railway.app/app2" }
                         }
                     });
                     console.log("  ✅ Menu button updated to /app2");

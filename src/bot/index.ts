@@ -362,7 +362,7 @@ bot.command("start", async (ctx) => {
         const orderId = payload.replace("buy_", "");
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
-            const miniAppUrl = `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${orderId}`;
+            const miniAppUrl = `https://p2pfather.up.railway.app/app2/trade/new/${orderId}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
             await ctx.reply(`🔍 *Viewing Ad #${orderId.slice(0, 8)}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
@@ -430,7 +430,7 @@ bot.command("start", async (ctx) => {
         "Ready to begin?",
     ].join("\n");
 
-    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2";
+    const miniAppUrl = "https://p2pfather.up.railway.app/app2";
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
@@ -509,7 +509,7 @@ bot.command("payment", async (ctx) => {
         "Or use the Mini App for the easiest setup! 📱",
     ].join("\n");
 
-    const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2/profile";
+    const miniAppUrl = "https://p2pfather.up.railway.app/app2/profile";
     const keyboard = new InlineKeyboard()
         .webApp("📱 Open Profile", miniAppUrl)
         .row()
@@ -1419,7 +1419,7 @@ bot.on("callback_query:data", async (ctx) => {
                 "Ready to begin?",
             ].join("\n");
 
-            const miniAppUrl = "https://registered-adi-highphaus-d016d815.koyeb.app/app2";
+            const miniAppUrl = "https://p2pfather.up.railway.app/app2";
             const startKeyboard = new InlineKeyboard()
                 .webApp("📱 Launch Application", miniAppUrl);
 
