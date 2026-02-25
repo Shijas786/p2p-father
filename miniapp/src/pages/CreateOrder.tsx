@@ -132,8 +132,9 @@ export function CreateOrder() {
     const availableBalance = physicalBalance - reserved;
 
     const isNative = (chain === 'bsc' && token === 'BNB') || (chain === 'base' && token === 'ETH');
+    // Use a small epsilon (1e-6) to avoid floating point precision issues
     const needsDeposit = type === 'sell' && vaultBalance !== undefined && amount &&
-        availableBalance < parseFloat(amount);
+        availableBalance < (parseFloat(amount) - 0.000001);
 
     const needsApproval = !isNative && needsDeposit && isExternalUser && allowance !== undefined && amount &&
         parseFloat(formatUnits(allowance as bigint, decimals)) < parseFloat(amount);
@@ -467,7 +468,7 @@ export function CreateOrder() {
                                 ) : (isExternalUser && needsApproval && !isNative && !approvalDone) ? (
                                     `STEP 1: APPROVE ${token}`
                                 ) : (
-                                    (type === 'sell' && availableBalance < parseFloat(amount || '0'))
+                                    (type === 'sell' && availableBalance < (parseFloat(amount || '0') - 0.000001))
                                         ? (isExternalUser ? `STEP 2: DEPOSIT & PUBLISH` : 'INSUFFICIENT BALANCE')
                                         : '🚀 PUBLISH'
                                 )}
