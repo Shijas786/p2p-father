@@ -467,7 +467,7 @@ export function CreateOrder() {
                                 ) : (isExternalUser && needsApproval && !isNative && !approvalDone) ? (
                                     `STEP 1: APPROVE ${token}`
                                 ) : (
-                                    (type === 'sell' && availableBalance < (parseFloat(amount || '0') * 1.005))
+                                    (type === 'sell' && availableBalance < parseFloat(amount || '0'))
                                         ? (isExternalUser ? `STEP 2: DEPOSIT & PUBLISH` : 'INSUFFICIENT BALANCE')
                                         : '🚀 PUBLISH'
                                 )}
