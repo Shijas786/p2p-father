@@ -51,7 +51,15 @@ export function useAuth() {
                 });
             }
         } catch (err: any) {
-            setError(err.message);
+            // Add debug info for troubleshooting
+            const webapp = window.Telegram?.WebApp;
+            const debugInfo = [
+                err.message,
+                `Platform: ${webapp?.platform || 'unknown'}`,
+                `Version: ${webapp?.version || 'N/A'}`,
+                `InitData: ${webapp?.initData ? 'present' : 'missing'}`,
+            ].join('\n');
+            setError(debugInfo);
         } finally {
             setLoading(false);
         }
