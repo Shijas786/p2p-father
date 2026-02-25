@@ -136,7 +136,7 @@ Expected: ₹${expectedAmount} to ${expectedReceiver}.
 Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, receiverMatch, tamperingDetected, confidence, reasoning }`;
 
             const result = await client.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-4o-mini",
                 messages: [
                     {
                         role: "user",
@@ -210,7 +210,7 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
     async generateText(prompt: string, modelType: "flash" | "pro" = "flash"): Promise<string> {
         try {
             const client = this.getClient();
-            const model = modelType === "flash" ? "gpt-4o-mini" : "gpt-4o";
+            const model = "gpt-4o-mini";
 
             const result = await client.chat.completions.create({
                 model,
