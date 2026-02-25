@@ -698,43 +698,17 @@ bot.command("help", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("newad", async (ctx) => {
-    const user = await ensureUser(ctx);
-
-    if (!user.upi_id && !user.phone_number && !user.bank_account_number) {
-        const keyboard = new InlineKeyboard()
-            .text("💳 Set Payment Methods", "setup_payment")
-            .text("⏭️ Skip", `cancel_action:${user.id}`);
-        await ctx.reply(
-            [
-                "💳 *Set up payment methods first!*",
-                "",
-                "You need at least one payment method (UPI, Phone, or Bank) to trade.",
-                "",
-                "Use /payment or tap below:",
-            ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
-        );
-        return;
-    }
-
-    if (!user.wallet_address) {
-        await ctx.reply("⚠️ Set up your wallet first! Type /start to create one.");
-        return;
-    }
-
+    const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
     const keyboard = new InlineKeyboard()
-        .text("🔴 I want to SELL crypto", "newad:sell")
-        .row()
-        .text("🟢 I want to BUY crypto", "newad:buy");
+        .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
     await ctx.reply(
         [
             "📢 *Create a New Ad*",
             "",
-            "What do you want to do?",
+            "Use our Mini App for the best experience! 🚀",
             "",
-            "🔴 *SELL* — You have crypto, want INR",
-            "🟢 *BUY* — You have INR, want crypto",
+            "Tap below to open the ad creation page:",
         ].join("\n"),
         { parse_mode: "Markdown", reply_markup: keyboard }
     );
@@ -1604,21 +1578,17 @@ bot.on("callback_query:data", async (ctx) => {
             await ctx.answerCallbackQuery();
         }
 
-        // Handle "Create New Ad" button
+        // Handle "Create New Ad" button — redirect to miniapp
         if (data === "newad_start") {
+            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
             const keyboard = new InlineKeyboard()
-                .text("🔴 I want to SELL crypto", "newad:sell")
-                .row()
-                .text("🟢 I want to BUY crypto", "newad:buy");
+                .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
             await ctx.editMessageText(
                 [
                     "📢 *Create a New Ad*",
                     "",
-                    "What do you want to do?",
-                    "",
-                    "🔴 *SELL* — You have crypto, want INR",
-                    "🟢 *BUY* — You have INR, want crypto",
+                    "Use our Mini App for the best experience! 🚀",
                 ].join("\n"),
                 { parse_mode: "Markdown", reply_markup: keyboard }
             );
