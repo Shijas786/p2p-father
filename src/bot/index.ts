@@ -149,8 +149,8 @@ export async function broadcastAd(order: any, user: any) {
         ].join("\n");
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
-        const deepLink = `https://t.me/${botUser.username}?start=buy_${order.id}`;
-        const keyboard = new InlineKeyboard().url(actionLabel, deepLink);
+        const miniAppTradeUrl = `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`;
+        const keyboard = new InlineKeyboard().webApp(actionLabel, miniAppTradeUrl);
 
         await broadcast(msg, keyboard);
     } catch (e) {
@@ -1960,7 +1960,7 @@ bot.on("callback_query:data", async (ctx) => {
                     if (targetGroup !== undefined) {
                         // Post ONLY to that group
                         const groupKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
+                            .webApp("⚡ Buy Now", `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`);
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
@@ -1971,7 +1971,7 @@ bot.on("callback_query:data", async (ctx) => {
                     } else if (env.BROADCAST_CHANNEL_ID) {
                         // Fallback: Post to Main Channel for Direct DM ads
                         const channelKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
+                            .webApp("⚡ Buy Now", `https://registered-adi-highphaus-d016d815.koyeb.app/app2/trade/new/${order.id}`);
 
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
