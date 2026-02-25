@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import OpenAI from "openai";
 import { env } from "../config/env";
 import type { ParsedIntent } from "../types";
 import axios from "axios";
@@ -50,17 +50,17 @@ Respond with JSON ONLY:
 }`;
 
 class AIService {
-    private genAI: GoogleGenerativeAI | null = null;
+    private client: OpenAI | null = null;
 
-    private getClient(): GoogleGenerativeAI {
-        if (!this.genAI) {
-            const apiKey = env.GEMINI_API_KEY || env.OPENAI_API_KEY; // Fallback to OpenAI key if user provided it by mistake
+    private getClient(): OpenAI {
+        if (!this.client) {
+            const apiKey = env.OPENAI_API_KEY;
             if (!apiKey) {
-                throw new Error("Gemini API key not configured");
+                throw new Error("OpenAI API key not configured");
             }
-            this.genAI = new GoogleGenerativeAI(apiKey);
+            this.client = new OpenAI({ apiKey });
         }
-        return this.genAI;
+        return this.client;
     }
 
     /**
@@ -71,29 +71,26 @@ class AIService {
         conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
     ): Promise<ParsedIntent> {
         try {
-            const genAI = this.getClient();
-            const model = genAI.getGenerativeModel({
-                model: "gemini-1.5-flash",
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
+            const client = this.getClient();
+
+            const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+                { role: "system", content: SYSTEM_PROMPT },
+                ...(conversationHistory || []).slice(-6).map((m) => ({
+                    role: m.role as "user" | "assistant",
+                    content: m.content,
+                })),
+                { role: "user", content: message },
+            ];
+
+            const result = await client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages,
+                response_format: { type: "json_object" },
+                max_tokens: 300,
+                temperature: 0.3,
             });
 
-            const chat = model.startChat({
-                history: [
-                    { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-                    { role: "model", parts: [{ text: "Understood. I am P2PFather Bot. I will provide JSON responses based on user intents." }] },
-                    ...(conversationHistory || []).slice(-6).map((m) => ({
-                        role: m.role === "assistant" ? "model" as const : "user" as const,
-                        parts: [{ text: m.content }],
-                    })),
-                ],
-            });
-
-            const result = await chat.sendMessage(message);
-            const response = result.response;
-            const content = response.text();
-
+            const content = result.choices[0]?.message?.content;
             if (!content) {
                 return this.fallbackParse(message);
             }
@@ -106,7 +103,7 @@ class AIService {
     }
 
     /**
-     * Analyze a payment screenshot using Gemini 1.5 Pro Vision
+     * Analyze a payment screenshot using GPT-4o Vision
      */
     async analyzePaymentProof(
         imageUrl: string,
@@ -114,17 +111,12 @@ class AIService {
         expectedReceiver: string
     ) {
         try {
-            const genAI = this.getClient();
-            const model = genAI.getGenerativeModel({
-                model: "gemini-1.5-pro",
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
-            });
+            const client = this.getClient();
 
             // Fetch image data
             const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
             const imageData = Buffer.from(response.data).toString('base64');
+            const dataUrl = `data:image/jpeg;base64,${imageData}`;
 
             const prompt = `You are a professional P2P payment verification expert for the Indian market. 
 Analyze this UPI/bank payment screenshot (Common apps: GPay, PhonePe, Paytm).
@@ -143,17 +135,22 @@ Expected: ₹${expectedAmount} to ${expectedReceiver}.
 
 Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, receiverMatch, tamperingDetected, confidence, reasoning }`;
 
-            const result = await model.generateContent([
-                prompt,
-                {
-                    inlineData: {
-                        data: imageData,
-                        mimeType: "image/jpeg" // Default to jpeg, handles most Telegram photos
-                    }
-                }
-            ]);
+            const result = await client.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            { type: "image_url", image_url: { url: dataUrl } },
+                        ],
+                    },
+                ],
+                response_format: { type: "json_object" },
+                max_tokens: 500,
+            });
 
-            const text = result.response.text();
+            const text = result.choices[0]?.message?.content;
             return JSON.parse(text || "{}");
         } catch (error) {
             console.error("AI vision error:", error);
@@ -177,13 +174,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
         evidence: string[];
     }) {
         try {
-            const genAI = this.getClient();
-            const model = genAI.getGenerativeModel({
-                model: "gemini-1.5-pro",
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
-            });
+            const client = this.getClient();
 
             const prompt = `You are a fair P2P dispute arbitrator. Analyze the evidence and recommend a resolution.
 Consider timestamps, payment proofs, user history, trade terms.
@@ -196,8 +187,17 @@ Evidence summary: ${context.evidence.join("\n")}
 
 Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "needs_admin", confidence, reasoning }`;
 
-            const result = await model.generateContent(prompt);
-            return JSON.parse(result.response.text() || "{}");
+            const result = await client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "You are a fair P2P dispute arbitrator. Always respond in JSON." },
+                    { role: "user", content: prompt },
+                ],
+                response_format: { type: "json_object" },
+                max_tokens: 500,
+            });
+
+            return JSON.parse(result.choices[0]?.message?.content || "{}");
         } catch (error) {
             console.error("AI dispute error:", error);
             return { recommendation: "needs_admin", confidence: 0, reasoning: "AI analysis failed" };
@@ -205,14 +205,20 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
     }
 
     /**
-     * Generate a raw text response using Gemini
+     * Generate a raw text response using OpenAI
      */
     async generateText(prompt: string, modelType: "flash" | "pro" = "flash"): Promise<string> {
         try {
-            const genAI = this.getClient();
-            const model = genAI.getGenerativeModel({ model: modelType === "flash" ? "gemini-1.5-flash" : "gemini-1.5-pro" });
-            const result = await model.generateContent(prompt);
-            return result.response.text();
+            const client = this.getClient();
+            const model = modelType === "flash" ? "gpt-4o-mini" : "gpt-4o";
+
+            const result = await client.chat.completions.create({
+                model,
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 1000,
+            });
+
+            return result.choices[0]?.message?.content || "";
         } catch (error) {
             console.error("AI generateText error:", error);
             return "";
