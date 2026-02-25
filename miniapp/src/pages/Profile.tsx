@@ -153,7 +153,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     <span className="prof-stat-label">30d Trades</span>
                 </div>
                 <div className="prof-stat-box">
-                    <span className="prof-stat-num">{user?.points || 0}</span>
+                    <span className="prof-stat-num">{parseFloat((user?.points || 0).toFixed(1))}</span>
                     <span className="prof-stat-label">Points</span>
                 </div>
                 <div className="prof-stat-box">
