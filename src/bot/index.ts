@@ -433,6 +433,21 @@ bot.command("start", async (ctx) => {
 
     const cacheBuster = `?v=${Date.now()}`;
     const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
+
+    // Forcefully overwrite the menu button for this specific user's chat
+    // This fixes issues where older accounts cached the previous hosting URL
+    try {
+        await ctx.api.setChatMenuButton({
+            chat_id: ctx.chat.id,
+            menu_button: {
+                type: "web_app",
+                text: "Open App",
+                web_app: { url: miniAppUrl }
+            }
+        });
+    } catch (err) {
+        console.error("Failed to update user specific menu button:", err);
+    }
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
