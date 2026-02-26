@@ -21,6 +21,21 @@
             color: #eaecef;
             line-height: 1.7;
             overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #0ecb81 #050505;
+        }
+
+        /* Scroll Progress */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: #0ecb81;
+            z-index: 9999;
+            width: 0%;
+            box-shadow: 0 0 10px rgba(14, 203, 129, 0.5);
+            transition: width 0.1s ease-out;
         }
 
         /* Hero */
@@ -65,6 +80,7 @@
             margin-bottom: 12px;
             background: linear-gradient(135deg, #fff, #0ecb81);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -514,13 +530,45 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Reveal System */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .d1 {
+            transition-delay: 0.1s;
+        }
+
+        .d2 {
+            transition-delay: 0.2s;
+        }
+
+        .d3 {
+            transition-delay: 0.3s;
+        }
+
+        .d4 {
+            transition-delay: 0.4s;
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- Scroll Progress -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
     <!-- Hero -->
-    <div class="hero">
+    <div class="hero reveal">
         <div class="hero-badge">📖 User Guide</div>
         <h1>P2PFather</h1>
         <p>Your safe & easy way to buy and sell crypto using INR. No middlemen. Just you, the buyer, and a smart
@@ -530,7 +578,7 @@
     <div class="container">
 
         <!-- Section 1: What is P2PFather -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">1</div>
             <div class="section-title">What is P2PFather?</div>
             <div class="section-subtitle">A secure digital marketplace for your crypto</div>
@@ -569,7 +617,7 @@
         </div>
 
         <!-- Section 2: Getting Started -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">2</div>
             <div class="section-title">Getting Started</div>
             <div class="section-subtitle">3 simple steps to start trading</div>
@@ -599,11 +647,21 @@
                             Account. This is how you'll send/receive INR.</div>
                     </div>
                 </div>
+                <div class="step">
+                    <div class="step-dot">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Connect your own Wallet (Optional) 🔌</div>
+                        <div class="step-desc">Want to use your own wallet like MetaMaask or Trust Wallet? Go to
+                            <strong>Wallet</strong> → Tap <strong>"Connect External Wallet"</strong> to link via
+                            WalletConnect.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Section 3: Wallet vs Vault -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">3</div>
             <div class="section-title">Wallet vs Vault</div>
             <div class="section-subtitle">Understanding where your crypto lives</div>
@@ -629,7 +687,7 @@
         </div>
 
         <!-- Section 4: How to Deposit -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">4</div>
             <div class="section-title">How to Deposit</div>
             <div class="section-subtitle">Get crypto into your Vault so you can trade</div>
@@ -690,7 +748,7 @@
         </div>
 
         <!-- Section 5: Gas Fees -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">5</div>
             <div class="section-title">⛽ Gas Fees</div>
             <div class="section-subtitle">The small "delivery charge" for blockchain transactions</div>
@@ -749,7 +807,7 @@
         </div>
 
         <!-- Section 6: How to Trade -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">6</div>
             <div class="section-title">How to Trade</div>
             <div class="section-subtitle">Selling crypto for INR or Buying crypto with INR</div>
@@ -856,7 +914,7 @@
         </div>
 
         <!-- Section 7: Safety -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">7</div>
             <div class="section-title">🔐 How Escrow Keeps You Safe</div>
             <div class="section-subtitle">The smart contract is the unbiased referee</div>
@@ -882,7 +940,7 @@
         </div>
 
         <!-- Section 8: Disputes -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">8</div>
             <div class="section-title">⚖️ Disputes</div>
             <div class="section-subtitle">What if something goes wrong?</div>
@@ -938,7 +996,7 @@
         </div>
 
         <!-- Section 9: Commands -->
-        <div class="section">
+        <div class="section reveal">
             <div class="section-number">9</div>
             <div class="section-title">📋 Bot Commands</div>
             <div class="section-subtitle">Quick shortcuts in the Telegram bot</div>
@@ -982,27 +1040,41 @@
     </div>
 
     <!-- Footer -->
-    <div class="footer">
+    <div class="footer reveal">
         Made with 💚 by <a href="https://t.me/P2pFatherBot">P2PFather</a><br>
         <span class="text-muted">Trade safe. Trade smart.</span>
     </div>
 
     <script>
-        function showTab(tab) {
-            document.getElementById('content-sell').classList.remove('active');
-            document.getElementById('content-buy').classList.remove('active');
-            document.getElementById('tab-sell').classList.remove('active-sell');
-            document.getElementById('tab-buy').classList.remove('active-buy');
-
-            document.getElementById('content-' + tab).classList.add('active');
-            if (tab === 'sell') {
-                document.getElementById('tab-sell').classList.add('active-sell');
-            } else {
-                document.getElementById('tab-buy').classList.add('active-buy');
-            }
+        // Tab Switching Logic
+        function showTab(type) {
+            document.getElementById('tab-sell').className = 'tab' + (type === 'sell' ? ' active-sell' : '');
+            document.getElementById('tab-buy').className = 'tab' + (type === 'buy' ? ' active-buy' : '');
+            document.getElementById('content-sell').className = 'tab-content' + (type === 'sell' ? ' active' : '');
+            document.getElementById('content-buy').className = 'tab-content' + (type === 'buy' ? ' active' : '');
         }
-    </script>
 
+        // Scroll Progress
+        const progressBar = document.getElementById('scrollProgress');
+        window.addEventListener('scroll', () => {
+            const h = document.documentElement.scrollHeight - window.innerHeight;
+            const pct = (window.scrollY / h) * 100;
+            if (progressBar) progressBar.style.width = pct + '%';
+        }, { passive: true });
+
+        // Reveal on Scroll
+        const revealObs = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            revealObs.observe(el);
+        });
+    </script>
 </body>
 
 </html>
