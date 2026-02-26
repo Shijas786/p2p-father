@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2PFather — User Guide</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050505;
+            color: #eaecef;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            background: linear-gradient(180deg, #0a1a0a 0%, #050505 100%);
+            border-bottom: 1px solid #1a2e1a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(14, 203, 129, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(14, 203, 129, 0.1);
+            color: #0ecb81;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff, #0ecb81);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: #848e9c;
+            font-size: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Container */
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Section */
+        .section {
+            padding: 40px 0;
+            border-bottom: 1px solid #1a1d23;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0ecb81, #0a9e64);
+            color: #050505;
+            font-weight: 800;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            color: #848e9c;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: #181a20;
+            border: 1px solid #2b2f36;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: #3a3f47;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card-icon {
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #1e2026;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: #b7bdc6;
+            line-height: 1.6;
+        }
+
+        /* Comparison */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .compare-box {
+            background: #1e2026;
+            border: 1px solid #2b2f36;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .compare-box .emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .compare-box .label {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .compare-box .desc {
+            font-size: 12px;
+            color: #848e9c;
+        }
+
+        .compare-box.green {
+            border-color: rgba(14, 203, 129, 0.3);
+        }
+
+        .compare-box.gold {
+            border-color: rgba(240, 185, 11, 0.3);
+        }
+
+        /* Steps */
+        .steps {
+            margin: 16px 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #1e2026;
+            border: 2px solid #0ecb81;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #0ecb81;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 13px;
+            top: 32px;
+            width: 2px;
+            height: calc(100% - 12px);
+            background: #2b2f36;
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 3px;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .step-desc {
+            font-size: 13px;
+            color: #848e9c;
+        }
+
+        /* Alert Box */
+        .alert {
+            border-radius: 10px;
+            padding: 16px;
+            margin: 16px 0;
+            font-size: 13px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .alert.danger {
+            background: rgba(246, 70, 93, 0.08);
+            border: 1px solid rgba(246, 70, 93, 0.2);
+            color: #f6465d;
+        }
+
+        .alert.warning {
+            background: rgba(240, 185, 11, 0.08);
+            border: 1px solid rgba(240, 185, 11, 0.2);
+            color: #f0b90b;
+        }
+
+        .alert.info {
+            background: rgba(14, 203, 129, 0.08);
+            border: 1px solid rgba(14, 203, 129, 0.2);
+            color: #0ecb81;
+        }
+
+        /* Flow Diagram */
+        .flow {
+            background: #181a20;
+            border: 1px solid #2b2f36;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .flow-box.seller {
+            background: rgba(246, 70, 93, 0.15);
+            color: #f6465d;
+        }
+
+        .flow-box.escrow {
+            background: rgba(240, 185, 11, 0.15);
+            color: #f0b90b;
+        }
+
+        .flow-box.buyer {
+            background: rgba(14, 203, 129, 0.15);
+            color: #0ecb81;
+        }
+
+        .flow-arrow {
+            color: #5e6673;
+            font-size: 18px;
+        }
+
+        /* Gas Table */
+        .gas-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 13px;
+        }
+
+        .gas-table th {
+            background: #1e2026;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            color: #848e9c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .gas-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #2b2f36;
+            color: #b7bdc6;
+        }
+
+        .gas-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .gas-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .gas-tag.eth {
+            background: rgba(98, 126, 234, 0.15);
+            color: #627eea;
+        }
+
+        .gas-tag.bnb {
+            background: rgba(240, 185, 11, 0.15);
+            color: #f0b90b;
+        }
+
+        /* Commands */
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 16px 0;
+        }
+
+        .cmd-item {
+            background: #1e2026;
+            border: 1px solid #2b2f36;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .cmd-name {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0ecb81;
+            margin-bottom: 4px;
+        }
+
+        .cmd-desc {
+            font-size: 11px;
+            color: #848e9c;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid #2b2f36;
+            background: #181a20;
+            color: #848e9c;
+            transition: all 0.2s;
+        }
+
+        .tab.active-sell {
+            background: rgba(246, 70, 93, 0.1);
+            border-color: #f6465d;
+            color: #f6465d;
+        }
+
+        .tab.active-buy {
+            background: rgba(14, 203, 129, 0.1);
+            border-color: #0ecb81;
+            color: #0ecb81;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #5e6673;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #0ecb81;
+            text-decoration: none;
+        }
+
+        /* Highlight text */
+        .text-green {
+            color: #0ecb81;
+        }
+
+        .text-red {
+            color: #f6465d;
+        }
+
+        .text-gold {
+            color: #f0b90b;
+        }
+
+        .text-muted {
+            color: #848e9c;
+        }
+
+        .bold {
+            font-weight: 700;
+        }
+
+        code {
+            background: #1e2026;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Space Grotesk', monospace;
+            font-size: 13px;
+            color: #f0b90b;
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cmd-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-badge">📖 User Guide</div>
+        <h1>P2PFather</h1>
+        <p>Your safe & easy way to buy and sell crypto using INR. No middlemen. Just you, the buyer, and a smart
+            contract keeping everyone honest.</p>
+    </div>
+
+    <div class="container">
+
+        <!-- Section 1: What is P2PFather -->
+        <div class="section">
+            <div class="section-number">1</div>
+            <div class="section-title">What is P2PFather?</div>
+            <div class="section-subtitle">A secure digital marketplace for your crypto</div>
+
+            <div class="card">
+                <div class="card-desc">
+                    Imagine you want to sell your USDT for INR. You post an ad saying <em>"Selling 10 USDT at ₹93"</em>.
+                    A buyer sees your ad and says <em>"I'll buy!"</em><br><br>
+                    But how do you trust each other with your money? 🤔<br><br>
+                    <strong>That's where the Escrow (safe locker) comes in!</strong> Your crypto gets locked in a smart
+                    contract on the blockchain.
+                    Nobody can steal it — not the buyer, not us, nobody. The crypto only gets released when YOU confirm
+                    you received the INR in your bank.
+                </div>
+            </div>
+
+            <!-- Flow Diagram -->
+            <div class="flow">
+                <div style="font-size:13px; color:#848e9c; margin-bottom:12px;">How a trade works:</div>
+                <div class="flow-row">
+                    <div class="flow-box seller">🔴 Seller locks crypto</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box escrow">🔐 Escrow holds it</div>
+                </div>
+                <div class="flow-row">
+                    <div class="flow-box buyer">🟢 Buyer sends ₹ INR</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box seller">🔴 Seller checks bank</div>
+                </div>
+                <div class="flow-row">
+                    <div class="flow-box seller">🔴 Seller taps Release</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box buyer">🟢 Buyer gets crypto! ✅</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Getting Started -->
+        <div class="section">
+            <div class="section-number">2</div>
+            <div class="section-title">Getting Started</div>
+            <div class="section-subtitle">3 simple steps to start trading</div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-dot">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Open the Bot</div>
+                        <div class="step-desc">Search <code>@P2pFatherBot</code> on Telegram → Tap <strong>"Open
+                                App"</strong> or <strong>"Launch Application"</strong></div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-dot">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Your Wallet is Auto-Created 🎉</div>
+                        <div class="step-desc">A crypto wallet is created for you automatically. You'll get an address
+                            like <code>0x365d...5799</code>. This is YOUR address where you receive crypto.</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-dot">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Set Up Payment Methods</div>
+                        <div class="step-desc">Go to <strong>Profile</strong> → Add your UPI ID, Phone Number, or Bank
+                            Account. This is how you'll send/receive INR.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Wallet vs Vault -->
+        <div class="section">
+            <div class="section-number">3</div>
+            <div class="section-title">Wallet vs Vault</div>
+            <div class="section-subtitle">Understanding where your crypto lives</div>
+
+            <div class="compare-grid">
+                <div class="compare-box gold">
+                    <div class="emoji">🪙</div>
+                    <div class="label">Wallet</div>
+                    <div class="desc">Cash in your pocket. You own it, but you can't trade with it directly.</div>
+                </div>
+                <div class="compare-box green">
+                    <div class="emoji">🔐</div>
+                    <div class="label">Vault (Escrow)</div>
+                    <div class="desc">Cash in a bank locker. Locked & safe. Ready to trade!</div>
+                </div>
+            </div>
+
+            <div class="alert info">
+                <div class="alert-icon">💡</div>
+                <div>To trade, your crypto MUST be in the <strong>Vault</strong>. First deposit from Wallet → Vault.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: How to Deposit -->
+        <div class="section">
+            <div class="section-number">4</div>
+            <div class="section-title">How to Deposit</div>
+            <div class="section-subtitle">Get crypto into your Vault so you can trade</div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🏦</div>
+                    <div class="card-title">Option 1: From an Exchange</div>
+                </div>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-dot">1</div>
+                        <div class="step-content">
+                            <div class="step-desc">Go to <strong>Wallet</strong> page → Copy your wallet address</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">2</div>
+                        <div class="step-content">
+                            <div class="step-desc">Go to your exchange (Binance, WazirX, etc.) → Withdraw</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">3</div>
+                        <div class="step-content">
+                            <div class="step-desc">Paste your address & choose the correct network:<br>
+                                <span class="text-green">● Base network</span> → for USDC<br>
+                                <span class="text-gold">● BSC (BEP20)</span> → for USDT or BNB
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">4</div>
+                        <div class="step-content">
+                            <div class="step-desc">Once arrived, go to Wallet → Tap <strong>"Deposit to Vault"</strong>
+                                ✅</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🛒</div>
+                    <div class="card-title">Option 2: Buy from a P2PFather Ad</div>
+                </div>
+                <div class="card-desc">
+                    Don't have crypto? No problem! Browse sell ads on the <strong>Orders</strong> page, buy with INR,
+                    and the crypto lands directly in your Vault. Easy!
+                </div>
+            </div>
+
+            <div class="alert danger">
+                <div class="alert-icon">⚠️</div>
+                <div><strong>Always use the correct network!</strong> Sending USDC on BSC instead of Base = funds lost
+                    forever. Double-check before you send.</div>
+            </div>
+        </div>
+
+        <!-- Section 5: Gas Fees -->
+        <div class="section">
+            <div class="section-number">5</div>
+            <div class="section-title">⛽ Gas Fees</div>
+            <div class="section-subtitle">The small "delivery charge" for blockchain transactions</div>
+
+            <div class="card-desc" style="margin-bottom:16px;">
+                Every time you move crypto on the blockchain (deposit, withdraw, send), you need to pay a tiny
+                <strong>gas fee</strong>.
+                It's like a postage stamp — very small, but you can't send without it.
+            </div>
+
+            <table class="gas-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Gas Needed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Deposit to Vault</td>
+                        <td><span class="gas-tag eth">ETH</span> on Base &nbsp;or&nbsp; <span
+                                class="gas-tag bnb">BNB</span> on BSC</td>
+                    </tr>
+                    <tr>
+                        <td>Withdraw from Vault</td>
+                        <td><span class="gas-tag eth">ETH</span> on Base &nbsp;or&nbsp; <span
+                                class="gas-tag bnb">BNB</span> on BSC</td>
+                    </tr>
+                    <tr>
+                        <td>Send to someone</td>
+                        <td><span class="gas-tag eth">ETH</span> on Base &nbsp;or&nbsp; <span
+                                class="gas-tag bnb">BNB</span> on BSC</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💡</div>
+                    <div class="card-title">How to Get Gas</div>
+                </div>
+                <div class="card-desc">
+                    <strong class="text-green">For Base:</strong> Send a tiny amount of ETH ($0.01–$0.05) from an
+                    exchange to your wallet on <strong>Base network</strong>.<br><br>
+                    <strong class="text-gold">For BSC:</strong> Send a tiny amount of BNB from an exchange on
+                    <strong>BSC (BEP20)</strong>,
+                    or <strong>buy BNB from a BNB sell ad</strong> right here on P2PFather!
+                </div>
+            </div>
+
+            <div class="alert warning">
+                <div class="alert-icon">⚠️</div>
+                <div><strong>No gas = can't move crypto.</strong> Your crypto is still safe, you just need gas to move
+                    it. Keep a small amount of ETH/BNB for gas.</div>
+            </div>
+        </div>
+
+        <!-- Section 6: How to Trade -->
+        <div class="section">
+            <div class="section-number">6</div>
+            <div class="section-title">How to Trade</div>
+            <div class="section-subtitle">Selling crypto for INR or Buying crypto with INR</div>
+
+            <div class="tabs">
+                <div class="tab active-sell" onclick="showTab('sell')" id="tab-sell">🔴 I want to SELL</div>
+                <div class="tab" onclick="showTab('buy')" id="tab-buy">🟢 I want to BUY</div>
+            </div>
+
+            <!-- Sell Tab -->
+            <div class="tab-content active" id="content-sell">
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-dot">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Create a Sell Ad</div>
+                            <div class="step-desc">Tap <strong>Create Ad</strong> → Select SELL → Choose token, amount,
+                                rate, and payment methods → Tap <strong>🚀 PUBLISH</strong></div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Your Crypto Gets Locked 🔐</div>
+                            <div class="step-desc">Your crypto is locked in the Escrow smart contract. Nobody can touch
+                                it. Your ad appears on the marketplace.</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Buyer Accepts & Sends INR</div>
+                            <div class="step-desc">A buyer sees your ad, starts a trade, and sends INR to your UPI/Bank.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">4</div>
+                        <div class="step-content">
+                            <div class="step-title">Check Your Bank App! 🚨</div>
+                            <div class="step-desc" style="color:#f6465d; font-weight:600;">
+                                Open YOUR bank app → Verify money is received.<br>
+                                NEVER trust SMS alone — SMS can be faked!<br>
+                                <em>Bank app check cheyyathe crypto release cheyyaruth!</em> 🛡️
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">5</div>
+                        <div class="step-content">
+                            <div class="step-title">Release Crypto ✅</div>
+                            <div class="step-desc">Tap <strong>"✅ Release Crypto"</strong>. The smart contract sends
+                                crypto to the buyer. Trade done! 🎉</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buy Tab -->
+            <div class="tab-content" id="content-buy">
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-dot">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Browse Sell Ads</div>
+                            <div class="step-desc">Go to <strong>Orders</strong> page → See all live sell ads with
+                                rates.</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Pick an Ad & Start Trade</div>
+                            <div class="step-desc">Tap on a sell ad → Tap <strong>"Buy Now"</strong>. The seller's
+                                crypto gets locked.</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Send INR to Seller</div>
+                            <div class="step-desc">You'll see the seller's UPI/Bank details. Open GPay / PhonePe / Paytm
+                                → Send the exact INR amount → Tap <strong>"💸 I've Paid"</strong>.</div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">4</div>
+                        <div class="step-content">
+                            <div class="step-title">Wait for Seller to Confirm</div>
+                            <div class="step-desc">The seller checks their bank app and releases the crypto to you.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-dot">5</div>
+                        <div class="step-content">
+                            <div class="step-title">Receive Crypto! 🎉</div>
+                            <div class="step-desc">Crypto lands in your Vault. Keep it for trading or withdraw to your
+                                own wallet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7: Safety -->
+        <div class="section">
+            <div class="section-number">7</div>
+            <div class="section-title">🔐 How Escrow Keeps You Safe</div>
+            <div class="section-subtitle">The smart contract is the unbiased referee</div>
+
+            <div class="card">
+                <div class="card-desc">
+                    🔐 Crypto is locked in a <strong>smart contract on the blockchain</strong> — a program that nobody
+                    can hack or change<br><br>
+                    🚫 <strong>Nobody can steal it</strong> — not even us, the P2PFather team<br><br>
+                    ⏰ If the seller doesn't respond, <strong>admins can step in</strong> and resolve it<br><br>
+                    🛡️ If the buyer fakes a payment, the <strong>seller keeps their crypto safely</strong>
+                </div>
+            </div>
+
+            <div class="alert danger">
+                <div class="alert-icon">🚨</div>
+                <div>
+                    <strong>GOLDEN RULE FOR SELLERS:</strong><br>
+                    Always check your <strong>BANK APP</strong> before releasing crypto. Never trust SMS, screenshots,
+                    or the buyer's word alone. Open your actual bank app and confirm the money is there.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 8: Disputes -->
+        <div class="section">
+            <div class="section-number">8</div>
+            <div class="section-title">⚖️ Disputes</div>
+            <div class="section-subtitle">What if something goes wrong?</div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🚩</div>
+                    <div class="card-title">When to Open a Dispute</div>
+                </div>
+                <div class="card-desc">
+                    • Buyer says "I paid" but seller didn't receive money<br>
+                    • Seller won't release crypto after receiving payment<br>
+                    • Wrong amount was sent<br>
+                    • Any suspicious or fraudulent activity
+                </div>
+            </div>
+
+            <div class="steps" style="margin-top:16px;">
+                <div class="step">
+                    <div class="step-dot">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Tap "⚠️ Open Dispute"</div>
+                        <div class="step-desc">Either the buyer or seller can open a dispute from the trade page.</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-dot">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Admin Gets Notified</div>
+                        <div class="step-desc">An admin is immediately alerted and reviews the trade.</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-dot">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Provide Evidence</div>
+                        <div class="step-desc">Share payment screenshots, UTR/reference numbers, and any other proof.
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-dot">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Admin Decides</div>
+                        <div class="step-desc">
+                            <span class="text-green">✅ Release to Buyer</span> — if payment is verified<br>
+                            <span class="text-red">❌ Refund to Seller</span> — if payment was fake<br>
+                            <span class="text-gold">🔍 Investigate</span> — if more info is needed
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 9: Commands -->
+        <div class="section">
+            <div class="section-number">9</div>
+            <div class="section-title">📋 Bot Commands</div>
+            <div class="section-subtitle">Quick shortcuts in the Telegram bot</div>
+
+            <div class="cmd-grid">
+                <div class="cmd-item">
+                    <div class="cmd-name">/start</div>
+                    <div class="cmd-desc">Open bot & get wallet</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/newad</div>
+                    <div class="cmd-desc">Create buy/sell ad</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/ads</div>
+                    <div class="cmd-desc">Browse live ads</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/myads</div>
+                    <div class="cmd-desc">Your active ads</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/mytrades</div>
+                    <div class="cmd-desc">Ongoing trades</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/wallet</div>
+                    <div class="cmd-desc">Balance & deposit</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/profile</div>
+                    <div class="cmd-desc">Your stats</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-name">/help</div>
+                    <div class="cmd-desc">Get help</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Made with 💚 by <a href="https://t.me/P2pFatherBot">P2PFather</a><br>
+        <span class="text-muted">Trade safe. Trade smart.</span>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            document.getElementById('content-sell').classList.remove('active');
+            document.getElementById('content-buy').classList.remove('active');
+            document.getElementById('tab-sell').classList.remove('active-sell');
+            document.getElementById('tab-buy').classList.remove('active-buy');
+
+            document.getElementById('content-' + tab).classList.add('active');
+            if (tab === 'sell') {
+                document.getElementById('tab-sell').classList.add('active-sell');
+            } else {
+                document.getElementById('tab-buy').classList.add('active-buy');
+            }
+        }
+    </script>
+
+</body>
+
+</html>
