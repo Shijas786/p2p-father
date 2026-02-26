@@ -445,8 +445,16 @@ bot.command("start", async (ctx) => {
                 web_app: { url: miniAppUrl }
             }
         });
+
+        // --- DEBUG INFO FOR ADMIN CACHE ISSUE ---
+        if (ctx.from?.id.toString() === "1206689874" || true) { // Always show for now to help the user debug
+            const currentMenuButton = await ctx.api.getChatMenuButton({ chat_id: ctx.chat.id });
+            console.log(`Debug Menu Button for ${ctx.from?.id}:`, JSON.stringify(currentMenuButton));
+            await ctx.reply(`*🛠 System Debug Info*\nMenu Button URL currently registered with Telegram:\n\`${currentMenuButton.type === 'web_app' ? currentMenuButton.web_app.url : 'No WebApp URL'}\``, { parse_mode: "Markdown" });
+        }
     } catch (err) {
         console.error("Failed to update user specific menu button:", err);
+        await ctx.reply(`*🛠 System Debug Error*\nFailed to update menu button: ${err}`, { parse_mode: "Markdown" });
     }
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
