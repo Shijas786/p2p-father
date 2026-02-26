@@ -54,17 +54,19 @@ async function main() {
     // Uses process.cwd() to be safe across dev/prod (Docker)
     app.use(express.static(path.join(process.cwd(), "public")));
 
-    // Serve Mini App frontend — NO CACHING so Koyeb CDN always passes through
+    // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
     const noCacheHeaders = (res: any) => {
-        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
         res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         res.setHeader("Surrogate-Control", "no-store");
     };
-    app.use("/app", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
+    const staticOpts = { setHeaders: noCacheHeaders, etag: false, lastModified: false };
+    app.use("/app", express.static(miniAppDist, staticOpts));
 
-    // NEW PATH — bypasses Koyeb CDN cache entirely (fresh URL = no cached version)
-    app.use("/miniapp", express.static(miniAppDist, { setHeaders: noCacheHeaders }));
+    // NEW PATH — bypasses CDN cache entirely (fresh URL = no cached version)
+    app.use("/miniapp", express.static(miniAppDist, staticOpts));
 
     // Mount Mini App API
     app.use("/api/miniapp", miniappRouter);
@@ -90,11 +92,13 @@ async function main() {
     // Health Check (Koyeb needs a 200 OK)
     app.get("/health", (req, res) => res.send("OK"));
 
-    // Mini App SPA fallback
+    // Mini App SPA fallback — also set no-cache headers
     app.get("/app/{*path}", (req, res) => {
+        noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
     app.get("/miniapp/{*path}", (req, res) => {
+        noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
 

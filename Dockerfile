@@ -6,13 +6,21 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy all source files (Invalidate Cache: 2026-02-26 V16.2)
+# Copy all source files (Invalidate Cache: 2026-02-26 V17.0 NUCLEAR)
 COPY . .
 
-# NUCLEAR: Force Docker to rebuild from here (change string to bust)
-RUN echo "FORCE_REBUILD_MINIAPP_PATH_20260226_V2"
+# ═══════════════════════════════════════════════════════════
+# NUCLEAR CACHE BUST — Change this string to force full rebuild
+# ═══════════════════════════════════════════════════════════
+RUN echo "NUCLEAR_FRESH_BUILD_20260226_V3_$(date +%s)"
+
+# Clean everything and rebuild miniapp from scratch
 WORKDIR /app/miniapp
-RUN npm install --legacy-peer-deps && rm -rf dist && npx vite build && ls -la dist/assets/*.css
+RUN rm -rf node_modules dist .vite package-lock.json && \
+    npm cache clean --force && \
+    npm install --legacy-peer-deps --prefer-offline=false && \
+    npx vite build && \
+    ls -la dist/assets/*.css
 
 # Build the backend
 WORKDIR /app
