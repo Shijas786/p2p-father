@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
-import { useAccount, useWriteContract, useConfig, useReadContract } from 'wagmi';
+import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { appKit } from '../lib/wagmi';
 import { waitForTransactionReceipt } from 'wagmi/actions';
@@ -57,6 +57,7 @@ export function Wallet({ user }: Props) {
 
     const { address: wagmiAddress, isConnected, chain: walletChain } = useAccount();
     const { writeContractAsync } = useWriteContract();
+    const { switchChainAsync } = useSwitchChain();
     const config = useConfig();
 
     useEffect(() => {
@@ -163,7 +164,12 @@ export function Wallet({ user }: Props) {
             const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
             if (walletChain?.id !== targetChainId) {
                 setVaultError(`Please switch to ${vaultChain.toUpperCase()} network`);
-                appKit.open({ view: 'Networks' });
+                try {
+                    await switchChainAsync({ chainId: targetChainId });
+                    setVaultError('');
+                } catch (e) {
+                    appKit.open({ view: 'Networks' });
+                }
                 setVaultLoading(false);
                 return;
             }
@@ -237,7 +243,12 @@ export function Wallet({ user }: Props) {
 
                 if (walletChain?.id !== targetChainId) {
                     setVaultError(`Please switch to ${vaultChain.toUpperCase()} network`);
-                    appKit.open({ view: 'Networks' });
+                    try {
+                        await switchChainAsync({ chainId: targetChainId });
+                        setVaultError('');
+                    } catch (e) {
+                        appKit.open({ view: 'Networks' });
+                    }
                     setVaultLoading(false);
                     return;
                 }
@@ -612,7 +623,16 @@ export function Wallet({ user }: Props) {
                         {user?.wallet_type === 'external' && walletChain?.id !== (vaultChain === 'bsc' ? bsc.id : base.id) ? (
                             <button
                                 className="btn btn-primary btn-block"
-                                onClick={() => appKit.open({ view: 'Networks' })}
+                                onClick={async () => {
+                                    setVaultLoading(true);
+                                    try {
+                                        await switchChainAsync({ chainId: vaultChain === 'bsc' ? bsc.id : base.id });
+                                        setVaultError('');
+                                    } catch (e) {
+                                        appKit.open({ view: 'Networks' });
+                                    }
+                                    setVaultLoading(false);
+                                }}
                                 disabled={vaultLoading}
                             >
                                 {vaultLoading ? <span className="spinner" /> : `Switch to ${vaultChain.toUpperCase()} Network`}

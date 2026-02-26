@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain } from 'wagmi';
 import { parseUnits } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
@@ -67,6 +67,7 @@ export function TradeDetail({ user }: Props) {
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
     const { chain: walletChain } = useAccount();
+    const { switchChainAsync } = useSwitchChain();
 
     const formatBal = (val: any, decs = 2) => {
         const num = parseFloat(val || '0');
@@ -283,7 +284,12 @@ export function TradeDetail({ user }: Props) {
         const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
         if (walletChain?.id !== targetChainId) {
             setError(`Please switch to ${tradeChain.toUpperCase()} network`);
-            appKit.open({ view: 'Networks' });
+            try {
+                await switchChainAsync({ chainId: targetChainId });
+                setError('');
+            } catch (err: any) {
+                appKit.open({ view: 'Networks' });
+            }
             return;
         }
 
@@ -319,7 +325,12 @@ export function TradeDetail({ user }: Props) {
         const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
         if (walletChain?.id !== targetChainId) {
             setError(`Please switch to ${tradeChain.toUpperCase()} network`);
-            appKit.open({ view: 'Networks' });
+            try {
+                await switchChainAsync({ chainId: targetChainId });
+                setError('');
+            } catch (err: any) {
+                appKit.open({ view: 'Networks' });
+            }
             return;
         }
 
