@@ -105,30 +105,34 @@ function AppInner() {
 
   // When wagmi detects a connected external wallet, save it to backend
   useEffect(() => {
-    if (walletMode === 'external' && isConnected && address && !savingAddress && !walletChosen) {
-      console.log('[P2P] External wallet connected via WalletConnect:', address);
-      setSavingAddress(true);
-      setConnecting(true);
+    if (walletMode === 'external' && isConnected && address && !savingAddress) {
+      const isMismatch = user && user.wallet_address && address.toLowerCase() !== user.wallet_address.toLowerCase();
 
-      api.wallet.connectExternal(address)
-        .then(() => {
-          console.log('[P2P] External address saved to backend');
-          return refreshUser();
-        })
-        .then(() => {
-          console.log('[P2P] User refreshed with new wallet');
-          setWalletChosen(true);
-          setConnecting(false);
-          setSavingAddress(false);
-        })
-        .catch((err) => {
-          console.error('[P2P] Failed to save external wallet:', err);
-          setConnecting(false);
-          setSavingAddress(false);
-          setWalletChosen(true); // show app anyway
-        });
+      if (!walletChosen || isMismatch) {
+        console.log('[P2P] External wallet connected:', address, isMismatch ? '(Address change detected)' : '');
+        setSavingAddress(true);
+        setConnecting(true);
+
+        api.wallet.connectExternal(address)
+          .then(() => {
+            console.log('[P2P] External address saved to backend');
+            return refreshUser();
+          })
+          .then(() => {
+            console.log('[P2P] User refreshed with current wallet');
+            setWalletChosen(true);
+            setConnecting(false);
+            setSavingAddress(false);
+          })
+          .catch((err) => {
+            console.error('[P2P] Failed to save external wallet:', err);
+            setConnecting(false);
+            setSavingAddress(false);
+            setWalletChosen(true); // show app anyway
+          });
+      }
     }
-  }, [walletMode, isConnected, address, savingAddress, walletChosen]);
+  }, [walletMode, isConnected, address, savingAddress, walletChosen, user, refreshUser]);
 
   const DeepLinkHandler = () => {
     const navigate = useNavigate();

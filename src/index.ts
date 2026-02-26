@@ -100,11 +100,13 @@ async function main() {
 
     // Guide page
     app.get("/guide", (req, res) => {
+        noCacheHeaders(res);
         res.sendFile(path.join(process.cwd(), "public", "guide.html"));
     });
 
     // Fallback file serving (Express v5 uses {*path} instead of *)
     app.get("/{*path}", (req, res) => {
+        noCacheHeaders(res);
         res.sendFile(path.join(process.cwd(), "public", "index.html"));
     });
 
