@@ -1132,9 +1132,10 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
-        const { release_to_buyer } = req.body;
+        const { release_to_buyer, releaseToBuyer } = req.body;
+        const shouldReleaseToBuyer = release_to_buyer || releaseToBuyer;
 
-        if (release_to_buyer) {
+        if (shouldReleaseToBuyer) {
             // Release escrow to buyer
             let txHash: string | null = null;
             if (trade.on_chain_trade_id) {
