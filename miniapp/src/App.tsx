@@ -116,6 +116,7 @@ function AppInner() {
         api.wallet.connectExternal(address)
           .then(() => {
             console.log('[P2P] External address saved to backend');
+            appKit.close(); // Force modal to close if it's stuck open
             return refreshUser();
           })
           .then(() => {
@@ -210,7 +211,10 @@ function AppInner() {
           // Small delay to let wagmi state update
           setTimeout(() => {
             console.log('[P2P] After modal open, wagmi state:', { isConnected, address });
-          }, 1000);
+            if (isConnected && address) {
+              appKit.close();
+            }
+          }, 1500);
         }}
       />
     );
