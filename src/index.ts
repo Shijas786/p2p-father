@@ -141,11 +141,12 @@ async function main() {
 
                 // Update the Telegram Menu Button to point to /miniapp
                 try {
+                    const cacheBuster = `?v=${Date.now()}`;
                     await bot.api.setChatMenuButton({
                         menu_button: {
                             type: "web_app",
                             text: "Open App",
-                            web_app: { url: "https://p2pfather.up.railway.app/miniapp" }
+                            web_app: { url: `https://p2pfather.up.railway.app/miniapp${cacheBuster}` }
                         }
                     });
                     console.log("  ✅ Menu button updated to /miniapp");

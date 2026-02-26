@@ -362,7 +362,8 @@ bot.command("start", async (ctx) => {
         const orderId = payload.replace("buy_", "");
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
-            const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/trade/new/${orderId}`;
+            const cacheBuster = `?v=${Date.now()}`;
+            const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/trade/new/${orderId}${cacheBuster}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
             await ctx.reply(`🔍 *Viewing Ad #${orderId.slice(0, 8)}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
@@ -430,7 +431,8 @@ bot.command("start", async (ctx) => {
         "Ready to begin?",
     ].join("\n");
 
-    const miniAppUrl = "https://p2pfather.up.railway.app/miniapp";
+    const cacheBuster = `?v=${Date.now()}`;
+    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
@@ -509,7 +511,8 @@ bot.command("payment", async (ctx) => {
         "Or use the Mini App for the easiest setup! 📱",
     ].join("\n");
 
-    const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/profile";
+    const cacheBuster = `?v=${Date.now()}`;
+    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/profile${cacheBuster}`;
     const keyboard = new InlineKeyboard()
         .webApp("📱 Open Profile", miniAppUrl)
         .row()
@@ -698,7 +701,8 @@ bot.command("help", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("newad", async (ctx) => {
-    const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
+    const cacheBuster = `?v=${Date.now()}`;
+    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/create${cacheBuster}`;
     const keyboard = new InlineKeyboard()
         .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
@@ -1393,7 +1397,8 @@ bot.on("callback_query:data", async (ctx) => {
                 "Ready to begin?",
             ].join("\n");
 
-            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp";
+            const cacheBuster = `?v=${Date.now()}`;
+            const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
             const startKeyboard = new InlineKeyboard()
                 .webApp("📱 Launch Application", miniAppUrl);
 
@@ -1931,7 +1936,7 @@ bot.on("callback_query:data", async (ctx) => {
                     if (targetGroup !== undefined) {
                         // Post ONLY to that group
                         const groupKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/miniapp?startapp=order_${order.id}`);
+                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/miniapp?startapp=order_${order.id}&v=${Date.now()}`);
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
