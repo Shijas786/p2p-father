@@ -6,11 +6,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy all source files (Invalidate Cache: 2026-02-26 V16)
+# Copy all source files (Invalidate Cache: 2026-02-26 V16.2)
 COPY . .
 
 # NUCLEAR: Force Docker to rebuild from here (change string to bust)
-RUN echo "FORCE_REBUILD_MINIAPP_PATH_20260226_V1"
+RUN echo "FORCE_REBUILD_MINIAPP_PATH_20260226_V2"
 WORKDIR /app/miniapp
 RUN npm install --legacy-peer-deps && rm -rf dist && npx vite build && ls -la dist/assets/*.css
 

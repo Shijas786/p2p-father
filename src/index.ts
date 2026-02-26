@@ -126,6 +126,10 @@ async function main() {
             console.log("  ⚠️ Webhook delete minor error:", err.message);
         }
 
+        // Give old instance 3 seconds to die (prevents 409 Conflict during zero-downtime redeploy)
+        console.log("  ⏳ Waiting 3s for old instances to clear...");
+        await new Promise(r => setTimeout(r, 3000));
+
         bot.start({
             onStart: async (botInfo) => {
                 console.log(`  ✅ Bot started! @${botInfo.username}`);
@@ -156,6 +160,18 @@ async function main() {
         console.log("  ✅ API Server only mode.");
     }
 }
+
+// Robust error logging
+process.on("uncaughtException", (err) => {
+    console.error("💥 Uncaught Exception:", err);
+    if (err.message.includes("Conflict")) {
+        console.log("⚠️ Bot conflict detected. Only one instance should run.");
+    }
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("💥 Unhandled Rejection at:", promise, "reason:", reason);
+});
 
 // Graceful shutdown
 process.on("SIGINT", () => {
