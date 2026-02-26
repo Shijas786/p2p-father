@@ -98,6 +98,11 @@ async function main() {
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
 
+    // Guide page
+    app.get("/guide", (req, res) => {
+        res.sendFile(path.join(process.cwd(), "public", "guide.html"));
+    });
+
     // Fallback file serving (Express v5 uses {*path} instead of *)
     app.get("/{*path}", (req, res) => {
         res.sendFile(path.join(process.cwd(), "public", "index.html"));
