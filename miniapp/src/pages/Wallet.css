@@ -253,27 +253,28 @@
 }
 
 .modal-content {
-    background: linear-gradient(165deg, #1e2330 0%, #10141d 100%);
+    background: #151922;
     width: 100%;
-    max-width: 360px;
-    border-radius: 24px;
-    padding: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 320px;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 85vh;
     overflow-y: auto;
     position: relative;
 }
 
 .modal-content h3 {
-    font-size: 16px;
-    font-weight: 800;
-    margin-bottom: 12px;
-    text-align: center;
-    background: linear-gradient(to right, #fff, #94a3b8);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-align: left;
+    color: #fff;
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: initial;
 }
 
 /* ════ Segmented Selectors ════ */
@@ -306,12 +307,12 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 10px;
-    border-radius: 9px;
-    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--text-secondary);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s;
     border: none;
     background: transparent;
 }
@@ -339,27 +340,28 @@
 .token-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 6px;
+    margin-bottom: 12px;
 }
 
 .token-btn {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 4px;
-    padding: 8px 6px;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 4px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    transition: all 0.25s ease;
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
 .token-btn.active {
-    background: rgba(14, 203, 129, 0.1);
-    border-color: rgba(14, 203, 129, 0.4);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    transform: translateY(-1px);
+    background: rgba(14, 203, 129, 0.08);
+    border-color: rgba(14, 203, 129, 0.3);
+    box-shadow: none;
+    transform: none;
 }
 
 .token-btn.active span {
@@ -368,12 +370,11 @@
 }
 
 .token-btn-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .token-btn-symbol {
@@ -384,19 +385,20 @@
 
 /* ════ Stat Card ════ */
 .modal-stat-card {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: transparent;
+    border-radius: 0;
+    padding: 4px 0;
+    margin-bottom: 10px;
+    border: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .modal-stat-label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 9px;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--text-muted);
     letter-spacing: 0.3px;
@@ -405,7 +407,7 @@
 
 .modal-stat-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: #fff;
 }
@@ -413,14 +415,14 @@
 /* ════ Input Style ════ */
 .modal-input-wrapper {
     position: relative;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .modal-input-field {
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px;
     font-size: 16px;
     font-weight: 700;
     color: #fff;
@@ -432,24 +434,22 @@
 .modal-input-field:focus {
     border-color: var(--green);
     background: rgba(14, 203, 129, 0.02);
-    box-shadow: 0 0 20px rgba(14, 203, 129, 0.05);
 }
 
 /* ════ Action Button ════ */
 .modal-action-btn {
     width: 100%;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 8px;
     background: var(--green);
     color: #000;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: none;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(14, 203, 129, 0.2);
 }
 
 .modal-action-btn:hover {
