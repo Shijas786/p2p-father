@@ -257,7 +257,7 @@
     width: 100%;
     max-width: 360px;
     border-radius: 24px;
-    padding: 24px;
+    padding: 16px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
     animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 85vh;
@@ -266,9 +266,9 @@
 }
 
 .modal-content h3 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     text-align: center;
     background: linear-gradient(to right, #fff, #94a3b8);
     -webkit-background-clip: text;
@@ -278,7 +278,7 @@
 
 /* ════ Segmented Selectors ════ */
 .selection-group {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .selection-label {
@@ -306,9 +306,9 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 9px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -340,26 +340,26 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .token-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
+    gap: 4px;
+    padding: 8px 6px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
+    border-radius: 12px;
     transition: all 0.25s ease;
 }
 
 .token-btn.active {
     background: rgba(14, 203, 129, 0.1);
     border-color: rgba(14, 203, 129, 0.4);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
 }
 
 .token-btn.active span {
@@ -368,8 +368,8 @@
 }
 
 .token-btn-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -377,7 +377,7 @@
 }
 
 .token-btn-symbol {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--text-secondary);
 }
@@ -385,10 +385,13 @@
 /* ════ Stat Card ════ */
 .modal-stat-card {
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 20px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .modal-stat-label {
@@ -396,13 +399,13 @@
     font-weight: 700;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 6px;
-    display: block;
+    letter-spacing: 0.3px;
+    margin-bottom: 0;
 }
 
 .modal-stat-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 700;
     color: #fff;
 }
@@ -410,15 +413,15 @@
 /* ════ Input Style ════ */
 .modal-input-wrapper {
     position: relative;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .modal-input-field {
     background: rgba(0, 0, 0, 0.3);
     border: 2px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-    padding: 16px;
-    font-size: 18px;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 16px;
     font-weight: 700;
     color: #fff;
     width: 100%;
@@ -435,18 +438,18 @@
 /* ════ Action Button ════ */
 .modal-action-btn {
     width: 100%;
-    padding: 16px;
-    border-radius: 14px;
+    padding: 12px;
+    border-radius: 12px;
     background: var(--green);
     color: #000;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     border: none;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 8px 24px rgba(14, 203, 129, 0.2);
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(14, 203, 129, 0.2);
 }
 
 .modal-action-btn:hover {
