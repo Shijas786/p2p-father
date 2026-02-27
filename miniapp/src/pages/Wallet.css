@@ -253,92 +253,215 @@
 }
 
 .modal-content {
-    background: #1e2330;
-    /* Match header card */
+    background: linear-gradient(165deg, #1e2330 0%, #10141d 100%);
     width: 100%;
-    max-width: 340px;
-    /* Small Popup Width */
-    border-radius: 16px;
-    /* Fully rounded */
-    padding: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 80vh;
+    max-width: 360px;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 85vh;
     overflow-y: auto;
     position: relative;
+}
+
+.modal-content h3 {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    text-align: center;
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ════ Segmented Selectors ════ */
+.selection-group {
+    margin-bottom: 20px;
+}
+
+.selection-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+    letter-spacing: 0.5px;
+}
+
+.segmented-control {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Remove slideUp, add scaleIn */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes scaleIn {
-    from {
-        transform: scale(0.95);
-        opacity: 0;
-    }
-
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-.badge-chain-toggle {
-    display: flex;
-    gap: 4px;
-    background: #151922;
-    padding: 3px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-}
-
-.btn-toggle {
+.segmented-btn {
     flex: 1;
-    border: none;
-    font-size: 12px;
-    padding: 6px;
-    border-radius: 6px;
-    background: transparent;
-    color: #888;
-    transition: all 0.2s;
-}
-
-.btn-toggle.active {
-    background: var(--bg-elevated);
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Base/BSC Specific Buttons */
-.btn-chain-base.active {
-    background: #0052ff !important;
-    color: #fff !important;
-}
-
-.btn-chain-bsc.active {
-    background: #f0b90b !important;
-    color: #000 !important;
-}
-
-/* Token Toggle Buttons with Icons */
-.btn-token-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    background: transparent;
 }
 
-.btn-token-toggle .token-icon {
+.segmented-btn:active {
+    transform: scale(0.96);
+}
+
+/* Chain Specifics */
+.segmented-btn.chain-base.active {
+    background: rgba(0, 82, 255, 0.15);
+    color: #4d90ff;
+    box-shadow: 0 0 15px rgba(0, 82, 255, 0.1);
+    border: 1px solid rgba(0, 82, 255, 0.3);
+}
+
+.segmented-btn.chain-bsc.active {
+    background: rgba(240, 185, 11, 0.15);
+    color: #f3ba2f;
+    box-shadow: 0 0 15px rgba(240, 185, 11, 0.1);
+    border: 1px solid rgba(240, 185, 11, 0.3);
+}
+
+/* Token Specifics */
+.token-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.token-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    transition: all 0.25s ease;
+}
+
+.token-btn.active {
+    background: rgba(14, 203, 129, 0.1);
+    border-color: rgba(14, 203, 129, 0.4);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.token-btn.active span {
+    color: var(--green);
+    font-weight: 700;
+}
+
+.token-btn-icon {
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.token-btn-symbol {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ════ Stat Card ════ */
+.modal-stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.modal-stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* ════ Input Style ════ */
+.modal-input-wrapper {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.modal-input-field {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    width: 100%;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.modal-input-field:focus {
+    border-color: var(--green);
+    background: rgba(14, 203, 129, 0.02);
+    box-shadow: 0 0 20px rgba(14, 203, 129, 0.05);
+}
+
+/* ════ Action Button ════ */
+.modal-action-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--green);
+    color: #000;
+    font-size: 15px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 24px rgba(14, 203, 129, 0.2);
+}
+
+.modal-action-btn:hover {
+    transform: translateY(-2px);
+    background: var(--green-bright);
+    box-shadow: 0 12px 30px rgba(14, 203, 129, 0.3);
+}
+
+.modal-action-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.modal-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }

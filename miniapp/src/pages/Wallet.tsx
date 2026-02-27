@@ -624,50 +624,56 @@ export function Wallet({ user }: Props) {
             {/* Vault Action Modal */}
             {showVaultAction && (
                 <div className="modal-overlay" onClick={() => setShowVaultAction(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="modal-content redesign-inner" onClick={e => e.stopPropagation()}>
                         <h3>{showVaultAction === 'deposit' ? 'Top Up Vault' : 'Withdraw from Vault'}</h3>
 
-                        <div className="flex gap-2 mb-4 mt-2">
-                            <div className="flex-1">
-                                <label className="text-xs text-muted mb-1 block">Chain</label>
-                                <div className="flex gap-1">
-                                    <button className={`btn btn-sm flex-1 btn-toggle btn-token-toggle ${vaultChain === 'base' ? 'active btn-chain-base' : 'btn-secondary'}`} onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}>
-                                        <IconTokenETH size={14} /> Base
-                                    </button>
-                                    <button className={`btn btn-sm flex-1 btn-toggle btn-token-toggle ${vaultChain === 'bsc' ? 'active btn-chain-bsc' : 'btn-secondary'}`} onClick={() => setVaultChain('bsc')}>
-                                        <IconChainBsc size={14} /> BSC
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex-1">
-                                <label className="text-xs text-muted mb-1 block">Token</label>
-                                <div className="flex gap-1">
-                                    {['USDC', 'USDT', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
-                                        <button
-                                            key={t}
-                                            className={`btn btn-sm flex-1 btn-token-toggle ${vaultToken === t ? 'btn-primary' : 'btn-secondary'}`}
-                                            onClick={() => setVaultToken(t as any)}
-                                        >
-                                            <span className="token-icon">
-                                                {t === 'USDC' && <IconTokenUSDC size={14} />}
-                                                {t === 'USDT' && <IconTokenUSDT size={14} />}
-                                                {t === 'BNB' && <IconTokenBNB size={14} />}
-                                            </span>
-                                            {t}
-                                        </button>
-                                    ))}
-                                </div>
+                        {/* Chain Selection (Segmented Control) */}
+                        <div className="selection-group">
+                            <label className="selection-label">Select Chain</label>
+                            <div className="segmented-control">
+                                <button
+                                    className={`segmented-btn chain-base ${vaultChain === 'base' ? 'active' : ''}`}
+                                    onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}
+                                >
+                                    <IconTokenETH size={14} /> Base
+                                </button>
+                                <button
+                                    className={`segmented-btn chain-bsc ${vaultChain === 'bsc' ? 'active' : ''}`}
+                                    onClick={() => setVaultChain('bsc')}
+                                >
+                                    <IconChainBsc size={14} /> BSC
+                                </button>
                             </div>
                         </div>
 
-                        <div className="card bg-secondary p-3 mb-4">
-                            <div className="flex justify-between text-xs text-muted mb-1">
-                                <span>{showVaultAction === 'deposit' ? 'Wallet Balance' : 'Available in Vault'}</span>
+                        {/* Token Selection (Grid) */}
+                        <div className="selection-group">
+                            <label className="selection-label">Select Token</label>
+                            <div className="token-grid">
+                                {['USDC', 'USDT', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
+                                    <button
+                                        key={t}
+                                        className={`token-btn ${vaultToken === t ? 'active' : ''}`}
+                                        onClick={() => setVaultToken(t as any)}
+                                    >
+                                        <div className="token-btn-icon">
+                                            {t === 'USDC' && <IconTokenUSDC size={18} />}
+                                            {t === 'USDT' && <IconTokenUSDT size={18} />}
+                                            {t === 'BNB' && <IconTokenBNB size={18} />}
+                                        </div>
+                                        <span className="token-btn-symbol">{t}</span>
+                                    </button>
+                                ))}
                             </div>
-                            <div className="font-mono font-bold text-lg">
-                                {/* Display correct available balance hint */}
+                        </div>
+
+                        {/* Balance Hint */}
+                        <div className="modal-stat-card">
+                            <span className="modal-stat-label">
+                                {showVaultAction === 'deposit' ? 'Wallet Balance' : 'Available in Vault'}
+                            </span>
+                            <div className="modal-stat-value">
                                 {showVaultAction === 'deposit' ? (
-                                    // Wallet Balance
                                     user?.wallet_type === 'external' ? (
                                         formatBal(getExtBalance(vaultToken, vaultChain), vaultToken === 'BNB' ? 4 : 2)
                                     ) : (
@@ -678,7 +684,6 @@ export function Wallet({ user }: Props) {
                                         )
                                     )
                                 ) : (
-                                    // Vault Available
                                     formatBal(vaultChain === 'base'
                                         ? (vaultToken === 'USDC' ? (parseFloat(vaultBaseUsdc) - parseFloat(reservedBaseUsdc)).toString() : (parseFloat(vaultBaseUsdt) - parseFloat(reservedBaseUsdt)).toString())
                                         : (vaultToken === 'USDC'
@@ -693,41 +698,44 @@ export function Wallet({ user }: Props) {
                             </div>
                         </div>
 
-                        <input
-                            type="number"
-                            placeholder="Amount"
-                            className="input-lg mb-4"
-                            value={vaultAmount}
-                            onChange={e => setVaultAmount(e.target.value)}
-                            autoFocus
-                        />
+                        {/* Amount Input */}
+                        <div className="modal-input-wrapper">
+                            <input
+                                type="number"
+                                placeholder="0.00"
+                                className="modal-input-field"
+                                value={vaultAmount}
+                                onChange={e => setVaultAmount(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
 
-                        {vaultError && <div className="text-red text-sm mb-3">{vaultError}</div>}
-                        {vaultSuccess && <div className="text-green text-sm mb-3">{vaultSuccess}</div>}
+                        {vaultError && <div className="text-red text-center text-sm mb-3">{vaultError}</div>}
+                        {vaultSuccess && <div className="text-green text-center text-sm mb-3">{vaultSuccess}</div>}
 
                         {user?.wallet_type === 'external' && currentChainId !== (vaultChain === 'bsc' ? bsc.id : base.id) ? (
                             <button
-                                className="btn btn-primary btn-block"
+                                className="modal-action-btn"
                                 onClick={() => smartSwitch(vaultChain === 'bsc' ? bsc.id : base.id)}
                                 disabled={vaultLoading}
                             >
-                                {vaultLoading ? <div className="flex items-center gap-2 justify-center"><span className="spinner-white" /><span>SWITCHING...</span></div> : `Switch to ${vaultChain.toUpperCase()} Network`}
+                                {vaultLoading ? 'Switching...' : `Switch to ${vaultChain.toUpperCase()}`}
                             </button>
                         ) : showVaultAction === 'deposit' && user?.wallet_type === 'external' && vaultNeedsApproval && vaultStep !== 'approved' ? (
                             <button
-                                className="btn btn-primary btn-block"
+                                className="modal-action-btn"
                                 onClick={handleVaultApprove}
                                 disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
                             >
-                                {vaultLoading ? <span className="spinner" /> : `Step 1: Approve ${vaultToken}`}
+                                {vaultLoading ? 'Approving...' : `Step 1: Approve ${vaultToken}`}
                             </button>
                         ) : (
                             <button
-                                className="btn btn-primary btn-block"
+                                className="modal-action-btn"
                                 onClick={handleVaultAction}
                                 disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
                             >
-                                {vaultLoading ? <span className="spinner" /> : (showVaultAction === 'deposit' ? (user?.wallet_type === 'external' ? 'Step 2: Deposit' : 'Deposit') : 'Withdraw')}
+                                {vaultLoading ? 'Processing...' : (showVaultAction === 'deposit' ? (user?.wallet_type === 'external' ? 'Step 2: Deposit' : 'Confirm Deposit') : 'Confirm Withdraw')}
                             </button>
                         )}
                     </div>
