@@ -214,7 +214,13 @@ export function CreateOrder() {
 
 
     async function handleApprove() {
-        if (!amount || !isExternalUser || !isConnected || !address) return;
+        if (!amount || !isExternalUser || !isConnected || !address) {
+            if (isExternalUser && !isConnected) {
+                showToast("Connect your wallet first", "warning");
+                appKit.open();
+            }
+            return;
+        }
         haptic('medium');
         setSubmitting(true);
         setError('');
@@ -256,6 +262,14 @@ export function CreateOrder() {
 
     async function submit() {
         if (isDataLoading) return;
+
+        // Connection Guard
+        if (isExternalUser && (!isConnected || !address)) {
+            showToast("Wallet disconnected. Please reconnect.", "warning");
+            appKit.open();
+            return;
+        }
+
         haptic('medium');
         setSubmitting(true);
         setError('');

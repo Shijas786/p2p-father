@@ -43,7 +43,7 @@ interface Props {
 export function TradeDetail({ user }: Props) {
     const { id, orderId } = useParams<{ id: string; orderId: string }>();
     const navigate = useNavigate();
-    const { address: externalAddress } = useAccount();
+    const { address: externalAddress, isConnected } = useAccount();
 
     // State
     const [trade, setTrade] = useState<any>(null);
@@ -317,6 +317,11 @@ export function TradeDetail({ user }: Props) {
 
     // 1. Approve Token
     async function handleApprove() {
+        if (isExternalWallet && (!externalAddress || !isConnected)) {
+            showToast("Connect your wallet first", "warning");
+            appKit.open();
+            return;
+        }
         const targetChainId = tradeChain === 'bsc' ? bsc.id : base.id;
         const switched = await smartSwitch(targetChainId);
         if (!switched) return;
@@ -352,6 +357,11 @@ export function TradeDetail({ user }: Props) {
 
     // 2. Lock Funds (Create Trade on Chain)
     async function handleLockFunds() {
+        if (isExternalWallet && (!externalAddress || !isConnected)) {
+            showToast("Connect your wallet first", "warning");
+            appKit.open();
+            return;
+        }
         const targetChainId = tradeChain === 'bsc' ? bsc.id : base.id;
         const switched = await smartSwitch(targetChainId);
         if (!switched) return;

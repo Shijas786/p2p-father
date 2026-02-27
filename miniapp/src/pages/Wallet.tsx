@@ -227,6 +227,14 @@ export function Wallet({ user }: Props) {
     // ═══ VAULT OPERATIONS ═══
     async function handleVaultApprove() {
         if (!vaultAmount || parseFloat(vaultAmount) <= 0) return;
+
+        // Connection Guard
+        if (user?.wallet_type === 'external' && (!isConnected || !wagmiAddress)) {
+            setVaultError("Wallet disconnected. Please connect first.");
+            appKit.open();
+            return;
+        }
+
         setVaultLoading(true);
         setVaultError('');
         setVaultSuccess('');
@@ -269,6 +277,13 @@ export function Wallet({ user }: Props) {
     async function handleVaultAction() {
         if (!vaultAmount || parseFloat(vaultAmount) <= 0) return;
 
+        // Connection Guard
+        if (user?.wallet_type === 'external' && (!isConnected || !wagmiAddress)) {
+            setVaultError("Wallet disconnected. Please connect first.");
+            appKit.open();
+            return;
+        }
+
         // Validation for Withdraw
         if (showVaultAction === 'withdraw') {
             let available = 0;
@@ -301,11 +316,6 @@ export function Wallet({ user }: Props) {
             const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
 
             if (isExternal) {
-                if (!isConnected || !wagmiAddress) {
-                    setVaultError("Please connect your wallet first.");
-                    appKit.open();
-                    return;
-                }
 
                 const switched = await smartSwitch(targetChainId);
                 if (!switched) return;
