@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
 import { waitForTransactionReceipt } from '@wagmi/core';
 import { parseUnits, formatUnits } from 'viem';
 import { api } from '../lib/api';
@@ -8,6 +8,9 @@ import { haptic } from '../lib/telegram';
 import { CONTRACTS, ESCROW_ABI, ERC20_ABI } from '../lib/contracts';
 import { wagmiConfig, appKit } from '../lib/wagmi';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../components/Toast';
+import { useBalance } from 'wagmi';
+import { bsc, base } from 'wagmi/chains';
 import './CreateOrder.css';
 
 const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK'];
@@ -101,6 +104,8 @@ export function CreateOrder() {
     });
 
     const { writeContractAsync } = useWriteContract();
+    const { switchChainAsync } = useSwitchChain();
+    const { showToast } = useToast();
 
     const TOKENS_BY_CHAIN: Record<string, string[]> = {
         base: ['USDC', 'USDT'],
@@ -127,6 +132,61 @@ export function CreateOrder() {
             if (data.fee_percentage) setFeePercentage(data.fee_percentage);
         }).catch(console.error);
     }, [type, chain, token]);
+
+    // ═══ EXTERNAL WALLET AUTO-FETCH ═══
+    const isExt = user?.wallet_type === 'external' && isConnected && address;
+    const baseUsdcAddr = (CONTRACTS as any).base.tokens.USDC;
+    const baseUsdtAddr = (CONTRACTS as any).base.tokens.USDT;
+    const bscUsdcAddr = (CONTRACTS as any).bsc.tokens.USDC;
+    const bscUsdtAddr = (CONTRACTS as any).bsc.tokens.USDT;
+
+    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr } });
+    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr } });
+    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr } });
+    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr } });
+    const { data: bscNativeBal } = useBalance({ address: address, chainId: bsc.id, query: { enabled: !!isExt } });
+
+    const getExtBalance = (tok: string, ch: string) => {
+        if (!isExt) return "0.00";
+        if (ch === 'base') {
+            const raw = tok === 'USDC' ? extBaseUsdc : extBaseUsdt;
+            return raw ? formatUnits(raw as bigint, 6) : "0.00";
+        } else {
+            if (tok === 'BNB') return bscNativeBal?.value ? formatUnits(bscNativeBal.value, 18) : "0.00";
+            const raw = tok === 'USDC' ? extBscUsdc : extBscUsdt;
+            return raw ? formatUnits(raw as bigint, 18) : "0.00";
+        }
+    };
+
+    // ═══ SMART NETWORK SWITCHER ═══
+    async function smartSwitch(targetId: number) {
+        if (walletChain?.id === targetId) return true;
+        haptic('selection');
+        setSubmitting(true);
+        showToast(`Switching to ${targetId === bsc.id ? 'BSC' : 'Base'}...`, 'info');
+
+        try {
+            const switchPromise = switchChainAsync({ chainId: targetId });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("SWITCH_TIMEOUT")), 8000));
+            await Promise.race([switchPromise, timeoutPromise]);
+            showToast("Network Switched!", "success");
+            setSubmitting(false);
+            return true;
+        } catch (err: any) {
+            console.error("[SmartSwitch] Error:", err);
+            if (err.message === "SWITCH_TIMEOUT" || (err.code && err.code !== 4001)) {
+                showToast("Wallet unresponsive. Please switch manually.", "warning");
+                appKit.open({ view: 'Networks' });
+            } else if (err.code === 4001) {
+                showToast("Switch rejected by user", "error");
+            } else {
+                showToast("Switch failed. Try the network menu.", "error");
+                appKit.open({ view: 'Networks' });
+            }
+            setSubmitting(false);
+            return false;
+        }
+    }
 
     const physicalBalance = vaultBalance !== undefined ? parseFloat(formatUnits(vaultBalance as bigint, decimals)) : 0;
     const availableBalance = physicalBalance - reserved;
@@ -157,12 +217,8 @@ export function CreateOrder() {
         setError('');
 
         try {
-            if (!isCorrectChain) {
-                setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
-                appKit.open({ view: 'Networks' });
-                setSubmitting(false);
-                return;
-            }
+            const switched = await smartSwitch(targetChainId);
+            if (!switched) return;
 
             const amountUnits = parseUnits(amount, decimals);
             const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
@@ -170,6 +226,7 @@ export function CreateOrder() {
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
             setTxStep('approving');
+            showToast(`Approving ${token} in wallet...`, 'info');
             const hash = await writeContractAsync({
                 address: tokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
@@ -183,6 +240,7 @@ export function CreateOrder() {
 
             haptic('success');
             setApprovalDone(true);
+            showToast("Approved successfully!", "success");
         } catch (err: any) {
             console.error(err);
             setError(err.shortMessage || err.message || 'Approval failed');
@@ -212,12 +270,8 @@ export function CreateOrder() {
                 const amountUnits = parseUnits(amount, decimals);
                 const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
 
-                if (!isCorrectChain) {
-                    setError(`Please switch to ${chain === 'bsc' ? 'BSC' : 'Base'} network`);
-                    appKit.open({ view: 'Networks' });
-                    setSubmitting(false);
-                    return;
-                }
+                const switched = await smartSwitch(targetChainId);
+                if (!switched) return;
 
                 const isBsc = chain === 'bsc';
                 const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
@@ -225,6 +279,7 @@ export function CreateOrder() {
                 // Deposit if needed (approval should already be done)
                 if (needsDeposit) {
                     setTxStep('depositing');
+                    showToast("Depositing in wallet...", "info");
                     const hash = await writeContractAsync({
                         address: currentEscrow as `0x${string}`,
                         abi: ESCROW_ABI,
@@ -236,6 +291,7 @@ export function CreateOrder() {
                     });
                     console.log('Deposit Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });
+                    showToast("Deposit confirmed!", "success");
                 }
             }
 
@@ -421,9 +477,14 @@ export function CreateOrder() {
                         {type === 'sell' && (
                             <div className={`co-vault-box card-glass mb-3 ${availableBalance < parseFloat(amount || '0') ? 'border-orange' : 'border-green'}`}>
                                 <div className="flex justify-between items-center text-[10px]">
-                                    <span className="text-muted uppercase">Vault Balance</span>
+                                    <span className="text-muted uppercase">
+                                        {isExternalUser ? 'External Wallet Balance' : 'Vault Balance'}
+                                    </span>
                                     <span className={availableBalance < parseFloat(amount || '0') ? 'text-orange' : 'text-green'}>
-                                        {vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...'} {token}
+                                        {isExternalUser
+                                            ? formatBal(getExtBalance(token, chain), token === 'BNB' ? 4 : 2)
+                                            : (vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')
+                                        } {token}
                                     </span>
                                 </div>
                             </div>

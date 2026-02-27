@@ -9,6 +9,8 @@ import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
 import { copyToClipboard } from '../lib/utils';
+import { useToast } from '../components/Toast';
+import { useBalance } from 'wagmi';
 import './Wallet.css';
 
 interface Props {
@@ -58,6 +60,7 @@ export function Wallet({ user }: Props) {
     const { address: wagmiAddress, isConnected, chain: walletChain } = useAccount();
     const { writeContractAsync } = useWriteContract();
     const { switchChainAsync } = useSwitchChain();
+    const { showToast } = useToast();
     const config = useConfig();
 
     useEffect(() => {
@@ -153,6 +156,70 @@ export function Wallet({ user }: Props) {
         vaultAllowance === undefined || parseFloat(formatUnits(vaultAllowance as bigint, vaultDecimals)) < parseFloat(vaultAmount)
     );
 
+    // ═══ EXTERNAL WALLET AUTO-FETCH ═══
+    // Fetch external wallet balances for ALL supported assets in parallel
+    const isExt = user?.wallet_type === 'external' && isConnected && wagmiAddress;
+    const baseUsdcAddr = (CONTRACTS as any).base.tokens.USDC;
+    const baseUsdtAddr = (CONTRACTS as any).base.tokens.USDT;
+    const bscUsdcAddr = (CONTRACTS as any).bsc.tokens.USDC;
+    const bscUsdtAddr = (CONTRACTS as any).bsc.tokens.USDT;
+
+    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr } });
+    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr } });
+    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr } });
+    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr } });
+    const { data: bscNativeBal } = useBalance({ address: wagmiAddress, chainId: bsc.id, query: { enabled: !!isExt } });
+
+    const getExtBalance = (token: string, chain: string) => {
+        if (!isExt) return "0.00";
+        if (chain === 'base') {
+            const raw = token === 'USDC' ? extBaseUsdc : extBaseUsdt;
+            return raw ? formatUnits(raw as bigint, 6) : "0.00";
+        } else {
+            if (token === 'BNB') return bscNativeBal?.value ? formatUnits(bscNativeBal.value, 18) : "0.00";
+            const raw = token === 'USDC' ? extBscUsdc : extBscUsdt;
+            return raw ? formatUnits(raw as bigint, 18) : "0.00";
+        }
+    };
+
+    // ═══ SMART NETWORK SWITCHER ═══
+    async function smartSwitch(targetId: number) {
+        if (walletChain?.id === targetId) return true;
+        haptic('selection');
+        setVaultLoading(true);
+        showToast(`Switching to ${targetId === bsc.id ? 'BSC' : 'Base'}...`, 'info');
+
+        try {
+            // Attempt automatic switch
+            const switchPromise = switchChainAsync({ chainId: targetId });
+
+            // Timeout after 8 seconds if wallet is unresponsive
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("SWITCH_TIMEOUT")), 8000)
+            );
+
+            await Promise.race([switchPromise, timeoutPromise]);
+            showToast("Network Switched!", "success");
+            setVaultLoading(false);
+            return true;
+        } catch (err: any) {
+            console.error("[SmartSwitch] Error:", err);
+
+            if (err.message === "SWITCH_TIMEOUT" || (err.code && err.code !== 4001)) {
+                showToast("Wallet unresponsive. Please switch manually.", "warning");
+                appKit.open({ view: 'Networks' });
+            } else if (err.code === 4001) {
+                showToast("Switch rejected by user", "error");
+            } else {
+                showToast("Switch failed. Try the network menu.", "error");
+                appKit.open({ view: 'Networks' });
+            }
+
+            setVaultLoading(false);
+            return false;
+        }
+    }
+
     // ═══ VAULT OPERATIONS ═══
     async function handleVaultApprove() {
         if (!vaultAmount || parseFloat(vaultAmount) <= 0) return;
@@ -162,22 +229,14 @@ export function Wallet({ user }: Props) {
 
         try {
             const targetChainId = vaultChain === 'bsc' ? bsc.id : base.id;
-            if (walletChain?.id !== targetChainId) {
-                setVaultError(`Please switch to ${vaultChain.toUpperCase()} network`);
-                try {
-                    await switchChainAsync({ chainId: targetChainId });
-                    setVaultError('');
-                } catch (e) {
-                    appKit.open({ view: 'Networks' });
-                }
-                setVaultLoading(false);
-                return;
-            }
+            const switched = await smartSwitch(targetChainId);
+            if (!switched) return;
 
             const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
             const isBsc = vaultChain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
+            showToast(`Approving ${vaultToken} in wallet...`, 'info');
             const approveHash = await writeContractAsync({
                 address: vaultTokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
@@ -190,11 +249,13 @@ export function Wallet({ user }: Props) {
 
             haptic('success');
             setVaultSuccess('✅ Approved! Now click Deposit.');
+            showToast("Approved successfully!", "success");
             setVaultStep('approved');
             await refetchVaultAllowance();
         } catch (err: any) {
             console.error(err);
             setVaultError(err.message || 'Approval failed');
+            showToast("Approval failed", "error");
             haptic('error');
         } finally {
             setVaultLoading(false);
@@ -238,20 +299,12 @@ export function Wallet({ user }: Props) {
             if (isExternal) {
                 if (!isConnected || !wagmiAddress) {
                     setVaultError("Please connect your wallet first.");
+                    appKit.open();
                     return;
                 }
 
-                if (walletChain?.id !== targetChainId) {
-                    setVaultError(`Please switch to ${vaultChain.toUpperCase()} network`);
-                    try {
-                        await switchChainAsync({ chainId: targetChainId });
-                        setVaultError('');
-                    } catch (e) {
-                        appKit.open({ view: 'Networks' });
-                    }
-                    setVaultLoading(false);
-                    return;
-                }
+                const switched = await smartSwitch(targetChainId);
+                if (!switched) return;
 
                 const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
                 const isBsc = vaultChain === 'bsc';
@@ -259,6 +312,7 @@ export function Wallet({ user }: Props) {
 
                 if (showVaultAction === 'deposit') {
                     setVaultSuccess('Deposit pending...');
+                    showToast("Depositing in wallet...", "info");
                     const depositHash = await writeContractAsync({
                         address: vaultEscrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
@@ -271,6 +325,7 @@ export function Wallet({ user }: Props) {
                     await waitForTransactionReceipt(config, { hash: depositHash });
                 } else {
                     setVaultSuccess('Withdraw pending...');
+                    showToast("Withdrawing in wallet...", "info");
                     const txHash = await writeContractAsync({
                         address: vaultEscrowAddress as `0x${string}`,
                         abi: ESCROW_ABI,
@@ -282,6 +337,7 @@ export function Wallet({ user }: Props) {
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }
                 setVaultSuccess('Success!');
+                showToast("Transaction confirmed!", "success");
             } else {
                 // Bot Wallet
                 if (showVaultAction === 'deposit') {
@@ -290,6 +346,7 @@ export function Wallet({ user }: Props) {
                     await api.wallet.withdrawFromVault(amount, vaultToken, vaultChain);
                 }
                 setVaultSuccess('Success!');
+                showToast("Vault updated!", "success");
             }
 
             haptic('success');
@@ -302,6 +359,7 @@ export function Wallet({ user }: Props) {
         } catch (err: any) {
             console.error(err);
             setVaultError(err.message || 'Operation failed');
+            showToast("Operation failed", "error");
             haptic('error');
         } finally {
             setVaultLoading(false);
@@ -587,10 +645,14 @@ export function Wallet({ user }: Props) {
                                 {/* Display correct available balance hint */}
                                 {showVaultAction === 'deposit' ? (
                                     // Wallet Balance
-                                    formatBal(vaultChain === 'base'
-                                        ? (vaultToken === 'USDC' ? balances?.usdc : balances?.usdt)
-                                        : (vaultToken === 'USDC' ? balances?.bsc_usdc : vaultToken === 'USDT' ? balances?.bsc_usdt : balances?.bnb),
-                                        vaultToken === 'BNB' ? 4 : 2
+                                    user?.wallet_type === 'external' ? (
+                                        formatBal(getExtBalance(vaultToken, vaultChain), vaultToken === 'BNB' ? 4 : 2)
+                                    ) : (
+                                        formatBal(vaultChain === 'base'
+                                            ? (vaultToken === 'USDC' ? balances?.usdc : balances?.usdt)
+                                            : (vaultToken === 'USDC' ? balances?.bsc_usdc : vaultToken === 'USDT' ? balances?.bsc_usdt : balances?.bnb),
+                                            vaultToken === 'BNB' ? 4 : 2
+                                        )
                                     )
                                 ) : (
                                     // Vault Available
@@ -623,19 +685,10 @@ export function Wallet({ user }: Props) {
                         {user?.wallet_type === 'external' && walletChain?.id !== (vaultChain === 'bsc' ? bsc.id : base.id) ? (
                             <button
                                 className="btn btn-primary btn-block"
-                                onClick={async () => {
-                                    setVaultLoading(true);
-                                    try {
-                                        await switchChainAsync({ chainId: vaultChain === 'bsc' ? bsc.id : base.id });
-                                        setVaultError('');
-                                    } catch (e) {
-                                        appKit.open({ view: 'Networks' });
-                                    }
-                                    setVaultLoading(false);
-                                }}
+                                onClick={() => smartSwitch(vaultChain === 'bsc' ? bsc.id : base.id)}
                                 disabled={vaultLoading}
                             >
-                                {vaultLoading ? <span className="spinner" /> : `Switch to ${vaultChain.toUpperCase()} Network`}
+                                {vaultLoading ? <div className="flex items-center gap-2 justify-center"><span className="spinner-white" /><span>SWITCHING...</span></div> : `Switch to ${vaultChain.toUpperCase()} Network`}
                             </button>
                         ) : showVaultAction === 'deposit' && user?.wallet_type === 'external' && vaultNeedsApproval && vaultStep !== 'approved' ? (
                             <button

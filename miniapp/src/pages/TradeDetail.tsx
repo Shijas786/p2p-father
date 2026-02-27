@@ -8,6 +8,8 @@ import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import { copyToClipboard } from '../lib/utils';
 import { appKit } from '../lib/wagmi';
+import { useToast } from '../components/Toast';
+import { bsc, base } from 'wagmi/chains';
 import './TradeDetail.css';
 
 // createTrade ABI extension (not in shared contracts.ts)
@@ -68,6 +70,7 @@ export function TradeDetail({ user }: Props) {
     const { writeContractAsync } = useWriteContract();
     const { chain: walletChain } = useAccount();
     const { switchChainAsync } = useSwitchChain();
+    const { showToast } = useToast();
 
     const formatBal = (val: any, decs = 2) => {
         const num = parseFloat(val || '0');
@@ -279,20 +282,41 @@ export function TradeDetail({ user }: Props) {
             setActionLoading(false);
         }
     }
+    // ═══ SMART NETWORK SWITCHER ═══
+    async function smartSwitch(targetId: number) {
+        if (walletChain?.id === targetId) return true;
+        haptic('selection');
+        setActionLoading(true);
+        showToast(`Switching to ${targetId === bsc.id ? 'BSC' : 'Base'}...`, 'info');
+
+        try {
+            const switchPromise = switchChainAsync({ chainId: targetId });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("SWITCH_TIMEOUT")), 8000));
+            await Promise.race([switchPromise, timeoutPromise]);
+            showToast("Network Switched!", "success");
+            setActionLoading(false);
+            return true;
+        } catch (err: any) {
+            console.error("[SmartSwitch] Error:", err);
+            if (err.message === "SWITCH_TIMEOUT" || (err.code && err.code !== 4001)) {
+                showToast("Wallet unresponsive. Please switch manually.", "warning");
+                appKit.open({ view: 'Networks' });
+            } else if (err.code === 4001) {
+                showToast("Switch rejected by user", "error");
+            } else {
+                showToast("Switch failed. Try the network menu.", "error");
+                appKit.open({ view: 'Networks' });
+            }
+            setActionLoading(false);
+            return false;
+        }
+    }
 
     // 1. Approve Token
     async function handleApprove() {
-        const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
-        if (walletChain?.id !== targetChainId) {
-            setError(`Please switch to ${tradeChain.toUpperCase()} network`);
-            try {
-                await switchChainAsync({ chainId: targetChainId });
-                setError('');
-            } catch (err: any) {
-                appKit.open({ view: 'Networks' });
-            }
-            return;
-        }
+        const targetChainId = tradeChain === 'bsc' ? bsc.id : base.id;
+        const switched = await smartSwitch(targetChainId);
+        if (!switched) return;
 
         haptic('medium');
         setActionLoading(true);
@@ -301,6 +325,7 @@ export function TradeDetail({ user }: Props) {
             const isBsc = tradeChain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
+            showToast(`Approving ${trade.token} in wallet...`, 'info');
             const hash = await writeContractAsync({
                 address: tokenAddress,
                 abi: ERC20_ABI,
@@ -312,6 +337,7 @@ export function TradeDetail({ user }: Props) {
             setApproveTxHash(hash);
             console.log('Approve TX:', hash);
             haptic('success');
+            showToast("Approval sent!", "success");
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Approval failed');
@@ -323,17 +349,9 @@ export function TradeDetail({ user }: Props) {
 
     // 2. Lock Funds (Create Trade on Chain)
     async function handleLockFunds() {
-        const targetChainId = tradeChain === 'bsc' ? 56 : 8453;
-        if (walletChain?.id !== targetChainId) {
-            setError(`Please switch to ${tradeChain.toUpperCase()} network`);
-            try {
-                await switchChainAsync({ chainId: targetChainId });
-                setError('');
-            } catch (err: any) {
-                appKit.open({ view: 'Networks' });
-            }
-            return;
-        }
+        const targetChainId = tradeChain === 'bsc' ? bsc.id : base.id;
+        const switched = await smartSwitch(targetChainId);
+        if (!switched) return;
 
         haptic('heavy');
         setActionLoading(true);
@@ -345,6 +363,7 @@ export function TradeDetail({ user }: Props) {
             const isBsc = tradeChain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
+            showToast("Locking funds in wallet...", "info");
             const hash = await writeContractAsync({
                 address: escrowAddress,
                 abi: ESCROW_CREATE_TRADE_ABI,
@@ -361,6 +380,7 @@ export function TradeDetail({ user }: Props) {
             });
             setLockTxHash(hash);
             console.log('Lock TX:', hash);
+            showToast("Lock transaction sent!", "success");
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Lock failed');
