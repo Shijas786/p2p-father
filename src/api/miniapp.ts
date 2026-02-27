@@ -451,18 +451,24 @@ router.get("/orders", async (req: Request, res: Response) => {
     try {
         const type = typeof req.query.type === "string" ? req.query.type : undefined;
         // Increase limit slightly to account for filtered items
-        const rawOrders = await db.getActiveOrders(type, undefined, 30);
+        const rawOrders = await db.getActiveOrders(type, undefined, 50);
+
+        // Filter out dust orders (available < min trade amount)
+        let orders = rawOrders.filter(o => {
+            const available = o.amount - (o.filled_amount || 0);
+            const minAmount = o.token === 'BNB' ? 0.001 : 1.0;
+            return available >= (minAmount - 0.000001);
+        });
 
         // JIT LIQUIDITY CHECK (Batch)
         // Only check sell orders where reliability is critical
-        let orders = rawOrders;
         if (type === 'sell' || !type) {
-            const sellOrders = rawOrders.filter(o => o.type === 'sell');
+            const sellOrders = orders.filter(o => o.type === 'sell');
             if (sellOrders.length > 0) {
                 const invalidIds = await escrow.validateSellerBalances(sellOrders);
                 if (invalidIds.size > 0) {
                     console.log(`[Orders] Filtering ${invalidIds.size} ghost ads:`, Array.from(invalidIds));
-                    orders = rawOrders.filter(o => !invalidIds.has(o.id));
+                    orders = orders.filter(o => !invalidIds.has(o.id));
 
                     // Optional: Trigger background cleanup for these invalid ads?
                     // For now, just hide them. The background job will kill them eventually.
@@ -527,7 +533,7 @@ router.post("/orders", async (req: Request, res: Response) => {
         const parsedRate = parseFloat(rate);
 
         // Input validation
-        const minAmount = token === 'BNB' ? 0.001 : 0.01;
+        const minAmount = token === 'BNB' ? 0.001 : 1.0;
         if (isNaN(parsedAmount) || parsedAmount < minAmount || parsedAmount > 100000) {
             return res.status(400).json({ error: `Amount must be between ${minAmount} and 100,000` });
         }
