@@ -20,6 +20,7 @@ import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
 import { Leaderboard } from './pages/Leaderboard';
 import { ToastProvider } from './components/Toast';
+import { APP_VERSION } from './constants';
 import './styles/global.css';
 
 const queryClient = new QueryClient({
@@ -167,6 +168,7 @@ function AppInner() {
         <div className="logo">P2PFather</div>
         <div className="spinner spinner-lg" />
         <span className="text-xs text-muted">Initializing...</span>
+        <div style={{ position: 'absolute', bottom: 20, fontSize: 10, opacity: 0.4 }}>v{APP_VERSION}</div>
       </div>
     );
   }
@@ -178,6 +180,7 @@ function AppInner() {
         <div className="logo">P2PFather</div>
         <div className="spinner spinner-lg" />
         <span className="text-xs text-muted">Connecting wallet...</span>
+        <div style={{ position: 'absolute', bottom: 20, fontSize: 10, opacity: 0.4 }}>v{APP_VERSION}</div>
       </div>
     );
   }

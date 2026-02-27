@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
+import { APP_VERSION } from '../constants';
 import './Profile.css';
 
 interface Props {
@@ -312,6 +313,10 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <span className="prof-account-label">Member Since</span>
                         <span className="prof-account-value">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</span>
                     </div>
+                </div>
+
+                <div className="text-center mt-8 pb-4" style={{ opacity: 0.3, fontSize: '10px' }}>
+                    Build Version: {APP_VERSION}
                 </div>
             </div>
         </div>
