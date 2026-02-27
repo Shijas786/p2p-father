@@ -301,12 +301,30 @@ export function IconTokenUSDT({ size = defaults.size, className }: IconProps) {
     );
 }
 
+export function IconTokenBNB({ size = defaults.size, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+            <circle cx="12" cy="12" r="12" fill="#F0B90B" />
+            <path d="M12 6.5l2.5 2.5-2.5 2.5-2.5-2.5 2.5-2.5zM12 17.5l2.5-2.5-2.5-2.5-2.5 2.5 2.5 2.5zM17.5 12l-2.5 2.5-2.5-2.5 2.5-2.5 2.5 2.5zM6.5 12l2.5-2.5 2.5 2.5-2.5 2.5-2.5-2.5z" fill="black" />
+        </svg>
+    );
+}
+
 // Chain Icons
 export function IconChainBase({ size = defaults.size, className }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
             <circle cx="12" cy="12" r="11" fill="#0052ff" />
             <circle cx="12" cy="12" r="6" fill="none" stroke="white" strokeWidth="2.5" />
+        </svg>
+    );
+}
+
+export function IconChainBsc({ size = defaults.size, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+            <circle cx="12" cy="12" r="11" fill="#F0B90B" />
+            <path d="M12 7l1.75 1.75L12 10.5l-1.75-1.75L12 7zM12 14.5l1.75 1.75L12 18l-1.75-1.75L12 14.5zM15.5 10.75l1.75 1.75L15.5 14.25l-1.75-1.75L15.5 10.75zM8.5 10.75l1.75 1.75L8.5 14.25l-1.75-1.75L8.5 10.75z" fill="black" />
         </svg>
     );
 }

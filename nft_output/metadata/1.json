@@ -1,0 +1,39 @@
+{
+    "name": "Genesis P2PFather #1",
+    "description": "An exclusive P2PFather platform Genesis collection item.",
+    "image": "ipfs://placeholder_hash/1.png",
+    "attributes": [
+        {
+            "trait_type": "Base Face",
+            "value": "Tough Bald Dad"
+        },
+        {
+            "trait_type": "Beard",
+            "value": "Mutton Chop Sideburns"
+        },
+        {
+            "trait_type": "Moustache",
+            "value": "Classic Chevron Moustache"
+        },
+        {
+            "trait_type": "Eyes",
+            "value": "Tired Baggy Eyes"
+        },
+        {
+            "trait_type": "Hat",
+            "value": "Brown Cowboy Hat"
+        },
+        {
+            "trait_type": "Outfit",
+            "value": "White Plain T-Shirt"
+        },
+        {
+            "trait_type": "Accessories",
+            "value": "No Accessory"
+        },
+        {
+            "trait_type": "Background",
+            "value": "Muted Olive Green"
+        }
+    ]
+}

@@ -318,3 +318,27 @@
     font-weight: 600;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* Base/BSC Specific Buttons */
+.btn-chain-base.active {
+    background: #0052ff !important;
+    color: #fff !important;
+}
+
+.btn-chain-bsc.active {
+    background: #f0b90b !important;
+    color: #000 !important;
+}
+
+/* Token Toggle Buttons with Icons */
+.btn-token-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-token-toggle .token-icon {
+    display: flex;
+    align-items: center;
+}

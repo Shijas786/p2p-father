@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
+import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
 import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain, useChainId, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { appKit } from '../lib/wagmi';
@@ -385,7 +385,7 @@ export function Wallet({ user }: Props) {
         ETH: <IconTokenETH size={24} />,
         USDC: <IconTokenUSDC size={24} />,
         USDT: <IconTokenUSDT size={24} />,
-        BNB: <div style={{ width: 24, height: 24, background: '#F0B90B', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 8, color: 'black' }}>BNB</div>,
+        BNB: <IconTokenBNB size={24} />,
     };
 
     const assets = [
@@ -631,8 +631,12 @@ export function Wallet({ user }: Props) {
                             <div className="flex-1">
                                 <label className="text-xs text-muted mb-1 block">Chain</label>
                                 <div className="flex gap-1">
-                                    <button className={`btn btn-sm flex-1 ${vaultChain === 'base' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}>Base</button>
-                                    <button className={`btn btn-sm flex-1 ${vaultChain === 'bsc' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setVaultChain('bsc')}>BSC</button>
+                                    <button className={`btn btn-sm flex-1 btn-toggle btn-token-toggle ${vaultChain === 'base' ? 'active btn-chain-base' : 'btn-secondary'}`} onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}>
+                                        <IconTokenETH size={14} /> Base
+                                    </button>
+                                    <button className={`btn btn-sm flex-1 btn-toggle btn-token-toggle ${vaultChain === 'bsc' ? 'active btn-chain-bsc' : 'btn-secondary'}`} onClick={() => setVaultChain('bsc')}>
+                                        <IconChainBsc size={14} /> BSC
+                                    </button>
                                 </div>
                             </div>
                             <div className="flex-1">
@@ -641,9 +645,14 @@ export function Wallet({ user }: Props) {
                                     {['USDC', 'USDT', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
                                         <button
                                             key={t}
-                                            className={`btn btn-sm flex-1 ${vaultToken === t ? 'btn-primary' : 'btn-secondary'}`}
+                                            className={`btn btn-sm flex-1 btn-token-toggle ${vaultToken === t ? 'btn-primary' : 'btn-secondary'}`}
                                             onClick={() => setVaultToken(t as any)}
                                         >
+                                            <span className="token-icon">
+                                                {t === 'USDC' && <IconTokenUSDC size={14} />}
+                                                {t === 'USDT' && <IconTokenUSDT size={14} />}
+                                                {t === 'BNB' && <IconTokenBNB size={14} />}
+                                            </span>
                                             {t}
                                         </button>
                                     ))}
