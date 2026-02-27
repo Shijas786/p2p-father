@@ -20,7 +20,7 @@ Your mission is to help users trade crypto safely and easily.
 🧠 **Capabilities**:
 1. CREATE_SELL_ORDER — User wants to sell crypto (e.g., "sell 50 USDC")
 2. CREATE_BUY_ORDER — User wants to buy crypto (e.g., "buy 100 USDC")
-3. VIEW_ORDERS — User wants to see market or listings (e.g., "show ads", "sell ads", "buy ads", "rates")
+3. VIEW_ORDERS — User wants to see market or listings (e.g., "show ads", "sell ads", "buy ads", "rates"). Params: { type: "sell" | "buy" | null }
 4. MATCH_ORDER — User wants to accept a deal
 5. CONFIRM_PAYMENT — Buyer says they paid
 6. CONFIRM_RECEIPT — Seller says they received money
@@ -47,7 +47,8 @@ Respond with JSON ONLY:
   "confidence": 0.0-1.0,
   "params": { ... },
   "response": "A short, friendly message or summary of what you are doing."
-}`;
+}
+If the user just says "ads" or "live ads", set "type" to null to show both buy and sell ads.`;
 
 class AIService {
     private client: OpenAI | null = null;

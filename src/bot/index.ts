@@ -799,7 +799,7 @@ bot.command("sell", async (ctx) => {
 //                     /ads COMMAND (Browse Live Ads)
 // ═══════════════════════════════════════════════════════════════
 
-bot.command("ads", async (ctx) => {
+bot.command(["ads", "liveads"], async (ctx) => {
     await ensureUser(ctx);
 
     const keyboard = new InlineKeyboard()
@@ -3015,14 +3015,18 @@ bot.on("message:text", async (ctx) => {
     }
     console.log(`[BOT] Clean text: "${cleanText}"`);
 
-    // In groups, ONLY reply if mentioned or replying to bot
+    // In groups, ONLY reply if mentioned, replying to bot, OR using whitelisted keywords
     if (ctx.chat.type !== "private") {
         const isMentioned = botName ? new RegExp(`@${botName}`, "i").test(text) : false;
         const isReplyToBot = ctx.message.reply_to_message?.from?.id === botInfo.id;
 
-        console.log(`[BOT] Group logic - Mentioned: ${isMentioned}, ReplyToBot: ${isReplyToBot}`);
+        // Whitelist certain keywords to work without mentions/replies in groups
+        const whitelistedKeywords = [/\blive\s*ads?\b/i, /\bads?\b/i, /\bmarket\b/i];
+        const isWhitelisted = whitelistedKeywords.some(regex => regex.test(text));
 
-        if (!isMentioned && !isReplyToBot) {
+        console.log(`[BOT] Group logic - Mentioned: ${isMentioned}, ReplyToBot: ${isReplyToBot}, Whitelisted: ${isWhitelisted}`);
+
+        if (!isMentioned && !isReplyToBot && !isWhitelisted) {
             console.log("[BOT] Ignoring non-mention in group");
             return; // Ignore random group chatter
         }
@@ -3364,7 +3368,13 @@ bot.on("message:text", async (ctx) => {
                 await ctx.reply("📊 Loading orders...");
                 // Re-use orders command
                 try {
-                    const orders = await db.getActiveOrders(intent.params.type, intent.params.token, 10);
+                    // Normalize type (ensure it's buy, sell, or undefined)
+                    let orderType: any = intent.params.type;
+                    if (orderType !== "buy" && orderType !== "sell") {
+                        orderType = undefined; // Show all if type is "ads" or unknown
+                    }
+
+                    const orders = await db.getActiveOrders(orderType, intent.params.token, 10);
                     if (orders.length === 0) {
                         await ctx.reply("No orders available right now. Be the first! /sell");
                     } else {
