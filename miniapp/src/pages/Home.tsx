@@ -149,7 +149,7 @@ export function Home({ user }: Props) {
                         </div>
                     ) : filteredOrders.length > 0 ? (
                         filteredOrders.map(order => {
-                            const available = (order.amount - (order.filled_amount || 0)) * (1 - feePercentage / 2);
+                            const available = (order.amount - (order.filled_amount || 0));
                             const isMine = user?.id === order.user_id;
 
                             return (
@@ -251,7 +251,7 @@ export function Home({ user }: Props) {
                                 <div className="p2p-modal-row">
                                     <span>Amount</span>
                                     <span className="font-mono font-bold">
-                                        {formatBal((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2), confirmOrder.token === 'BNB' ? 4 : 2)} {confirmOrder.token}
+                                        {formatBal((confirmOrder.amount - (confirmOrder.filled_amount || 0)), confirmOrder.token === 'BNB' ? 4 : 2)} {confirmOrder.token}
                                     </span>
                                 </div>
                                 <div className="p2p-modal-row">
@@ -261,7 +261,7 @@ export function Home({ user }: Props) {
                                 <div className="p2p-modal-row">
                                     <span>Total</span>
                                     <span className="font-mono font-bold">
-                                        ₹{(((confirmOrder.amount - (confirmOrder.filled_amount || 0)) * (1 - feePercentage / 2)) * confirmOrder.rate).toLocaleString()}
+                                        ₹{(((confirmOrder.amount - (confirmOrder.filled_amount || 0))) * confirmOrder.rate).toLocaleString()}
                                     </span>
                                 </div>
                                 {confirmOrder.username && (
