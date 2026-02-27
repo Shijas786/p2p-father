@@ -685,7 +685,8 @@ router.post("/trades", async (req: Request, res: Response) => {
 
         const tradeAmount = amount || order.amount;
         const minAmount = order.token === 'BNB' ? 0.001 : 1.0;
-        if (tradeAmount < minAmount) {
+        // Float precision fix (1 - 0.000001 < 1.0)
+        if (tradeAmount < (minAmount - 0.000001)) {
             return res.status(400).json({ error: `Minimum trade amount is ${minAmount} ${order.token}` });
         }
         if (tradeAmount <= 0 || tradeAmount > order.amount - (order.filled_amount || 0)) {
