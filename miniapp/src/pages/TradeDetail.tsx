@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, useChainId } from 'wagmi';
 import { parseUnits } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
@@ -68,7 +68,8 @@ export function TradeDetail({ user }: Props) {
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
-    const { chain: walletChain } = useAccount();
+    const { chain: walletChain } = useAccount(); // Still needed for some UI perhaps, but useChainId for logic
+    const currentChainId = useChainId();
     const { switchChainAsync } = useSwitchChain();
     const { showToast } = useToast();
 
@@ -90,7 +91,7 @@ export function TradeDetail({ user }: Props) {
         abi: ERC20_ABI,
         functionName: 'allowance',
         args: externalAddress && trade ? [externalAddress, escrowAddress] : undefined,
-        query: { enabled: !!externalAddress && !!trade }
+        query: { enabled: !!externalAddress && !!trade, refetchInterval: 5000 }
     });
 
     // Validations
@@ -284,7 +285,7 @@ export function TradeDetail({ user }: Props) {
     }
     // ═══ SMART NETWORK SWITCHER ═══
     async function smartSwitch(targetId: number) {
-        if (walletChain?.id === targetId) return true;
+        if (currentChainId === targetId) return true;
         haptic('selection');
         setActionLoading(true);
         showToast(`Switching to ${targetId === bsc.id ? 'BSC' : 'Base'}...`, 'info');
@@ -293,6 +294,8 @@ export function TradeDetail({ user }: Props) {
             const switchPromise = switchChainAsync({ chainId: targetId });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("SWITCH_TIMEOUT")), 8000));
             await Promise.race([switchPromise, timeoutPromise]);
+            // Give wagmi a longer moment to update state in mobile wallets
+            await new Promise(r => setTimeout(r, 1000));
             showToast("Network Switched!", "success");
             setActionLoading(false);
             return true;

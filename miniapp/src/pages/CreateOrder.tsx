@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useSwitchChain, useChainId } from 'wagmi';
 import { waitForTransactionReceipt } from '@wagmi/core';
 import { parseUnits, formatUnits } from 'viem';
 import { api } from '../lib/api';
@@ -17,8 +17,9 @@ const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK'];
 
 export function CreateOrder() {
     const navigate = useNavigate();
+    const { address, isConnected } = useAccount();
+    const currentChainId = useChainId();
     const { user } = useAuth();
-    const { address, isConnected, chain: walletChain } = useAccount();
     const [step, setStep] = useState(1);
     const [type, setType] = useState<'sell' | 'buy'>('sell');
     const [token, setToken] = useState('USDC');
@@ -72,7 +73,7 @@ export function CreateOrder() {
 
     // Wagmi: Contract Interactions
     const targetChainId = chain === 'bsc' ? 56 : 8453;
-    const isCorrectChain = walletChain?.id === targetChainId;
+    const isCorrectChain = currentChainId === targetChainId;
 
     const tokenAddress = (CONTRACTS as any)[chain]?.tokens[token];
     const isExternalUser = user?.wallet_type === 'external';
@@ -140,11 +141,11 @@ export function CreateOrder() {
     const bscUsdcAddr = (CONTRACTS as any).bsc.tokens.USDC;
     const bscUsdtAddr = (CONTRACTS as any).bsc.tokens.USDT;
 
-    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr } });
-    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr } });
-    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr } });
-    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr } });
-    const { data: bscNativeBal } = useBalance({ address: address, chainId: bsc.id, query: { enabled: !!isExt } });
+    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr, refetchInterval: 5000 } });
+    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr, refetchInterval: 5000 } });
+    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr, refetchInterval: 5000 } });
+    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: address ? [address] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr, refetchInterval: 5000 } });
+    const { data: bscNativeBal } = useBalance({ address: address, chainId: bsc.id, query: { enabled: !!isExt, refetchInterval: 5000 } });
 
     const getExtBalance = (tok: string, ch: string) => {
         if (!isExt) return "0.00";
@@ -160,7 +161,7 @@ export function CreateOrder() {
 
     // ═══ SMART NETWORK SWITCHER ═══
     async function smartSwitch(targetId: number) {
-        if (walletChain?.id === targetId) return true;
+        if (currentChainId === targetId) return true;
         haptic('selection');
         setSubmitting(true);
         showToast(`Switching to ${targetId === bsc.id ? 'BSC' : 'Base'}...`, 'info');
@@ -169,6 +170,8 @@ export function CreateOrder() {
             const switchPromise = switchChainAsync({ chainId: targetId });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("SWITCH_TIMEOUT")), 8000));
             await Promise.race([switchPromise, timeoutPromise]);
+            // Give wagmi a longer moment to update state in mobile wallets
+            await new Promise(r => setTimeout(r, 1000));
             showToast("Network Switched!", "success");
             setSubmitting(false);
             return true;
