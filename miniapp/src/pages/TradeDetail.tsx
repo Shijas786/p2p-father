@@ -68,7 +68,7 @@ export function TradeDetail({ user }: Props) {
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
-    const { chain: walletChain } = useAccount(); // Still needed for some UI perhaps, but useChainId for logic
+    // const { chain: walletChain } = useAccount(); // Still needed for some UI perhaps, but useChainId for logic
     const currentChainId = useChainId();
     const { switchChainAsync } = useSwitchChain();
     const { showToast } = useToast();

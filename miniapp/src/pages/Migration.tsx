@@ -16,7 +16,7 @@ export function Migration() {
     const [withdrawing, setWithdrawing] = useState<string | null>(null);
     const [error, setError] = useState('');
 
-    const { address, isConnected, chain: walletChain } = useAccount();
+    const { address, chain: walletChain } = useAccount();
     const { writeContractAsync } = useWriteContract();
     const config = useConfig();
 

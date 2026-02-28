@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
+import { IconChainBase, IconChainBsc, IconTokenUSDC, IconTokenUSDT, IconTokenBNB } from '../components/Icons';
 import './Home.css';
 
 interface Props {
@@ -16,7 +17,7 @@ export function Home({ user }: Props) {
     const [tab, setTab] = useState<'buy' | 'sell'>('buy');
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [feePercentage, setFeePercentage] = useState(0.01);
+    // const [feePercentage, setFeePercentage] = useState(0.01);
     const [paymentFilter, setPaymentFilter] = useState('All');
     const [tokenFilter, setTokenFilter] = useState('USDC');
 
@@ -30,9 +31,9 @@ export function Home({ user }: Props) {
     const [tokenDropdown, setTokenDropdown] = useState(false);
 
     useEffect(() => {
-        api.stats.get().then(data => {
-            if (data.fee_percentage) setFeePercentage(data.fee_percentage);
-        }).catch(console.error);
+        // api.stats.get().then(data => {
+        //     if (data.fee_percentage) setFeePercentage(data.fee_percentage);
+        // }).catch(console.error);
     }, []);
 
     useEffect(() => {
@@ -101,7 +102,9 @@ export function Home({ user }: Props) {
                 {/* Filters Row */}
                 <div className="p2p-filters">
                     <div className="p2p-token-selector" onClick={() => setTokenDropdown(!tokenDropdown)}>
-                        <span className="p2p-token-icon">{tokenFilter === 'USDC' ? '🔵' : tokenFilter === 'USDT' ? '🟢' : '🟡'}</span>
+                        <span className="p2p-token-icon">
+                            {tokenFilter === 'USDC' ? <IconTokenUSDC size={20} /> : tokenFilter === 'USDT' ? <IconTokenUSDT size={20} /> : <IconTokenBNB size={20} />}
+                        </span>
                         <span>{tokenFilter}</span>
                         <span className="p2p-chevron">▼</span>
                         {tokenDropdown && (
@@ -112,7 +115,10 @@ export function Home({ user }: Props) {
                                         className={`p2p-dropdown-item ${tokenFilter === t ? 'active' : ''}`}
                                         onClick={(e) => { e.stopPropagation(); setTokenFilter(t); setTokenDropdown(false); }}
                                     >
-                                        {t === 'USDC' ? '🔵' : t === 'USDT' ? '🟢' : '🟡'} {t}
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            {t === 'USDC' ? <IconTokenUSDC size={16} /> : t === 'USDT' ? <IconTokenUSDT size={16} /> : <IconTokenBNB size={16} />}
+                                            {t}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -204,7 +210,10 @@ export function Home({ user }: Props) {
 
                                             <div className="p2p-available">
                                                 <span className="p2p-avail-label">Available</span>
-                                                <span className="p2p-avail-value">{formatBal(available, order.token === 'BNB' ? 4 : 2)} {order.token}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span className="p2p-avail-value">{formatBal(available, order.token === 'BNB' ? 4 : 2)} {order.token}</span>
+                                                    {order.chain === 'base' ? <IconChainBase size={14} /> : order.chain === 'bsc' ? <IconChainBsc size={14} /> : null}
+                                                </div>
                                             </div>
                                         </div>
 
