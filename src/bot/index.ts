@@ -3577,8 +3577,8 @@ bot.catch((err) => {
     console.error("Bot error:", err);
 });
 
-// Register commands with Telegram for autocomplete
-bot.api.setMyCommands([
+// Define command lists
+const privateCommands = [
     { command: "start", description: "Start the bot" },
     { command: "newad", description: "Create a buy/sell ad" },
     { command: "ads", description: "Browse live P2P ads" },
@@ -3590,7 +3590,19 @@ bot.api.setMyCommands([
     { command: "profile", description: "Your stats & profile" },
     { command: "help", description: "How to use this bot" },
     { command: "send", description: "Withdraw crypto" },
+];
 
-]).catch((err: any) => console.error("setMyCommands error:", err));
+const groupCommands = [
+    { command: "ads", description: "Browse live P2P ads" },
+    { command: "help", description: "How to use this bot" },
+];
+
+// Register all commands for private chats
+bot.api.setMyCommands(privateCommands, { scope: { type: "all_private_chats" } })
+    .catch((err: any) => console.error("setMyCommands (private) error:", err));
+
+// Register minimal commands for group chats
+bot.api.setMyCommands(groupCommands, { scope: { type: "all_group_chats" } })
+    .catch((err: any) => console.error("setMyCommands (groups) error:", err));
 
 export { bot, notifyTrader };
