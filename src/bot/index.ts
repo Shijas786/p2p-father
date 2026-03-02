@@ -261,7 +261,7 @@ bot.command("ping", async (ctx) => {
     await ctx.reply(`🏓 Pong! (Bot Version: ${new Date().toISOString()})`);
 });
 
-bot.command("start", async (ctx) => {
+bot.command(["start", "open"], async (ctx) => {
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
 
@@ -3580,6 +3580,7 @@ bot.catch((err) => {
 // Define command lists
 const privateCommands = [
     { command: "start", description: "Start the bot" },
+    { command: "open", description: "Open the Mini App" },
     { command: "newad", description: "Create a buy/sell ad" },
     { command: "ads", description: "Browse live P2P ads" },
     { command: "myads", description: "Manage your ads" },
