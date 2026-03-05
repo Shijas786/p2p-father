@@ -163,7 +163,8 @@ router.post("/auth", async (req: Request, res: Response) => {
         res.json({
             user: {
                 ...user,
-                is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id))
+                is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id)),
+                admin_ids: env.ADMIN_IDS
             }
         });
     } catch (err: any) {
@@ -1024,6 +1025,14 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             dispute_reason: disputeReason,
         });
 
+        // Auto-post system message to trade chat
+        await db.createTradeMessage({
+            trade_id: trade.id,
+            user_id: user.id,
+            message: `⚠️ Dispute raised by ${role}. Reason: ${reason || "No reason provided"}. Admin has been notified and will join this chat shortly.`,
+            type: "system"
+        });
+
         // Human-readable stage info for admin notification
         const stageLabel = previousStatus === 'in_escrow'
             ? '🔒 Escrow Locked — Buyer never sent fiat'
@@ -1040,6 +1049,12 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             `👥 Seller: @${(trade as any).seller_username || 'Unknown'} | Buyer: @${(trade as any).buyer_username || 'Unknown'}\n` +
             `📝 Reason: ${reason || "No reason provided"}\n\n` +
             `<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
+        );
+
+        // NOTIFY the other party about dispute
+        const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+        await notifyTradeUpdate(otherPartyId,
+            `⚠️ <b>Dispute Raised!</b>\n\nYour trade partner has raised a dispute on trade <code>${trade.id.slice(0, 8)}</code>.\n\nReason: ${reason || "No reason provided"}\n\nPlease provide evidence in the trade chat. Admin will join shortly.`
         );
 
         res.json({ success: true });
@@ -1177,6 +1192,46 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
     }
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN — Send Message in Trade Chat (Dispute Live Chat)
+// ═══════════════════════════════════════════════════════════════
+
+router.post("/admin/trades/:id/message", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const trade = await db.getTradeById(req.params.id as string);
+        if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: "Message content required" });
+
+        const newMessage = await db.createTradeMessage({
+            trade_id: trade.id,
+            user_id: user.id,
+            message
+        });
+
+        res.json({ success: true, message: newMessage });
+
+        // Notify both parties
+        const adminName = user.username || user.first_name || 'Admin';
+        await notifyTradeUpdate(trade.buyer_id,
+            `🛡️ <b>Admin ${adminName}</b> sent a message in trade chat.\n\n"${message}"`
+        );
+        await notifyTradeUpdate(trade.seller_id,
+            `🛡️ <b>Admin ${adminName}</b> sent a message in trade chat.\n\n"${message}"`
+        );
+    } catch (err: any) {
+        console.error("[ADMIN] Send message error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 router.get("/admin/trades/:id/messages", async (req: Request, res: Response) => {
@@ -1207,7 +1262,8 @@ router.get("/trades/:id/messages", async (req: Request, res: Response) => {
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
-        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+        const isTradeAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id && !isTradeAdmin) {
             return res.status(403).json({ error: "Not a party to this trade" });
         }
 
@@ -1226,7 +1282,8 @@ router.post("/trades/:id/messages", async (req: Request, res: Response) => {
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
-        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+        const isChatAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id && !isChatAdmin) {
             return res.status(403).json({ error: "Not a party to this trade" });
         }
 
@@ -1263,7 +1320,8 @@ router.post("/trades/:id/messages/upload", upload.single("image"), async (req: R
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
 
-        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+        const isUploadAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id && !isUploadAdmin) {
             return res.status(403).json({ error: "Not a party to this trade" });
         }
 

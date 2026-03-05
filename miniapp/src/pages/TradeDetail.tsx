@@ -153,7 +153,9 @@ export function TradeDetail({ user }: Props) {
             if (prevStatusRef.current && data.status !== prevStatusRef.current) {
                 haptic('success');
                 if (data.status === 'completed') {
-                    sounds.play('success');
+                    sounds.play('trade_complete');
+                } else if (data.status === 'disputed') {
+                    sounds.play('dispute');
                 } else {
                     sounds.play('notification');
                 }
@@ -467,6 +469,7 @@ export function TradeDetail({ user }: Props) {
         try {
             await api.trades.confirmReceipt(id);
             haptic('success');
+            sounds.play('trade_complete');
             await loadTrade();
         } catch (err: any) {
             setError(err.message);
@@ -485,6 +488,7 @@ export function TradeDetail({ user }: Props) {
         try {
             await api.trades.dispute(id, reason);
             haptic('warning');
+            sounds.play('dispute');
             await loadTrade();
         } catch (err: any) {
             setError(err.message);
@@ -765,27 +769,12 @@ export function TradeDetail({ user }: Props) {
                 {/* Disputed Status UI */}
                 {trade && trade.status === 'disputed' && (
                     <div className="card border-red p-4 text-center animate-in mb-4">
-                        <div className="text-4xl mb-2">🚫</div>
-                        <h3 className="text-red font-bold uppercase">Trade Disputed</h3>
-                        <p className="text-sm text-muted mt-2 mb-4">
-                            Admin has been notified. Please utilize the chat to provide evidence.
+                        <div className="text-4xl mb-2">⚠️</div>
+                        <h3 className="text-red font-bold uppercase">Trade Under Dispute</h3>
+                        <p className="text-sm text-muted mt-2">
+                            Admin has been notified and will review this case in the chat below.
+                            Please provide any evidence (screenshots, UTR, etc.) via the chat.
                         </p>
-                        <a
-                            href={`https://t.me/cryptowolf07`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-block mb-2"
-                        >
-                            💬 Contact Admin (@cryptowolf07)
-                        </a>
-                        <a
-                            href={`https://t.me/orusmon`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-block"
-                        >
-                            💬 Contact Admin (@orusmon)
-                        </a>
                     </div>
                 )}
 
@@ -948,49 +937,68 @@ export function TradeDetail({ user }: Props) {
                             {messages.length === 0 && (
                                 <p className="chat-empty">No messages yet. Start the conversation!</p>
                             )}
-                            {messages.map(m => (
-                                <div key={m.id} className={`chat-msg ${m.user_id === user.id ? 'msg-me' : 'msg-them'}`}>
-                                    {/* Them Avatar */}
-                                    {m.user_id !== user.id && (
-                                        <div className="chat-avatar">
-                                            {m.photo_url ? (
-                                                <img src={m.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                            ) : (
-                                                <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
-                                                    {m.username?.[0]?.toUpperCase() || '?'}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                            {messages.map(m => {
+                                const isSystemMsg = m.type === 'system';
+                                const isAdminMsg = !isSystemMsg && user?.admin_ids?.includes(m.telegram_id);
+                                const isMine = m.user_id === user.id;
+                                const msgClass = isSystemMsg ? 'msg-system' : isAdminMsg ? 'msg-admin' : isMine ? 'msg-me' : 'msg-them';
 
-                                    <div className="msg-bubble">
-                                        <div className="msg-sender">{m.username || 'User'}</div>
-                                        {/* Image message */}
-                                        {m.type === 'image' && m.image_url && (
-                                            <div className="msg-image" onClick={() => setFullscreenImage(m.image_url)}>
-                                                <img src={m.image_url} alt="Payment proof" />
-                                                <div className="msg-image-label">📸 Tap to view</div>
+                                return (
+                                    <div key={m.id} className={`chat-msg ${msgClass}`}>
+                                        {/* System message — centered */}
+                                        {isSystemMsg ? (
+                                            <div className="msg-bubble msg-system-bubble">
+                                                <div className="msg-text">{m.message}</div>
+                                                <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                             </div>
-                                        )}
-                                        {/* Text message */}
-                                        {m.message && <div className="msg-text">{m.message}</div>}
-                                        <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                    </div>
+                                        ) : (
+                                            <>
+                                                {/* Them/Admin Avatar (left side) */}
+                                                {!isMine && (
+                                                    <div className="chat-avatar">
+                                                        {m.photo_url ? (
+                                                            <img src={m.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                                        ) : (
+                                                            <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
+                                                                {isAdminMsg ? '🛡️' : (m.username?.[0]?.toUpperCase() || '?')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
-                                    {/* Me Avatar */}
-                                    {m.user_id === user.id && (
-                                        <div className="chat-avatar">
-                                            {user.photo_url ? (
-                                                <img src={user.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                            ) : (
-                                                <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
-                                                    {user.first_name?.[0]?.toUpperCase() || '?'}
+                                                <div className="msg-bubble">
+                                                    <div className="msg-sender">
+                                                        {isAdminMsg ? `🛡️ ${m.username || 'Admin'}` : (m.username || 'User')}
+                                                    </div>
+                                                    {/* Image message */}
+                                                    {m.type === 'image' && m.image_url && (
+                                                        <div className="msg-image" onClick={() => setFullscreenImage(m.image_url)}>
+                                                            <img src={m.image_url} alt="Payment proof" />
+                                                            <div className="msg-image-label">📸 Tap to view</div>
+                                                        </div>
+                                                    )}
+                                                    {/* Text message */}
+                                                    {m.message && <div className="msg-text">{m.message}</div>}
+                                                    <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+
+                                                {/* Me Avatar (right side) */}
+                                                {isMine && (
+                                                    <div className="chat-avatar">
+                                                        {user.photo_url ? (
+                                                            <img src={user.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                                        ) : (
+                                                            <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
+                                                                {user.first_name?.[0]?.toUpperCase() || '?'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
                             <div ref={chatEndRef} />
                         </div>
 

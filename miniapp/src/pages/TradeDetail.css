@@ -393,3 +393,46 @@
     font-size: 14px;
     font-weight: 600;
 }
+
+/* ── Admin Messages ── */
+.chat-msg.msg-admin {
+    justify-content: flex-start;
+}
+
+.msg-admin .msg-bubble {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #eaecef;
+    border-bottom-left-radius: 4px;
+}
+
+.msg-admin .msg-sender {
+    color: #f59e0b;
+    font-weight: 800;
+    opacity: 1;
+}
+
+/* ── System Messages ── */
+.chat-msg.msg-system {
+    justify-content: center;
+}
+
+.msg-system-bubble {
+    max-width: 90% !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    text-align: center;
+    font-style: italic;
+    padding: 8px 14px !important;
+}
+
+.msg-system .msg-text {
+    font-size: 11px;
+    color: #848e9c;
+}
+
+.msg-system .msg-time {
+    text-align: center;
+    color: #5e6673;
+}

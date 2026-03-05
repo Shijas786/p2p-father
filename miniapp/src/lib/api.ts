@@ -228,6 +228,11 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ releaseToBuyer }),
             }),
+        sendMessage: (tradeId: string, message: string) =>
+            request<{ success: boolean; message: any }>(`/admin/trades/${tradeId}/message`, {
+                method: 'POST',
+                body: JSON.stringify({ message }),
+            }),
     },
 
     // ---- Users ----

@@ -3,6 +3,9 @@ const SOUNDS = {
     notification: 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3',
     success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
     error: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+    // New distinct sounds for P2P events
+    trade_complete: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',   // Achievement / level-up fanfare
+    dispute: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',          // Alert / warning tone
 };
 
 class SoundService {
@@ -42,3 +45,4 @@ class SoundService {
 }
 
 export const sounds = new SoundService();
+

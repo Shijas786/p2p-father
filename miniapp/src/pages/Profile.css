@@ -7,69 +7,100 @@
 
 /* ── Header ── */
 .prof-header {
-    padding: 24px 20px 16px;
+    padding: 32px 20px 24px;
     background: #181a20;
     border-bottom: 1px solid #2b2f36;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .prof-avatar {
-    width: 56px;
-    height: 56px;
+    width: 88px;
+    height: 88px;
     border-radius: 50%;
     background: linear-gradient(135deg, #f0b90b, #d4a200);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 12px;
-    overflow: hidden;
+    margin-bottom: 16px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(240, 185, 11, 0.15);
+    border: 2px solid #2b2f36;
 }
 
 .prof-avatar-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
 
 .prof-avatar-letter {
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 700;
     color: #181a20;
 }
 
 .prof-name-row {
-    margin-bottom: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 
 .prof-username {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     color: #eaecef;
-    margin-bottom: 2px;
+    margin-bottom: 0;
 }
 
 .prof-handle {
-    font-size: 13px;
+    font-size: 14px;
     color: #848e9c;
-    display: block;
 }
 
 .prof-badges {
     display: flex;
     gap: 8px;
-    margin-top: 8px;
+    justify-content: center;
 }
 
 .prof-badge {
     font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 4px;
+    padding: 4px 12px;
+    border-radius: 6px;
     background: #2b2f36;
     color: #5e6673;
+    font-weight: 600;
 }
 
 .prof-badge.verified {
     background: rgba(14, 203, 129, 0.1);
     color: #0ecb81;
+}
+
+.prof-update-photo-btn {
+    background: rgba(240, 185, 11, 0.1);
+    color: #f0b90b;
+    border: 1px solid rgba(240, 185, 11, 0.2);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.prof-update-photo-btn:active {
+    background: rgba(240, 185, 11, 0.2);
 }
 
 /* ── Stats Grid ── */

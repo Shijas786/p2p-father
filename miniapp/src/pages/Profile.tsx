@@ -114,37 +114,35 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         <div className="page profile-page animate-in">
             {/* ═══ Profile Header ═══ */}
             <div className="prof-header">
-                <div className="prof-avatar" onClick={handleAvatarClick} style={{ cursor: 'pointer', position: 'relative' }}>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelect}
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                    />
+                <div className="prof-avatar">
                     {user?.photo_url ? (
                         <img src={user.photo_url} alt="" className="prof-avatar-img" />
                     ) : (
                         <span className="prof-avatar-letter">{user?.first_name?.[0]?.toUpperCase() || '?'}</span>
                     )}
-                    <div className="prof-avatar-edit-icon" style={{
-                        position: 'absolute', bottom: 0, right: 0,
-                        background: '#0ecb81', borderRadius: '50%',
-                        width: '24px', height: '24px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '12px', border: '2px solid #181a20'
-                    }}>
-                        📷
-                    </div>
                 </div>
+
                 <div className="prof-name-row">
                     <h2 className="prof-username">{user?.first_name || 'User'}</h2>
                     {user?.username && <span className="prof-handle">@{user.username}</span>}
                 </div>
+
                 {/* Verification Badges */}
                 <div className="prof-badges">
-                    <span className="prof-badge verified">✓ Telegram</span>
+                    <span className="prof-badge verified">✓ Telegram Verified</span>
                 </div>
+
+                {/* Hidden File Input & Update Button */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                />
+                <button className="prof-update-photo-btn" onClick={handleAvatarClick} disabled={saving}>
+                    <span>📷</span> {saving ? 'Uploading...' : 'Update Profile Picture'}
+                </button>
             </div>
 
             {/* ═══ Stats Grid ═══ */}
