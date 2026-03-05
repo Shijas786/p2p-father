@@ -14,14 +14,19 @@ interface Props {
 export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const navigate = useNavigate();
 
-    const [showEditModal, setShowEditModal] = useState(false);
-
-    // Form State (for modal)
+    // UPI State
     const [upiInput, setUpiInput] = useState(user?.upi_id || '');
+    const [editingUpi, setEditingUpi] = useState(false);
+
+    // Phone State
     const [phoneInput, setPhoneInput] = useState(user?.phone_number || '');
+    const [editingPhone, setEditingPhone] = useState(false);
+
+    // Bank State
     const [bankAccount, setBankAccount] = useState(user?.bank_account_number || '');
     const [bankIfsc, setBankIfsc] = useState(user?.bank_ifsc || '');
     const [bankName, setBankName] = useState(user?.bank_name || '');
+    const [editingBank, setEditingBank] = useState(false);
 
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
@@ -50,62 +55,61 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }
     };
 
-    const openEditModal = () => {
-        haptic('light');
-        setUpiInput(user?.upi_id || '');
-        setPhoneInput(user?.phone_number || '');
-        setBankAccount(user?.bank_account_number || '');
-        setBankIfsc(user?.bank_ifsc || '');
-        setBankName(user?.bank_name || '');
-        setShowEditModal(true);
-        setMessage('');
-    };
-
-    const handleSaveProfile = async () => {
+    async function saveField(updates: Record<string, any>, successMsg: string) {
         haptic('medium');
         setSaving(true);
         setMessage('');
-
         try {
-            const updates: any = {};
-
-            // Validate & Add Phone
-            if (phoneInput !== (user?.phone_number || '')) {
-                const cleaned = phoneInput.replace(/\D/g, '');
-                if (cleaned && cleaned.length < 10) throw new Error('Enter a valid 10-digit phone number');
-                updates.phone_number = cleaned;
-            }
-
-            // Validate & Add UPI
-            if (upiInput !== (user?.upi_id || '')) {
-                if (upiInput && !upiInput.includes('@')) throw new Error('Enter a valid UPI ID (e.g. name@upi)');
-                updates.upi_id = upiInput;
-            }
-
-            // Validate & Add Bank
-            if (bankAccount !== (user?.bank_account_number || '') || bankIfsc !== (user?.bank_ifsc || '') || bankName !== (user?.bank_name || '')) {
-                if (bankAccount && bankAccount.length < 8) throw new Error('Enter a valid bank account number');
-                if (bankIfsc && bankIfsc.length < 11) throw new Error('Enter a valid IFSC code (11 characters)');
-
-                updates.bank_account_number = bankAccount || null;
-                updates.bank_ifsc = bankIfsc ? bankIfsc.toUpperCase() : null;
-                updates.bank_name = bankName || null;
-            }
-
-            if (Object.keys(updates).length > 0) {
-                await api.profile.update(updates);
-                haptic('success');
-                setMessage('success:Profile updated!');
-                onUpdate();
-            }
-            setShowEditModal(false);
+            await api.profile.update(updates);
+            haptic('success');
+            setMessage(`success:${successMsg}`);
+            setEditingUpi(false);
+            setEditingPhone(false);
+            setEditingBank(false);
+            onUpdate();
         } catch (err: any) {
             setMessage(`error:${err.message}`);
             haptic('error');
         } finally {
             setSaving(false);
         }
-    };
+    }
+
+    async function saveUpi() {
+        if (!upiInput || !upiInput.includes('@')) {
+            setMessage('error:Enter a valid UPI ID (e.g. name@upi)');
+            return;
+        }
+        await saveField({ upi_id: upiInput }, 'UPI updated!');
+    }
+
+    async function savePhone() {
+        const cleaned = phoneInput.replace(/\D/g, '');
+        if (cleaned.length < 10) {
+            setMessage('error:Enter a valid 10-digit phone number');
+            return;
+        }
+        await saveField({ phone_number: cleaned }, 'Phone updated!');
+    }
+
+    async function saveBank() {
+        if (!bankAccount || bankAccount.length < 8) {
+            setMessage('error:Enter a valid bank account number');
+            return;
+        }
+        if (!bankIfsc || bankIfsc.length < 11) {
+            setMessage('error:Enter a valid IFSC code (11 characters)');
+            return;
+        }
+        await saveField({
+            bank_account_number: bankAccount,
+            bank_ifsc: bankIfsc.toUpperCase(),
+            bank_name: bankName || null,
+        }, 'Bank details updated!');
+    }
+
+
+
     return (
         <div className="page profile-page animate-in">
             {/* ═══ Profile Header ═══ */}
@@ -124,15 +128,22 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     <div className="prof-name-row">
                         <h2 className="prof-username">{user?.first_name || 'User'}</h2>
                         {user?.username && <span className="prof-handle">@{user.username}</span>}
-                        {/* Verification Badges */}
-                        <div className="prof-badges">
-                            <span className="prof-badge verified">✓ Telegram Verified</span>
-                        </div>
                     </div>
 
-                    {/* Edit Button */}
-                    <button className="prof-edit-profile-btn" onClick={openEditModal}>
-                        ⚙️ Edit
+                    <div className="prof-badges">
+                        <span className="prof-badge verified">✓ Telegram Verified</span>
+                    </div>
+
+                    {/* Hidden File Input & Update Button */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                    />
+                    <button className="prof-update-photo-btn" style={{ marginTop: '12px', width: 'fit-content' }} onClick={handleAvatarClick} disabled={saving}>
+                        <span>📷</span> {saving ? 'Uploading...' : 'Update Photo'}
                     </button>
                 </div>
             </div>
@@ -178,24 +189,60 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     <div className="prof-payment-item">
                         <div className="prof-payment-top">
                             <span className="prof-payment-name">📱 UPI ID</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingUpi(!editingUpi); setMessage(''); }}>
+                                {editingUpi ? 'Cancel' : (user?.upi_id ? 'Edit' : 'Add')}
+                            </button>
                         </div>
-                        <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
+                        {editingUpi ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} autoFocus />
+                                <button className="prof-save-btn" onClick={saveUpi} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
+                        )}
                     </div>
 
                     {/* Phone */}
                     <div className="prof-payment-item">
                         <div className="prof-payment-top">
                             <span className="prof-payment-name">📞 Phone Number</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingPhone(!editingPhone); setMessage(''); }}>
+                                {editingPhone ? 'Cancel' : (user?.phone_number ? 'Edit' : 'Add')}
+                            </button>
                         </div>
-                        <span className="prof-payment-value">{user?.phone_number || 'Not set'}</span>
+                        {editingPhone ? (
+                            <div className="prof-edit-form">
+                                <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} autoFocus />
+                                <button className="prof-save-btn" onClick={savePhone} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">{user?.phone_number || 'Not set'}</span>
+                        )}
                     </div>
 
                     {/* Bank */}
                     <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
                         <div className="prof-payment-top">
                             <span className="prof-payment-name">🏦 Bank Transfer</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingBank(!editingBank); setMessage(''); }}>
+                                {editingBank ? 'Cancel' : (user?.bank_account_number ? 'Edit' : 'Add')}
+                            </button>
                         </div>
-                        {user?.bank_account_number ? (
+                        {editingBank ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} autoFocus />
+                                <input placeholder="IFSC Code" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} />
+                                <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} />
+                                <button className="prof-save-btn" onClick={saveBank} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : user?.bank_account_number ? (
                             <div className="prof-bank-info">
                                 <span className="prof-payment-value">{user.bank_account_number}</span>
                                 <span className="prof-bank-sub">IFSC: {user.bank_ifsc} {user.bank_name && `• ${user.bank_name}`}</span>
@@ -273,65 +320,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     Build Version: {APP_VERSION}
                 </div>
             </div>
-
-            {/* ═══ Edit Profile Modal ═══ */}
-            {showEditModal && (
-                <div className="prof-modal-overlay" onClick={() => setShowEditModal(false)}>
-                    <div className="prof-modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="prof-modal-header">
-                            <h3>Edit Profile</h3>
-                            <button className="prof-modal-close" onClick={() => setShowEditModal(false)}>×</button>
-                        </div>
-
-                        <div className="prof-modal-body">
-                            {/* Avatar Edit */}
-                            <div className="prof-modal-avatar-section">
-                                <div className="prof-avatar" onClick={handleAvatarClick} style={{ cursor: 'pointer', margin: '0 auto 12px' }}>
-                                    {user?.photo_url ? (
-                                        <img src={user.photo_url} alt="" className="prof-avatar-img" />
-                                    ) : (
-                                        <span className="prof-avatar-letter">{user?.first_name?.[0]?.toUpperCase() || '?'}</span>
-                                    )}
-                                    <div className="prof-avatar-edit-icon">📷</div>
-                                </div>
-                                <span className="prof-avatar-hint">Tap to change photo</span>
-
-                                {/* Hidden File Input */}
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileSelect}
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                />
-                            </div>
-
-                            <div className="prof-modal-form">
-                                <div className="form-group">
-                                    <label>📱 UPI ID</label>
-                                    <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>📞 Phone Number</label>
-                                    <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>🏦 Bank Transfer</label>
-                                    <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} />
-                                    <input placeholder="IFSC Code" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} style={{ marginTop: '8px' }} />
-                                    <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} style={{ marginTop: '8px' }} />
-                                </div>
-                            </div>
-
-                            <button className="btn btn-primary btn-block mt-4" onClick={handleSaveProfile} disabled={saving}>
-                                {saving ? <div className="spinner small" /> : 'Save Changes'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -184,7 +184,7 @@ export const api = {
     // ---- Profile ----
     profile: {
         get: () => request<{ user: any }>('/profile'),
-        update: (data: Record<string, any>) =>
+        update: (data: { upi_id?: string }) =>
             request<{ user: any }>('/profile', {
                 method: 'PUT',
                 body: JSON.stringify(data),
