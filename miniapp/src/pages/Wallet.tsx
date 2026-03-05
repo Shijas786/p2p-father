@@ -446,7 +446,7 @@ export function Wallet({ user }: Props) {
                         <IconLock size={16} color="#6366f1" />
                         P2P Escrow Vault
                         <span className="vault-info-trigger" onClick={() => setShowVaultInfo(!showVaultInfo)}>
-                            <IconInfo size={14} color={showVaultInfo ? "#6366f1" : "#94a3b8"} />
+                            <IconInfo size={18} color={showVaultInfo ? "#6366f1" : "#e2e8f0"} />
                         </span>
                     </div>
                     <div className="vault-actions">
