@@ -114,6 +114,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         <div className="page profile-page animate-in">
             {/* ═══ Profile Header ═══ */}
             <div className="prof-header">
+                {/* Left side: Avatar */}
                 <div className="prof-avatar">
                     {user?.photo_url ? (
                         <img src={user.photo_url} alt="" className="prof-avatar-img" />
@@ -122,27 +123,29 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     )}
                 </div>
 
-                <div className="prof-name-row">
-                    <h2 className="prof-username">{user?.first_name || 'User'}</h2>
-                    {user?.username && <span className="prof-handle">@{user.username}</span>}
-                </div>
+                {/* Right side: Info & Actions */}
+                <div className="prof-info-col" style={{ flex: 1 }}>
+                    <div className="prof-name-row">
+                        <h2 className="prof-username">{user?.first_name || 'User'}</h2>
+                        {user?.username && <span className="prof-handle">@{user.username}</span>}
+                    </div>
 
-                {/* Verification Badges */}
-                <div className="prof-badges">
-                    <span className="prof-badge verified">✓ Telegram Verified</span>
-                </div>
+                    <div className="prof-badges">
+                        <span className="prof-badge verified">✓ Telegram Verified</span>
+                    </div>
 
-                {/* Hidden File Input & Update Button */}
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                />
-                <button className="prof-update-photo-btn" onClick={handleAvatarClick} disabled={saving}>
-                    <span>📷</span> {saving ? 'Uploading...' : 'Update Profile Picture'}
-                </button>
+                    {/* Hidden File Input & Update Button */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                    />
+                    <button className="prof-update-photo-btn" style={{ marginTop: '12px', width: 'fit-content' }} onClick={handleAvatarClick} disabled={saving}>
+                        <span>📷</span> {saving ? 'Uploading...' : 'Update Photo'}
+                    </button>
+                </div>
             </div>
 
             {/* ═══ Stats Grid ═══ */}
