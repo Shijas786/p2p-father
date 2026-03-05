@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconLock, IconCopy, IconQr } from '../components/Icons';
+import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconLock, IconCopy, IconQr, IconInfo } from '../components/Icons';
 import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain, useChainId, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { appKit } from '../lib/wagmi';
@@ -55,6 +55,7 @@ export function Wallet({ user }: Props) {
     const [vaultError, setVaultError] = useState('');
     const [vaultSuccess, setVaultSuccess] = useState('');
     const [vaultStep, setVaultStep] = useState<'idle' | 'approved'>('idle');
+    const [showVaultInfo, setShowVaultInfo] = useState(false);
 
     const { address: wagmiAddress, isConnected } = useAccount();
     const currentChainId = useChainId();
@@ -444,6 +445,9 @@ export function Wallet({ user }: Props) {
                     <div className="vault-title">
                         <IconLock size={16} color="#6366f1" />
                         P2P Escrow Vault
+                        <span className="vault-info-trigger" onClick={() => setShowVaultInfo(!showVaultInfo)}>
+                            <IconInfo size={14} color={showVaultInfo ? "#6366f1" : "#94a3b8"} />
+                        </span>
                     </div>
                     <div className="vault-actions">
                         <button className="btn-vault deposit" onClick={() => { setShowVaultAction('deposit'); setVaultError(''); setVaultSuccess(''); }}>
@@ -454,6 +458,13 @@ export function Wallet({ user }: Props) {
                         </button>
                     </div>
                 </div>
+
+                {showVaultInfo && (
+                    <div className="vault-info-banner animate-in">
+                        <IconInfo size={12} color="#6366f1" />
+                        <span>Funds here are dedicated to your active P2P sell listings.</span>
+                    </div>
+                )}
 
                 <div className="vault-assets">
                     {/* Base */}
