@@ -77,6 +77,8 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             setEditingUpi(false);
             setEditingPhone(false);
             setEditingBank(false);
+            setEditingReceiveAddr(false);
+            setEditingCdm(false);
             onUpdate();
         } catch (err: any) {
             setMessage(`error:${err.message}`);
