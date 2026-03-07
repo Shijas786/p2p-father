@@ -141,13 +141,8 @@ function AppInner() {
       console.log('[P2P] Toggling wallet. Current mode:', user?.wallet_type);
 
       if (user?.wallet_type === 'external') {
-        // Disconnect Wagmi
-        if (isConnected) {
-          const connectors = wagmiConfig.connectors;
-          if (connectors.length > 0) {
-            await wagmiConfig.state.connections.values().next().value?.connector?.disconnect?.();
-          }
-        }
+        // We do NOT disconnect Wagmi here.
+        // We want to keep the session alive so they can switch back instantly.
 
         // Instantly switch back to Bot Wallet
         setConnecting(true);
@@ -163,9 +158,26 @@ function AppInner() {
           });
 
       } else {
-        // Automatically switch to External Wallet
+        // Switching to External Wallet
         setWalletMode('external');
-        await appKit.open();
+
+        // If they already have an active WalletConnect session, just use it!
+        if (isConnected && address) {
+          console.log('[P2P] Existing Wagmi session found. Reconnecting instantly...');
+          setConnecting(true);
+          api.wallet.connectExternal(address)
+            .then(() => refreshUser())
+            .then(() => {
+              setConnecting(false);
+            })
+            .catch(err => {
+              console.error('[P2P] Error reconnecting to external wallet:', err);
+              setConnecting(false);
+            });
+        } else {
+          // No active session, they must connect
+          await appKit.open();
+        }
       }
 
     } catch (err) {
