@@ -149,7 +149,7 @@ function AppInner() {
       }
 
       // Stop wagmi from auto-connecting
-      autoSelectAttempted.current = false;
+      autoSelectAttempted.current = true;
 
       // Reset local state to show the WalletSelector
       setWalletChosen(false);
