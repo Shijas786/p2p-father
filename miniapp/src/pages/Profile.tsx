@@ -28,6 +28,10 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [bankName, setBankName] = useState(user?.bank_name || '');
     const [editingBank, setEditingBank] = useState(false);
 
+    // Receive Address State
+    const [receiveAddrInput, setReceiveAddrInput] = useState(user?.receive_address || '');
+    const [editingReceiveAddr, setEditingReceiveAddr] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +110,19 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             bank_ifsc: bankIfsc.toUpperCase(),
             bank_name: bankName || null,
         }, 'Bank details updated!');
+    }
+
+    async function saveReceiveAddr() {
+        if (receiveAddrInput && !receiveAddrInput.startsWith('0x')) {
+            setMessage('error:Enter a valid wallet address (0x...)');
+            return;
+        }
+        await saveField({ receive_address: receiveAddrInput || null }, 'Receive address updated!');
+    }
+
+    async function useDefaultWallet() {
+        setReceiveAddrInput('');
+        await saveField({ receive_address: null }, 'Reset to default wallet!');
     }
 
 
@@ -249,6 +266,39 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                             </div>
                         ) : (
                             <span className="prof-payment-value">Not set</span>
+                        )}
+                    </div>
+
+                    {/* Receive Address */}
+                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">🔗 Receive Address</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
+                                {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
+                            </button>
+                        </div>
+                        {editingReceiveAddr ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="0x..." value={receiveAddrInput} onChange={e => setReceiveAddrInput(e.target.value)} autoFocus />
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                    <button className="prof-save-btn" onClick={saveReceiveAddr} disabled={saving} style={{ flex: 1 }}>
+                                        {saving ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button className="prof-save-btn secondary" onClick={useDefaultWallet} disabled={saving} style={{ flex: 1 }}>
+                                        Use Default Wallet
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="prof-bank-info">
+                                <span className="prof-payment-value">
+                                    {user?.receive_address ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}` : 'Not set (using default)'}
+                                </span>
+                                <div className="prof-bank-sub" style={{ color: '#f0b90b', marginTop: '8px', padding: '8px', background: 'rgba(240, 185, 11, 0.1)', borderRadius: '6px', fontSize: '11px', lineHeight: '1.4' }}>
+                                    ⚠️ <b>Security Note:</b> Changes only apply to <b>new trades</b>.
+                                    Address for active trades or disputes cannot be changed.
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

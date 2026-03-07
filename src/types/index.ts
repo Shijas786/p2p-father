@@ -43,6 +43,7 @@ export interface User {
     tier: "standard" | "silver" | "gold" | "vip";
     is_verified: boolean;
     is_banned: boolean;
+    receive_address: string | null;
     created_at: string;
     photo_url?: string; // Manual PFP
     total_volume?: number;
@@ -108,6 +109,7 @@ export interface Trade {
     dispute_evidence: DisputeEvidence | null;
     resolution: string | null;
     resolved_by: string | null;
+    buyer_custom_address: string | null;
     created_at: string;
 }
 

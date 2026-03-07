@@ -738,6 +738,10 @@ router.post("/trades", async (req: Request, res: Response) => {
             const sellerWalletType = (seller as any).wallet_type || 'bot';
 
             // ═══ P2P TRADING FLOW (VAULT BASED) ═══
+            const receiveAddress = buyer.receive_address || buyer.wallet_address;
+            if (!receiveAddress) {
+                return res.status(400).json({ error: "Buyer has no receive address configured" });
+            }
 
             let escrowTxHash = "";
             let onChainTradeId = "";
@@ -770,10 +774,10 @@ router.post("/trades", async (req: Request, res: Response) => {
                 // Buyer pays fiat for Amount * 0.995.
                 // Buyer receives Amount * 0.99.
 
-                console.log(`[TRADES] Relayer creating trade for ${seller.wallet_address} -> ${buyer.wallet_address} on ${order.chain}. Lock: ${tradeAmount}`);
+                console.log(`[TRADES] Relayer creating trade for ${seller.wallet_address} -> ${receiveAddress} on ${order.chain}. Lock: ${tradeAmount}`);
                 const tradeIdStr = await escrow.createRelayedTrade(
                     seller.wallet_address!,
-                    buyer.wallet_address!,
+                    receiveAddress,
                     tokenAddress,
                     tradeAmount.toString(),
                     3600, // 1 hour
@@ -797,6 +801,8 @@ router.post("/trades", async (req: Request, res: Response) => {
                 buyer_id: buyer.id,
                 amount: tradeAmount,
                 token: order.token,
+                chain: order.chain,
+                buyer_custom_address: receiveAddress,
                 fiat_amount: fiatAmount as any,
                 fiat_currency: "INR",
                 rate: order.rate,

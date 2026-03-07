@@ -80,6 +80,7 @@ class Database {
                     wallet_index: nextIndex,
                     wallet_address: walletAddress,
                     wallet_type: walletAddress ? 'bot' : null,
+                    receive_address: null,
                 })
                 .select()
                 .single();
@@ -404,7 +405,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id, photo_url), buyer:users!trades_buyer_id_fkey(username, photo_url, telegram_id)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, telegram_id, photo_url, receive_address), buyer:users!trades_buyer_id_fkey(username, photo_url, telegram_id, receive_address)")
             .eq("id", tradeId)
             .single();
 
@@ -424,6 +425,7 @@ class Database {
             buyer_username: data.buyer?.username,
             buyer_photo_url: data.buyer?.photo_url,
             buyer_telegram_id: data.buyer?.telegram_id,
+            buyer_custom_address: data.buyer_custom_address,
         } as any;
     }
 
