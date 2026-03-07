@@ -325,11 +325,11 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 <div className="prof-section">
                     <div className="prof-section-header">
                         <span className="prof-section-icon">🔗</span>
-                        <span className="prof-section-title">Receive Address</span>
+                        <span className="prof-section-title">Settlement Wallet</span>
                     </div>
                     <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
                         <div className="prof-payment-top">
-                            <span className="prof-payment-name">Settlement Wallet</span>
+                            <span className="prof-payment-name">Wallet to receive funds</span>
                             <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
                                 {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
                             </button>
