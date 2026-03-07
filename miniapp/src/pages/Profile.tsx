@@ -347,7 +347,12 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         ) : (
                             <div className="prof-bank-info">
                                 <span className="prof-payment-value">
-                                    {user?.receive_address ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}` : 'Default Bot Wallet'}
+                                    {user?.receive_address
+                                        ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}`
+                                        : user?.wallet_address
+                                            ? `Default (${user.wallet_type === 'external' ? 'External' : 'Bot'}): ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
+                                            : 'Default Bot Wallet'
+                                    }
                                 </span>
                             </div>
                         )}
