@@ -380,11 +380,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <span className="prof-nav-text">My Ads</span>
                         <span className="prof-nav-chevron">›</span>
                     </div>
-                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/wallet'); }}>
-                        <span className="prof-nav-icon">💰</span>
-                        <span className="prof-nav-text">Wallet</span>
-                        <span className="prof-nav-chevron">›</span>
-                    </div>
                 </div>
 
                 {/* Wallet Info (Original Layout) */}
