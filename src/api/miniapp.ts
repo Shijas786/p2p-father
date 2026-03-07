@@ -1401,13 +1401,18 @@ router.put("/profile", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const { upi_id, phone_number, bank_account_number, bank_ifsc, bank_name } = req.body;
+        const { upi_id, phone_number, bank_account_number, bank_ifsc, bank_name, receive_address, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name } = req.body;
         const updates: Record<string, any> = {};
         if (upi_id !== undefined) updates.upi_id = upi_id;
         if (phone_number !== undefined) updates.phone_number = phone_number;
         if (bank_account_number !== undefined) updates.bank_account_number = bank_account_number;
         if (bank_ifsc !== undefined) updates.bank_ifsc = bank_ifsc;
         if (bank_name !== undefined) updates.bank_name = bank_name;
+        if (receive_address !== undefined) updates.receive_address = receive_address;
+        if (cdm_bank_number !== undefined) updates.cdm_bank_number = cdm_bank_number;
+        if (cdm_bank_name !== undefined) updates.cdm_bank_name = cdm_bank_name;
+        if (cdm_phone !== undefined) updates.cdm_phone = cdm_phone;
+        if (cdm_user_name !== undefined) updates.cdm_user_name = cdm_user_name;
 
         if (Object.keys(updates).length > 0) {
             await db.updateUser(user.id, updates as any);
