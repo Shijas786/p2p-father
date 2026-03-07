@@ -813,7 +813,6 @@ router.post("/trades", async (req: Request, res: Response) => {
                 escrow_tx_hash: escrowTxHash as any,
                 on_chain_trade_id: onChainTradeId as any,
                 escrow_locked_at: lockedAt as any,
-                chain: order.chain,
             });
 
             res.json({ trade });
