@@ -138,25 +138,38 @@ function AppInner() {
 
   const handleSwitchWallet = async () => {
     try {
-      console.log('[P2P] Switching wallet...');
-      // Disconnect wagmi if it's connected
-      if (isConnected) {
-        // Find the active connector to disconnect
-        const connectors = wagmiConfig.connectors;
-        if (connectors.length > 0) {
-          await wagmiConfig.state.connections.values().next().value?.connector?.disconnect?.();
+      console.log('[P2P] Toggling wallet. Current mode:', user?.wallet_type);
+
+      if (user?.wallet_type === 'external') {
+        // Disconnect Wagmi
+        if (isConnected) {
+          const connectors = wagmiConfig.connectors;
+          if (connectors.length > 0) {
+            await wagmiConfig.state.connections.values().next().value?.connector?.disconnect?.();
+          }
         }
+
+        // Instantly switch back to Bot Wallet
+        setConnecting(true);
+        api.wallet.connectBot()
+          .then(() => refreshUser())
+          .then(() => {
+            setWalletMode('bot');
+            setConnecting(false);
+          })
+          .catch(err => {
+            console.error('[P2P] Error auto-switching to bot wallet:', err);
+            setConnecting(false);
+          });
+
+      } else {
+        // Automatically switch to External Wallet
+        setWalletMode('external');
+        await appKit.open();
       }
 
-      // Stop wagmi from auto-connecting
-      autoSelectAttempted.current = true;
-
-      // Reset local state to show the WalletSelector
-      setWalletChosen(false);
-      setWalletMode(null);
-
     } catch (err) {
-      console.error('[P2P] Error switching wallet:', err);
+      console.error('[P2P] Error toggling wallet:', err);
     }
   };
 
