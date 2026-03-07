@@ -727,29 +727,28 @@ export function TradeDetail({ user }: Props) {
 
                             return (
                                 <>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden border border-white/10 relative">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%', background: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
                                             {cpPhoto ? (
-                                                <img src={cpPhoto} alt="" className="w-full h-full object-cover" />
+                                                <img src={cpPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                                             ) : (
-                                                <span className="text-sm font-bold text-gray-400">{cpName[0]?.toUpperCase()}</span>
+                                                <span style={{ fontSize: '14px', fontWeight: 700, color: '#9ca3af' }}>{cpName[0]?.toUpperCase()}</span>
                                             )}
-                                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-black ${trade ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                                            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #000', background: trade ? '#22c55e' : '#6b7280' }}></div>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-white text-sm">{cpName}</span>
-                                                {/* <span className="text-blue-400 text-[10px]">Verified</span> */}
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>{cpName}</span>
                                             </div>
-                                            <div className="text-[10px] text-muted flex items-center gap-1">
+                                            <div style={{ fontSize: '10px', color: '#848e9c', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 {trade ? (
-                                                    <span className={`status-badge px-1.5 py-0.5 rounded text-[9px] ${trade.status}`}>
+                                                    <span className={`status-badge ${trade.status}`} style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px' }}>
                                                         {trade.status.replace('_', ' ').toUpperCase()}
                                                     </span>
                                                 ) : (
                                                     <span>Level 1 Trader</span>
                                                 )}
-                                                {cpUsername && <span className="text-gray-600">@{cpUsername}</span>}
+                                                {cpUsername && <span style={{ color: '#4b5563' }}>@{cpUsername}</span>}
                                             </div>
                                         </div>
                                     </div>
