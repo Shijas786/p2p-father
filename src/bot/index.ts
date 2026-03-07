@@ -149,7 +149,7 @@ export async function broadcastAd(order: any, user: any) {
         ].join("\n");
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
-        const miniAppLink = `https://t.me/${botUser.username}/miniapp?startapp=order_${order.id}`;
+        const miniAppLink = `https://t.me/${botUser.username}?start=buy_${order.id}`;
         const keyboard = new InlineKeyboard().url(actionLabel, miniAppLink);
 
         await broadcast(msg, keyboard);
@@ -1959,7 +1959,7 @@ bot.on("callback_query:data", async (ctx) => {
                     if (targetGroup !== undefined) {
                         // Post ONLY to that group
                         const groupKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/miniapp?startapp=order_${order.id}&v=${Date.now()}`);
+                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
 
                         await ctx.api.sendMessage(
                             String(targetGroup),
@@ -1970,7 +1970,7 @@ bot.on("callback_query:data", async (ctx) => {
                     } else if (env.BROADCAST_CHANNEL_ID) {
                         // Fallback: Post to Main Channel for Direct DM ads
                         const channelKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}/miniapp?startapp=order_${order.id}`);
+                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
 
                         await ctx.api.sendMessage(
                             env.BROADCAST_CHANNEL_ID,
