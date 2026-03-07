@@ -32,6 +32,13 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [receiveAddrInput, setReceiveAddrInput] = useState(user?.receive_address || '');
     const [editingReceiveAddr, setEditingReceiveAddr] = useState(false);
 
+    // CDM State
+    const [cdmBankNumber, setCdmBankNumber] = useState(user?.cdm_bank_number || '');
+    const [cdmBankName, setCdmBankName] = useState(user?.cdm_bank_name || '');
+    const [cdmPhone, setCdmPhone] = useState(user?.cdm_phone || '');
+    const [cdmUserName, setCdmUserName] = useState(user?.cdm_user_name || '');
+    const [editingCdm, setEditingCdm] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,6 +130,19 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     async function useDefaultWallet() {
         setReceiveAddrInput('');
         await saveField({ receive_address: null }, 'Reset to default wallet!');
+    }
+
+    async function saveCdm() {
+        if (!cdmBankNumber || !cdmBankName || !cdmPhone || !cdmUserName) {
+            setMessage('error:Please fill all CDM fields');
+            return;
+        }
+        await saveField({
+            cdm_bank_number: cdmBankNumber,
+            cdm_bank_name: cdmBankName,
+            cdm_phone: cdmPhone,
+            cdm_user_name: cdmUserName
+        }, 'CDM details updated!');
     }
 
 
@@ -299,6 +319,35 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     Address for active trades or disputes cannot be changed.
                                 </div>
                             </div>
+                        )}
+                    </div>
+
+                    {/* CDM Details */}
+                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">🏦 CDM Details</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingCdm(!editingCdm); setMessage(''); }}>
+                                {editingCdm ? 'Cancel' : (user?.cdm_bank_number ? 'Edit' : 'Add')}
+                            </button>
+                        </div>
+                        {editingCdm ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="Bank Number" value={cdmBankNumber} onChange={e => setCdmBankNumber(e.target.value)} />
+                                <input placeholder="Bank Name" value={cdmBankName} onChange={e => setCdmBankName(e.target.value)} />
+                                <input placeholder="Bank Linked Phone" value={cdmPhone} onChange={e => setCdmPhone(e.target.value)} />
+                                <input placeholder="Bank User Name" value={cdmUserName} onChange={e => setCdmUserName(e.target.value)} />
+                                <button className="prof-save-btn" onClick={saveCdm} disabled={saving}>
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        ) : user?.cdm_bank_number ? (
+                            <div className="prof-bank-info">
+                                <span className="prof-payment-value">{user.cdm_bank_number}</span>
+                                <span className="prof-bank-sub">{user.cdm_bank_name} • {user.cdm_user_name}</span>
+                                <span className="prof-bank-sub">Phone: {user.cdm_phone}</span>
+                            </div>
+                        ) : (
+                            <span className="prof-payment-value">Not set</span>
                         )}
                     </div>
                 </div>

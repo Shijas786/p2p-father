@@ -833,6 +833,24 @@ export function TradeDetail({ user }: Props) {
                                 </div>
                             )}
 
+                            {trade.seller_cdm_bank_number && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-blue/30">
+                                    <div className="text-[10px] text-blue uppercase font-bold mb-1">🏦 CDM (Cash Deposit)</div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="font-mono text-sm text-white select-all">{trade.seller_cdm_bank_number}</span>
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_cdm_bank_number || '');
+                                            if (success) haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                    <div className="text-xs text-muted mt-1">
+                                        <div>Bank: <span className="text-white">{trade.seller_cdm_bank_name}</span></div>
+                                        <div>Name: <span className="text-white">{trade.seller_cdm_user_name}</span></div>
+                                        <div>Phone: <span className="text-white">{trade.seller_cdm_phone}</span></div>
+                                    </div>
+                                </div>
+                            )}
+
                             {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && (
                                 <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
                                     <div className="text-sm text-orange">⚠️ Seller has not set up payment details yet. Contact them via chat.</div>
