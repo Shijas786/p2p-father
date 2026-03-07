@@ -8,10 +8,9 @@ import './Profile.css';
 interface Props {
     user: any;
     onUpdate: () => void;
-    onSwitchWallet: () => void;
 }
 
-export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
+export function Profile({ user, onUpdate }: Props) {
     const navigate = useNavigate();
 
     // UPI State
@@ -289,39 +288,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         )}
                     </div>
 
-                    {/* Receive Address */}
-                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
-                        <div className="prof-payment-top">
-                            <span className="prof-payment-name">🔗 Receive Address</span>
-                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
-                                {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
-                            </button>
-                        </div>
-                        {editingReceiveAddr ? (
-                            <div className="prof-edit-form">
-                                <input placeholder="0x..." value={receiveAddrInput} onChange={e => setReceiveAddrInput(e.target.value)} autoFocus />
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                    <button className="prof-save-btn" onClick={saveReceiveAddr} disabled={saving} style={{ flex: 1 }}>
-                                        {saving ? 'Saving...' : 'Save'}
-                                    </button>
-                                    <button className="prof-save-btn secondary" onClick={useDefaultWallet} disabled={saving} style={{ flex: 1 }}>
-                                        Use Default Wallet
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="prof-bank-info">
-                                <span className="prof-payment-value">
-                                    {user?.receive_address ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}` : 'Not set (using default)'}
-                                </span>
-                                <div className="prof-bank-sub" style={{ color: '#f0b90b', marginTop: '8px', padding: '8px', background: 'rgba(240, 185, 11, 0.1)', borderRadius: '6px', fontSize: '11px', lineHeight: '1.4' }}>
-                                    ⚠️ <b>Security Note:</b> Changes only apply to <b>new trades</b>.
-                                    Address for active trades or disputes cannot be changed.
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
                     {/* CDM Details */}
                     <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
                         <div className="prof-payment-top">
@@ -352,6 +318,41 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     </div>
                 </div>
 
+                {/* Custom Receive Address */}
+                <div className="prof-section">
+                    <div className="prof-section-header">
+                        <span className="prof-section-icon">🔗</span>
+                        <span className="prof-section-title">Receive Address</span>
+                    </div>
+                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                        <div className="prof-payment-top">
+                            <span className="prof-payment-name">Settlement Wallet</span>
+                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
+                                {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
+                            </button>
+                        </div>
+                        {editingReceiveAddr ? (
+                            <div className="prof-edit-form">
+                                <input placeholder="0x..." value={receiveAddrInput} onChange={e => setReceiveAddrInput(e.target.value)} autoFocus />
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                    <button className="prof-save-btn" onClick={saveReceiveAddr} disabled={saving} style={{ flex: 1 }}>
+                                        {saving ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button className="prof-save-btn secondary" onClick={useDefaultWallet} disabled={saving} style={{ flex: 1 }}>
+                                        Use Default
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="prof-bank-info">
+                                <span className="prof-payment-value">
+                                    {user?.receive_address ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}` : 'Default Bot Wallet'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Status Message */}
                 {message && (
                     <div className={`prof-message ${message.startsWith('success:') ? 'success' : 'error'}`}>
@@ -375,31 +376,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <span className="prof-nav-icon">💰</span>
                         <span className="prof-nav-text">Wallet</span>
                         <span className="prof-nav-chevron">›</span>
-                    </div>
-                </div>
-
-                {/* Wallet Type */}
-                <div className="prof-section">
-                    <div className="prof-nav-item" style={{ borderBottom: 'none' }}>
-                        <span className="prof-nav-icon">🔗</span>
-                        <div style={{ flex: 1 }}>
-                            <div className="prof-nav-text">
-                                {user?.wallet_address
-                                    ? `${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-6)}`
-                                    : 'No wallet'}
-                            </div>
-                            <span className="prof-wallet-type">
-                                {user?.wallet_type === 'external' ? 'External Wallet' : 'Bot Wallet'}
-                            </span>
-                        </div>
-                        <button className="prof-switch-btn" onClick={() => {
-                            if (window.confirm('Switch wallet?')) {
-                                haptic('medium');
-                                onSwitchWallet();
-                            }
-                        }}>
-                            Switch
-                        </button>
                     </div>
                 </div>
 
