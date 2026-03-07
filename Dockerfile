@@ -9,9 +9,7 @@ RUN npm install
 # Copy all source files
 COPY . .
 
-# Build miniapp from scratch
-WORKDIR /app/miniapp
-RUN npm install --legacy-peer-deps && npx vite build && ls -la dist/assets/*.css
+# Miniapp is pre-built and synced to public/app in Git, skipping Vite build to save memory
 
 # Build the backend
 WORKDIR /app
