@@ -39,6 +39,9 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [cdmUserName, setCdmUserName] = useState(user?.cdm_user_name || '');
     const [editingCdm, setEditingCdm] = useState(false);
 
+    // Accordion State
+    const [isPaymentMethodsExpanded, setIsPaymentMethodsExpanded] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -219,106 +222,113 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
                 {/* Payment Methods */}
                 <div className="prof-section">
-                    <div className="prof-section-header">
-                        <span className="prof-section-icon">💳</span>
-                        <span className="prof-section-title">Payment Methods</span>
+                    <div className="prof-section-header" onClick={() => { haptic('light'); setIsPaymentMethodsExpanded(!isPaymentMethodsExpanded); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span className="prof-section-icon">💳</span>
+                            <span className="prof-section-title">Payment Methods</span>
+                        </div>
+                        <span className="prof-nav-chevron" style={{ transform: isPaymentMethodsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: '24px', color: '#848e9c' }}>›</span>
                     </div>
 
-                    {/* UPI */}
-                    <div className="prof-payment-item">
-                        <div className="prof-payment-top">
-                            <span className="prof-payment-name">📱 UPI ID</span>
-                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingUpi(!editingUpi); setMessage(''); }}>
-                                {editingUpi ? 'Cancel' : (user?.upi_id ? 'Edit' : 'Add')}
-                            </button>
-                        </div>
-                        {editingUpi ? (
-                            <div className="prof-edit-form">
-                                <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} autoFocus />
-                                <button className="prof-save-btn" onClick={saveUpi} disabled={saving}>
-                                    {saving ? 'Saving...' : 'Save'}
-                                </button>
+                    {isPaymentMethodsExpanded && (
+                        <>
+                            {/* UPI */}
+                            <div className="prof-payment-item">
+                                <div className="prof-payment-top">
+                                    <span className="prof-payment-name">📱 UPI ID</span>
+                                    <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingUpi(!editingUpi); setMessage(''); }}>
+                                        {editingUpi ? 'Cancel' : (user?.upi_id ? 'Edit' : 'Add')}
+                                    </button>
+                                </div>
+                                {editingUpi ? (
+                                    <div className="prof-edit-form">
+                                        <input placeholder="yourname@upi" value={upiInput} onChange={e => setUpiInput(e.target.value)} autoFocus />
+                                        <button className="prof-save-btn" onClick={saveUpi} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
+                                )}
                             </div>
-                        ) : (
-                            <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
-                        )}
-                    </div>
 
-                    {/* Phone */}
-                    <div className="prof-payment-item">
-                        <div className="prof-payment-top">
-                            <span className="prof-payment-name">📞 Phone Number</span>
-                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingPhone(!editingPhone); setMessage(''); }}>
-                                {editingPhone ? 'Cancel' : (user?.phone_number ? 'Edit' : 'Add')}
-                            </button>
-                        </div>
-                        {editingPhone ? (
-                            <div className="prof-edit-form">
-                                <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} autoFocus />
-                                <button className="prof-save-btn" onClick={savePhone} disabled={saving}>
-                                    {saving ? 'Saving...' : 'Save'}
-                                </button>
+                            {/* Phone */}
+                            <div className="prof-payment-item">
+                                <div className="prof-payment-top">
+                                    <span className="prof-payment-name">📞 Phone Number</span>
+                                    <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingPhone(!editingPhone); setMessage(''); }}>
+                                        {editingPhone ? 'Cancel' : (user?.phone_number ? 'Edit' : 'Add')}
+                                    </button>
+                                </div>
+                                {editingPhone ? (
+                                    <div className="prof-edit-form">
+                                        <input type="tel" placeholder="9876543210" value={phoneInput} onChange={e => setPhoneInput(e.target.value)} autoFocus />
+                                        <button className="prof-save-btn" onClick={savePhone} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <span className="prof-payment-value">{user?.phone_number || 'Not set'}</span>
+                                )}
                             </div>
-                        ) : (
-                            <span className="prof-payment-value">{user?.phone_number || 'Not set'}</span>
-                        )}
-                    </div>
 
-                    {/* Bank */}
-                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
-                        <div className="prof-payment-top">
-                            <span className="prof-payment-name">🏦 Bank Transfer</span>
-                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingBank(!editingBank); setMessage(''); }}>
-                                {editingBank ? 'Cancel' : (user?.bank_account_number ? 'Edit' : 'Add')}
-                            </button>
-                        </div>
-                        {editingBank ? (
-                            <div className="prof-edit-form">
-                                <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} autoFocus />
-                                <input placeholder="IFSC Code" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} />
-                                <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} />
-                                <button className="prof-save-btn" onClick={saveBank} disabled={saving}>
-                                    {saving ? 'Saving...' : 'Save'}
-                                </button>
+                            {/* Bank */}
+                            <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                                <div className="prof-payment-top">
+                                    <span className="prof-payment-name">🏦 Bank Transfer</span>
+                                    <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingBank(!editingBank); setMessage(''); }}>
+                                        {editingBank ? 'Cancel' : (user?.bank_account_number ? 'Edit' : 'Add')}
+                                    </button>
+                                </div>
+                                {editingBank ? (
+                                    <div className="prof-edit-form">
+                                        <input placeholder="Account Number" value={bankAccount} onChange={e => setBankAccount(e.target.value)} autoFocus />
+                                        <input placeholder="IFSC Code" value={bankIfsc} onChange={e => setBankIfsc(e.target.value.toUpperCase())} />
+                                        <input placeholder="Bank Name (optional)" value={bankName} onChange={e => setBankName(e.target.value)} />
+                                        <button className="prof-save-btn" onClick={saveBank} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                ) : user?.bank_account_number ? (
+                                    <div className="prof-bank-info">
+                                        <span className="prof-payment-value">{user.bank_account_number}</span>
+                                        <span className="prof-bank-sub">IFSC: {user.bank_ifsc} {user.bank_name && `• ${user.bank_name}`}</span>
+                                    </div>
+                                ) : (
+                                    <span className="prof-payment-value">Not set</span>
+                                )}
                             </div>
-                        ) : user?.bank_account_number ? (
-                            <div className="prof-bank-info">
-                                <span className="prof-payment-value">{user.bank_account_number}</span>
-                                <span className="prof-bank-sub">IFSC: {user.bank_ifsc} {user.bank_name && `• ${user.bank_name}`}</span>
-                            </div>
-                        ) : (
-                            <span className="prof-payment-value">Not set</span>
-                        )}
-                    </div>
 
-                    {/* CDM Details */}
-                    <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
-                        <div className="prof-payment-top">
-                            <span className="prof-payment-name">🏦 CDM Details</span>
-                            <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingCdm(!editingCdm); setMessage(''); }}>
-                                {editingCdm ? 'Cancel' : (user?.cdm_bank_number ? 'Edit' : 'Add')}
-                            </button>
-                        </div>
-                        {editingCdm ? (
-                            <div className="prof-edit-form">
-                                <input placeholder="Bank Number" value={cdmBankNumber} onChange={e => setCdmBankNumber(e.target.value)} />
-                                <input placeholder="Bank Name" value={cdmBankName} onChange={e => setCdmBankName(e.target.value)} />
-                                <input placeholder="Bank Linked Phone" value={cdmPhone} onChange={e => setCdmPhone(e.target.value)} />
-                                <input placeholder="Bank User Name" value={cdmUserName} onChange={e => setCdmUserName(e.target.value)} />
-                                <button className="prof-save-btn" onClick={saveCdm} disabled={saving}>
-                                    {saving ? 'Saving...' : 'Save'}
-                                </button>
+                            {/* CDM Details */}
+                            <div className="prof-payment-item" style={{ borderBottom: 'none' }}>
+                                <div className="prof-payment-top">
+                                    <span className="prof-payment-name">🏦 CDM Details</span>
+                                    <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingCdm(!editingCdm); setMessage(''); }}>
+                                        {editingCdm ? 'Cancel' : (user?.cdm_bank_number ? 'Edit' : 'Add')}
+                                    </button>
+                                </div>
+                                {editingCdm ? (
+                                    <div className="prof-edit-form">
+                                        <input placeholder="Bank Number" value={cdmBankNumber} onChange={e => setCdmBankNumber(e.target.value)} />
+                                        <input placeholder="Bank Name" value={cdmBankName} onChange={e => setCdmBankName(e.target.value)} />
+                                        <input placeholder="Bank Linked Phone" value={cdmPhone} onChange={e => setCdmPhone(e.target.value)} />
+                                        <input placeholder="Bank User Name" value={cdmUserName} onChange={e => setCdmUserName(e.target.value)} />
+                                        <button className="prof-save-btn" onClick={saveCdm} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                ) : user?.cdm_bank_number ? (
+                                    <div className="prof-bank-info">
+                                        <span className="prof-payment-value">{user.cdm_bank_number}</span>
+                                        <span className="prof-bank-sub">{user.cdm_bank_name} • {user.cdm_user_name}</span>
+                                        <span className="prof-bank-sub">Phone: {user.cdm_phone}</span>
+                                    </div>
+                                ) : (
+                                    <span className="prof-payment-value">Not set</span>
+                                )}
                             </div>
-                        ) : user?.cdm_bank_number ? (
-                            <div className="prof-bank-info">
-                                <span className="prof-payment-value">{user.cdm_bank_number}</span>
-                                <span className="prof-bank-sub">{user.cdm_bank_name} • {user.cdm_user_name}</span>
-                                <span className="prof-bank-sub">Phone: {user.cdm_phone}</span>
-                            </div>
-                        ) : (
-                            <span className="prof-payment-value">Not set</span>
-                        )}
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Custom Receive Address */}
