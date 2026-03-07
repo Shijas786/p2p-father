@@ -8,9 +8,10 @@ import './Profile.css';
 interface Props {
     user: any;
     onUpdate: () => void;
+    onSwitchWallet: () => void;
 }
 
-export function Profile({ user, onUpdate }: Props) {
+export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const navigate = useNavigate();
 
     // UPI State
@@ -376,6 +377,32 @@ export function Profile({ user, onUpdate }: Props) {
                         <span className="prof-nav-icon">💰</span>
                         <span className="prof-nav-text">Wallet</span>
                         <span className="prof-nav-chevron">›</span>
+                    </div>
+                </div>
+
+                {/* Wallet Info (Original Layout) */}
+                <div className="prof-section">
+                    <div className="prof-section-header">
+                        <span className="prof-section-icon">👛</span>
+                        <span className="prof-section-title">Wallet</span>
+                    </div>
+                    <div className="prof-wallet-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+                        <div className="prof-bank-info" style={{ flex: 1 }}>
+                            <span className="prof-payment-value" style={{ display: 'block', marginBottom: '4px' }}>
+                                {user?.wallet_type === 'external' ? 'WalletConnect' : 'Bot Wallet'}
+                            </span>
+                            <span className="prof-bank-sub" style={{ fontSize: '12px', color: '#848e9c' }}>
+                                {user?.wallet_address ? `${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-6)}` : 'Internal'}
+                            </span>
+                        </div>
+                        <button className="prof-switch-btn" onClick={() => {
+                            if (window.confirm('Switch wallet?')) {
+                                haptic('medium');
+                                onSwitchWallet();
+                            }
+                        }}>
+                            Switch
+                        </button>
                     </div>
                 </div>
 

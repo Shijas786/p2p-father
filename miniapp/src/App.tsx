@@ -136,6 +136,30 @@ function AppInner() {
     }
   }, [walletMode, isConnected, address, savingAddress, walletChosen, user, refreshUser]);
 
+  const handleSwitchWallet = async () => {
+    try {
+      console.log('[P2P] Switching wallet...');
+      // Disconnect wagmi if it's connected
+      if (isConnected) {
+        // Find the active connector to disconnect
+        const connectors = wagmiConfig.connectors;
+        if (connectors.length > 0) {
+          await wagmiConfig.state.connections.values().next().value?.connector?.disconnect?.();
+        }
+      }
+
+      // Stop wagmi from auto-connecting
+      autoSelectAttempted.current = false;
+
+      // Reset local state to show the WalletSelector
+      setWalletChosen(false);
+      setWalletMode(null);
+
+    } catch (err) {
+      console.error('[P2P] Error switching wallet:', err);
+    }
+  };
+
   const DeepLinkHandler = () => {
     const navigate = useNavigate();
     const processed = useRef(false);
@@ -238,7 +262,7 @@ function AppInner() {
 
           <Route path="ads" element={<MyAds />} />
           <Route path="admin" element={<Admin />} />
-          <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} />} />
+          <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
           <Route path="leaderboard" element={<Leaderboard />} />
         </Route>
       </Routes>
