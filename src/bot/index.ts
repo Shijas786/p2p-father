@@ -286,27 +286,19 @@ bot.command(["start", "open"], async (ctx) => {
         const groupId = parts[1]; // Capture group ID
 
         if (groupId) {
-            // Set session for targeted ad creation
-            ctx.session.ad_draft = {
-                target_group_id: Number(groupId),
-                type: "sell" // Default
-            };
+            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
+            const keyboard = new InlineKeyboard()
+                .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
             await ctx.reply(
                 [
                     "📢 *Create a New Ad*",
                     "",
-                    "This ad will be posted to the group you came from!",
+                    "Use our Mini App for the best experience! 🚀",
                     "",
-                    "What do you want to do?",
+                    "Tap below to open the ad creation page:",
                 ].join("\n"),
-                {
-                    parse_mode: "Markdown",
-                    reply_markup: new InlineKeyboard()
-                        .text("🔴 I want to SELL crypto", "newad:sell")
-                        .row()
-                        .text("🟢 I want to BUY crypto", "newad:buy")
-                }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             return;
         }
@@ -1394,22 +1386,22 @@ bot.on("callback_query:data", async (ctx) => {
         // Handle "I want to SELL/BUY" from /newad
         // Handle "I want to SELL/BUY" from /newad
         if (data === "newad:sell" || data === "newad:buy") {
-            const adType = data.replace("newad:", "");
-            ctx.session.ad_draft = { type: adType };
-
+            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
             const keyboard = new InlineKeyboard()
-                .text("💵 USDC (Base)", `newad_token:USDC`)
-                .text("dt USDT (Base)", `newad_token:USDT`);
+                .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
             await ctx.editMessageText(
                 [
-                    `📢 *Create ${adType.toUpperCase()} Ad — Step 1/3*`,
+                    "📢 *Create a New Ad*",
                     "",
-                    "Which token do you want to trade?",
+                    "We've moved ad creation to our Mini App for a faster and more secure experience! 🚀",
+                    "",
+                    "Tap below to get started:",
                 ].join("\n"),
                 { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
+            return;
         }
 
         // Handle "Back" to Start
