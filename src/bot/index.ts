@@ -199,7 +199,22 @@ bot.use(async (ctx, next) => {
             // Redirect to DM with context
             const startPayload = (cmd === "/newad" || cmd === "/sell") ? `${cmd.replace("/", "")}_${chatId}` : "dm";
 
-            await ctx.reply(`⚠️ Please [DM me](https://t.me/${username}?start=${startPayload}) to trade!`, { parse_mode: "Markdown" });
+            const keyboard = new InlineKeyboard()
+                .url("🚀 Go to DM", `https://t.me/${username}?start=${startPayload}`);
+
+            await ctx.reply(
+                [
+                    "💸 *Ready to Trade?* ⚡",
+                    "",
+                    "Listing an ad is super easy, but we jump into DMs to keep your details safe.",
+                    "",
+                    "📦 *Tap below to Open Bot*, then launch the *P2PFather App* to finish! 🏁",
+                ].join("\n"),
+                {
+                    parse_mode: "Markdown",
+                    reply_markup: keyboard
+                }
+            );
             return;
         }
     }
@@ -958,10 +973,12 @@ bot.command("buy", async (ctx) => {
                 [
                     "📊 *No sell orders available right now*",
                     "",
-                    "Be the first! Create a sell order with /sell",
-                    "Or check back later.",
+                    "Be the first! 🚀 Launch the Mini App to create a sell order!",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                {
+                    parse_mode: "Markdown",
+                    reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                }
             );
             return;
         }
@@ -1645,9 +1662,12 @@ bot.on("callback_query:data", async (ctx) => {
                             "",
                             "No ads available right now! 😔",
                             "",
-                            "Be the first — /newad to create one!",
+                            "Be the first! 🚀 Launch the Mini App and create an ad!",
                         ].join("\n"),
-                        { parse_mode: "Markdown" }
+                        {
+                            parse_mode: "Markdown",
+                            reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                        }
                     );
                     await ctx.answerCallbackQuery();
                     return;
@@ -3376,7 +3396,13 @@ bot.on("message:text", async (ctx) => {
 
                     const orders = await db.getActiveOrders(orderType, intent.params.token, 10);
                     if (orders.length === 0) {
-                        await ctx.reply("No orders available right now. Be the first! /sell");
+                        await ctx.reply(
+                            "No orders available right now. Be the first! 🚀 Launch the Mini App and create an ad!",
+                            {
+                                parse_mode: "Markdown",
+                                reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                            }
+                        );
                     } else {
                         const list = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
                         try {
