@@ -1876,7 +1876,7 @@ bot.on("callback_query:data", async (ctx) => {
                     // 2. Bot Wallets: Can use Hot Wallet (Auto-Deposit)
                     else {
                         // Check Hot Wallet Balance as fallback
-                        const hotWalletBalance = await wallet.getTokenBalance(user.wallet_address!, tokenAddress);
+                        const hotWalletBalance = await wallet.getTokenBalance(user.wallet_address!, tokenAddress, draftChain as any);
                         const hotBalanceNum = parseFloat(hotWalletBalance);
 
                         if (balanceNum >= amount) {
