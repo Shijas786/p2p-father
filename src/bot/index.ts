@@ -453,7 +453,8 @@ bot.command(["start", "open"], async (ctx) => {
         .webApp("📱 Open P2PFather App", miniAppUrl).row()
         .text("🔍 Browse Ads", "ads:all")
         .text("👤 My Profile", "view_profile").row()
-        .text("🔑 My Wallet", "view_wallet");
+        .text("🔑 My Wallet", "view_wallet")
+        .url("📖 User Guide", "https://p2pfather.up.railway.app/guide");
 
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -1466,7 +1467,8 @@ bot.on("callback_query:data", async (ctx) => {
                 .webApp("📱 Open P2PFather App", miniAppUrl).row()
                 .text("🔍 Browse Ads", "ads:all")
                 .text("👤 My Profile", "view_profile").row()
-                .text("🔑 My Wallet", "view_wallet");
+                .text("🔑 My Wallet", "view_wallet")
+                .url("📖 User Guide", "https://p2pfather.up.railway.app/guide");
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
