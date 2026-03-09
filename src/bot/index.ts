@@ -424,18 +424,8 @@ bot.command(["start", "open"], async (ctx) => {
         "🔐 *Your Wallet Address:*",
         `\`${user.wallet_address}\``,
         "",
-        "*P2P Trading*",
-        "📖 /newad — Create buy/sell ad",
-        "🔍 /ads — Browse live ads",
-        "📂 /myads — Manage your ads",
-        "",
-        "*Wallet & Profile*",
-        "💰 /portfolio — Check balance & send",
-        "⚙️ /wallet — Wallet settings",
-        "💳 /payment — Set payment methods",
-        "📊 /profile — Your stats",
-        "",
-        "Ready to begin?",
+        "🚀 **Ready to Trade?**",
+        "Open our Mini App to browse ads, manage your portfolio, and list your own offers in a few taps!",
     ].join("\n");
 
     const cacheBuster = `?v=${Date.now()}`;
@@ -444,6 +434,7 @@ bot.command(["start", "open"], async (ctx) => {
     // Forcefully overwrite the menu button for this specific user's chat
     // This fixes issues where older accounts cached the previous hosting URL
     try {
+        // --- UPDATING MENU BUTTON ---
         await ctx.api.setChatMenuButton({
             chat_id: ctx.chat.id,
             menu_button: {
@@ -452,13 +443,6 @@ bot.command(["start", "open"], async (ctx) => {
                 web_app: { url: miniAppUrl }
             }
         });
-
-        // --- DEBUG INFO FOR ADMIN CACHE ISSUE ---
-        if (ctx.from?.id.toString() === "1206689874" || true) { // Always show for now to help the user debug
-            const currentMenuButton = await ctx.api.getChatMenuButton({ chat_id: ctx.chat.id });
-            console.log(`Debug Menu Button for ${ctx.from?.id}:`, JSON.stringify(currentMenuButton));
-            await ctx.reply(`*🛠 System Debug Info*\nMenu Button URL currently registered with Telegram:\n\`${currentMenuButton.type === 'web_app' ? currentMenuButton.web_app.url : 'No WebApp URL'}\``, { parse_mode: "Markdown" });
-        }
     } catch (err) {
         console.error("Failed to update user specific menu button:", err);
         await ctx.reply(`*🛠 System Debug Error*\nFailed to update menu button: ${err}`, { parse_mode: "Markdown" });
@@ -466,7 +450,10 @@ bot.command(["start", "open"], async (ctx) => {
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
-        .webApp("📱 Launch Application", miniAppUrl);
+        .webApp("📱 Open P2PFather App", miniAppUrl).row()
+        .text("🔍 Browse Ads", "ads:all")
+        .text("👤 My Profile", "view_profile").row()
+        .text("🔑 My Wallet", "view_wallet");
 
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -1404,6 +1391,60 @@ bot.on("callback_query:data", async (ctx) => {
             return;
         }
 
+        // Handle "View Profile"
+        if (data === "view_profile") {
+            const user = await ensureUser(ctx);
+            const stars = (user.trust_score ?? 0) >= 95 ? "💎" :
+                (user.trust_score ?? 0) >= 80 ? "⭐" :
+                    (user.trust_score ?? 0) >= 60 ? "🟢" :
+                        (user.trust_score ?? 0) >= 30 ? "🟡" : "🔴";
+
+            await ctx.reply(
+                [
+                    "👤 *Your Profile*",
+                    "",
+                    `Name: ${user.first_name || "Anonymous"}`,
+                    `Tier: ${user.tier.toUpperCase()}`,
+                    "",
+                    `${stars} Trust: ${user.trust_score}%`,
+                    `📈 Total Trades: ${user.trade_count}`,
+                    `✅ Completed: ${user.completed_trades}`,
+                    "",
+                    `💳 Wallet: \`${user.wallet_address ? truncateAddress(user.wallet_address) : "Not set"}\``,
+                    `📱 UPI: ${user.upi_id || "Not set"}`,
+                ].join("\n"),
+                { parse_mode: "Markdown" }
+            );
+            await ctx.answerCallbackQuery();
+            return;
+        }
+
+        // Handle "View Wallet"
+        if (data === "view_wallet") {
+            const user = await ensureUser(ctx);
+            const keyboard = new InlineKeyboard()
+                .text("📋 Copy Address", `copy:${user.wallet_address}`)
+                .row()
+                .text("🔑 Export Private Key", "export_key")
+                .row()
+                .text("📱 Set UPI", "change_upi");
+
+            await ctx.reply(
+                [
+                    "🔑 *Your Wallet*",
+                    "",
+                    `💳 Address: \`${user.wallet_address}\``,
+                    `📱 UPI: ${user.upi_id || "Not set"}`,
+                    "",
+                    "Your wallet was created automatically.",
+                    "You OWN this wallet — export your key anytime!",
+                ].join("\n"),
+                { parse_mode: "Markdown", reply_markup: keyboard }
+            );
+            await ctx.answerCallbackQuery();
+            return;
+        }
+
         // Handle "Back" to Start
         if (data === "start_over") {
             const user = await ensureUser(ctx);
@@ -1415,24 +1456,17 @@ bot.on("callback_query:data", async (ctx) => {
                 "🔐 *Your Wallet Address:*",
                 `\`${user.wallet_address}\``,
                 "",
-                "*P2P Trading*",
-                "📖 /newad — Create buy/sell ad",
-                "🔍 /ads — Browse live ads",
-                "📂 /myads — Manage your ads",
-                "",
-                "*Wallet & Profile*",
-                "💰 /portfolio — Check balance & send",
-                "⚙️ /wallet — Wallet settings",
-                "💳 /payment — Set payment methods",
-                "📊 /profile — Your stats",
-                "",
-                "Ready to begin?",
+                "🚀 **Ready to Trade?**",
+                "Open our Mini App to browse ads, manage your portfolio, and list your own offers in a few taps!",
             ].join("\n");
 
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
             const startKeyboard = new InlineKeyboard()
-                .webApp("📱 Launch Application", miniAppUrl);
+                .webApp("📱 Open P2PFather App", miniAppUrl).row()
+                .text("🔍 Browse Ads", "ads:all")
+                .text("👤 My Profile", "view_profile").row()
+                .text("🔑 My Wallet", "view_wallet");
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
