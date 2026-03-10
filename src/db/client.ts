@@ -215,7 +215,7 @@ class Database {
         const db = this.getClient();
         let query = db
             .from("orders")
-            .select("*, users!inner(username, trust_score, completed_trades, wallet_address, telegram_id, photo_url)")
+            .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, photo_url)")
             .eq("status", "active")
             .order("rate", { ascending: type === "sell" })
             .limit(limit);
@@ -233,7 +233,7 @@ class Database {
 
         return (data || []).map((d: any) => ({
             ...d,
-            username: d.users?.username,
+            username: d.users?.username || d.users?.first_name || "Unknown",
             trust_score: d.users?.trust_score,
             wallet_address: d.users?.wallet_address,
             telegram_id: d.users?.telegram_id,
@@ -245,7 +245,7 @@ class Database {
         const db = this.getClient();
         const { data, error } = await db
             .from("orders")
-            .select("*, users!inner(username, trust_score, upi_id, photo_url)")
+            .select("*, users!inner(username, first_name, trust_score, upi_id, photo_url)")
             .eq("id", orderId)
             .single();
         if (error) {
@@ -255,7 +255,7 @@ class Database {
         if (!data) return null;
         return {
             ...data,
-            username: data.users?.username,
+            username: data.users?.username || data.users?.first_name || "Unknown",
             trust_score: data.users?.trust_score,
             upi_id: data.users?.upi_id,
             photo_url: data.users?.photo_url,
@@ -409,7 +409,7 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, phone_number, bank_account_number, bank_ifsc, bank_name, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name, telegram_id, photo_url, receive_address), buyer:users!trades_buyer_id_fkey(username, photo_url, telegram_id, receive_address)")
+            .select("*, seller:users!trades_seller_id_fkey(upi_id, username, first_name, phone_number, bank_account_number, bank_ifsc, bank_name, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name, telegram_id, photo_url, receive_address), buyer:users!trades_buyer_id_fkey(username, first_name, photo_url, telegram_id, receive_address)")
             .eq("id", tradeId)
             .single();
 
@@ -418,7 +418,7 @@ class Database {
         return {
             ...data,
             seller_upi_id: data.seller?.upi_id,
-            seller_username: data.seller?.username,
+            seller_username: data.seller?.username || data.seller?.first_name || "Seller",
             seller_phone: data.seller?.phone_number,
             seller_bank_account: data.seller?.bank_account_number,
             seller_bank_ifsc: data.seller?.bank_ifsc,
@@ -430,7 +430,7 @@ class Database {
             seller_cdm_phone: data.seller?.cdm_phone,
             seller_cdm_user_name: data.seller?.cdm_user_name,
 
-            buyer_username: data.buyer?.username,
+            buyer_username: data.buyer?.username || data.buyer?.first_name || "Buyer",
             buyer_photo_url: data.buyer?.photo_url,
             buyer_telegram_id: data.buyer?.telegram_id,
             buyer_custom_address: data.buyer_custom_address,
@@ -441,16 +441,16 @@ class Database {
         const db = this.getClient();
         const { data } = await db
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(username, photo_url), buyer:users!trades_buyer_id_fkey(username, photo_url)")
+            .select("*, seller:users!trades_seller_id_fkey(username, first_name, photo_url), buyer:users!trades_buyer_id_fkey(username, first_name, photo_url)")
             .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
             .order("created_at", { ascending: false })
             .limit(limit);
 
         return (data || []).map((t: any) => ({
             ...t,
-            seller_username: t.seller?.username,
+            seller_username: t.seller?.username || t.seller?.first_name || "Seller",
             seller_photo_url: t.seller?.photo_url,
-            buyer_username: t.buyer?.username,
+            buyer_username: t.buyer?.username || t.buyer?.first_name || "Buyer",
             buyer_photo_url: t.buyer?.photo_url,
         })) as any[];
     }
