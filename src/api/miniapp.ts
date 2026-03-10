@@ -418,13 +418,13 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
         const mappedOrders = await Promise.all(orders.map(async (o) => {
             const { data: userData } = await (db as any).getClient()
                 .from("users")
-                .select("username, telegram_id, completed_trades")
+                .select("username, first_name, telegram_id, completed_trades")
                 .eq("id", o.user_id)
                 .single();
 
             return {
                 ...o,
-                username: userData?.username || "Unknown",
+                username: userData?.username || userData?.first_name || "Unknown",
                 user_telegram_id: userData?.telegram_id,
                 completed_trades: userData?.completed_trades || 0
             };
@@ -980,7 +980,9 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
             const tradeWithUsername = {
                 ...trade,
                 seller_username: user.username,
-                buyer_username: buyerUser?.username || buyerUser?.first_name || 'Buyer',
+                seller_first_name: user.first_name,
+                buyer_username: buyerUser?.username,
+                buyer_first_name: buyerUser?.first_name,
                 release_tx_hash: releaseTxHash || trade.release_tx_hash,
             };
             await broadcastTradeSuccess(tradeWithUsername, originalOrder || trade);
@@ -1135,7 +1137,7 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
         const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
         const { data: disputes } = await supabase
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(username, upi_id), buyer:users!trades_buyer_id_fkey(username)")
+            .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id), buyer:users!trades_buyer_id_fkey(username, first_name)")
             .eq("status", "disputed")
             .order("created_at", { ascending: false });
 
@@ -1562,7 +1564,7 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
         const leaderboard = (users || []).map((u: any, index: number) => ({
             rank: from + index + 1,
             id: u.id,
-            name: u.username || (u.first_name ? u.first_name : (u.wallet_address ? `${u.wallet_address.slice(0, 6)}...${u.wallet_address.slice(-4)}` : "Anon")),
+            name: u.username || u.first_name || (u.wallet_address ? `${u.wallet_address.slice(0, 6)}...${u.wallet_address.slice(-4)}` : "Anon"),
             photo_url: u.photo_url,
             points: u.points || 0,
             volume: u.total_volume || 0,

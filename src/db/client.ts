@@ -32,10 +32,14 @@ class Database {
         if (existing) {
             // Update username/first_name if changed
             if (username !== existing.username || firstName !== existing.first_name) {
-                await db
+                const { data: updated } = await db
                     .from("users")
                     .update({ username, first_name: firstName, updated_at: new Date().toISOString() })
-                    .eq("telegram_id", telegramId);
+                    .eq("telegram_id", telegramId)
+                    .select()
+                    .single();
+
+                if (updated) return updated as User;
             }
             return existing as User;
         }

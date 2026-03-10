@@ -98,10 +98,13 @@ function escapeMarkdown(text: string): string {
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
-        const buyerRaw = trade.buyer_username || "Buyer";
-        const sellerRaw = trade.seller_username || "Seller";
-        const buyer = buyerRaw !== "Buyer" ? `@${escapeMarkdown(buyerRaw)}` : "Buyer";
-        const seller = sellerRaw !== "Seller" ? `@${escapeMarkdown(sellerRaw)}` : "Seller";
+        const buyerUsername = trade.buyer_username;
+        const buyerFirstName = trade.buyer_first_name || "Buyer";
+        const buyer = buyerUsername ? `@${escapeMarkdown(buyerUsername)}` : escapeMarkdown(buyerFirstName);
+
+        const sellerUsername = trade.seller_username;
+        const sellerFirstName = trade.seller_first_name || "Seller";
+        const seller = sellerUsername ? `@${escapeMarkdown(sellerUsername)}` : escapeMarkdown(sellerFirstName);
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
         const chain = trade.chain || order?.chain || 'bsc';
 
@@ -132,8 +135,9 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await bot.api.getMe();
-        const usernameRaw = user.username || "Someone";
-        const username = usernameRaw !== "Someone" ? `@${escapeMarkdown(usernameRaw)}` : "Someone";
+        const usernameRaw = user.username;
+        const firstName = user.first_name || "Someone";
+        const username = usernameRaw ? `@${escapeMarkdown(usernameRaw)}` : escapeMarkdown(firstName);
         const typeEmoji = order.type === 'sell' ? '🔴' : '🟢';
         const typeLabel = order.type === 'sell' ? 'SELL' : 'BUY';
         const totalFiat = (order.amount * order.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
