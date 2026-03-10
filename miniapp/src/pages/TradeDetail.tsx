@@ -705,11 +705,11 @@ export function TradeDetail({ user }: Props) {
 
                             if (trade) {
                                 if (isTradeSeller) { // I am Seller, CP is Buyer
-                                    cpName = trade.buyer_username || 'Buyer';
+                                    cpName = trade.buyer_username || trade.buyer_first_name || 'Buyer';
                                     cpPhoto = trade.buyer_photo_url;
                                     cpUsername = trade.buyer_username;
                                 } else { // I am Buyer, CP is Seller
-                                    cpName = trade.seller_username || 'Seller';
+                                    cpName = trade.seller_username || trade.seller_first_name || 'Seller';
                                     cpPhoto = trade.seller_photo_url;
                                     cpUsername = trade.seller_username;
                                 }
@@ -719,9 +719,9 @@ export function TradeDetail({ user }: Props) {
                                     cpName = 'You';
                                     cpPhoto = user.photo_url;
                                 } else {
-                                    cpName = order.username || 'Maker';
+                                    cpName = order.username || order.first_name || 'Maker';
                                     cpPhoto = order.photo_url;
-                                    cpUsername = order.username; // Does order has username? Yes from join.
+                                    cpUsername = order.username;
                                 }
                             }
 
@@ -977,7 +977,7 @@ export function TradeDetail({ user }: Props) {
                                                             <img src={m.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                         ) : (
                                                             <div className="w-full h-full rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">
-                                                                {isAdminMsg ? '🛡️' : (m.username?.[0]?.toUpperCase() || '?')}
+                                                                {isAdminMsg ? '🛡️' : ((m.username || m.first_name || '?')[0].toUpperCase())}
                                                             </div>
                                                         )}
                                                     </div>
@@ -985,7 +985,7 @@ export function TradeDetail({ user }: Props) {
 
                                                 <div className="msg-bubble">
                                                     <div className="msg-sender">
-                                                        {isAdminMsg ? `🛡️ ${m.username || 'Admin'}` : (m.username || 'User')}
+                                                        {isAdminMsg ? `🛡️ ${m.username || 'Admin'}` : (m.username || m.first_name || 'User')}
                                                     </div>
                                                     {/* Image message */}
                                                     {m.type === 'image' && m.image_url && (

@@ -127,7 +127,9 @@ export function Orders({ user }: Props) {
                 ) : filtered.length > 0 ? (
                     filtered.map(trade => {
                         const isBuyer = trade.buyer_id === user?.id;
-                        const counterparty = isBuyer ? trade.seller_username : trade.buyer_username;
+                        const counterparty = isBuyer ?
+                            (trade.seller_username || trade.seller_first_name) :
+                            (trade.buyer_username || trade.buyer_first_name);
                         const totalFiat = trade.amount * trade.rate;
 
                         return (
@@ -150,7 +152,7 @@ export function Orders({ user }: Props) {
                                             />
                                         ) : (
                                             <div className="orders-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#fff', background: '#374151' }}>
-                                                {(counterparty?.[0] || '?').toUpperCase()}
+                                                {((counterparty || '?')[0] || '?').toUpperCase()}
                                             </div>
                                         )}
                                         <span className="orders-counterparty">

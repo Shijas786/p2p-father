@@ -177,12 +177,12 @@ export function Admin() {
                                 <div>
                                     <div className="text-muted">Buyer</div>
                                     <div className="font-bold text-green">{d.buyer?.first_name}</div>
-                                    <div className="opacity-50">@{d.buyer?.username || 'no_user'}</div>
+                                    <div className="opacity-50">@{d.buyer?.username || d.buyer?.first_name || 'no_user'}</div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-muted">Seller</div>
                                     <div className="font-bold" style={{ color: '#f97316' }}>{d.seller?.first_name}</div>
-                                    <div className="opacity-50">@{d.seller?.username || 'no_user'}</div>
+                                    <div className="opacity-50">@{d.seller?.username || d.seller?.first_name || 'no_user'}</div>
                                 </div>
                             </div>
 

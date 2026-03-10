@@ -172,15 +172,15 @@ export function Home({ user }: Props) {
                                                     alt=""
                                                     onError={(e) => {
                                                         e.currentTarget.style.display = 'none';
-                                                        e.currentTarget.parentElement!.innerText = order.username?.[0]?.toUpperCase() || '?';
+                                                        e.currentTarget.parentElement!.innerText = (order.username || order.first_name || '?')[0].toUpperCase();
                                                     }}
                                                 />
                                             ) : (
-                                                order.username?.[0]?.toUpperCase() || '?'
+                                                (order.username || order.first_name || '?')[0].toUpperCase()
                                             )}
                                         </div>
                                         <div className="p2p-trader-name">
-                                            <span className="p2p-username">{order.username || 'Anonymous'}</span>
+                                            <span className="p2p-username">{order.username || order.first_name || 'Anonymous'}</span>
                                             {order.trust_score >= 90 && <span className="p2p-verified-badge">💎</span>}
                                         </div>
                                         <div className="p2p-trader-stats">
@@ -276,7 +276,7 @@ export function Home({ user }: Props) {
                                 {confirmOrder.username && (
                                     <div className="p2p-modal-row" style={{ borderTop: '1px solid #2b2f36', paddingTop: 10 }}>
                                         <span>Trader</span>
-                                        <span>@{confirmOrder.username}</span>
+                                        <span>@{confirmOrder.username || confirmOrder.first_name || 'Trader'}</span>
                                     </div>
                                 )}
                             </div>
