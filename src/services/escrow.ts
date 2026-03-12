@@ -213,6 +213,38 @@ class EscrowService {
     }
 
     /**
+     * Mark trade as paid on-chain (called when Buyer confirms fiat payment)
+     */
+    async markFiatSent(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                const contract = this.getEscrowContract(chain);
+                if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
+                console.log(`[ESCROW] Marking trade ${tradeId} as paid on-chain (${chain}) (Attempt ${attempts})...`);
+
+                const txOptions: any = {};
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                }
+
+                const tx = await contract.markFiatSent(tradeId, txOptions);
+                await tx.wait();
+                console.log(`[ESCROW] Marked paid on-chain: ${tx.hash}`);
+                return tx.hash;
+            } catch (err: any) {
+                console.error(`[ESCROW] Mark paid attempt ${attempts} failed:`, err.message);
+                if (attempts >= maxAttempts) throw err;
+                await new Promise(r => setTimeout(r, 2000 * attempts));
+            }
+        }
+        throw new Error("Mark fiat sent failed after max retries");
+    }
+
+    /**
      * Refund funds to seller (called by Relayer if timeout or Seller cancels)
      */
     async refund(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
@@ -242,6 +274,38 @@ class EscrowService {
             }
         }
         throw new Error("Refund failed after max retries");
+    }
+
+    /**
+     * Raise a dispute on-chain
+     */
+    async raiseDispute(tradeId: string | number, reason: string, chain: Chain = 'base'): Promise<string> {
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                const contract = this.getEscrowContract(chain);
+                if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
+                console.log(`[ESCROW] Raising dispute for trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
+
+                const txOptions: any = {};
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+                }
+
+                const tx = await contract.raiseDispute(tradeId, reason, txOptions);
+                await tx.wait();
+                console.log(`[ESCROW] Dispute raised: ${tx.hash}`);
+                return tx.hash;
+            } catch (err: any) {
+                console.error(`[ESCROW] Dispute attempt ${attempts} failed:`, err.message);
+                if (attempts >= maxAttempts) throw err;
+                await new Promise(r => setTimeout(r, 2000 * attempts));
+            }
+        }
+        throw new Error("Raise dispute failed after max retries");
     }
 
     /**

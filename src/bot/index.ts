@@ -2613,6 +2613,17 @@ bot.on("callback_query:data", async (ctx) => {
             if (!trade) return;
 
             await db.updateTrade(tradeId, { status: "fiat_sent" });
+
+            // SYNC ON-CHAIN if it's a contract trade
+            if (trade.on_chain_trade_id) {
+                try {
+                    console.log(`[BOT] Syncing fiat payment for trade ${trade.on_chain_trade_id} on-chain...`);
+                    await escrow.markFiatSent(trade.on_chain_trade_id, trade.chain as any);
+                } catch (err: any) {
+                    console.error(`[BOT] Failed to sync fiat status on-chain for trade ${trade.on_chain_trade_id}:`, err.message);
+                }
+            }
+
             await ctx.answerCallbackQuery({ text: "Marked as Paid! Seller notified." });
 
             const keyboard = new InlineKeyboard().text("👁️ Refresh Details", `trade_view:${tradeId}`);
@@ -2705,7 +2716,19 @@ bot.on("callback_query:data", async (ctx) => {
         // Dispute
         if (data.startsWith("trade_dispute:")) {
             const tradeId = data.replace("trade_dispute:", "");
+            const trade = await db.getTradeById(tradeId);
             await db.updateTrade(tradeId, { status: "disputed" });
+
+            // SYNC ON-CHAIN if it's a contract trade
+            if (trade?.on_chain_trade_id) {
+                try {
+                    console.log(`[BOT] Syncing dispute for trade ${trade.on_chain_trade_id} on-chain...`);
+                    await escrow.raiseDispute(trade.on_chain_trade_id, "Dispute raised via Bot", trade.chain as any);
+                } catch (err: any) {
+                    console.error(`[BOT] Failed to sync dispute on-chain for trade ${trade.on_chain_trade_id}:`, err.message);
+                }
+            }
+
             await ctx.editMessageText("⚠️ Dispute opened. Support will review this case.");
 
             // Notify Admins
