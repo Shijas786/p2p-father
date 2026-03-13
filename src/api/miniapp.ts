@@ -1068,6 +1068,8 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             : '💸 Fiat Sent — Buyer claims payment sent';
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
+        const botUsername = (await bot.api.getMe()).username;
+
         // NOTIFY ADMINS with full context
         await notifyAdmins(
             `🚨 <b>DISPUTE RAISED!</b>\n\n` +
@@ -1077,7 +1079,7 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             `👤 Raised by: ${role} @${user.username || user.first_name}\n` +
             `👥 Seller: @${(trade as any).seller_username || 'Unknown'} | Buyer: @${(trade as any).buyer_username || 'Unknown'}\n` +
             `📝 Reason: ${reason || "No reason provided"}\n\n` +
-            `<a href="https://t.me/P2PKeralaBot/app?startapp=trade_${trade.id}">View Trade</a>`
+            `<a href="https://t.me/${botUsername}/app?startapp=trade_${trade.id}">View Trade</a>`
         );
 
         // NOTIFY the other party about dispute

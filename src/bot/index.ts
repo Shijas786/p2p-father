@@ -195,7 +195,11 @@ bot.use(async (ctx, next) => {
     if (ctx.chat && ctx.chat.type !== "private" && ctx.message?.text?.startsWith("/")) {
         const text = ctx.message.text!;
         const cmd = text.split(" ")[0].split("@")[0];
-        const restricted = ["/newad", "/sell", "/buy", "/wallet", "/myads", "/mytrades", "/balance", "/deposit", "/withdraw"];
+        const restricted = [
+            "/newad", "/sell", "/buy", "/wallet", "/myads", "/mytrades",
+            "/balance", "/deposit", "/withdraw", "/ads", "/liveads",
+            "/market", "/send", "/profile", "/payment", "/phone", "/bank"
+        ];
 
         if (restricted.includes(cmd)) {
             const username = ctx.me.username;
@@ -210,7 +214,7 @@ bot.use(async (ctx, next) => {
                 [
                     "💸 *Ready to Trade?* ⚡",
                     "",
-                    "Listing an ad is super easy, but we jump into DMs to keep your details safe.",
+                    "Browsing and listing ads is super easy, but we jump into DMs to keep your details safe.",
                     "",
                     "📦 *Tap below to Open Bot*, then launch the *P2PFather App* to finish! 🏁",
                 ].join("\n"),
