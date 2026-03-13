@@ -146,7 +146,7 @@ async function main() {
                         menu_button: {
                             type: "web_app",
                             text: "Open App",
-                            web_app: { url: `https://p2pfather.up.railway.app/miniapp${cacheBuster}` }
+                            web_app: { url: `https://www.p2pfather.com/miniapp${cacheBuster}` }
                         }
                     });
                     console.log("  ✅ Menu button updated to /miniapp");

@@ -294,7 +294,7 @@ bot.command(["start", "open"], async (ctx) => {
         const groupId = parts[1]; // Capture group ID
 
         if (groupId) {
-            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
+            const miniAppUrl = "https://www.p2pfather.com/miniapp/create";
             const keyboard = new InlineKeyboard()
                 .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
@@ -378,7 +378,7 @@ bot.command(["start", "open"], async (ctx) => {
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
             const cacheBuster = `?v=${Date.now()}`;
-            const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/trade/new/${orderId}${cacheBuster}`;
+            const miniAppUrl = `https://www.p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
             await ctx.reply(`🔍 *Viewing Ad #${orderId.slice(0, 8)}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
@@ -437,7 +437,7 @@ bot.command(["start", "open"], async (ctx) => {
     ].join("\n");
 
     const cacheBuster = `?v=${Date.now()}`;
-    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
+    const miniAppUrl = `https://www.p2pfather.com/miniapp${cacheBuster}`;
 
     // Forcefully overwrite the menu button for this specific user's chat
     // This fixes issues where older accounts cached the previous hosting URL
@@ -462,7 +462,7 @@ bot.command(["start", "open"], async (ctx) => {
         .text("🔍 Browse Ads", "ads:all")
         .text("👤 My Profile", "view_profile").row()
         .text("🔑 My Wallet", "view_wallet")
-        .url("📖 User Guide", "https://p2pfather.up.railway.app/guide");
+        .url("📖 User Guide", "https://www.p2pfather.com/guide");
 
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -538,7 +538,7 @@ bot.command("payment", async (ctx) => {
     ].join("\n");
 
     const cacheBuster = `?v=${Date.now()}`;
-    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/profile${cacheBuster}`;
+    const miniAppUrl = `https://www.p2pfather.com/miniapp/profile${cacheBuster}`;
     const keyboard = new InlineKeyboard()
         .webApp("📱 Open Profile", miniAppUrl)
         .row()
@@ -728,7 +728,7 @@ bot.command("help", async (ctx) => {
 
 bot.command("newad", async (ctx) => {
     const cacheBuster = `?v=${Date.now()}`;
-    const miniAppUrl = `https://p2pfather.up.railway.app/miniapp/create${cacheBuster}`;
+    const miniAppUrl = `https://www.p2pfather.com/miniapp/create${cacheBuster}`;
     const keyboard = new InlineKeyboard()
         .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
@@ -965,7 +965,7 @@ bot.command("buy", async (ctx) => {
                 ].join("\n"),
                 {
                     parse_mode: "Markdown",
-                    reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                    reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://www.p2pfather.com/miniapp/create")
                 }
             );
             return;
@@ -1382,7 +1382,7 @@ bot.on("callback_query:data", async (ctx) => {
         // Handle "I want to SELL/BUY" from /newad
         // Handle "I want to SELL/BUY" from /newad
         if (data === "newad:sell" || data === "newad:buy") {
-            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
+            const miniAppUrl = "https://www.p2pfather.com/miniapp/create";
             const keyboard = new InlineKeyboard()
                 .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
@@ -1470,13 +1470,13 @@ bot.on("callback_query:data", async (ctx) => {
             ].join("\n");
 
             const cacheBuster = `?v=${Date.now()}`;
-            const miniAppUrl = `https://p2pfather.up.railway.app/miniapp${cacheBuster}`;
+            const miniAppUrl = `https://www.p2pfather.com/miniapp${cacheBuster}`;
             const startKeyboard = new InlineKeyboard()
                 .webApp("📱 Open P2PFather App", miniAppUrl).row()
                 .text("🔍 Browse Ads", "ads:all")
                 .text("👤 My Profile", "view_profile").row()
                 .text("🔑 My Wallet", "view_wallet")
-                .url("📖 User Guide", "https://p2pfather.up.railway.app/guide");
+                .url("📖 User Guide", "https://www.p2pfather.com/guide");
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
@@ -1661,7 +1661,7 @@ bot.on("callback_query:data", async (ctx) => {
 
         // Handle "Create New Ad" button — redirect to miniapp
         if (data === "newad_start") {
-            const miniAppUrl = "https://p2pfather.up.railway.app/miniapp/create";
+            const miniAppUrl = "https://www.p2pfather.com/miniapp/create";
             const keyboard = new InlineKeyboard()
                 .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
@@ -1702,7 +1702,7 @@ bot.on("callback_query:data", async (ctx) => {
                         ].join("\n"),
                         {
                             parse_mode: "Markdown",
-                            reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                            reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://www.p2pfather.com/miniapp/create")
                         }
                     );
                     await ctx.answerCallbackQuery();
@@ -3459,7 +3459,7 @@ bot.on("message:text", async (ctx) => {
                             "No orders available right now. Be the first! 🚀 Launch the Mini App and create an ad!",
                             {
                                 parse_mode: "Markdown",
-                                reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.up.railway.app/miniapp/create")
+                                reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://www.p2pfather.com/miniapp/create")
                             }
                         );
                     } else {
