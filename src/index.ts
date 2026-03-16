@@ -93,11 +93,19 @@ async function main() {
     app.get("/health", (req, res) => res.send("OK"));
 
     // Mini App SPA fallback — also set no-cache headers
-    app.get(["/app", "/app/:path*"], (req, res) => {
+    app.get("/app", (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
-    app.get(["/miniapp", "/miniapp/:path*"], (req, res) => {
+    app.get("/app/(.*)", (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(miniAppDist, "index.html"));
+    });
+    app.get("/miniapp", (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(miniAppDist, "index.html"));
+    });
+    app.get("/miniapp/(.*)", (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
@@ -109,7 +117,7 @@ async function main() {
     });
 
     // Fallback file serving
-    app.get("/:path*", (req, res) => {
+    app.get("(.*)", (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(process.cwd(), "public", "index.html"));
     });
