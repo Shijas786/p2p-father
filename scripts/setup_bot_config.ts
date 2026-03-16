@@ -11,7 +11,7 @@ async function main() {
     }
 
     const bot = new Bot(token);
-    const miniAppUrl = "https://www.p2pfather.com/app/";
+    const miniAppUrl = "https://p2pfather.com/app/";
 
     console.log("⏳ Configuring bot menu button via API...");
 

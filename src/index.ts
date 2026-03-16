@@ -93,11 +93,11 @@ async function main() {
     app.get("/health", (req, res) => res.send("OK"));
 
     // Mini App SPA fallback — also set no-cache headers
-    app.get("/app/{*path}", (req, res) => {
+    app.get(["/app", "/app/*"], (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
-    app.get("/miniapp/{*path}", (req, res) => {
+    app.get(["/miniapp", "/miniapp/*"], (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
@@ -108,8 +108,8 @@ async function main() {
         res.sendFile(path.join(process.cwd(), "public", "guide.html"));
     });
 
-    // Fallback file serving (Express v5 uses {*path} instead of *)
-    app.get("/{*path}", (req, res) => {
+    // Fallback file serving
+    app.get("*", (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(process.cwd(), "public", "index.html"));
     });
@@ -146,7 +146,7 @@ async function main() {
                         menu_button: {
                             type: "web_app",
                             text: "Open App",
-                            web_app: { url: `https://www.p2pfather.com/miniapp${cacheBuster}` }
+                            web_app: { url: `https://p2pfather.com/miniapp${cacheBuster}` }
                         }
                     });
                     console.log("  ✅ Menu button updated to /miniapp");
