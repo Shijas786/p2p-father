@@ -114,143 +114,134 @@ export function Admin({ user }: Props) {
     if (loading) return <div className="page p-4"><div className="spinner" /></div>;
 
     return (
-        <div className="page p-4 pb-10">
-            <h1 className="text-xl font-bold mb-4 text-red">🛡️ Admin Dashboard</h1>
+        <div className="page">
+            <header className="page-header">
+                <h1 className="page-title text-red">🛡️ Admin Dashboard</h1>
+                <p className="page-subtitle">Dispute Resolution Center</p>
+            </header>
 
             {error && <div className="p-3 bg-red/10 border border-red/20 rounded mb-4 text-sm">{error}</div>}
 
             {disputes.length === 0 ? (
-                <div className="text-center text-muted py-20 bg-white/5 rounded-xl border border-white/5">
-                    <div className="text-4xl mb-4">🕊️</div>
-                    <p className="text-sm">No active disputes. Peace reigns.</p>
+                <div className="empty-state">
+                    <div className="icon">🕊️</div>
+                    <h3 className="text-secondary">No active disputes</h3>
+                    <p className="text-muted">Everything is running smoothly.</p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4">
                     {disputes.map(d => (
-                        <div key={d.id} className="card border-red p-0 overflow-hidden bg-[#0f172a]">
-                            {/* Card Header */}
-                            <div className="p-3 border-b border-white/5 bg-white/5">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="font-mono text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">#{d.id.slice(0, 8)}</span>
-                                    <span className="text-[10px] text-gray-500">{new Date(d.created_at).toLocaleString()}</span>
+                        <div key={d.id} className="card flex flex-col gap-3">
+                            {/* Header */}
+                            <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="badge badge-red font-mono">#{d.id.slice(0, 8)}</span>
+                                        <span className="text-sm font-bold text-white">{d.amount} {d.token}</span>
+                                    </div>
+                                    <div className="text-[10px] text-muted">{new Date(d.created_at).toLocaleString()}</div>
                                 </div>
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <div className="text-lg font-bold text-white">{d.amount} {d.token}</div>
-                                        <div className="text-xs text-muted">Value: ₹{d.fiat_amount?.toLocaleString()}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-[10px] text-gray-500 uppercase font-bold">Parties</div>
-                                        <div className="text-xs">
-                                            <span className="text-green-400">@{d.buyer?.username}</span>
-                                            <span className="mx-1 text-gray-600">vs</span>
-                                            <span className="text-orange-400">@{d.seller?.username}</span>
-                                        </div>
-                                    </div>
+                                <div className="text-right">
+                                    <div className="text-[11px] font-bold text-orange">₹{d.fiat_amount?.toLocaleString()}</div>
+                                    <div className="text-[10px] text-muted">@{d.buyer?.username} vs @{d.seller?.username}</div>
                                 </div>
                             </div>
 
-                            {/* Escrow Lock Info (Old Style) */}
-                            <div className="mx-3 mt-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded text-[11px]">
-                                <span className="font-bold flex items-center gap-1" style={{ color: '#f97316' }}>
-                                    🔒 Seller's {d.amount} {d.token} locked in escrow
+                            {/* Escrow Status Tag */}
+                            <div className="p-2 bg-orange/5 border border-orange/10 rounded flex flex-col gap-1">
+                                <span className="text-[10px] font-bold text-orange flex items-center gap-1">
+                                    🔒 SECURE ESCROW: {d.amount} {d.token}
                                 </span>
-                                <div className="text-gray-400 mt-0.5 ml-4">
-                                    <span className="text-green-400/80">Release</span> → goes to buyer | <span className="text-red-400/80">Refund</span> → returns to seller
+                                <div className="text-[9px] text-muted leading-tight">
+                                    Release → Buyer gets funds | Refund → Seller gets funds
                                 </div>
                             </div>
 
-                            {/* Reason */}
-                            <div className="px-3 pt-3">
-                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Reason</div>
-                                <p className="text-xs text-gray-300 italic bg-black/20 p-2 rounded">
-                                    "{d.dispute_reason}"
-                                </p>
-                            </div>
-
-                            {/* Embedded Chat Area */}
-                            <div className="px-3 py-3">
-                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex justify-between">
-                                    <span>💬 Trade Chat</span>
-                                    <span>{d.chatMessages?.length || 0} messages</span>
+                            {/* Chat Preview (Scrollable Window) */}
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-muted uppercase tracking-wider px-1">
+                                    <span>Chat History</span>
+                                    <span>{d.chatMessages?.length || 0} msgs</span>
                                 </div>
-                                <div className="bg-black/40 border border-white/5 rounded-xl overflow-hidden flex flex-col h-[250px]">
-                                    {/* Messages List */}
-                                    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-                                        {d.chatMessages?.length === 0 ? (
-                                            <div className="h-full flex items-center justify-center text-[11px] text-gray-600">
-                                                No messages yet.
-                                            </div>
-                                        ) : (
-                                            d.chatMessages?.map((msg: any, idx: number) => {
-                                                const isBuyer = msg.sender_role === 'buyer' || msg.user_id === d.buyer?.username;
-                                                const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
-                                                const isMe = msg.telegram_id === user.telegram_id;
-                                                
-                                                return (
-                                                    <div key={idx} className={`flex flex-col max-w-[90%] ${isMe ? 'self-end' : 'self-start'}`}>
-                                                        <div className={`text-[9px] font-bold mb-0.5 px-1 truncate ${isAdmin ? (isMe ? 'text-blue-400' : 'text-purple-400') : (isBuyer ? 'text-green-400' : 'text-orange-400')}`}>
-                                                            {isAdmin ? (isMe ? '🛡️ Admin (You)' : `🛡️ Admin (${msg.first_name || 'Admin'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
-                                                        </div>
-                                                        <div className={`p-2 rounded-lg text-xs shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : (isAdmin ? 'bg-purple-900/40 text-gray-200 border border-purple-500/30' : 'bg-gray-800 text-gray-200 rounded-tl-none border border-white/5')}`}>
-                                                            {msg.image_url ? (
-                                                                <div className="flex flex-col gap-1">
-                                                                    <img src={msg.image_url} alt="Proof" className="max-w-[150px] rounded" />
-                                                                    {msg.message && <p>{msg.message}</p>}
-                                                                </div>
-                                                            ) : (
-                                                                <p className="whitespace-pre-wrap">{msg.message}</p>
-                                                            )}
-                                                            <div className="text-[8px] opacity-40 text-right mt-1">
-                                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                
+                                <div className="bg-black/30 rounded-lg border border-white/5 h-[180px] overflow-y-auto p-2 flex flex-col gap-2 scroll-area">
+                                    {d.chatMessages?.length === 0 ? (
+                                        <div className="flex-1 flex items-center justify-center text-[10px] text-muted italic">
+                                            No messages yet.
+                                        </div>
+                                    ) : (
+                                        d.chatMessages?.map((msg: any, idx: number) => {
+                                            const isBuyer = msg.sender_role === 'buyer' || msg.user_id === d.buyer?.username;
+                                            const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
+                                            const isMe = msg.telegram_id === user.telegram_id;
+                                            
+                                            return (
+                                                <div key={idx} className={`flex flex-col max-w-[85%] ${isMe ? 'self-end' : 'self-start'}`}>
+                                                    <div className={`text-[8px] font-bold mb-0.5 px-0.5 truncate ${isAdmin ? (isMe ? 'text-blue' : 'text-purple-400') : (isBuyer ? 'text-green' : 'text-orange')}`}>
+                                                        {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
+                                                    </div>
+                                                    <div className={`p-2 rounded-lg text-xs shadow-sm ${isMe ? 'bg-blue text-white rounded-tr-none' : (isAdmin ? 'bg-purple-900/40 text-gray-200 border border-purple-500/20' : 'bg-secondary text-gray-200 rounded-tl-none border border-white/5')}`}>
+                                                        {msg.image_url ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <img src={msg.image_url} alt="Proof" className="max-w-[140px] rounded border border-white/10" />
+                                                                {msg.message && <p className="leading-tight">{msg.message}</p>}
                                                             </div>
+                                                        ) : (
+                                                            <p className="whitespace-pre-wrap leading-tight">{msg.message}</p>
+                                                        )}
+                                                        <div className="text-[7px] opacity-40 text-right mt-1">
+                                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
                                                     </div>
-                                                );
-                                            })
-                                        )}
-                                        <div ref={el => chatEndRefs.current[d.id] = el} />
-                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                    <div ref={el => chatEndRefs.current[d.id] = el} />
+                                </div>
 
-                                    {/* Small Input Area */}
-                                    <div className="p-2 bg-white/5 border-t border-white/5 flex gap-2">
-                                        <input
-                                            type="text"
-                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
-                                            placeholder="Reply to traders..."
-                                            value={newMessages[d.id] || ''}
-                                            onChange={(e) => setNewMessages(prev => ({ ...prev, [d.id]: e.target.value }))}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(d.id)}
-                                            disabled={sendingMessage[d.id]}
-                                        />
-                                        <button
-                                            className={`p-1.5 px-3 rounded-lg bg-blue-600 text-[10px] font-bold text-white transition-opacity ${sendingMessage[d.id] || !(newMessages[d.id]?.trim()) ? 'opacity-50' : 'hover:bg-blue-500'}`}
-                                            onClick={() => handleSendMessage(d.id)}
-                                            disabled={sendingMessage[d.id] || !(newMessages[d.id]?.trim())}
-                                        >
-                                            {sendingMessage[d.id] ? <span className="spinner-sm" /> : 'SEND'}
-                                        </button>
-                                    </div>
+                                {/* Reply Input */}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-muted"
+                                        placeholder="Reply traders..."
+                                        value={newMessages[d.id] || ''}
+                                        onChange={(e) => setNewMessages(prev => ({ ...prev, [d.id]: e.target.value }))}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(d.id)}
+                                        disabled={sendingMessage[d.id]}
+                                    />
+                                    <button
+                                        className={`btn btn-primary btn-sm px-3 ${sendingMessage[d.id] || !(newMessages[d.id]?.trim()) ? 'opacity-50' : ''}`}
+                                        onClick={() => handleSendMessage(d.id)}
+                                        disabled={sendingMessage[d.id] || !(newMessages[d.id]?.trim())}
+                                    >
+                                        {sendingMessage[d.id] ? <div className="spinner" style={{width: 12, height: 12}} /> : 'SEND'}
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Resolution Buttons */}
-                            <div className="p-3 bg-white/5 flex gap-2 border-t border-white/5">
+                            {/* Resolution Controls */}
+                            <div className="flex gap-2 pt-1">
                                 <button
-                                    className="flex-1 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-black tracking-widest border border-green-500/30 transition-all active:scale-95 flex flex-col items-center"
+                                    className="btn btn-block btn-sm bg-green/10 text-green border border-green/20 hover:bg-green/20"
                                     onClick={() => resolve(d.id, true)}
                                     disabled={actionLoading}
                                 >
-                                    <span>RELEASE</span>
-                                    <span className="text-[9px] opacity-60 font-medium">To Buyer</span>
+                                    <span className="flex flex-col items-center">
+                                        <span className="font-bold">RELEASE</span>
+                                        <span className="text-[8px] opacity-70">To Buyer</span>
+                                    </span>
                                 </button>
                                 <button
-                                    className="flex-1 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-black tracking-widest border border-red-500/30 transition-all active:scale-95 flex flex-col items-center"
+                                    className="btn btn-block btn-sm bg-red/10 text-red border border-red/20 hover:bg-red/20"
                                     onClick={() => resolve(d.id, false)}
                                     disabled={actionLoading}
                                 >
-                                    <span>REFUND</span>
-                                    <span className="text-[9px] opacity-60 font-medium">To Seller</span>
+                                    <span className="flex flex-col items-center">
+                                        <span className="font-bold">REFUND</span>
+                                        <span className="text-[8px] opacity-70">To Seller</span>
+                                    </span>
                                 </button>
                             </div>
                         </div>
