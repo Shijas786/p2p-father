@@ -164,7 +164,7 @@ export function Admin({ user }: Props) {
                                     <span>{d.chatMessages?.length || 0} msgs</span>
                                 </div>
                                 
-                                <div className="bg-black/30 rounded-lg border border-white/5 h-[140px] overflow-y-scroll p-2 flex flex-col gap-2 scroll-area">
+                                <div className="bg-black/30 rounded-lg border border-white/5 h-[140px] overflow-y-scroll p-2 flex flex-col gap-1.5 custom-scrollbar">
                                     {d.chatMessages?.length === 0 ? (
                                         <div className="flex-1 flex items-center justify-center text-[10px] text-muted italic">
                                             No messages yet.

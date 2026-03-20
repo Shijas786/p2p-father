@@ -461,6 +461,26 @@ h4 {
   background: var(--text-secondary);
 }
 
+/* ---- Custom Scrollbar for Chat ---- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--green);
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(14, 203, 129, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--green-bright);
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
 /* ---- Animations ---- */
 @keyframes fadeIn {
   from {
