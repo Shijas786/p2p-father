@@ -606,7 +606,7 @@ export function TradeDetail({ user }: Props) {
                                             <span className="font-mono text-green font-bold">{buyerGets} {disp.token}</span>
                                         </div>
                                         <div className="text-[10px] text-right text-gray-500 mt-1">
-                                            (0.5% fee deducted)
+                                            (0.25% fee deducted)
                                         </div>
                                     </>
                                 )}
