@@ -286,7 +286,7 @@ function AppInner() {
           <Route path="wallet" element={<Wallet user={user} />} />
 
           <Route path="ads" element={<MyAds />} />
-          <Route path="admin" element={<Admin />} />
+          <Route path="admin" element={<Admin user={user} />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
           <Route path="leaderboard" element={<Leaderboard />} />
         </Route>
