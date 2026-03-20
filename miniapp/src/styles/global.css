@@ -454,8 +454,11 @@ h4 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 /* ---- Animations ---- */
