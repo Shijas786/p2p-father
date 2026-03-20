@@ -117,18 +117,19 @@ export function Admin({ user }: Props) {
         <div className="page">
             <header className="page-header flex justify-between items-center">
                 <div>
-                    <h1 className="page-title text-red">🛡️ Admin Dashboard</h1>
-                    <p className="page-subtitle">Dispute Resolution <span className="text-[8px] opacity-30 font-mono">v1.3.0</span></p>
+                    <h1 className="page-title" style={{ color: 'var(--red)' }}>🛡️ Admin Dashboard</h1>
+                    <p className="page-subtitle">Dispute Resolution <span style={{ fontSize: '9px', opacity: 0.3, fontFamily: 'monospace' }}>v1.3.1</span></p>
                 </div>
                 <button 
                   onClick={() => { haptic('medium'); window.location.reload(); }}
-                  className="btn btn-sm btn-secondary text-[8px] opacity-50 hover:opacity-100"
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: '8px', opacity: 0.6 }}
                 >
                   FORCE RELOAD
                 </button>
             </header>
 
-            {error && <div className="p-3 bg-red/10 border border-red/20 rounded mb-4 text-sm">{error}</div>}
+            {error && <div className="card mb-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'rgba(246, 70, 93, 0.2)', color: 'var(--red)' }}>{error}</div>}
 
             {disputes.length === 0 ? (
                 <div className="empty-state">
@@ -137,44 +138,44 @@ export function Admin({ user }: Props) {
                     <p className="text-muted">Everything is running smoothly.</p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex-col" style={{ gap: '16px' }}>
                     {disputes.map(d => (
-                        <div key={d.id} className="card flex flex-col gap-3">
+                        <div key={d.id} className="card flex-col" style={{ gap: '12px' }}>
                             {/* Header */}
-                            <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                            <div className="flex justify-between items-start" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
                                 <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="badge badge-red font-mono">#{d.id.slice(0, 8)}</span>
-                                        <span className="text-sm font-bold text-white">{d.amount} {d.token}</span>
+                                    <div className="flex items-center" style={{ gap: '8px', marginBottom: '4px' }}>
+                                        <span className="badge badge-red font-mono" style={{ textTransform: 'lowercase' }}>#{d.id.slice(0, 8)}</span>
+                                        <span className="font-bold" style={{ fontSize: '0.875rem', color: '#fff' }}>{d.amount} {d.token}</span>
                                     </div>
-                                    <div className="text-[10px] text-muted">{new Date(d.created_at).toLocaleString()}</div>
+                                    <div className="text-muted" style={{ fontSize: '10px' }}>{new Date(d.created_at).toLocaleString()}</div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[11px] font-bold text-orange">₹{d.fiat_amount?.toLocaleString()}</div>
-                                    <div className="text-[10px] text-muted">@{d.buyer?.username} vs @{d.seller?.username}</div>
+                                    <div className="font-bold" style={{ fontSize: '11px', color: 'var(--orange)' }}>₹{d.fiat_amount?.toLocaleString()}</div>
+                                    <div className="text-muted" style={{ fontSize: '10px' }}>@{d.buyer?.username} vs @{d.seller?.username}</div>
                                 </div>
                             </div>
 
                             {/* Escrow Status Tag */}
-                            <div className="p-2 bg-orange/5 border border-orange/10 rounded flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-orange flex items-center gap-1">
+                            <div style={{ padding: '8px', backgroundColor: 'var(--orange-bg)', border: '1px solid rgba(240, 185, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
+                                <span className="font-bold" style={{ fontSize: '10px', color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     🔒 SECURE ESCROW: {d.amount} {d.token}
                                 </span>
-                                <div className="text-[9px] text-muted leading-tight">
+                                <div className="text-muted" style={{ fontSize: '9px', marginTop: '2px', lineHeight: '1.2' }}>
                                     Release → Buyer gets funds | Refund → Seller gets funds
                                 </div>
                             </div>
 
                             {/* Chat Preview (Scrollable Window) */}
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center text-[10px] font-bold text-muted uppercase tracking-wider px-1">
+                            <div className="flex-col" style={{ gap: '8px' }}>
+                                <div className="flex justify-between items-center px-1" style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     <span>Chat History</span>
                                     <span>{d.chatMessages?.length || 0} msgs</span>
                                 </div>
                                 
-                                <div className="bg-black/30 rounded-lg border border-white/5 h-[140px] overflow-y-scroll p-2 flex flex-col gap-1.5 custom-scrollbar">
+                                <div className="custom-scrollbar" style={{ backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', height: '140px', overflowY: 'scroll', padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {d.chatMessages?.length === 0 ? (
-                                        <div className="flex-1 flex items-center justify-center text-[10px] text-muted italic">
+                                        <div className="text-muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontStyle: 'italic' }}>
                                             No messages yet.
                                         </div>
                                     ) : (
@@ -184,20 +185,30 @@ export function Admin({ user }: Props) {
                                             const isMe = msg.telegram_id === user.telegram_id;
                                             
                                             return (
-                                                <div key={idx} className={`flex flex-col max-w-[85%] ${isMe ? 'self-end' : 'self-start'}`}>
-                                                    <div className={`text-[8px] font-bold mb-0.5 px-0.5 truncate ${isAdmin ? (isMe ? 'text-blue' : 'text-purple-400') : (isBuyer ? 'text-green' : 'text-orange')}`}>
+                                                <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
+                                                    <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '2px', padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
                                                         {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
                                                     </div>
-                                                    <div className={`p-2 rounded-lg text-xs shadow-sm ${isMe ? 'bg-blue text-white rounded-tr-none' : (isAdmin ? 'bg-purple-900/40 text-gray-200 border border-purple-500/20' : 'bg-secondary text-gray-200 rounded-tl-none border border-white/5')}`}>
+                                                    <div className="bubble-shadow" style={{ 
+                                                        padding: '8px', 
+                                                        borderRadius: 'var(--radius-md)', 
+                                                        fontSize: '12px', 
+                                                        lineHeight: '1.3',
+                                                        backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88, 28, 135, 0.4)' : 'rgba(255,255,255,0.05)'),
+                                                        color: isMe ? '#fff' : 'var(--text-primary)',
+                                                        border: isMe ? 'none' : '1px solid var(--border)',
+                                                        borderTopRightRadius: isMe ? '0' : 'var(--radius-md)',
+                                                        borderTopLeftRadius: !isMe ? '0' : 'var(--radius-md)'
+                                                    }}>
                                                         {msg.image_url ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                <img src={msg.image_url} alt="Proof" className="max-w-[140px] rounded border border-white/10" />
-                                                                {msg.message && <p className="leading-tight">{msg.message}</p>}
+                                                            <div className="flex-col" style={{ gap: '4px' }}>
+                                                                <img src={msg.image_url} alt="Proof" style={{ maxWidth: '140px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                                {msg.message && <p>{msg.message}</p>}
                                                             </div>
                                                         ) : (
-                                                            <p className="whitespace-pre-wrap leading-tight">{msg.message}</p>
+                                                            <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
                                                         )}
-                                                        <div className="text-[7px] opacity-40 text-right mt-1">
+                                                        <div style={{ fontSize: '7px', opacity: 0.5, textAlign: 'right', marginTop: '4px' }}>
                                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
                                                     </div>
@@ -208,11 +219,19 @@ export function Admin({ user }: Props) {
                                     <div ref={el => chatEndRefs.current[d.id] = el} />
                                 </div>
 
-                                {/* Reply Input */}
-                                <div className="flex gap-2">
+                                {/* Reply Input Area */}
+                                <div className="flex" style={{ gap: '8px' }}>
                                     <input
                                         type="text"
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-muted"
+                                        style={{ 
+                                            flex: 1, 
+                                            padding: '8px 12px', 
+                                            fontSize: '12px', 
+                                            backgroundColor: 'rgba(0,0,0,0.4)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: '#fff'
+                                        }}
                                         placeholder="Reply traders..."
                                         value={newMessages[d.id] || ''}
                                         onChange={(e) => setNewMessages(prev => ({ ...prev, [d.id]: e.target.value }))}
@@ -220,35 +239,38 @@ export function Admin({ user }: Props) {
                                         disabled={sendingMessage[d.id]}
                                     />
                                     <button
-                                        className={`btn btn-primary btn-sm px-3 ${sendingMessage[d.id] || !(newMessages[d.id]?.trim()) ? 'opacity-50' : ''}`}
+                                        className="btn btn-primary btn-sm"
+                                        style={{ padding: '0 16px', opacity: sendingMessage[d.id] || !(newMessages[d.id]?.trim()) ? 0.4 : 1 }}
                                         onClick={() => handleSendMessage(d.id)}
                                         disabled={sendingMessage[d.id] || !(newMessages[d.id]?.trim())}
                                     >
-                                        {sendingMessage[d.id] ? <div className="spinner" style={{width: 12, height: 12}} /> : 'SEND'}
+                                        {sendingMessage[d.id] ? <div className="spinner" style={{ width: 12, height: 12 }} /> : 'SEND'}
                                     </button>
                                 </div>
                             </div>
 
                             {/* Resolution Controls */}
-                            <div className="flex gap-2 pt-1">
+                            <div className="flex" style={{ gap: '8px', paddingTop: '4px' }}>
                                 <button
-                                    className="btn btn-block btn-sm bg-green/10 text-green border border-green/20 hover:bg-green/20"
+                                    className="btn btn-block btn-sm"
+                                    style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)', flex: 1 }}
                                     onClick={() => resolve(d.id, true)}
                                     disabled={actionLoading}
                                 >
-                                    <span className="flex flex-col items-center">
+                                    <span className="flex-col items-center">
                                         <span className="font-bold">RELEASE</span>
-                                        <span className="text-[8px] opacity-70">To Buyer</span>
+                                        <span style={{ fontSize: '8px', opacity: 0.7 }}>To Buyer</span>
                                     </span>
                                 </button>
                                 <button
-                                    className="btn btn-block btn-sm bg-red/10 text-red border border-red/20 hover:bg-red/20"
+                                    className="btn btn-block btn-sm"
+                                    style={{ backgroundColor: 'var(--red-bg)', color: 'var(--red)', border: '1px solid rgba(246, 70, 93, 0.2)', flex: 1 }}
                                     onClick={() => resolve(d.id, false)}
                                     disabled={actionLoading}
                                 >
-                                    <span className="flex flex-col items-center">
+                                    <span className="flex-col items-center">
                                         <span className="font-bold">REFUND</span>
-                                        <span className="text-[8px] opacity-70">To Seller</span>
+                                        <span style={{ fontSize: '8px', opacity: 0.7 }}>To Seller</span>
                                     </span>
                                 </button>
                             </div>
