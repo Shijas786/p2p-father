@@ -24,21 +24,22 @@ export function Admin({ user }: Props) {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
-    const [selectedTrade, setSelectedTrade] = useState<string | null>(null);
-    const [chatMessages, setChatMessages] = useState<any[]>([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [sendingMessage, setSendingMessage] = useState(false);
-    const chatEndRef = useRef<HTMLDivElement>(null);
+    const [newMessages, setNewMessages] = useState<Record<string, string>>({});
+    const [sendingMessage, setSendingMessage] = useState<Record<string, boolean>>({});
+    const chatEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     useEffect(() => {
         loadDisputes();
     }, []);
 
     useEffect(() => {
-        if (selectedTrade) {
-            chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [chatMessages, selectedTrade]);
+        // Auto-scroll all chats to bottom on load/update
+        disputes.forEach(d => {
+            if (chatEndRefs.current[d.id]) {
+                chatEndRefs.current[d.id]?.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }, [disputes]);
 
     async function loadDisputes() {
         setLoading(true);
@@ -66,33 +67,28 @@ export function Admin({ user }: Props) {
         }
     }
 
-    async function viewMessages(tradeId: string) {
-        setSelectedTrade(tradeId);
-        setChatMessages([]);
-        try {
-            const { messages } = await api.admin.getTradeMessages(tradeId);
-            setChatMessages(messages);
-        } catch (err: any) {
-            alert('Failed to load messages: ' + err.message);
-        }
-    }
+    async function handleSendMessage(tradeId: string) {
+        const msg = newMessages[tradeId];
+        if (!msg?.trim()) return;
 
-    async function handleSendMessage() {
-        if (!selectedTrade || !newMessage.trim()) return;
-        setSendingMessage(true);
+        setSendingMessage(prev => ({ ...prev, [tradeId]: true }));
         try {
-            await api.admin.sendMessage(selectedTrade, newMessage.trim());
-            setNewMessage('');
+            await api.admin.sendMessage(tradeId, msg.trim());
+            setNewMessages(prev => ({ ...prev, [tradeId]: '' }));
             haptic('light');
-            // Reload messages
-            const { messages } = await api.admin.getTradeMessages(selectedTrade);
-            setChatMessages(messages);
-            // Also update the preview in the list
-            setDisputes(prev => prev.map(d => d.id === selectedTrade ? { ...d, chatMessages: messages } : d));
+            
+            // Reload messages for this specific trade
+            const { messages } = await api.admin.getTradeMessages(tradeId);
+            setDisputes(prev => prev.map(d => d.id === tradeId ? { ...d, chatMessages: messages } : d));
+            
+            // Scroll to bottom
+            setTimeout(() => {
+                chatEndRefs.current[tradeId]?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         } catch (err: any) {
             alert('Failed to send message: ' + err.message);
         } finally {
-            setSendingMessage(false);
+            setSendingMessage(prev => ({ ...prev, [tradeId]: false }));
         }
     }
 
@@ -115,154 +111,146 @@ export function Admin({ user }: Props) {
         }
     }
 
-    if (loading && !selectedTrade) return <div className="page p-4"><div className="spinner" /></div>;
+    if (loading) return <div className="page p-4"><div className="spinner" /></div>;
 
     return (
-        <div className="page p-4">
+        <div className="page p-4 pb-10">
             <h1 className="text-xl font-bold mb-4 text-red">🛡️ Admin Dashboard</h1>
 
             {error && <div className="p-3 bg-red/10 border border-red/20 rounded mb-4 text-sm">{error}</div>}
 
-            {selectedTrade && (
-                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-[#0f172a] rounded-xl w-full max-w-md h-[80vh] flex flex-col border border-gray-800 shadow-2xl overflow-hidden">
-                        <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-[#1e293b]">
-                            <div>
-                                <h3 className="font-bold text-white">Dispute Chat</h3>
-                                <p className="text-xs text-gray-400">Trade #{selectedTrade.slice(0, 8)}</p>
-                            </div>
-                            <button onClick={() => setSelectedTrade(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                <span className="text-xl text-gray-400">✕</span>
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#0B1120]">
-                            {chatMessages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
-                                    <span className="text-4xl">💬</span>
-                                    <p>No messages in this trade chat yet.</p>
-                                </div>
-                            ) : (
-                                chatMessages.map((msg, idx) => {
-                                    const isBuyer = msg.sender_role === 'buyer' || msg.user_id === disputes.find(d => d.id === selectedTrade)?.buyer?.username;
-                                    const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
-                                    const isMe = msg.telegram_id === user.telegram_id;
-                                    const alignRight = isMe;
-
-                                    return (
-                                        <div key={msg.id || idx} className={`flex flex-col max-w-[85%] ${alignRight ? 'self-end items-end' : 'self-start items-start'}`}>
-                                            <div className="flex items-center gap-2 mb-1 px-1">
-                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isAdmin ? (isMe ? 'text-blue-400' : 'text-purple-400') : (isBuyer ? 'text-green-400' : 'text-orange-400')}`}>
-                                                    {isAdmin ? (isMe ? '🛡️ Admin (You)' : `🛡️ Admin (${msg.first_name || msg.username || 'Admin'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
-                                                </span>
-                                                <span className="text-[10px] text-gray-600">
-                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <div className={`p-3 rounded-2xl text-sm shadow-sm ${alignRight ? 'bg-blue-600 text-white rounded-tr-none' : (isAdmin ? 'bg-purple-900/40 text-gray-200 border border-purple-500/30' : 'bg-[#1e293b] text-gray-200 rounded-tl-none border border-gray-700')}`}>
-                                                {msg.type === 'image' || msg.image_url ? (
-                                                    <div className="flex flex-col gap-2">
-                                                        <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg">
-                                                            <img src={msg.image_url} alt="Proof" className="max-w-[200px] max-h-[200px] w-full h-auto object-cover rounded-lg bg-black/50" loading="lazy" />
-                                                        </a>
-                                                        {msg.message && <p className="pt-1 border-t border-white/10 mt-1">{msg.message}</p>}
-                                                    </div>
-                                                ) : (
-                                                    <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                            <div ref={chatEndRef} />
-                        </div>
-
-                        <div className="p-3 bg-[#1e293b] border-t border-gray-800 flex gap-2">
-                            <input
-                                type="text"
-                                className="flex-1 bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                                placeholder="Type a message to traders..."
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                disabled={sendingMessage}
-                            />
-                            <button
-                                className={`p-2 rounded-lg bg-blue-600 text-white transition-opacity ${sendingMessage || !newMessage.trim() ? 'opacity-50' : 'hover:bg-blue-500'}`}
-                                onClick={handleSendMessage}
-                                disabled={sendingMessage || !newMessage.trim()}
-                            >
-                                {sendingMessage ? <span className="spinner-sm" /> : 'Send'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {disputes.length === 0 ? (
-                <div className="text-center text-muted py-10 bg-white/5 rounded-xl border border-white/5 mx-auto max-w-sm">
-                    <div className="text-3xl mb-2">🕊️</div>
+                <div className="text-center text-muted py-20 bg-white/5 rounded-xl border border-white/5">
+                    <div className="text-4xl mb-4">🕊️</div>
                     <p className="text-sm">No active disputes. Peace reigns.</p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-6">
                     {disputes.map(d => (
-                        <div key={d.id} className="card-glass border-red/30 p-3 relative overflow-hidden">
-                            {/* Accent line */}
-                            <div className="absolute top-0 left-0 w-1 h-full bg-red-500/50" />
-
-                            <div className="flex justify-between items-center mb-2 px-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-mono text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">#{d.id.slice(0, 8)}</span>
-                                    <span className="text-sm font-bold text-white">{d.amount} {d.token}</span>
+                        <div key={d.id} className="card border-red p-0 overflow-hidden bg-[#0f172a]">
+                            {/* Card Header */}
+                            <div className="p-3 border-b border-white/5 bg-white/5">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-mono text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">#{d.id.slice(0, 8)}</span>
+                                    <span className="text-[10px] text-gray-500">{new Date(d.created_at).toLocaleString()}</span>
                                 </div>
-                                <span className="text-[10px] text-gray-500">{new Date(d.created_at).toLocaleDateString()}</span>
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <div className="text-lg font-bold text-white">{d.amount} {d.token}</div>
+                                        <div className="text-xs text-muted">Value: ₹{d.fiat_amount?.toLocaleString()}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] text-gray-500 uppercase font-bold">Parties</div>
+                                        <div className="text-xs">
+                                            <span className="text-green-400">@{d.buyer?.username}</span>
+                                            <span className="mx-1 text-gray-600">vs</span>
+                                            <span className="text-orange-400">@{d.seller?.username}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 p-2 bg-black/30 rounded-lg mb-2 text-[11px] border border-white/5 items-center">
-                                <div className="flex flex-col">
-                                    <span className="text-gray-500 text-[9px] uppercase font-bold">Buyer</span>
-                                    <span className="font-bold text-green-400 truncate">@{d.buyer?.username || 'user'}</span>
-                                </div>
-                                <div className="flex flex-col text-right">
-                                    <span className="text-gray-500 text-[9px] uppercase font-bold">Seller</span>
-                                    <span className="font-bold text-orange-400 truncate">@{d.seller?.username || 'user'}</span>
+                            {/* Escrow Lock Info (Old Style) */}
+                            <div className="mx-3 mt-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded text-[11px]">
+                                <span className="font-bold flex items-center gap-1" style={{ color: '#f97316' }}>
+                                    🔒 Seller's {d.amount} {d.token} locked in escrow
+                                </span>
+                                <div className="text-gray-400 mt-0.5 ml-4">
+                                    <span className="text-green-400/80">Release</span> → goes to buyer | <span className="text-red-400/80">Refund</span> → returns to seller
                                 </div>
                             </div>
 
-                            <div className="mb-2 px-1">
-                                <p className="text-[11px] text-gray-400 leading-tight line-clamp-2 italic">
+                            {/* Reason */}
+                            <div className="px-3 pt-3">
+                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Reason</div>
+                                <p className="text-xs text-gray-300 italic bg-black/20 p-2 rounded">
                                     "{d.dispute_reason}"
                                 </p>
                             </div>
 
-                            <div className="flex gap-2 items-center mb-3">
-                                <button
-                                    className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded text-[10px] font-bold transition-colors border border-white/10 flex items-center justify-center gap-2"
-                                    onClick={() => viewMessages(d.id)}
-                                >
-                                    💬 {d.chatMessages?.length || 0} MESSAGES
-                                </button>
-                                <div className="text-right text-[11px] text-orange-500/80 font-mono font-bold px-1">
-                                    ₹{d.fiat_amount?.toLocaleString()}
+                            {/* Embedded Chat Area */}
+                            <div className="px-3 py-3">
+                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex justify-between">
+                                    <span>💬 Trade Chat</span>
+                                    <span>{d.chatMessages?.length || 0} messages</span>
+                                </div>
+                                <div className="bg-black/40 border border-white/5 rounded-xl overflow-hidden flex flex-col h-[250px]">
+                                    {/* Messages List */}
+                                    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                                        {d.chatMessages?.length === 0 ? (
+                                            <div className="h-full flex items-center justify-center text-[11px] text-gray-600">
+                                                No messages yet.
+                                            </div>
+                                        ) : (
+                                            d.chatMessages?.map((msg: any, idx: number) => {
+                                                const isBuyer = msg.sender_role === 'buyer' || msg.user_id === d.buyer?.username;
+                                                const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
+                                                const isMe = msg.telegram_id === user.telegram_id;
+                                                
+                                                return (
+                                                    <div key={idx} className={`flex flex-col max-w-[90%] ${isMe ? 'self-end' : 'self-start'}`}>
+                                                        <div className={`text-[9px] font-bold mb-0.5 px-1 truncate ${isAdmin ? (isMe ? 'text-blue-400' : 'text-purple-400') : (isBuyer ? 'text-green-400' : 'text-orange-400')}`}>
+                                                            {isAdmin ? (isMe ? '🛡️ Admin (You)' : `🛡️ Admin (${msg.first_name || 'Admin'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
+                                                        </div>
+                                                        <div className={`p-2 rounded-lg text-xs shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : (isAdmin ? 'bg-purple-900/40 text-gray-200 border border-purple-500/30' : 'bg-gray-800 text-gray-200 rounded-tl-none border border-white/5')}`}>
+                                                            {msg.image_url ? (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <img src={msg.image_url} alt="Proof" className="max-w-[150px] rounded" />
+                                                                    {msg.message && <p>{msg.message}</p>}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="whitespace-pre-wrap">{msg.message}</p>
+                                                            )}
+                                                            <div className="text-[8px] opacity-40 text-right mt-1">
+                                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                        <div ref={el => chatEndRefs.current[d.id] = el} />
+                                    </div>
+
+                                    {/* Small Input Area */}
+                                    <div className="p-2 bg-white/5 border-t border-white/5 flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                                            placeholder="Reply to traders..."
+                                            value={newMessages[d.id] || ''}
+                                            onChange={(e) => setNewMessages(prev => ({ ...prev, [d.id]: e.target.value }))}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(d.id)}
+                                            disabled={sendingMessage[d.id]}
+                                        />
+                                        <button
+                                            className={`p-1.5 px-3 rounded-lg bg-blue-600 text-[10px] font-bold text-white transition-opacity ${sendingMessage[d.id] || !(newMessages[d.id]?.trim()) ? 'opacity-50' : 'hover:bg-blue-500'}`}
+                                            onClick={() => handleSendMessage(d.id)}
+                                            disabled={sendingMessage[d.id] || !(newMessages[d.id]?.trim())}
+                                        >
+                                            {sendingMessage[d.id] ? <span className="spinner-sm" /> : 'SEND'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            {/* Resolution Buttons */}
+                            <div className="p-3 bg-white/5 flex gap-2 border-t border-white/5">
                                 <button
-                                    className="flex-1 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-400 text-[10px] font-bold border border-green-600/30 transition-all active:scale-95"
+                                    className="flex-1 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-black tracking-widest border border-green-500/30 transition-all active:scale-95 flex flex-col items-center"
                                     onClick={() => resolve(d.id, true)}
                                     disabled={actionLoading}
                                 >
-                                    RELEASE
+                                    <span>RELEASE</span>
+                                    <span className="text-[9px] opacity-60 font-medium">To Buyer</span>
                                 </button>
                                 <button
-                                    className="flex-1 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 text-[10px] font-bold border border-red-600/30 transition-all active:scale-95"
+                                    className="flex-1 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-black tracking-widest border border-red-500/30 transition-all active:scale-95 flex flex-col items-center"
                                     onClick={() => resolve(d.id, false)}
                                     disabled={actionLoading}
                                 >
-                                    REFUND
+                                    <span>REFUND</span>
+                                    <span className="text-[9px] opacity-60 font-medium">To Seller</span>
                                 </button>
                             </div>
                         </div>
