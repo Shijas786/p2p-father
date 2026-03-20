@@ -30,7 +30,7 @@ export function CreateOrder() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
-    const [feePercentage, setFeePercentage] = useState<number>(0.01); // Default to 1%
+    const [feePercentage, setFeePercentage] = useState<number>(0.005); // Default to 0.5%
     const [approvalDone, setApprovalDone] = useState(false);
     const [bnbPriceInr, setBnbPriceInr] = useState<number>(0);
 

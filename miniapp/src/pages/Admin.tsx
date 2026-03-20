@@ -9,8 +9,9 @@ interface Dispute {
     token: string;
     fiat_amount: number;
     dispute_reason: string;
-    buyer: { username: string; first_name: string };
-    seller: { username: string; first_name: string };
+    buyer: { username: string; first_name: string; trust_score?: number };
+    seller: { username: string; first_name: string; upi_id?: string; phone_number?: string; trust_score?: number };
+    payment_proofs?: { utr: string }[];
     created_at: string;
     chatMessages?: any[];
 }
@@ -120,13 +121,6 @@ export function Admin({ user }: Props) {
                     <h1 className="page-title" style={{ color: 'var(--red)' }}>🛡️ Admin Dashboard</h1>
                     <p className="page-subtitle">Dispute Resolution <span style={{ fontSize: '9px', opacity: 0.3, fontFamily: 'monospace' }}>v1.3.1</span></p>
                 </div>
-                <button 
-                  onClick={() => { haptic('medium'); window.location.reload(); }}
-                  className="btn btn-sm btn-secondary"
-                  style={{ fontSize: '8px', opacity: 0.6 }}
-                >
-                  FORCE RELOAD
-                </button>
             </header>
 
             {error && <div className="card mb-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'rgba(246, 70, 93, 0.2)', color: 'var(--red)' }}>{error}</div>}
@@ -150,19 +144,57 @@ export function Admin({ user }: Props) {
                                     </div>
                                     <div className="text-muted" style={{ fontSize: '10px' }}>{new Date(d.created_at).toLocaleString()}</div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="font-bold" style={{ fontSize: '11px', color: 'var(--orange)' }}>₹{d.fiat_amount?.toLocaleString()}</div>
-                                    <div className="text-muted" style={{ fontSize: '10px' }}>@{d.buyer?.username} vs @{d.seller?.username}</div>
+                                <div className="text-right flex-col items-end">
+                                    <div className="font-bold" style={{ fontSize: '12px', color: 'var(--orange)' }}>₹{d.fiat_amount?.toLocaleString()}</div>
+                                    <div className="flex-col items-end" style={{ gap: '2px', marginTop: '4px' }}>
+                                        <div className="flex items-center" style={{ gap: '4px', fontSize: '10px' }}>
+                                            <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>BUYER:</span>
+                                            <span style={{ color: '#fff' }}>@{d.buyer?.username || 'user'}</span>
+                                            {d.buyer?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: '8px' }}>({d.buyer.trust_score}⭐)</span>}
+                                        </div>
+                                        <div className="flex items-center" style={{ gap: '4px', fontSize: '10px' }}>
+                                            <span style={{ color: 'var(--orange)', fontWeight: 'bold' }}>SELLER:</span>
+                                            <span style={{ color: '#fff' }}>@{d.seller?.username || 'user'}</span>
+                                            {d.seller?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: '8px' }}>({d.seller.trust_score}⭐)</span>}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Escrow Status Tag */}
-                            <div style={{ padding: '8px', backgroundColor: 'var(--orange-bg)', border: '1px solid rgba(240, 185, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
+                             <div style={{ padding: '8px', backgroundColor: 'var(--orange-bg)', border: '1px solid rgba(240, 185, 11, 0.2)', borderRadius: 'var(--radius-md)' }}>
                                 <span className="font-bold" style={{ fontSize: '10px', color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     🔒 SECURE ESCROW: {d.amount} {d.token}
                                 </span>
                                 <div className="text-muted" style={{ fontSize: '9px', marginTop: '2px', lineHeight: '1.2' }}>
                                     Release → Buyer gets funds | Refund → Seller gets funds
+                                </div>
+                            </div>
+
+                            {/* Dispute Reason & Details */}
+                            <div className="flex-col" style={{ gap: '8px', padding: '10px', backgroundColor: 'rgba(246, 70, 93, 0.05)', border: '1px solid rgba(246, 70, 93, 0.1)', borderRadius: 'var(--radius-md)' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚩 Dispute Reason</div>
+                                <div style={{ fontSize: '12px', lineHeight: '1.4', color: 'var(--text-primary)' }}>{d.dispute_reason}</div>
+                                
+                                <div className="flex flex-wrap" style={{ gap: '12px', marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                                    {d.payment_proofs?.[0]?.utr && (
+                                        <div className="flex-col">
+                                            <span style={{ fontSize: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>UTR / REF NO</span>
+                                            <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--blue)' }}>{d.payment_proofs[0].utr}</span>
+                                        </div>
+                                    )}
+                                    {d.seller?.upi_id && (
+                                        <div className="flex-col">
+                                            <span style={{ fontSize: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER UPI</span>
+                                            <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--green)' }}>{d.seller.upi_id}</span>
+                                        </div>
+                                    )}
+                                    {d.seller?.phone_number && (
+                                        <div className="flex-col">
+                                            <span style={{ fontSize: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER CONTACT</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-primary)' }}>{d.seller.phone_number}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

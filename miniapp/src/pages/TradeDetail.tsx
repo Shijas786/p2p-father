@@ -53,7 +53,7 @@ export function TradeDetail({ user }: Props) {
     const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [lockTxHash, setLockTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [order, setOrder] = useState<any>(null);
-    const [feePercentage, setFeePercentage] = useState<number>(0.01);
+    const [feePercentage, setFeePercentage] = useState<number>(0.005);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
@@ -557,7 +557,7 @@ export function TradeDetail({ user }: Props) {
                     {(() => {
                         const amount = parseFloat(disp.amount);
                         const rate = parseFloat(disp.rate || 0);
-                        const feePercent = feePercentage || 0.01;
+                        const feePercent = feePercentage || 0.005;
 
                         const sellerLock = amount.toFixed(4);
                         // Fiat Amount is what Buyer sends and Seller receives
@@ -589,7 +589,7 @@ export function TradeDetail({ user }: Props) {
                                             </div>
                                         </div>
                                         <div className="text-[10px] text-gray-500 mt-1">
-                                            (0.5% fee deducted)
+                                            (0.25% fee deducted)
                                         </div>
                                     </>
                                 ) : (

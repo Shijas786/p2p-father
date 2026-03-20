@@ -343,8 +343,8 @@ bot.command(["start", "open"], async (ctx) => {
                     .text("✅ Confirm Order", callbackData)
                     .text("❌ Cancel", `cancel_action:${user.id}`);
 
-                const totalFee = amount * env.FEE_PERCENTAGE; // 1%
-                const sideFee = amount * 0.005;            // 0.5%
+                const totalFee = amount * env.FEE_PERCENTAGE; // 0.5%
+                const sideFee = amount * (env.FEE_PERCENTAGE / 2); // 0.25%
                 const typeLabel = isSell ? "Sell" : "Buy";
 
                 await ctx.reply(
@@ -714,7 +714,7 @@ bot.command("help", async (ctx) => {
         "/ads • /newad • /wallet • /payment",
         "/market • /profile • /dispute",
         "",
-        `💰 Fee: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% per side`,
+        `💰 Fee: ${(env.FEE_PERCENTAGE * 50).toFixed(2)}% per side`,
         "",
         "📱 Everything in one place → /start",
     ].join("\n");

@@ -727,9 +727,9 @@ router.post("/trades", async (req: Request, res: Response) => {
             return res.status(409).json({ error: "Order already filled or no longer active" });
         }
 
-        const fiatAmount = tradeAmount * (1 - (env.FEE_PERCENTAGE / 2)) * order.rate; // 0.5% Seller Fee deducted from fiat
-        const feeAmount = tradeAmount * env.FEE_PERCENTAGE;      // Total Fee (usually 1%)
-        const buyerReceives = tradeAmount - feeAmount; // Gets 99% of locked amount (split 1% total fee)
+        const fiatAmount = tradeAmount * (1 - (env.FEE_PERCENTAGE / 2)) * order.rate; // 0.25% Seller Fee deducted from fiat
+        const feeAmount = tradeAmount * env.FEE_PERCENTAGE;      // Total Fee (usually 0.5%)
+        const buyerReceives = tradeAmount - feeAmount; // Gets 99.5% of locked amount (split 0.5% total fee)
 
         try {
             // ═══ ESCROW: Lock seller's funds on-chain ═══
@@ -770,9 +770,9 @@ router.post("/trades", async (req: Request, res: Response) => {
                 }
 
                 // 2. Relayer locks funds from Vault (Amount)
-                // Contract takes 1% (FEE_BPS=100) on release.
-                // Buyer pays fiat for Amount * 0.995.
-                // Buyer receives Amount * 0.99.
+                // Contract takes 0.5% (FEE_BPS=50) on release.
+                // Buyer pays fiat for Amount * 0.9975.
+                // Buyer receives Amount * 0.995.
 
                 console.log(`[TRADES] Relayer creating trade for ${seller.wallet_address} -> ${receiveAddress} on ${order.chain}. Lock: ${tradeAmount}`);
                 const tradeIdStr = await escrow.createRelayedTrade(
@@ -1161,7 +1161,7 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
         const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
         const { data: disputes } = await supabase
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id), buyer:users!trades_buyer_id_fkey(username, first_name)")
+            .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id, phone_number, trust_score), buyer:users!trades_buyer_id_fkey(username, first_name, trust_score), payment_proofs(utr)")
             .eq("status", "disputed")
             .order("created_at", { ascending: false });
 

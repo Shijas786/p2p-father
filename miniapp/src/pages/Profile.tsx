@@ -151,6 +151,13 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     }
 
 
+    if (!user) {
+        return (
+            <div className="page flex items-center justify-center">
+                <div className="spinner" />
+            </div>
+        );
+    }
 
     return (
         <div className="page profile-page animate-in">

@@ -45,7 +45,7 @@ const envSchema = z.object({
     BROADCAST_CHANNEL_ID: z.string().optional(),
 
     // App Config
-    FEE_BPS: z.string().default("100"),
+    FEE_BPS: z.string().default("50"),
     DEFAULT_CHAIN: z.string().default("base"),
     DEFAULT_TOKEN: z.string().default("USDC"),
     ESCROW_TIMEOUT_SECONDS: z.string().default("3600"),
