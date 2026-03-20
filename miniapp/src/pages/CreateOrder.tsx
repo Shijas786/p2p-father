@@ -473,8 +473,8 @@ export function CreateOrder() {
                                 </div>
                                 <div className="border-t border-white/10 my-2"></div>
                                 <div className="flex justify-between items-center text-[10px] text-muted">
-                                    <span>Trading Fee ({(feePercentage * 100).toFixed(1)}%)</span>
-                                    <span>{(feePercentage * 50).toFixed(1)}% Buyer + {(feePercentage * 50).toFixed(1)}% Seller</span>
+                                    <span>Trading Fee ({(feePercentage * 100).toFixed(2)}%)</span>
+                                    <span>{(feePercentage * 50).toFixed(2)}% Buyer + {(feePercentage * 50).toFixed(2)}% Seller</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] mt-1">
                                     <span className="text-orange">You (Seller) Lock:</span>
