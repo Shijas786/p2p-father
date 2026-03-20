@@ -115,9 +115,17 @@ export function Admin({ user }: Props) {
 
     return (
         <div className="page">
-            <header className="page-header">
-                <h1 className="page-title text-red">🛡️ Admin Dashboard</h1>
-                <p className="page-subtitle">Dispute Resolution Center</p>
+            <header className="page-header flex justify-between items-center">
+                <div>
+                    <h1 className="page-title text-red">🛡️ Admin Dashboard</h1>
+                    <p className="page-subtitle">Dispute Resolution <span className="text-[8px] opacity-30 font-mono">v1.3.0</span></p>
+                </div>
+                <button 
+                  onClick={() => { haptic('medium'); window.location.reload(); }}
+                  className="btn btn-sm btn-secondary text-[8px] opacity-50 hover:opacity-100"
+                >
+                  FORCE RELOAD
+                </button>
             </header>
 
             {error && <div className="p-3 bg-red/10 border border-red/20 rounded mb-4 text-sm">{error}</div>}
