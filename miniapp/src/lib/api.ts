@@ -217,6 +217,15 @@ export const api = {
         }>('/stats'),
     },
 
+    // ---- Bags.fm ----
+    bags: {
+        getStats: () => request<{
+            price: number;
+            mcap: number;
+            lifetime_fees: number;
+        }>('/bags/stats'),
+    },
+
     getLeaderboard: (page = 1) => request<{ leaderboard: any[]; page: number; total_count: number; has_more: boolean }>(`/leaderboard?page=${page}`),
 
     // ---- Admin ----

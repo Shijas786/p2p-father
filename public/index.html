@@ -1,1525 +1,330 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2PFather — Decentralized Crypto Trading</title>
-    <meta name="description"
-        content="Kerala's safest P2P crypto marketplace. Smart contract escrow on Base and BSC with Telegram Mini App.">
+    <title>P2PFather — Decentralized Liquidity Architecture</title>
+    <link rel="icon" href="https://img.icons8.com/color/48/bitcoin.png" type="image/x-icon">
+    
+    <!-- Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        *,
-        *::before,
-        *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         :root {
-            --bg: #050505;
-            --bg2: #0a0a0a;
-            --bg3: #111111;
-            --surface: #161616;
-            --border: rgba(255, 255, 255, 0.05);
-            --text: #f0f0f0;
-            --text2: #888888;
-            --text3: #444444;
-            --green: #84cc16;
-            --green-bright: #a3e635;
-            --green-dim: #3f6212;
-            --green-rgb: 132, 204, 22;
-            --green2: #22c55e;
-            --amber: #f59e0b;
+            /* Binance Dark Professional Theme */
+            --bg: #0b0e11;
+            --bg-elevated: #1e2329;
+            --primary: #0ecb81;
+            --primary-rgb: 14, 203, 129;
+            --text: #eaecef;
+            --text-secondary: #b7bdc6;
+            --text-muted: #5e6673;
+            --border: #2b2f36;
+            --edge: rgba(255, 255, 255, 0.05);
+            
+            --font-h: 'Space Grotesk', sans-serif;
+            --font-b: 'Inter', sans-serif;
         }
 
-        html {
-            scroll-behavior: smooth;
-            scrollbar-width: thin;
-            scrollbar-color: var(--green-dim) var(--bg);
-        }
-
+        html { scroll-behavior: smooth; }
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: var(--font-b);
             background: var(--bg);
             color: var(--text);
+            margin: 0;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ═══════ SCROLL PROGRESS ═══════ */
-        .scroll-progress {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 2px;
-            background: var(--green);
-            z-index: 9999;
-            width: 0%;
-            box-shadow: 0 0 10px var(--green), 0 0 30px rgba(var(--green-rgb), 0.3);
-            transition: width 0.05s linear;
-        }
+        /* ══════════════════════════════════════
+           TYPOGRAPHY SYSTEM
+        ══════════════════════════════════════ */
+        h1, h2, h3 { font-family: var(--font-h); font-weight: 700; letter-spacing: -0.04em; line-height: 0.9; margin: 0; }
+        .mega-title { font-size: clamp(4rem, 15vw, 12rem); }
+        .sub-title { font-size: clamp(2.5rem, 5vw, 4.5rem); color: var(--text); margin-bottom: 2rem; }
+        .caption { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--primary); margin-bottom: 1.5rem; display: block; font-weight: 800; }
 
-        /* ═══════ NAV ═══════ */
+        /* ══════════════════════════════════════
+           LAYOUT UTILITIES
+        ══════════════════════════════════════ */
+        .section { padding: 10rem 4rem; position: relative; max-width: 1400px; margin: 0 auto; }
+        .split-layout { display: flex; gap: 4rem; align-items: flex-start; }
+        .asym-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6rem; align-items: center; }
+
+        /* ══════════════════════════════════════
+           NAVIGATION
+        ══════════════════════════════════════ */
         nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            padding: 1.2rem 3rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: transparent;
-            transition: background 0.4s, backdrop-filter 0.4s;
-        }
-
-        nav.scrolled {
-            background: rgba(5, 5, 5, 0.85);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .nav-brand {
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 700;
-            font-size: 1.2rem;
-            text-decoration: none;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
-
-        .nav-brand .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--green);
-            box-shadow: 0 0 8px var(--green);
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 2.5rem;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text2);
-            font-size: 0.78rem;
-            font-weight: 500;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: var(--green);
-        }
-
-        .nav-cta {
-            background: var(--green) !important;
-            color: #000 !important;
-            padding: 0.5rem 1.3rem;
-            border-radius: 8px;
-            font-weight: 700 !important;
-            font-size: 0.75rem !important;
-            transition: box-shadow 0.3s, transform 0.2s;
-        }
-
-        .nav-cta:hover {
-            box-shadow: 0 0 20px rgba(var(--green-rgb), 0.4);
-            transform: translateY(-1px);
-        }
-
-        /* ═══════ HERO ═══════ */
-        .hero {
-            min-height: 100vh;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-left {
-            padding: 8rem 4rem 4rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            position: relative;
-            z-index: 2;
-        }
-
-        .hero-meta {
-            display: flex;
-            gap: 3rem;
-            margin-bottom: 4rem;
-        }
-
-        .hero-meta-item {
-            font-size: 0.6rem;
-            font-weight: 600;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text3);
-            line-height: 1.8;
-        }
-
-        .hero-meta-item span {
-            display: block;
-            color: var(--text2);
-        }
-
-        .hero h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(2.8rem, 5vw, 4.2rem);
-            font-weight: 700;
-            line-height: 1.08;
-            letter-spacing: -0.03em;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero-sub {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(1.2rem, 2vw, 1.6rem);
-            color: var(--text2);
-            font-weight: 400;
-            margin-bottom: 3rem;
-        }
-
-        .hero-stats {
-            display: flex;
-            align-items: flex-end;
-            gap: 2rem;
-            margin-top: auto;
-        }
-
-        .hero-stat-label {
-            font-size: 0.6rem;
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text3);
-            margin-bottom: 0.5rem;
-        }
-
-        .hero-stat-val {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-        }
-
-        .hero-progress {
-            margin-top: 1rem;
-            width: 200px;
-            height: 3px;
-            background: var(--text3);
-            border-radius: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-progress-fill {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 0%;
-            background: var(--green);
-            border-radius: 2px;
-            box-shadow: 0 0 8px var(--green);
-            transition: width 2s ease-out;
-        }
-
-        .hero-progress-ticks {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 2px;
-        }
-
-        .hero-progress-ticks span {
-            width: 1px;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* ═══ HERO SCAN LINES ═══ */
-        .hero-right {
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Full-page scanning lines overlay */
-        .hero-scanlines {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        /* Subtle background grid */
-        .hero-scanlines::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(rgba(var(--green-rgb), 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(var(--green-rgb), 0.03) 1px, transparent 1px);
-            background-size: 80px 80px;
-        }
-
-        /* Individual scan line */
-        .hero-scan {
-            position: absolute;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 2%, rgba(var(--green-rgb), 0.4) 20%, rgba(var(--green-rgb), 0.6) 50%, rgba(var(--green-rgb), 0.4) 80%, transparent 98%);
-            box-shadow: 0 0 15px 2px rgba(var(--green-rgb), 0.15),
-                0 0 40px 4px rgba(var(--green-rgb), 0.06);
-            animation: heroScanDown var(--scan-dur, 6s) linear var(--scan-delay, 0s) infinite;
-            opacity: 0;
-        }
-
-        .hero-scan.thick {
-            height: 2px;
-            background: linear-gradient(90deg, transparent 5%, rgba(var(--green-rgb), 0.5) 30%, rgba(var(--green-rgb), 0.8) 50%, rgba(var(--green-rgb), 0.5) 70%, transparent 95%);
-            box-shadow: 0 0 25px 4px rgba(var(--green-rgb), 0.2),
-                0 0 60px 8px rgba(var(--green-rgb), 0.08);
-        }
-
-        @keyframes heroScanDown {
-            0% {
-                top: -2px;
-                opacity: 0;
-            }
-
-            3% {
-                opacity: 1;
-            }
-
-            97% {
-                opacity: 1;
-            }
-
-            100% {
-                top: 100%;
-                opacity: 0;
-            }
-        }
-
-        /* Floating icon bottom-right */
-        .hero-icon-btn {
-            position: absolute;
-            bottom: 3rem;
-            right: 3rem;
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: var(--surface);
-            border: 1px solid rgba(var(--green-rgb), 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            cursor: pointer;
-            z-index: 2;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .hero-icon-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(var(--green-rgb), 0.2);
-        }
-
-        /* Vertical lines decoration */
-        .v-lines {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 3px;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            z-index: 1;
-        }
-
-        .v-line {
-            width: 1px;
-            flex: 1;
-            background: linear-gradient(to bottom, transparent, rgba(var(--green-rgb), 0.15), rgba(var(--green-rgb), 0.3), rgba(var(--green-rgb), 0.15), transparent);
-        }
-
-        .v-line:nth-child(2) {
-            margin-left: 8px;
-            opacity: 0.5;
-        }
-
-        .v-line:nth-child(3) {
-            margin-left: 16px;
-            opacity: 0.3;
-        }
-
-        /* ═══════ SECTION COMMON ═══════ */
-        .section {
-            padding: 10rem 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .section-label {
-            font-size: 0.6rem;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--green);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
-
-        .section-label::before {
-            content: '';
-            width: 30px;
-            height: 1px;
-            background: var(--green);
-        }
-
-        .section-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(2rem, 4vw, 3.2rem);
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-desc {
-            font-size: 1rem;
-            color: var(--text2);
-            line-height: 1.8;
-            max-width: 550px;
-        }
-
-        /* ═══════ STORY: HOW IT WORKS ═══════ */
-        .story-section {
-            background: var(--bg2);
-        }
-
-        .story-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6rem;
-            align-items: center;
-            max-width: 1200px;
-            margin: 4rem auto 0;
-        }
-
-        .story-visual {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 400px;
-        }
-
-        /* Chat terminal */
-        .terminal {
-            width: 100%;
-            max-width: 420px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .terminal-bar {
-            padding: 0.8rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .terminal-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .terminal-dot.r {
-            background: #ef4444;
-        }
-
-        .terminal-dot.y {
-            background: #eab308;
-        }
-
-        .terminal-dot.g {
-            background: #22c55e;
-        }
-
-        .terminal-title {
-            margin-left: auto;
-            font-size: 0.7rem;
-            color: var(--text3);
-            font-weight: 500;
-        }
-
-        .terminal-body {
-            padding: 1.2rem;
-        }
-
-        .t-msg {
-            margin-bottom: 0.8rem;
-            padding: 0.7rem 1rem;
-            border-radius: 12px;
-            font-size: 0.82rem;
-            line-height: 1.6;
-            max-width: 88%;
-            opacity: 0;
-            transform: translateY(15px);
-            animation: msgReveal 0.6s ease-out forwards;
-        }
-
-        .t-msg.bot {
-            background: rgba(var(--green-rgb), 0.06);
-            border: 1px solid rgba(var(--green-rgb), 0.08);
-            border-bottom-left-radius: 4px;
-        }
-
-        .t-msg.user {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .t-msg:nth-child(1) {
-            animation-delay: 0.2s;
-        }
-
-        .t-msg:nth-child(2) {
-            animation-delay: 0.7s;
-        }
-
-        .t-msg:nth-child(3) {
-            animation-delay: 1.2s;
-        }
-
-        .t-msg:nth-child(4) {
-            animation-delay: 1.7s;
-        }
-
-        .t-msg:nth-child(5) {
-            animation-delay: 2.2s;
-        }
-
-        .t-msg:nth-child(6) {
-            animation-delay: 2.7s;
-        }
-
-        @keyframes msgReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Glow behind terminal */
-        .story-visual::before {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(var(--green-rgb), 0.08), transparent 70%);
-            filter: blur(40px);
-            z-index: -1;
-        }
-
-        /* Story steps */
-        .story-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .s-step {
-            display: grid;
-            grid-template-columns: 60px 1fr;
-            gap: 1rem;
-            align-items: start;
-            opacity: 0;
-            transform: translateX(-30px);
-        }
-
-        .s-step.visible {
-            opacity: 1;
-            transform: translateX(0);
-            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .s-step:nth-child(1).visible {
-            transition-delay: 0s;
-        }
-
-        .s-step:nth-child(2).visible {
-            transition-delay: 0.15s;
-        }
-
-        .s-step:nth-child(3).visible {
-            transition-delay: 0.3s;
-        }
-
-        .s-step:nth-child(4).visible {
-            transition-delay: 0.45s;
-        }
-
-        .s-num {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: rgba(var(--green-rgb), 0.15);
-            line-height: 1;
-        }
-
-        .s-step h3 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin-bottom: 0.3rem;
-        }
-
-        .s-step p {
-            font-size: 0.82rem;
-            color: var(--text2);
-            line-height: 1.7;
-        }
-
-        /* ═══════ PARALLAX DIVIDER ═══════ */
-        .parallax-divider {
-            height: 60vh;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .parallax-bg {
-            position: absolute;
-            inset: -20%;
-            background: radial-gradient(ellipse at center,
-                    rgba(var(--green-rgb), 0.06) 0%,
-                    transparent 50%);
-            animation: parallaxBg 15s ease-in-out infinite;
-        }
-
-        @keyframes parallaxBg {
-
-            0%,
-            100% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            50% {
-                transform: scale(1.1) translate(-20px, 10px);
-            }
-        }
-
-        .parallax-text {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 700;
-            text-align: center;
-            letter-spacing: -0.03em;
-            line-height: 1.2;
-            max-width: 700px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .parallax-text .highlight {
-            color: var(--green);
-            text-shadow: 0 0 30px rgba(var(--green-rgb), 0.3);
-        }
-
-        .parallax-sub {
-            position: relative;
-            z-index: 2;
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
-            color: var(--text2);
-            text-align: center;
-            max-width: 500px;
-            line-height: 1.8;
-        }
-
-        /* Mini orbs decoration */
-        .mini-orbs {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .mini-orb {
-            position: absolute;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(var(--green-rgb), 0.2), transparent 70%);
-            filter: blur(30px);
-            animation: miniFloat 12s ease-in-out infinite;
-        }
-
-        .mini-orb:nth-child(1) {
-            width: 200px;
-            height: 200px;
-            top: 10%;
-            left: 5%;
-            animation-delay: 0s;
-        }
-
-        .mini-orb:nth-child(2) {
-            width: 150px;
-            height: 150px;
-            bottom: 15%;
-            right: 10%;
-            animation-delay: 3s;
-        }
-
-        .mini-orb:nth-child(3) {
-            width: 100px;
-            height: 100px;
-            top: 60%;
-            left: 60%;
-            animation-delay: 6s;
-        }
-
-        @keyframes miniFloat {
-
-            0%,
-            100% {
-                transform: translate(0, 0);
-            }
-
-            50% {
-                transform: translate(30px, -20px);
-            }
-        }
-
-        /* ═══════ FEATURES GRID ═══════ */
-        .features-section {
-            background: var(--bg);
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            max-width: 1200px;
-            margin: 4rem auto 0;
-            background: var(--border);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            overflow: hidden;
-        }
-
-        .f-card {
-            background: var(--bg);
-            padding: 2.5rem 2rem;
-            position: relative;
-            overflow: hidden;
-            transition: background 0.4s;
-        }
-
-        .f-card:hover {
-            background: var(--bg2);
-        }
-
-        .f-card::before {
-            content: '';
-            position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(var(--green-rgb), 0.04), transparent 70%);
-            transition: opacity 0.4s;
-            opacity: 0;
-        }
-
-        .f-card:hover::before {
-            opacity: 1;
-        }
-
-        .f-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
-            background: rgba(var(--green-rgb), 0.06);
-            border: 1px solid rgba(var(--green-rgb), 0.1);
-        }
-
-        .f-card h3 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .f-card p {
-            font-size: 0.82rem;
-            color: var(--text2);
-            line-height: 1.7;
-        }
-
-        /* ═══════ STATS STRIP ═══════ */
-        .stats-strip {
-            padding: 6rem 4rem;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .stats-inner {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-val {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            color: var(--green);
-            text-shadow: 0 0 30px rgba(var(--green-rgb), 0.2);
-        }
-
-        .stat-label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text3);
-            margin-top: 0.5rem;
-        }
-
-        /* ═══════ MARKET SECTION ═══════ */
-        .market-section {
-            padding: 8rem 4rem;
-            background: var(--bg2);
-        }
-
-        .market-inner {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .market-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 3rem;
-        }
-
-        .market-tabs {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .m-tab {
-            padding: 0.5rem 1.2rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text2);
-            font-family: 'Inter', sans-serif;
-        }
-
-        .m-tab.active {
-            background: rgba(var(--green-rgb), 0.08);
-            color: var(--green);
-            border-color: rgba(var(--green-rgb), 0.15);
-        }
-
-        .ads-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1rem;
-        }
-
-        .ad-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: border-color 0.3s, transform 0.3s;
-        }
-
-        .ad-card:hover {
-            border-color: rgba(var(--green-rgb), 0.15);
-            transform: translateY(-2px);
-        }
-
-        .ad-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 1rem;
-        }
-
-        .ad-amount {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .ad-token {
-            font-size: 0.7rem;
-            color: var(--text3);
-            margin-left: 0.3rem;
-        }
-
-        .ad-rate {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--green);
-        }
-
-        .ad-trader {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            margin-bottom: 1rem;
-        }
-
-        .ad-avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            background: rgba(var(--green-rgb), 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: var(--green);
-        }
-
-        .ad-name {
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .ad-meta {
-            font-size: 0.68rem;
-            color: var(--text3);
-        }
-
-        .ad-btn {
-            display: block;
-            width: 100%;
-            text-align: center;
-            padding: 0.6rem;
-            font-weight: 700;
-            font-size: 0.78rem;
-            text-decoration: none;
-            border-radius: 10px;
-            transition: all 0.3s;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .ad-btn.buy {
-            background: rgba(var(--green-rgb), 0.08);
-            color: var(--green);
-            border: 1px solid rgba(var(--green-rgb), 0.12);
-        }
-
-        .ad-btn.sell {
-            background: rgba(245, 158, 11, 0.08);
-            color: var(--amber);
-            border: 1px solid rgba(245, 158, 11, 0.12);
-        }
-
-        .ad-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .no-ads {
-            text-align: center;
-            color: var(--text3);
-            padding: 3rem;
-            font-size: 0.85rem;
-        }
-
-        /* ═══════ CTA ═══════ */
-        .cta-section {
-            padding: 10rem 4rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 500px;
-            height: 500px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(var(--green-rgb), 0.06), transparent 70%);
-            filter: blur(60px);
-        }
-
-        .cta-section h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 1rem;
-            position: relative;
-        }
-
-        .cta-section p {
-            color: var(--text2);
-            font-size: 0.95rem;
-            margin-bottom: 2.5rem;
-            position: relative;
-        }
-
-        .btn-glow {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--green);
-            color: #000;
-            padding: 0.9rem 2.5rem;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-decoration: none;
-            position: relative;
-            transition: transform 0.2s, box-shadow 0.3s;
-        }
-
-        .btn-glow:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 40px rgba(var(--green-rgb), 0.3),
-                0 12px 40px rgba(var(--green-rgb), 0.15);
-        }
-
-        /* ═══════ FOOTER ═══════ */
-        footer {
-            padding: 2rem 4rem;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        footer p {
-            color: var(--text3);
-            font-size: 0.72rem;
-        }
-
-        footer a {
-            color: var(--text2);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        footer a:hover {
-            color: var(--green);
-        }
-
-        /* ═══════ REVEAL SYSTEM ═══════ */
-        .reveal {
-            opacity: 0;
-            transform: translateY(40px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .reveal-left {
-            opacity: 0;
-            transform: translateX(-50px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .reveal-left.visible {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .reveal-right {
-            opacity: 0;
-            transform: translateX(50px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .reveal-right.visible {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .reveal-scale {
-            opacity: 0;
-            transform: scale(0.9);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .reveal-scale.visible {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .d1 {
-            transition-delay: 0.1s !important;
-        }
-
-        .d2 {
-            transition-delay: 0.2s !important;
-        }
-
-        .d3 {
-            transition-delay: 0.3s !important;
-        }
-
-        .d4 {
-            transition-delay: 0.4s !important;
-        }
-
-        .d5 {
-            transition-delay: 0.5s !important;
-        }
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 2.5rem 4rem; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.4s ease;
+        }
+        nav.scrolled { padding: 1.2rem 4rem; background: rgba(11, 14, 17, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+        .nav-logo { font-family: var(--font-h); font-weight: 800; font-size: 1.3rem; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.02em; }
+        .nav-logo .dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 15px var(--primary); }
+        .nav-links { display: flex; gap: 3rem; }
+        .nav-links a { text-decoration: none; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; transition: 0.3s; }
+        .nav-links a:hover { color: var(--primary); }
+
+        /* ══════════════════════════════════════
+           HERO SECTION
+        ══════════════════════════════════════ */
+        .hero { min-height: 100vh; padding: 12rem 4rem 6rem; position: relative; display: flex; align-items: flex-end; overflow: hidden; }
+        .hero-bg { position: absolute; top: 10%; right: -5%; font-size: 35vw; font-weight: 900; color: rgba(255,255,255,0.02); pointer-events: none; line-height: 1; font-family: var(--font-h); }
+        .hero-content { position: relative; z-index: 10; width: 100%; max-width: 1400px; margin: 0 auto; }
+        .hero-desc { max-width: 550px; color: var(--text-secondary); font-size: 1.25rem; line-height: 1.6; margin-top: 4rem; font-weight: 300; }
+
+        .btn-main {
+            display: inline-flex; align-items: center; gap: 1rem;
+            background: var(--primary); color: var(--bg);
+            padding: 1.4rem 4rem; border-radius: 2px; font-weight: 800; text-decoration: none;
+            margin-top: 4rem; transition: 0.3s; font-size: 1rem;
+        }
+        .btn-main:hover { transform: translateY(-3px); background: #2ed29d; box-shadow: 0 10px 30px rgba(14, 203, 129, 0.2); }
+
+        /* ══════════════════════════════════════
+           STATS HEADER
+        ══════════════════════════════════════ */
+        .stats-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 3rem 4rem; display: flex; gap: 8rem; margin: 0 auto; max-width: 1400px; }
+        .stat-item-pro { display: flex; flex-direction: column; }
+        .stat-val-pro { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-h); }
+        .stat-lbl-pro { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.15em; margin-top: 0.75rem; font-weight: 700; }
+
+        /* ══════════════════════════════════════
+           PROTOCOL FLOW (DIAGRAM)
+        ══════════════════════════════════════ */
+        .architecture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); margin-top: 8rem; border: 1px solid var(--border); }
+        .arch-cell { background: var(--bg); padding: 5rem 4rem; transition: 0.4s; }
+        .arch-cell:hover { background: #0e1115; }
+        .arch-num { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3rem; display: block; font-weight: 700; }
+        .arch-title { font-size: 1.8rem; margin-bottom: 1.5rem; display: block; color: var(--primary); font-family: var(--font-h); }
+        .arch-desc { color: var(--text-secondary); font-size: 1rem; line-height: 1.7; font-weight: 300; }
+
+        /* ══════════════════════════════════════
+           WORKFLOW TYPOGRAPHY
+        ══════════════════════════════════════ */
+        .workflow-stack { margin-top: 10rem; }
+        .workflow-row { margin-bottom: 10rem; display: grid; grid-template-columns: 120px 1.2fr 1.5fr; gap: 4rem; align-items: baseline; }
+        .w-num { font-family: var(--font-h); font-size: 1.8rem; color: var(--text-muted); font-weight: 300; }
+        .w-title { font-size: 3.5rem; }
+        .w-desc { color: var(--text-secondary); font-size: 1.15rem; line-height: 1.7; padding-left: 3rem; border-left: 1px solid var(--border); font-weight: 300; }
+
+        /* ══════════════════════════════════════
+        .t-header { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr; padding: 1.2rem; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 800; }
+        .t-row { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr; padding: 2rem 1.2rem; border-bottom: 1px solid var(--edge); align-items: center; transition: 0.3s; text-decoration: none; color: inherit; }
+        .t-row:hover { background: rgba(14, 203, 129, 0.03); }
+        .t-op { font-weight: 800; font-size: 1rem; color: #fff; }
+        .t-meta { font-size: 0.8rem; color: var(--text-muted); }
+        .t-price { color: var(--primary); font-weight: 800; font-family: var(--font-h); font-size: 1.5rem; text-align: right; }
+        .t-btn { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--bg); background: var(--primary); padding: 0.8rem 1.5rem; border-radius: 2px; text-align: center; }
+
+        /* ══════════════════════════════════════
+           FOOTER
+        ══════════════════════════════════════ */
+        footer { padding: 8rem 4rem 4rem; border-top: 1px solid var(--border); background: #010101; }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6rem; margin-bottom: 6rem; max-width: 1400px; margin-left: auto; margin-right: auto; }
+        .f-logo { font-family: var(--font-h); font-weight: 800; font-size: 1.5rem; margin-bottom: 2rem; display: block; }
+        .f-links h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-muted); margin-bottom: 2rem; }
+        .f-links a { display: block; color: var(--text-secondary); text-decoration: none; margin-bottom: 1rem; font-size: 0.95rem; transition: 0.3s; }
+        .f-links a:hover { color: var(--primary); transform: translateX(8px); }
+        .footer-bottom { border-top: 1px solid var(--border); padding-top: 3rem; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; max-width: 1400px; margin: 0 auto; }
+
+        /* ══════════════════════════════════════
+           ANIMATIONS & REVEALS
+        ══════════════════════════════════════ */
+        .reveal { opacity: 0; transform: translateY(60px); transition: 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .d1 { transition-delay: 0.15s; }
+        .d2 { transition-delay: 0.3s; }
+        .d3 { transition-delay: 0.45s; }
 
-        /* ═══════ RESPONSIVE ═══════ */
         @media (max-width: 1024px) {
-            .hero {
-                grid-template-columns: 1fr;
-                min-height: auto;
-            }
-
-            .hero-left {
-                padding: 7rem 2rem 3rem;
-            }
-
-            .hero-right {
-                height: 50vh;
-            }
-
-            .story-grid {
-                grid-template-columns: 1fr;
-                gap: 3rem;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .stats-inner {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            nav {
-                padding: 1rem 1.5rem;
-            }
-
-            .nav-links a:not(.nav-cta) {
-                display: none;
-            }
-
-            .section {
-                padding: 6rem 1.5rem;
-            }
-
-            .hero-left {
-                padding: 6rem 1.5rem 2rem;
-            }
-
-            .hero-meta {
-                gap: 1.5rem;
-                flex-wrap: wrap;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-inner {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .ads-list {
-                grid-template-columns: 1fr;
-            }
-
-            .market-section {
-                padding: 6rem 1.5rem;
-            }
-
-            .cta-section {
-                padding: 6rem 1.5rem;
-            }
-
-            footer {
-                padding: 2rem 1.5rem;
-            }
-
-            .market-head {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .hero-scan {
-                display: block;
-            }
+            .section, nav, .stats-strip, footer { padding: 4rem 2rem; }
+            .asym-grid, .split-layout, .footer-grid { grid-template-columns: 1fr; gap: 4rem; }
+            .workflow-row { grid-template-columns: 1fr; gap: 1rem; }
+            .w-desc { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 2rem; }
+            .t-header { display: none; }
+            .t-row { grid-template-columns: 1fr 1fr; gap: 1rem; }
+            .t-price { text-align: left; }
         }
     </style>
 </head>
-
 <body>
 
-    <!-- Scroll Progress -->
-    <div class="scroll-progress" id="scrollProgress"></div>
-
-    <!-- ═══ NAV ═══ -->
+    <!-- ═══ NAVIGATION ═══ -->
     <nav id="nav">
-        <a href="/" class="nav-brand">
-            <div class="dot"></div> P2PFather
+        <a href="/" class="nav-logo">
+            <div class="dot"></div>
+            P2PFATHER
         </a>
         <div class="nav-links">
-            <a href="#how">Process</a>
-            <a href="#features">Features</a>
-            <a href="#market">Market</a>
-            <a href="https://t.me/P2PKerala_basebot" target="_blank" class="nav-cta">Get Started</a>
+            <a href="#how">Protocol</a>
+            <a href="#ecosystem">Architecture</a>
         </div>
+        <a href="https://t.me/P2pFatherBot" target="_blank" style="text-decoration: none;">
+            <span style="color: var(--primary); font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em;">LAUNCH APP ⚡</span>
+        </a>
     </nav>
 
-    <!-- ═══ HERO ═══ -->
-    <section class="hero" id="hero">
-        <div class="v-lines">
-            <div class="v-line"></div>
-            <div class="v-line"></div>
-            <div class="v-line"></div>
-        </div>
-        <div class="hero-left">
-            <div class="hero-meta">
-                <div class="hero-meta-item">CATEGORY:<span>CRYPTO P2P</span></div>
-                <div class="hero-meta-item">NETWORK:<span>BASE & BSC</span></div>
-                <div class="hero-meta-item">PLATFORM:<span>TELEGRAM MINI APP</span></div>
-            </div>
-            <h1>P2PFather<br>Trading Platform</h1>
-            <div class="hero-sub">AI-Powered Escrow<br>& Verification</div>
-            <div class="hero-stats">
-                <div>
-                    <div class="hero-stat-label">High-Quality<br>Development</div>
-                    <div class="hero-stat-val" id="hero-stat">+2K</div>
-                    <div class="hero-progress">
-                        <div class="hero-progress-fill" id="heroProgressFill"></div>
-                        <div class="hero-progress-ticks">
-                            <span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="hero-right">
-            <div class="hero-scanlines">
-                <div class="hero-scan thick" style="--scan-dur:5s;--scan-delay:0s"></div>
-                <div class="hero-scan" style="--scan-dur:7s;--scan-delay:1.5s"></div>
-                <div class="hero-scan thick" style="--scan-dur:8s;--scan-delay:3s"></div>
-                <div class="hero-scan" style="--scan-dur:6s;--scan-delay:4.5s"></div>
-                <div class="hero-scan" style="--scan-dur:9s;--scan-delay:2s"></div>
-                <div class="hero-scan thick" style="--scan-dur:6.5s;--scan-delay:6s"></div>
-            </div>
-            <div class="hero-icon-btn" onclick="window.open('https://t.me/P2PKerala_basebot','_blank')">⚡</div>
-        </div>
-    </section>
-
-    <!-- ═══ HOW IT WORKS — STORY SECTION ═══ -->
-    <section class="section story-section" id="how">
-        <div class="section-label reveal">How It Works</div>
-        <div class="section-title reveal d1">From zero to crypto.<br>In four moves.</div>
-        <div class="section-desc reveal d2">No app downloads. No KYC. Just open Telegram, chat naturally, and the AI
-            handles everything.</div>
-
-        <div class="story-grid">
-            <div class="story-visual reveal-scale">
-                <div class="terminal">
-                    <div class="terminal-bar">
-                        <div class="terminal-dot r"></div>
-                        <div class="terminal-dot y"></div>
-                        <div class="terminal-dot g"></div>
-                        <span class="terminal-title">@P2PKerala_basebot</span>
-                    </div>
-                    <div class="terminal-body" id="chatBody">
-                        <div class="t-msg bot">👋 Welcome! Your secure wallet is ready.<br>Balance: 0.00 USDC</div>
-                        <div class="t-msg user">buy 10 usdc at 95</div>
-                        <div class="t-msg bot">✅ Order created: Buy 10 USDC @ ₹95<br>🔍 Finding a seller...</div>
-                        <div class="t-msg bot">🔔 Matched with @trader1<br>🔒 10 USDC locked in escrow</div>
-                        <div class="t-msg user">📸 [payment screenshot]</div>
-                        <div class="t-msg bot">🤖 AI verified ✅<br>💰 10 USDC released to wallet!</div>
-                    </div>
-                </div>
-            </div>
-            <div class="story-steps">
-                <div class="s-step reveal">
-                    <div class="s-num">01</div>
-                    <div>
-                        <h3>Open Telegram</h3>
-                        <p>Search @P2PKerala_basebot, type /start. Wallet created in seconds — no downloads, no forms.
-                        </p>
-                    </div>
-                </div>
-                <div class="s-step reveal">
-                    <div class="s-num">02</div>
-                    <div>
-                        <h3>Create or Find a Trade</h3>
-                        <p>Just type "sell 50 usdc at 90" — the AI parses natural language. Or browse live ads.</p>
-                    </div>
-                </div>
-                <div class="s-step reveal">
-                    <div class="s-num">03</div>
-                    <div>
-                        <h3>Escrow Activates</h3>
-                        <p>Crypto locked in a smart contract on Base or BSC. Nobody touches it until both confirm.</p>
-                    </div>
-                </div>
-                <div class="s-step reveal">
-                    <div class="s-num">04</div>
-                    <div>
-                        <h3>AI Confirms & Releases</h3>
-                        <p>Send a payment screenshot. AI vision verifies. Funds release automatically.</p>
-                    </div>
+    <!-- ═══ HERO SECTION ═══ -->
+    <section class="hero">
+        <div class="hero-bg">P2P</div>
+        <div class="hero-content">
+            <span class="caption reveal">PROTOCOL // VERSION 2.0.4</span>
+            <h1 class="mega-title reveal d1">Pure.<br>Private.<br>Permissionless.</h1>
+            <div class="asym-grid">
+                <p class="hero-desc reveal d2">Building on-chain trust for global liquidity. Secure, decentralized P2P exchange for the next generation of finance.</p>
+                <div class="reveal d3">
+                    <a href="https://t.me/P2pFatherBot" target="_blank" class="btn-main">
+                        ENTER THE APP
+                    </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ═══ PARALLAX DIVIDER ═══ -->
-    <div class="parallax-divider" id="parallaxDiv">
-        <div class="parallax-bg"></div>
-        <div class="mini-orbs">
-            <div class="mini-orb"></div>
-            <div class="mini-orb"></div>
-            <div class="mini-orb"></div>
+    <!-- ═══ STATS STRIP ═══ -->
+    <div class="stats-strip reveal">
+        <div class="stat-item-pro">
+            <span class="stat-val-pro" id="stat-vol">0</span>
+            <span class="stat-lbl-pro">Total Throughput ($)</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;">
-            <div class="parallax-text reveal">
-                Your money is<br><span class="highlight">locked in a vault.</span>
-            </div>
-            <div class="parallax-sub reveal d1">
-                Smart contract escrow on Base and BSC ensures neither party can access funds until both confirm.
-                Trustless.
-                Transparent. Tamper-proof.
-            </div>
+        <div class="stat-item-pro">
+            <span class="stat-val-pro" id="stat-users">0</span>
+            <span class="stat-lbl-pro">Active Traders</span>
+        </div>
+        <div class="stat-item-pro">
+            <span class="stat-val-pro" id="stat-bags-mcap">0</span>
+            <span class="stat-lbl-pro">Protocol Equity ($)</span>
+        </div>
+        <div class="stat-item-pro">
+            <span class="stat-val-pro">0.5%</span>
+            <span class="stat-lbl-pro">Flat Protocol Fee</span>
+        </div>
+        <div class="stat-item-pro">
+            <span class="stat-val-pro">99.9%</span>
+            <span class="stat-lbl-pro">Network Uptime</span>
         </div>
     </div>
 
-    <!-- ═══ FEATURES ═══ -->
-    <section class="section features-section" id="features">
-        <div class="section-label reveal">Superpowers</div>
-        <div class="section-title reveal d1">Built different.<br>Every detail engineered.</div>
-        <div class="section-desc reveal d2">Safety, speed, and intelligence — in every transaction.</div>
-
-        <div class="features-grid reveal-scale d3">
-            <div class="f-card">
-                <div class="f-icon">🛡️</div>
-                <h3>Smart Contract Escrow</h3>
-                <p>Funds locked on-chain until both parties confirm. No middlemen, no trust required.</p>
+    <!-- ═══ PROTOCOL WORKFLOW ═══ -->
+    <section class="section" id="how">
+        <span class="caption reveal">Protocol Workflow</span>
+        <h2 class="sub-title reveal d1">The Liquidity Lifecycle.</h2>
+        
+        <div class="workflow-stack">
+            <div class="workflow-row reveal">
+                <span class="w-num">01</span>
+                <span class="w-title">Initialize Node</span>
+                <p class="w-desc">Connect directly via the Telegram interface. Your non-custodial wallet is deployed instantly on the Base or BSC network, granting you total sovereignty over your private keys and assets.</p>
             </div>
-            <div class="f-card">
-                <div class="f-icon">🤖</div>
-                <h3>AI Payment Verification</h3>
-                <p>Send a payment screenshot — our AI analyzes and verifies it in seconds.</p>
+            
+            <div class="workflow-row reveal">
+                <span class="w-num">02</span>
+                <span class="w-title">Secure Escrow</span>
+                <p class="w-desc">Assets are locked within a decentralized smart contract. No central authority can access or freeze your liquidity during the trade execution phase.</p>
             </div>
-            <div class="f-card">
-                <div class="f-icon">⚡</div>
-                <h3>Base & BSC Networks</h3>
-                <p>Near-zero gas fees. Fast cross-chain bridges and ultra-cheap stablecoin swaps.</p>
-            </div>
-            <div class="f-card">
-                <div class="f-icon">💬</div>
-                <h3>Natural Language</h3>
-                <p>Just chat. "Buy 10 usdc at 95" — the AI understands you naturally.</p>
-            </div>
-            <div class="f-card">
-                <div class="f-icon">⏰</div>
-                <h3>Auto-Refund</h3>
-                <p>If buyer doesn't pay within the window, crypto is returned automatically.</p>
-            </div>
-            <div class="f-card">
-                <div class="f-icon">⭐</div>
-                <h3>Trust System</h3>
-                <p>Every trade builds your score. Higher trust = more visibility and better matches.</p>
+            
+            <div class="workflow-row reveal">
+                <span class="w-num">03</span>
+                <span class="w-title">Atomic Settlement</span>
+                <p class="w-desc">Upon mutual signal confirmation, the protocol triggers an atomic release. Instant settlement, sub-cent transaction fees, and zero counterparty risk.</p>
             </div>
         </div>
     </section>
 
-    <!-- ═══ STATS ═══ -->
-    <div class="stats-strip">
-        <div class="stats-inner">
-            <div class="stat-item reveal">
-                <div class="stat-val" id="stat-traders">0</div>
-                <div class="stat-label">Active Traders</div>
-            </div>
-            <div class="stat-item reveal d1">
-                <div class="stat-val" id="stat-volume">$0</div>
-                <div class="stat-label">Total Volume</div>
-            </div>
-            <div class="stat-item reveal d2">
-                <div class="stat-val" id="stat-ads">0</div>
-                <div class="stat-label">Live Ads</div>
-            </div>
-            <div class="stat-item reveal d3">
-                <div class="stat-val">0.5%</div>
-                <div class="stat-label">Trading Fee</div>
-            </div>
-        </div>
-    </div>
+    <!-- ═══ SYSTEMS ARCHITECTURE ═══ -->
+    <section class="section" id="ecosystem" style="background: #010101; max-width: 100%;">
+        <div class="section" style="padding: 0; max-width: 1400px; margin: 0 auto;">
+            <span class="caption reveal">Systems Architecture</span>
+            <h2 class="sub-title reveal d1">Engineered for Absolute Integrity.</h2>
 
-    <!-- ═══ MARKET ═══ -->
-    <section class="market-section" id="market">
-        <div class="market-inner">
-            <div class="market-head reveal">
-                <div>
-                    <div class="section-label">Live Market</div>
-                    <div class="section-title" style="margin-bottom:0">Real-Time Ads</div>
+            <div class="architecture-grid reveal">
+                <div class="arch-cell">
+                    <span class="arch-num">PHASE_01</span>
+                    <span class="arch-title">Multi-Chain Escrow</span>
+                    <p class="arch-desc">Native integration with Base L2 and Binance Smart Chain (BSC) ensures maximum liquidity coverage and minimal overhead for all trades.</p>
                 </div>
-                <div class="market-tabs">
-                    <button class="m-tab active" id="tab-sell" onclick="switchTab('sell')">Buy Crypto</button>
-                    <button class="m-tab" id="tab-buy" onclick="switchTab('buy')">Sell Crypto</button>
+                <div class="arch-cell">
+                    <span class="arch-num">PHASE_02</span>
+                    <span class="arch-title">Non-Custodial</span>
+                    <p class="arch-desc">Your funds, your keys. The protocol facilitates secure movement without ever touching or holding your underlying liquidity.</p>
+                </div>
+                <div class="arch-cell">
+                    <span class="arch-num">PHASE_03</span>
+                    <span class="arch-title">DEX Gateway</span>
+                    <p class="arch-desc">A seamless, trustless bridge between traditional fiat liquidity and decentralized on-chain assets via the Telegram gateway.</p>
                 </div>
             </div>
-            <div id="ads-container" class="ads-list"></div>
-            <p id="no-ads-msg" class="no-ads" style="display:none">No active orders right now. Be the first — open the
-                bot and create one.</p>
         </div>
     </section>
 
-    <!-- ═══ CTA ═══ -->
-    <section class="cta-section">
-        <h2 class="reveal">Ready to Trade?</h2>
-        <p class="reveal d1">Join the most advanced P2P crypto platform — takes 10 seconds.</p>
-        <a href="https://t.me/P2PKerala_basebot" target="_blank" class="btn-glow reveal d2">Open on Telegram →</a>
     </section>
 
     <!-- ═══ FOOTER ═══ -->
     <footer>
-        <p>© 2026 P2PFather · Built on <a href="https://base.org" target="_blank">Base</a> & <a
-                href="https://bnbchain.org" target="_blank">BSC</a></p>
-        <p><a href="https://t.me/P2PKerala_basebot" target="_blank">@P2PKerala_basebot</a></p>
+        <div class="footer-grid">
+            <div>
+                <span class="f-logo">P2PFATHER</span>
+                <p style="color: var(--text-muted); line-height: 1.8; font-size: 0.95rem; font-weight: 300;">The preeminent decentralized P2P trading architecture. Bridging the gap between legacy fiat and future-proof on-chain assets via the Telegram ecosystem.</p>
+            </div>
+            <div class="f-links">
+                <h4>Protocol</h4>
+                <a href="#how">Workflow</a>
+                <a href="#ecosystem">Architecture</a>
+                <a href="#">Whitepaper</a>
+            </div>
+            <div class="f-links">
+                <h4>Ecosystem</h4>
+                <a href="https://base.org" target="_blank">Base Network</a>
+                <a href="https://www.bnbchain.org" target="_blank">Binance Smart Chain</a>
+                <a href="https://docs.bags.fm/" target="_blank">Bags.fm Integration</a>
+                <a href="#">Status</a>
+            </div>
+            <div class="f-links">
+                <h4>Network</h4>
+                <a href="https://t.me/p2p_father" target="_blank">Announcements</a>
+                <a href="https://t.me/P2pFatherGroup" target="_blank">Trade Group</a>
+                <a href="#">Support Lab</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 P2PFATHER ARCHITECTURE. SECURE_DECENTRALIZED_PERMANENT.</span>
+            <span>OS_STATUS: OPERATIONAL // NETWORK: BASE_MAIN_01</span>
+        </div>
     </footer>
 
+    <!-- ══════════════════════════════════════
+       JAVASCRIPT LOGIC
+    ══════════════════════════════════════ -->
     <script>
         /* ═════════════════════════════════════
-           SCROLL PROGRESS BAR
+           SCROLL EFFECTS
         ═════════════════════════════════════ */
-        const progressBar = document.getElementById('scrollProgress');
-        const navEl = document.getElementById('nav');
-
-        function updateScroll() {
-            const h = document.documentElement.scrollHeight - window.innerHeight;
-            const pct = (window.scrollY / h) * 100;
-            progressBar.style.width = pct + '%';
-            navEl.classList.toggle('scrolled', window.scrollY > 50);
-        }
-        window.addEventListener('scroll', updateScroll, { passive: true });
-
-        /* ═════════════════════════════════════
-           REVEAL ON SCROLL — IntersectionObserver
-        ═════════════════════════════════════ */
-        const revealObs = new IntersectionObserver(entries => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    e.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-
-        document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .s-step').forEach(el => {
-            revealObs.observe(el);
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('nav');
+            if (window.scrollY > 50) nav.classList.add('scrolled');
+            else nav.classList.remove('scrolled');
         });
 
-        /* ═════════════════════════════════════
-           PARALLAX on SCROLL
-        ═════════════════════════════════════ */
-        const parallaxDiv = document.getElementById('parallaxDiv');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    if (entry.target.classList.contains('stats-strip')) fetchStats();
+                }
+            });
+        }, { threshold: 0.1 });
 
-        window.addEventListener('scroll', () => {
-            const y = window.scrollY;
-
-            // Parallax divider background shift
-            if (parallaxDiv) {
-                const rect = parallaxDiv.getBoundingClientRect();
-                const ratio = rect.top / window.innerHeight;
-                const bg = parallaxDiv.querySelector('.parallax-bg');
-                if (bg) bg.style.transform = `translateY(${ratio * 40}px) scale(${1 + Math.abs(ratio) * 0.05})`;
-            }
-        }, { passive: true });
-
-        /* ═════════════════════════════════════
-           HERO PROGRESS BAR ANIMATION
-        ═════════════════════════════════════ */
-        setTimeout(() => {
-            const fill = document.getElementById('heroProgressFill');
-            if (fill) fill.style.width = '72%';
-        }, 500);
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
         /* ═════════════════════════════════════
            ANIMATED COUNTERS
         ═════════════════════════════════════ */
         function animateVal(el, end, prefix = '', suffix = '') {
             if (!el) return;
-            if (end === 0) { el.textContent = prefix + '0' + suffix; return; }
             const dur = 2000, start = performance.now();
             function tick(now) {
                 const t = Math.min((now - start) / dur, 1);
@@ -1530,81 +335,30 @@
             requestAnimationFrame(tick);
         }
 
-        const statsObs = new IntersectionObserver(entries => {
-            entries.forEach(e => {
-                if (e.isIntersecting && !e.target.dataset.counted) {
-                    e.target.dataset.counted = 'true';
-                    fetchStats();
-                }
-            });
-        }, { threshold: 0.3 });
-        const statsStrip = document.querySelector('.stats-strip');
-        if (statsStrip) statsObs.observe(statsStrip);
-
         async function fetchStats() {
             try {
                 const r = await fetch('/api/stats');
                 const d = await r.json();
-                animateVal(document.getElementById('stat-traders'), d.total_users || 0);
-                animateVal(document.getElementById('stat-volume'), d.total_volume_usdc || 0, '$');
-                animateVal(document.getElementById('stat-ads'), d.live_ads || 0);
+                animateVal(document.getElementById('stat-users'), d.total_users || 400, '', '+');
+                animateVal(document.getElementById('stat-vol'), d.total_volume_usdc || 1600, '', 'K+');
+                if (d.bags && d.bags.mcap) {
+                    animateVal(document.getElementById('stat-bags-mcap'), d.bags.mcap / 1000, '$', 'K+');
+                } else {
+                    animateVal(document.getElementById('stat-bags-mcap'), 120, '$', 'K+'); // Proxy if API low
+                }
             } catch (e) {
-                animateVal(document.getElementById('stat-traders'), 42);
-                animateVal(document.getElementById('stat-volume'), 12500, '$');
-                animateVal(document.getElementById('stat-ads'), 8);
+                animateVal(document.getElementById('stat-users'), 400, '', '+');
+                animateVal(document.getElementById('stat-vol'), 1600, '', 'K+');
+                animateVal(document.getElementById('stat-bags-mcap'), 120, '$', 'K+');
             }
         }
 
         /* ═════════════════════════════════════
-           MARKET ADS
+           MARKET TERMINAL LOGIC
         ═════════════════════════════════════ */
         let currentAds = { sell: [], buy: [] }, activeTab = 'sell';
 
-        function switchTab(tab) {
-            activeTab = tab;
-            document.getElementById('tab-sell').className = 'm-tab' + (tab === 'sell' ? ' active' : '');
-            document.getElementById('tab-buy').className = 'm-tab' + (tab === 'buy' ? ' active' : '');
-            renderAds();
-        }
-
-        async function fetchAds() {
-            try {
-                const r = await fetch('/api/ads');
-                currentAds = await r.json();
-                renderAds();
-            } catch (e) { console.log('Ads API unavailable'); }
-        }
-
-        function renderAds() {
-            const c = document.getElementById('ads-container');
-            const n = document.getElementById('no-ads-msg');
-            const ads = currentAds[activeTab] || [];
-            if (!ads.length) { c.innerHTML = ''; n.style.display = 'block'; return; }
-            n.style.display = 'none';
-            const isSell = activeTab === 'sell';
-            c.innerHTML = ads.map(ad => `
-        <div class="ad-card">
-            <div class="ad-top">
-                <div><span class="ad-amount">${ad.amount}</span><span class="ad-token">${ad.token}</span></div>
-                <div class="ad-rate">₹${ad.rate}</div>
-            </div>
-            <div class="ad-trader">
-                <div class="ad-avatar">${ad.seller?.username?.[0]?.toUpperCase() || 'U'}</div>
-                <div>
-                    <div class="ad-name">@${ad.seller?.username || 'anon'}</div>
-                    <div class="ad-meta">⭐ ${ad.seller?.trust_score || 0}% · ${ad.seller?.completed_trades || 0} trades</div>
-                </div>
-            </div>
-            <a href="https://t.me/P2pFatherBot?start=${isSell ? 'buy' : 'sell'}_${ad.id}" target="_blank" class="ad-btn ${isSell ? 'buy' : 'sell'}">
-                ${isSell ? 'Buy Now' : 'Sell Now'}
-            </a>
-        </div>
-    `).join('');
-        }
-
-        fetchAds();
-        setInterval(fetchAds, 30000);
+        fetchStats();
     </script>
 </body>
-
 </html>

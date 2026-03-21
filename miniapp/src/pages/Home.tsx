@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconChainBase, IconChainBsc, IconTokenUSDC, IconTokenUSDT, IconTokenBNB } from '../components/Icons';
+import { BagsStats } from '../components/BagsStats';
 import './Home.css';
 
 interface Props {
@@ -140,6 +141,7 @@ export function Home({ user }: Props) {
 
                 {/* Trader List */}
                 <div className="p2p-list">
+                    <BagsStats />
                     {loading ? (
                         <div className="p2p-skeletons">
                             {[1, 2, 3, 4].map(i => (

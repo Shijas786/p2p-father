@@ -75,13 +75,25 @@ async function main() {
     app.get("/api/stats", async (req, res) => {
         try {
             const stats = await db.getStats();
+            
+            // Bags.fm Stats
+            const { bags } = await import("./services/bags");
+            const bagsStats = await bags.getConsolidatedStats(env.BAGS_TOKEN_MINT);
+
             res.json({
                 total_users: stats.total_users,
                 total_volume_usdc: stats.total_volume_generic || 0,
                 total_fees_amount: stats.total_fees_amount || 0,
                 active_orders: stats.active_orders,
                 fee_percentage: env.FEE_PERCENTAGE,
-                fee_bps: parseInt(env.FEE_BPS)
+                fee_bps: parseInt(env.FEE_BPS),
+                bags: bagsStats 
+                    ? {
+                        price: bagsStats.price,
+                        mcap: bagsStats.mcap,
+                        liquidity: (bagsStats as any).liquidity || 0
+                    } 
+                    : null
             });
         } catch (e) {
             console.error("API Error:", e);

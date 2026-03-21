@@ -44,6 +44,10 @@ const envSchema = z.object({
     REDIS_URL: z.string().default(""),
     BROADCAST_CHANNEL_ID: z.string().optional(),
 
+    // Bags.fm
+    BAGS_API_KEY: z.string().default(""),
+    BAGS_TOKEN_MINT: z.string().default(""),
+
     // App Config
     FEE_BPS: z.string().default("50"),
     DEFAULT_CHAIN: z.string().default("base"),
