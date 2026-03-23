@@ -59,6 +59,14 @@ function getExplorerUrl(txHash: string, chain: 'base' | 'bsc' = 'base'): string 
     return `${baseUrl}/tx/${txHash}`;
 }
 
+let cachedBotInfo: any = null;
+async function getBotInfo() {
+    if (!cachedBotInfo) {
+        cachedBotInfo = await bot.api.getMe();
+    }
+    return cachedBotInfo;
+}
+
 async function broadcast(message: string, keyboard?: InlineKeyboard) {
     const groups = await groupManager.getGroups();
     // Include ENV broadcast channel if set
@@ -73,19 +81,35 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
 
     console.log(`📡 Broadcasting to ${groups.length} groups...`);
 
-    // Add deep link button to message if not present in keyboard? 
-    // Actually the message usually contains links.
-
     await Promise.allSettled(groups.map(async (chatId) => {
-        try {
-            await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown", reply_markup: keyboard });
-        } catch (error: any) {
-            // Remove group if bot was kicked
-            if (error.description?.includes("kicked") || error.description?.includes("blocked") || error.description?.includes("not a member")) {
-                console.log(`❌ Removing invalid group ${chatId}`);
-                groupManager.removeGroup(chatId).catch(console.error);
-            } else {
-                console.error(`⚠️ Broadcast failed to ${chatId}:`, error.message);
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown", reply_markup: keyboard });
+                return; // Success
+            } catch (error: any) {
+                attempts++;
+                const isPermanent = error.description?.includes("kicked") || 
+                                  error.description?.includes("blocked") || 
+                                  error.description?.includes("not a member") ||
+                                  error.description?.includes("chat not found");
+
+                if (isPermanent) {
+                    console.log(`❌ Removing invalid group ${chatId}`);
+                    groupManager.removeGroup(chatId).catch(console.error);
+                    return;
+                }
+
+                if (attempts >= maxAttempts) {
+                    console.error(`⚠️ Broadcast FAILED to ${chatId} after ${maxAttempts} attempts:`, error.message);
+                    return;
+                }
+
+                const delay = 1000 * attempts;
+                console.log(`🔄 Retrying broadcast to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
             }
         }
     }));
@@ -134,7 +158,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 
 export async function broadcastAd(order: any, user: any) {
     try {
-        const botUser = await bot.api.getMe();
+        const botUser = await getBotInfo();
         const usernameRaw = user.username;
         const firstName = user.first_name || "Someone";
         const username = usernameRaw ? `@${escapeMarkdown(usernameRaw)}` : escapeMarkdown(firstName);
@@ -2091,7 +2115,10 @@ bot.on("callback_query:data", async (ctx) => {
                         rate: draft.rate,
                         fiat_currency: "INR",
                         payment_methods: paymentMethods as any,
-                        payment_details: { upi: user.upi_id || "" },
+                        payment_details: {
+                            upi: user.upi_id || "",
+                            group_id: draft.target_group_id // Save target group ID
+                        },
                         status: "active",
                         filled_amount: 0,
                     });
@@ -2672,25 +2699,22 @@ bot.on("callback_query:data", async (ctx) => {
                     { parse_mode: "Markdown" }
                 );
 
-                // Broadcast Success (Group Specific)
+                // Unified Success Broadcast
                 try {
                     const order = await db.getOrderById(trade.order_id);
-                    const targetGroup = (order?.payment_details as any)?.group_id;
+                    const buyerUser = await db.getUserById(trade.buyer_id);
+                    const sellerUser = await db.getUserById(trade.seller_id);
 
-                    if (targetGroup) {
-                        await ctx.api.sendMessage(
-                            String(targetGroup),
-                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatTokenAmount(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
-                            { parse_mode: "Markdown" }
-                        ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
+                    const tradeWithUsername = {
+                        ...trade,
+                        seller_username: sellerUser?.username,
+                        seller_first_name: sellerUser?.first_name,
+                        buyer_username: buyerUser?.username,
+                        buyer_first_name: buyerUser?.first_name,
+                        release_tx_hash: txHash,
+                    };
 
-                    } else if (env.BROADCAST_CHANNEL_ID) {
-                        await ctx.api.sendMessage(
-                            env.BROADCAST_CHANNEL_ID,
-                            `✅ *Trade Completed!* 🎉\n\n💰 Volume: *${formatTokenAmount(trade.amount)}*\n🤝 P2P Swap executed successfully.\n\nStart trading now: /start`,
-                            { parse_mode: "Markdown" }
-                        ).catch(e => console.error("Admin Broadcast failed:", e));
-                    }
+                    await broadcastTradeSuccess(tradeWithUsername, order || trade);
                 } catch (e) {
                     console.error("Trade broadcast error:", e);
                 }
