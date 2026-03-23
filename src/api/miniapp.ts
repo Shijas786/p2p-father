@@ -524,7 +524,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -595,8 +595,10 @@ router.post("/orders", async (req: Request, res: Response) => {
             rate: parsedRate,
             fiat_currency: "INR",
             payment_methods: payment_methods || ["UPI"],
-            // payment_details: {}, // Optional in schema
-
+            payment_details: {
+                upi: user.upi_id || "",
+                group_id: group_id ? parseInt(group_id.toString()) : undefined
+            },
         });
 
         res.json({ order });
