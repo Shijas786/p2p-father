@@ -336,64 +336,23 @@ bot.command(["start", "open"], async (ctx) => {
         }
     }
 
-    // 🆕 HANDLE PRIVATE AD SETUP (Redirected from Group)
+    // 🆕 REDIRECT PRIVATE AD SETUP TO MINI APP
     if (payload && (payload.startsWith("setup_sell_") || payload.startsWith("setup_buy_"))) {
-        const isSell = payload.startsWith("setup_sell_");
-        const data = payload.replace(isSell ? "setup_sell_" : "setup_buy_", "");
-        const parts = data.split("_");
+        const miniAppUrl = "https://p2pfather.com/miniapp/create";
+        const keyboard = new InlineKeyboard()
+            .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
-        // Format: AMOUNT_RATE_GROUPID
-        if (parts.length >= 3) {
-            const amount = parseFloat(parts[0]);
-            const rate = parseFloat(parts[1]);
-            const groupId = parseInt(parts[2]); // Capture Group ID
-            const user = await ensureUser(ctx);
-
-            if (!isNaN(amount) && !isNaN(rate)) {
-                // Initialize Draft Session
-                ctx.session.ad_draft = {
-                    type: isSell ? "sell" : "buy",
-                    amount: amount,
-                    rate: rate,
-                    token: "USDC",
-                    target_group_id: !isNaN(groupId) ? groupId : undefined
-                };
-
-                const callbackData = isSell
-                    ? `confirm_sell:${amount}:${rate}:${user.id}`
-                    : `confirm_buy:${amount}:${rate}:${user.id}`;
-
-                const keyboard = new InlineKeyboard()
-                    .text("✅ Confirm Order", callbackData)
-                    .text("❌ Cancel", `cancel_action:${user.id}`);
-
-                const totalFee = amount * env.FEE_PERCENTAGE; // 0.5%
-                const sideFee = amount * (env.FEE_PERCENTAGE / 2); // 0.25%
-                const typeLabel = isSell ? "Sell" : "Buy";
-
-                await ctx.reply(
-                    [
-                        `📝 *Create ${typeLabel} Order*`,
-                        "",
-                        `Amount: ${formatTokenAmount(amount)}`,
-                        `Rate: ${formatINR(rate)}/USDC`,
-                        `Total: ${formatINR(amount * 0.995 * rate)}`,
-                        "",
-                        `⚖️ *Commission (${(env.FEE_PERCENTAGE * 100).toFixed(0)}%)*:`,
-                        `• Seller: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatTokenAmount(sideFee)})`,
-                        `• Buyer: ${(env.FEE_PERCENTAGE * 50).toFixed(1)}% (${formatTokenAmount(sideFee)})`,
-                        "",
-                        isSell
-                            ? `🔐 *You Lock:* ${formatTokenAmount(amount)}\n💰 *You Get Paid for:* ${formatTokenAmount(amount - sideFee)}\n📥 *Buyer Gets:* ${formatTokenAmount(amount - totalFee)}`
-                            : `🔐 *Seller Locks:* ${formatTokenAmount(amount)}\n💰 *You Pay for:* ${formatTokenAmount(amount - sideFee)}\n📥 *You Get:* ${formatTokenAmount(amount - totalFee)}`,
-                        "",
-                        " Confirm to list this order?",
-                    ].join("\n"),
-                    { parse_mode: "Markdown", reply_markup: keyboard }
-                );
-                return;
-            }
-        }
+        await ctx.reply(
+            [
+                "📢 *Create a New Ad*",
+                "",
+                "Use our Mini App for the best experience! 🚀",
+                "",
+                "Tap below to open the ad creation page:",
+            ].join("\n"),
+            { parse_mode: "Markdown", reply_markup: keyboard }
+        );
+        return;
     }
 
     // 2. Buy specific order
@@ -799,27 +758,21 @@ bot.command("send", async (ctx) => {
 
 // Also keep /sell as alias
 bot.command("sell", async (ctx) => {
-    await ensureUser(ctx);
+    const cacheBuster = `?v=${Date.now()}`;
+    const miniAppUrl = `https://p2pfather.com/miniapp/create${cacheBuster}`;
+    const keyboard = new InlineKeyboard()
+        .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
     await ctx.reply(
         [
-            "💰 *Create Sell Ad*",
+            "📢 *Create a New Ad*",
             "",
-            "Tell me what you want to sell:",
+            "Use our Mini App for the best experience! 🚀",
             "",
-            '*Example:* "sell 100 usdc at 88 via upi"',
-            "",
-            "Or provide details step by step:",
-            "• Amount (e.g., 100 USDC)",
-            "• Rate in INR (e.g., ₹88/USDC)",
-            "• Payment method (UPI, IMPS, NEFT)",
-            "",
-            "Or use /newad for guided setup.",
+            "Tap below to open the ad creation page:",
         ].join("\n"),
-        { parse_mode: "Markdown" }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
-
-    ctx.session.awaiting_input = "sell_details";
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1539,126 +1492,7 @@ bot.on("callback_query:data", async (ctx) => {
             handled = true;
         }
 
-        // Handle AI-generated Sell Order confirmation
-        if (data.startsWith("confirm_sell:")) {
-            console.log("DEBUG: confirm_sell callback received:", data);
-            await ctx.answerCallbackQuery({ text: "Processing Sell Confirmation..." });
-            handled = true;
-            try {
-                const parts = data.split(":");
-                if (parts.length < 4) throw new Error("Invalid callback data format (missing user_id)");
 
-                const amountStr = parts[1];
-                const rateStr = parts[2];
-                const creatorId = parseInt(parts[3]);
-                const token = parts[4] || "USDT";
-                const chain = parts[5] || (token === "USDC" ? "base" : "bsc");
-
-                if (ctx.from.id !== creatorId) {
-                    await ctx.answerCallbackQuery({ text: "⚠️ Expected creator to confirm.", show_alert: true });
-                    return;
-                }
-
-                const amount = parseFloat(amountStr);
-                const rate = parseFloat(rateStr);
-
-                if (isNaN(amount) || isNaN(rate)) {
-                    throw new Error(`Invalid amount or rate: ${amountStr}, ${rateStr}`);
-                }
-
-                ctx.session.ad_draft = {
-                    type: "sell",
-                    amount: amount,
-                    rate: rate,
-                    token: token,
-                    chain: chain,
-                };
-
-                const keyboard = new InlineKeyboard()
-                    .text("⚡ UPI", `ad_pay:upi:${creatorId}`)
-                    .text("🏦 Bank Transfer", `ad_pay:bank:${creatorId}`)
-                    .text("💳 All Methods", `ad_pay:all:${creatorId}`);
-
-                const text = [
-                    "📢 *Create Sell Ad — Step 3/3*",
-                    "",
-                    `Amount: *${formatTokenAmount(amount, token)}*`,
-                    `Rate: *${formatINR(rate)}/${token}*`,
-                    `Chain: *${chain.toUpperCase()}*`,
-                    "",
-                    "How do you want to receive payment?",
-                ].join("\n");
-
-                console.log("DEBUG: Editing message to Step 3/3");
-                await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
-                await ctx.answerCallbackQuery();
-                handled = true;
-            } catch (err: any) {
-                console.error("DEBUG: Error in create_sell handler:", err);
-                await ctx.answerCallbackQuery({ text: "❌ Error: " + err.message, show_alert: true });
-            }
-        }
-
-        // Handle AI-generated Buy Order confirmation
-        if (data.startsWith("confirm_buy:")) {
-            console.log("DEBUG: confirm_buy callback received:", data);
-            await ctx.answerCallbackQuery({ text: "Processing Buy Confirmation..." });
-            handled = true;
-            try {
-                const parts = data.split(":");
-                // confirm_buy:AMOUNT:RATE:USERID:TOKEN:CHAIN
-                if (parts.length < 4) throw new Error("Invalid callback data format (missing user_id)");
-
-                const amountStr = parts[1];
-                const rateStr = parts[2];
-                const creatorId = parseInt(parts[3]);
-                const token = parts[4] || "USDT";
-                const chain = parts[5] || (token === "USDC" ? "base" : "bsc");
-
-                if (ctx.from.id !== creatorId) {
-                    await ctx.answerCallbackQuery({ text: "⚠️ Expected creator to confirm.", show_alert: true });
-                    return;
-                }
-
-                const amount = parseFloat(amountStr);
-                const rate = parseFloat(rateStr);
-
-                if (isNaN(amount) || isNaN(rate)) {
-                    throw new Error(`Invalid amount or rate: ${amountStr}, ${rateStr}`);
-                }
-
-                ctx.session.ad_draft = {
-                    type: "buy",
-                    amount: amount,
-                    rate: rate,
-                    token: token,
-                    chain: chain,
-                };
-
-                const keyboard = new InlineKeyboard()
-                    .text("⚡ UPI", "ad_pay:upi")
-                    .text("🏦 Bank Transfer", "ad_pay:bank")
-                    .text("💳 All Methods", "ad_pay:all");
-
-                const text = [
-                    "📢 *Create Buy Ad — Step 3/3*",
-                    "",
-                    `Amount: *${formatTokenAmount(amount, token)}*`,
-                    `Rate: *${formatINR(rate)}/${token}*`,
-                    `Chain: *${chain.toUpperCase()}*`,
-                    "",
-                    "How do you want to pay the seller?",
-                ].join("\n");
-
-                console.log("DEBUG: Editing message to Step 3/3");
-                await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
-                await ctx.answerCallbackQuery();
-                handled = true;
-            } catch (err: any) {
-                console.error("DEBUG: Error in confirm_buy handler:", err);
-                await ctx.answerCallbackQuery({ text: "❌ Error: " + err.message, show_alert: true });
-            }
-        }
 
         // Handle Send Token Selection -> Ask Address
         if (data.startsWith("send_token:")) {
@@ -1874,295 +1708,7 @@ bot.on("callback_query:data", async (ctx) => {
 
         // ─────── AD PAYMENT METHOD SELECTION (Final Step) ───────
 
-        if (data.startsWith("ad_pay:")) {
-            const parts = data.split(":");
-            // Format: ad_pay:METHOD[:USERID]
-            const method = parts[1];
 
-            // Validate User if ID is present
-            if (parts.length >= 3) {
-                const creatorId = parseInt(parts[2]);
-                if (!isNaN(creatorId) && ctx.from.id !== creatorId) {
-                    await ctx.answerCallbackQuery({ text: "⚠️ This is not your ad draft.", show_alert: true });
-                    return;
-                }
-            }
-
-            const user = await ensureUser(ctx);
-            const draft = ctx.session.ad_draft;
-
-            if (!draft || !draft.amount || !draft.rate || !draft.type) {
-                await ctx.answerCallbackQuery({ text: "Session expired. Start over with /newad" });
-                return;
-            }
-
-            let paymentMethods: string[] = [];
-            if (method === "all") {
-                paymentMethods = ["UPI", "IMPS", "NEFT", "PAYTM", "BANK"];
-            } else {
-                paymentMethods = [method.toUpperCase()];
-            }
-
-            try {
-                // ═══ FOR SELL ADS: Check balance & lock in escrow ═══
-                if (draft.type === "sell") {
-                    const tokenSymbol = draft.token || "USDT";
-                    const draftChain = (draft as any).chain || (tokenSymbol === "USDC" ? "base" : "bsc");
-
-                    // Resolve token address per chain
-                    let tokenAddress: string;
-                    if (draftChain === 'bsc') {
-                        if (tokenSymbol === 'BNB') {
-                            tokenAddress = '0x0000000000000000000000000000000000000000';
-                        } else {
-                            tokenAddress = (tokenSymbol === 'USDT') ? '0x55d398326f99059fF775485246999027B3197955' : '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d';
-                        }
-                    } else {
-                        tokenAddress = (tokenSymbol === 'USDT') ? env.USDT_ADDRESS : env.USDC_ADDRESS;
-                    }
-                    const amount = draft.amount!;
-
-                    await ctx.editMessageText(`⏳ Checking your Vault balance for ${tokenSymbol} on ${draftChain.toUpperCase()}...`);
-
-                    // Use Vault balance instead of wallet balance — pass chain!
-                    const vaultBalance = await escrow.getVaultBalance(user.wallet_address!, tokenAddress, draftChain as any);
-                    const balanceNum = parseFloat(vaultBalance);
-
-                    let fundingSource = "vault"; // 'vault' or 'hot_wallet'
-
-                    // 1. External Wallets: MUST have funds in Vault
-                    // (We cannot auto-deposit from external wallets without a signature at trade time)
-                    if (user.wallet_type === 'external') {
-                        if (balanceNum < amount) {
-                            await ctx.editMessageText(
-                                [
-                                    `❌ *Insufficient Vault Balance*`,
-                                    "",
-                                    `Since you are using an External Wallet, you must deposit funds to the Vault *before* creating a Sell Ad.`,
-                                    "",
-                                    `Required: *${formatTokenAmount(amount, tokenSymbol)}*`,
-                                    `Vault Balance: *${formatTokenAmount(balanceNum, tokenSymbol)}*`,
-                                    "",
-                                    `📥 *Please deposit funds via the Mini App.*`,
-                                ].join("\n"),
-                                { parse_mode: "Markdown" }
-                            );
-                            ctx.session.ad_draft = undefined;
-                            await ctx.answerCallbackQuery();
-                            return;
-                        }
-                        fundingSource = "vault";
-                    }
-                    // 2. Bot Wallets: Can use Hot Wallet (Auto-Deposit)
-                    else {
-                        // Check Hot Wallet Balance as fallback
-                        const hotWalletBalance = await wallet.getTokenBalance(user.wallet_address!, tokenAddress, draftChain as any);
-                        const hotBalanceNum = parseFloat(hotWalletBalance);
-
-                        if (balanceNum >= amount) {
-                            fundingSource = "vault";
-                        } else if (hotBalanceNum >= amount) {
-                            fundingSource = "hot_wallet";
-                        } else {
-                            // Neither has enough
-                            await ctx.editMessageText(
-                                [
-                                    `❌ *Insufficient Balance*`,
-                                    "",
-                                    `You want to sell: *${formatTokenAmount(amount, tokenSymbol)}*`,
-                                    `Vault Balance: *${formatTokenAmount(balanceNum, tokenSymbol)}*`,
-                                    `Hot Wallet: *${formatTokenAmount(hotBalanceNum, tokenSymbol)}*`,
-                                    "",
-                                    `📥 *Please deposit funds to your wallet.*`,
-                                ].join("\n"),
-                                { parse_mode: "Markdown" }
-                            );
-                            ctx.session.ad_draft = undefined;
-                            await ctx.answerCallbackQuery();
-                            return;
-                        }
-                    }
-
-                    // Require payment method before creating ad
-                    if (!user.upi_id && !user.phone_number) {
-                        await ctx.editMessageText(
-                            "❌ *Payment Method Required*\n\nPlease set up your UPI ID or Phone Number in /profile before creating an ad.",
-                            { parse_mode: "Markdown" }
-                        );
-                        ctx.session.ad_draft = undefined;
-                        await ctx.answerCallbackQuery();
-                        return;
-                    }
-
-                    // No need to manually "lock" now - it stays in Vault or Hot Wallet until matched
-                    const escrowTxHash = fundingSource === "vault" ? "vault_backed" : "hot_wallet_backed";
-
-                    const token = draft.token! || "USDT";
-
-                    const order = await db.createOrder({
-                        user_id: user.id,
-                        type: "sell",
-                        token: token,
-                        chain: draftChain,
-                        amount: amount,
-
-                        rate: draft.rate,
-                        fiat_currency: "INR",
-                        payment_methods: paymentMethods as any,
-                        payment_details: {
-                            upi: user.upi_id || "",
-                            escrow_tx: escrowTxHash,
-                            group_id: draft.target_group_id // Save target group ID
-                        },
-                        status: "active",
-                        filled_amount: 0,
-                    });
-
-                    const totalFiat = amount * draft.rate;
-                    const feeAmount = amount * env.FEE_PERCENTAGE;
-
-                    // Vault-backed ads don't have a specific lock tx yet (it happened during deposit)
-                    const explorerUrl = draftChain === 'bsc'
-                        ? 'https://bscscan.com/address/' + env.ESCROW_CONTRACT_ADDRESS_BSC
-                        : 'https://basescan.org/address/' + env.ESCROW_CONTRACT_ADDRESS;
-
-                    // Clear draft
-                    ctx.session.ad_draft = undefined;
-                    ctx.session.awaiting_input = undefined;
-
-                    // Broadcast Logic (Group Specific)
-                    const botUser = await ctx.api.getMe();
-                    // Explicitly cast to prevent lint errors
-                    const groupVal = (order.payment_details as any)?.group_id;
-                    const targetGroup = typeof groupVal === 'number' ? groupVal : undefined;
-
-                    if (targetGroup !== undefined) {
-                        // Post ONLY to that group
-                        const groupKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
-
-                        await ctx.api.sendMessage(
-                            String(targetGroup),
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, token)}*\n📈 Rate: *${formatINR(order.rate)}/${token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
-                            { parse_mode: "Markdown", reply_markup: groupKeyboard }
-                        ).catch(e => console.error(`Group Broadcast failed to ${targetGroup}:`, e));
-
-                    } else if (env.BROADCAST_CHANNEL_ID) {
-                        // Fallback: Post to Main Channel for Direct DM ads
-                        const channelKeyboard = new InlineKeyboard()
-                            .url("⚡ Buy Now", `https://t.me/${botUser.username}?start=buy_${order.id}`);
-
-                        await ctx.api.sendMessage(
-                            env.BROADCAST_CHANNEL_ID,
-                            `📢 *New Sell Ad!* 🚀\n\n💰 Sell: *${formatTokenAmount(order.amount, token)}*\n📈 Rate: *${formatINR(order.rate)}/${token}*\n👤 Seller: @${user.username || "Anonymous"}\n\n👇 *Click below to buy:*`,
-                            { parse_mode: "Markdown", reply_markup: channelKeyboard }
-                        ).catch(e => console.error("Main Channel Broadcast failed:", e));
-                    }
-
-                    const keyboard = new InlineKeyboard()
-                        .text("📢 View My Ads", "myads_view")
-                        .text("📢 Create Another", "newad_start")
-                        .row()
-                        .text("🗑️ Delete Ad", `ad_delete:${order.id}`);
-
-                    await ctx.reply(
-                        [
-                            "✅ *Sell Ad Created!*",
-                            "",
-                            "🔴 *SELL Ad*",
-                            "",
-                            `💰 Amount: *${formatTokenAmount(draft.amount, token)}*`,
-                            `📈 Rate: *${formatINR(draft.rate)}/${token}*`,
-                            `💵 Total: *${formatINR(totalFiat)}*`,
-                            `💳 Payment: ${paymentMethods.join(", ")}`,
-                            `🏷️ Fee: ${formatTokenAmount(feeAmount, token)} (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%)`,
-                            "",
-                            `🔒 *Vault Backed* ✅`,
-                            `🔗 [View Vault Balance](${explorerUrl})`,
-                            "",
-                            `🆔 Ad ID: \`${order.id.slice(0, 8)}\``,
-                            "",
-                            "━━━━━━━━━━━━━━━━━━━",
-                            "Your ad is now LIVE! Buyers can see it.",
-                            "You can withdraw your funds from the Vault anytime via /wallet.",
-                        ].join("\n"),
-                        { parse_mode: "Markdown", reply_markup: keyboard }
-                    );
-
-                } else {
-                    // ═══ FOR BUY ADS: No escrow needed (buyer wants to buy crypto) ═══
-                    // Require payment method before creating ad
-                    if (!user.upi_id && !user.phone_number) {
-                        await ctx.editMessageText(
-                            "❌ *Payment Method Required*\n\nPlease set up your UPI ID or Phone Number in /profile before creating an ad.",
-                            { parse_mode: "Markdown" }
-                        );
-                        ctx.session.ad_draft = undefined;
-                        await ctx.answerCallbackQuery();
-                        return;
-                    }
-
-                    const amount = draft.amount!;
-                    const token = draft.token! || "USDT";
-                    const draftChain = (draft as any).chain || (token === "USDC" ? "base" : "bsc");
-
-                    const order = await db.createOrder({
-                        user_id: user.id,
-                        type: "buy",
-                        token: token,
-                        chain: draftChain,
-                        amount: amount,
-                        rate: draft.rate,
-                        fiat_currency: "INR",
-                        payment_methods: paymentMethods as any,
-                        payment_details: {
-                            upi: user.upi_id || "",
-                            group_id: draft.target_group_id // Save target group ID
-                        },
-                        status: "active",
-                        filled_amount: 0,
-                    });
-
-                    const totalFiat = amount * draft.rate;
-
-                    ctx.session.ad_draft = undefined;
-                    ctx.session.awaiting_input = undefined;
-
-                    const keyboard = new InlineKeyboard()
-                        .text("📢 View My Ads", "myads_view")
-                        .text("📢 Create Another", "newad_start")
-                        .row()
-                        .text("🗑️ Delete Ad", `ad_delete:${order.id}`);
-
-                    await ctx.reply(
-                        [
-                            `✅ *Buy Ad Created!*`,
-                            "",
-                            `🟢 *BUY Ad*`,
-                            "",
-                            `💰 Want to buy: *${formatTokenAmount(amount, token)}*`,
-                            `📈 Rate: *${formatINR(draft.rate)}/${token}*`,
-                            `💵 Will pay: *${formatINR(totalFiat)}*`,
-                            `💳 Payment: ${paymentMethods.join(", ")}`,
-                            "",
-                            `🆔 Ad ID: \`${order.id.slice(0, 8)}\``,
-                            "",
-                            "━━━━━━━━━━━━━━━━━━━",
-                            "Your ad is LIVE! Sellers can respond.",
-                            `When a seller matches, they'll lock ${token} in escrow first.`,
-                        ].join("\n"),
-                        { parse_mode: "Markdown", reply_markup: keyboard }
-                    );
-                }
-            } catch (error: any) {
-                console.error("Ad creation error:", error);
-                const errMsg = error?.message?.includes("insufficient")
-                    ? "❌ Insufficient USDC balance. Deposit more and try again."
-                    : "❌ Failed to create ad. Please try again with /newad";
-                await ctx.reply(errMsg);
-            }
-            await ctx.answerCallbackQuery();
-        }
 
         // Confirm Send Transaction
         if (data === "confirm_send") {
@@ -3118,18 +2664,17 @@ bot.on("message:text", async (ctx) => {
     }
     console.log(`[BOT] Clean text: "${cleanText}"`);
 
-    // In groups, ONLY reply if mentioned, replying to bot, OR using whitelisted keywords
+    // In groups, ONLY reply if mentioned OR using whitelisted keywords
     if (ctx.chat.type !== "private") {
         const isMentioned = botName ? new RegExp(`@${botName}`, "i").test(text) : false;
-        const isReplyToBot = ctx.message.reply_to_message?.from?.id === botInfo.id;
 
-        // Whitelist certain keywords to work without mentions/replies in groups
+        // Whitelist certain keywords to work without mentions in groups
         const whitelistedKeywords = [/\blive\s*ads?\b/i, /\bads?\b/i, /\bmarket\b/i];
         const isWhitelisted = whitelistedKeywords.some(regex => regex.test(text));
 
-        console.log(`[BOT] Group logic - Mentioned: ${isMentioned}, ReplyToBot: ${isReplyToBot}, Whitelisted: ${isWhitelisted}`);
+        console.log(`[BOT] Group logic - Mentioned: ${isMentioned}, Whitelisted: ${isWhitelisted}`);
 
-        if (!isMentioned && !isReplyToBot && !isWhitelisted) {
+        if (!isMentioned && !isWhitelisted) {
             console.log("[BOT] Ignoring non-mention in group");
             return; // Ignore random group chatter
         }
@@ -3267,95 +2812,7 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // ─────── GUIDED AD CREATION (Step-by-Step) ───────
 
-    // Step 1: User sends AMOUNT
-    if (ctx.session.awaiting_input?.startsWith("ad_amount_")) {
-        const adType = ctx.session.awaiting_input.replace("ad_amount_", "");
-        const amount = parseFloat(text.trim());
-
-        if (isNaN(amount) || amount <= 0) {
-            await ctx.reply("❌ Invalid amount. Send a number like `100` or `50.5`", { parse_mode: "Markdown" });
-            return;
-        }
-
-        const token = ctx.session.ad_draft?.token || "USDC";
-        const minAmount = 1;
-
-        if (amount < minAmount) {
-            await ctx.reply(`❌ Minimum amount is ${minAmount} ${token}.`);
-            return;
-        }
-
-        if (amount > 50000) {
-            await ctx.reply(`❌ Maximum amount is 50,000 ${token}.`);
-            return;
-        }
-
-        // Store amount in session (preserve token) and ask for rate
-        ctx.session.ad_draft = { ...ctx.session.ad_draft, type: adType, amount };
-
-        ctx.session.awaiting_input = `ad_rate_${adType}`;
-
-        await ctx.reply(
-            [
-                `📢 *Create ${adType.toUpperCase()} Ad — Step 2/3*`,
-                "",
-                `Amount: *${formatTokenAmount(amount, token)}*  ✅`,
-                "",
-                `What's your rate in INR per ${token}?`,
-                "",
-                "Send the rate (e.g., `88` or `92.5`):",
-                "",
-                `_Market rate: ~₹85-90/${token}_`,
-            ].join("\n"),
-            { parse_mode: "Markdown" }
-        );
-        return;
-    }
-
-    // Step 2: User sends RATE
-    if (ctx.session.awaiting_input?.startsWith("ad_rate_")) {
-        const adType = ctx.session.awaiting_input.replace("ad_rate_", "");
-        const rate = parseFloat(text.trim());
-
-        if (isNaN(rate) || rate <= 0) {
-            await ctx.reply("❌ Invalid rate. Send a number like `88` or `92.5`", { parse_mode: "Markdown" });
-            return;
-        }
-
-        if (rate < 50 || rate > 200) {
-            await ctx.reply("⚠️ Rate seems unusual. Normal range: ₹50-200/USDC. Send again or continue.");
-        }
-
-        // Store rate in session and ask for payment method
-        ctx.session.ad_draft = { ...ctx.session.ad_draft, rate };
-        const token = ctx.session.ad_draft?.token || "USDC";
-
-        ctx.session.awaiting_input = `ad_payment_${adType}`;
-        const draft = ctx.session.ad_draft!;
-
-        const keyboard = new InlineKeyboard()
-            .text("💳 UPI", `ad_pay:upi`)
-            .text("🏦 IMPS", `ad_pay:imps`)
-            .row()
-            .text("🏦 NEFT", `ad_pay:neft`)
-            .text("💳 All Methods", `ad_pay:all`);
-
-        await ctx.reply(
-            [
-                `📢 *Create ${adType.toUpperCase()} Ad — Step 3/3*`,
-                "",
-                `Amount: *${formatTokenAmount(draft.amount ?? 0, token)}*  ✅`,
-                `Rate: *${formatINR(rate)}/${token}*  ✅`,
-                `Total: *${formatINR((draft.amount ?? 0) * rate)}*`,
-                "",
-                "Select payment method:",
-            ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
-        );
-        return;
-    }
 
     // Try AI intent parsing
     try {
@@ -3396,75 +2853,23 @@ bot.on("message:text", async (ctx) => {
         // Route based on intent
         switch (intent.intent) {
             case "CREATE_SELL_ORDER":
-                if (intent.params.amount && intent.params.rate) {
-                    const token = intent.params.token || "USDT";
-                    const chain = intent.params.chain || (token === "USDC" ? "base" : "bsc");
-
-                    // Secure callback with UserID, token and chain
-                    const callbackData = `confirm_sell:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}:${token}:${chain}`;
-                    console.log(`DEBUG: Creating SELL button with data: ${callbackData}`);
-
-                    const keyboard = new InlineKeyboard()
-                        .text("✅ Confirm Order", callbackData)
-                        .text("❌ Cancel", "cancel_action");
-
-                    const feeAmt = intent.params.amount * env.FEE_PERCENTAGE;
-                    await ctx.reply(
-                        [
-                            "📝 *Create Sell Order*",
-                            "",
-                            `Amount: ${formatTokenAmount(intent.params.amount, token)}`,
-                            `Rate: ${formatINR(intent.params.rate)}/${token}`,
-                            `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
-                            `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmt, token)}`,
-                            `Buyer receives: ${formatTokenAmount(intent.params.amount - feeAmt, token)}`,
-                            `Payment: ${intent.params.paymentMethod || "UPI"}`,
-                            `Chain: ${chain.toUpperCase()}`,
-                            "",
-                            "Confirm to list this order?",
-                        ].join("\n"),
-                        { parse_mode: "Markdown", reply_markup: keyboard }
-                    );
-                } else {
-                    await ctx.reply(intent.response || "Please provide amount and rate.\n\nExample: *sell 100 usdt at 93*", { parse_mode: "Markdown" });
-                }
+            case "CREATE_BUY_ORDER": {
+                const miniAppUrl = "https://p2pfather.com/miniapp/create";
+                const keyboard = new InlineKeyboard()
+                    .webApp("📱 Create Ad in Mini App", miniAppUrl);
+                    
+                await ctx.reply(
+                    [
+                        "📢 *Create a New Ad*",
+                        "",
+                        "Ad creation has moved to the Mini App for a faster and more secure experience! 🚀",
+                        "",
+                        "Tap below to get started:",
+                    ].join("\n"),
+                    { parse_mode: "Markdown", reply_markup: keyboard }
+                );
                 break;
-
-            case "CREATE_BUY_ORDER":
-                if (intent.params.amount && intent.params.rate) {
-                    const token = intent.params.token || "USDT";
-                    const chain = intent.params.chain || (token === "USDC" ? "base" : "bsc");
-
-                    const callbackData = `confirm_buy:${intent.params.amount}:${intent.params.rate}:${ctx.from.id}:${token}:${chain}`;
-                    console.log(`DEBUG: Creating BUY button with data: ${callbackData}`);
-
-                    const keyboard = new InlineKeyboard()
-                        .text("✅ Confirm Order", callbackData)
-                        .text("❌ Cancel", `cancel_action:${ctx.from.id}`);
-
-                    await ctx.reply(
-                        [
-                            "📝 *Create Buy Order*",
-                            "",
-                            `Amount: ${formatTokenAmount(intent.params.amount, token)}`,
-                            `Rate: ${formatINR(intent.params.rate)}/${token}`,
-                            `Total: ${formatINR(intent.params.amount * intent.params.rate)}`,
-                            `Payment: ${intent.params.paymentMethod || "UPI"}`,
-                            `Chain: ${chain.toUpperCase()}`,
-                            "",
-                            "Confirm to list this order?",
-                        ].join("\n"),
-                        { parse_mode: "Markdown", reply_markup: keyboard }
-                    );
-                } else if (intent.params.amount) {
-                    // Just amount, ask for rate
-                    ctx.session.ad_draft = { type: "buy", amount: intent.params.amount, token: "USDC" };
-                    ctx.session.awaiting_input = "ad_rate_buy";
-                    await ctx.reply(`I've set the amount to ${intent.params.amount} USDC.\n\nAt what rate (INR) do you want to buy?`);
-                } else {
-                    await ctx.reply(intent.response || "Please provide amount and rate.\n\nExample: *buy 100 usdc at 85*", { parse_mode: "Markdown" });
-                }
-                break;
+            }
 
             case "VIEW_ORDERS":
                 // Trigger /orders logic
