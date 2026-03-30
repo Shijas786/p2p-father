@@ -1125,7 +1125,7 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
         }
 
         await db.updateTrade(req.params.id as string, {
-            status: "cancelled",
+            status: "refunded", // Changed from 'cancelled' to 'refunded' for consistency
             completed_at: new Date().toISOString() as any,
             release_tx_hash: refundTxHash as any,
         });
@@ -1217,11 +1217,20 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
             await notifyTradeUpdate(trade.buyer_id,
                 `❌ <b>Dispute Resolved!</b>\n\nAdmin has refunded the trade to the seller.`
             );
+            
+            // Add system message to trade chat
+            await db.createTradeMessage({
+                trade_id: trade.id,
+                user_id: user.id,
+                message: `✅ Dispute resolved: Refunded to Seller.`,
+                type: "system"
+            });
+
             res.json({ success: true, txHash });
         }
     } catch (err: any) {
         console.error("[ADMIN] Resolve dispute error:", err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: `Resolve error: ${err.message}` });
     }
 });
 
