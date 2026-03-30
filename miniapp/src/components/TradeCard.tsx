@@ -10,6 +10,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: string }>
     releasing: { label: 'Releasing', color: 'green', icon: '⏳' },
     completed: { label: 'Completed', color: 'green', icon: '🎉' },
     disputed: { label: 'Disputed', color: 'red', icon: '⚠️' },
+    refunded: { label: 'Refunded', color: 'red', icon: '🔙' },
     cancelled: { label: 'Cancelled', color: 'red', icon: '❌' },
     expired: { label: 'Expired', color: 'red', icon: '⏰' },
 };
