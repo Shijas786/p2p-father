@@ -28,7 +28,7 @@ export function WalletSelector({ onSelectBot, onSelectExternal, loading }: Props
                     <div className="ws-option-icon"><IconLink size={28} color="var(--blue)" /></div>
                     <div className="ws-option-content">
                         <h3>Connect Wallet</h3>
-                        <p>MetaMask, Coinbase, Trust Wallet & more</p>
+                        <p>MetaMask, Bitget, Trust Wallet & more</p>
                         <span className="badge badge-blue">You control keys</span>
                     </div>
                     <span className="ws-arrow">›</span>

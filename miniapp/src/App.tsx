@@ -7,6 +7,7 @@ import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
+import { overrideWindowOpen } from '@bitget-wallet/omni-connect';
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
 import { Home } from './pages/Home';
@@ -88,6 +89,12 @@ function AppInner() {
 
   useEffect(() => {
     setupTelegramApp();
+    // Override window.open so WalletConnect deep links work inside Telegram's iframe
+    // This is required for Bitget Wallet (and other wallets) to launch correctly
+    const isTMA = !!(window.Telegram?.WebApp);
+    if (isTMA) {
+      overrideWindowOpen();
+    }
   }, []);
 
   // Only auto-skip selector for returning EXTERNAL wallet users

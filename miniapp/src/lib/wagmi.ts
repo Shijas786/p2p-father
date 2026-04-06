@@ -17,6 +17,10 @@ export const wagmiAdapter = new WagmiAdapter({
     networks: [base, bsc],
 });
 
+// Bitget Wallet IDs (WalletConnect explorer)
+const BITGET_WALLET_ID = '38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662';
+const BITGET_WALLET_LITE_ID = '21c3a371f72f0057186082edb2ddd43566f7e908508ac3e85373c6d1966ed614';
+
 // Create the AppKit modal
 export const appKit = createAppKit({
     adapters: [wagmiAdapter],
@@ -24,6 +28,10 @@ export const appKit = createAppKit({
     defaultNetwork: bsc,
     projectId,
     metadata,
+    featuredWalletIds: [
+        BITGET_WALLET_ID,
+        BITGET_WALLET_LITE_ID,
+    ],
     features: {
         analytics: false,
         email: false,
