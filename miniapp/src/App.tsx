@@ -7,7 +7,7 @@ import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
-import { overrideWindowOpen } from '@bitget-wallet/omni-connect';
+
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
 import { Home } from './pages/Home';
@@ -89,11 +89,26 @@ function AppInner() {
 
   useEffect(() => {
     setupTelegramApp();
-    // Override window.open so WalletConnect deep links work inside Telegram's iframe
-    // This is required for Bitget Wallet (and other wallets) to launch correctly
-    const isTMA = !!(window.Telegram?.WebApp);
-    if (isTMA) {
-      overrideWindowOpen();
+
+    // Patch window.open so WalletConnect deep links work inside Telegram's iframe.
+    // Bitget Wallet (and others) need window.open to forward to Telegram's openLink.
+    // We do this manually (instead of overrideWindowOpen) so we can safely catch
+    // "Attempted an unsupported operation" errors on older Telegram clients.
+    if (window.Telegram?.WebApp) {
+      const _origOpen = window.open.bind(window);
+      window.open = (url?: string | URL, target?: string, features?: string): Window | null => {
+        if (url) {
+          const href = url.toString();
+          try {
+            window.Telegram?.WebApp?.openLink(href);
+            return null;
+          } catch {
+            // Telegram client doesn't support openLink — fall back to native
+            return _origOpen(href, target, features);
+          }
+        }
+        return _origOpen(url as string, target, features);
+      };
     }
   }, []);
 
