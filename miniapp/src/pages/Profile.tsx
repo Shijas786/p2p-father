@@ -17,6 +17,8 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     // UPI State
     const [upiInput, setUpiInput] = useState(user?.upi_id || '');
     const [editingUpi, setEditingUpi] = useState(false);
+    const [digitalRupeeInput, setDigitalRupeeInput] = useState(user?.digital_rupee_id || '');
+    const [editingDigitalRupee, setEditingDigitalRupee] = useState(false);
 
     // Phone State
     const [phoneInput, setPhoneInput] = useState(user?.phone_number || '');
@@ -97,6 +99,12 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             return;
         }
         await saveField({ upi_id: upiInput }, 'UPI updated!');
+    }
+
+    async function saveDigitalRupee() {
+        if (!digitalRupeeInput.trim()) return;
+        await saveField({ digital_rupee_id: digitalRupeeInput.trim() }, 'Digital Rupee ID updated!');
+        setEditingDigitalRupee(false);
     }
 
     async function savePhone() {
@@ -258,7 +266,25 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     <span className="prof-payment-value">{user?.upi_id || 'Not set'}</span>
                                 )}
                             </div>
-
+                            {/* Digital Rupee */}
+                            <div className="prof-payment-item">
+                                <div className="prof-payment-top">
+                                    <span className="prof-payment-name">💳 Digital Rupee (e₹)</span>
+                                    <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingDigitalRupee(!editingDigitalRupee); setMessage(''); }}>
+                                        {editingDigitalRupee ? 'Cancel' : (user?.digital_rupee_id ? 'Edit' : 'Add')}
+                                    </button>
+                                </div>
+                                {editingDigitalRupee ? (
+                                    <div className="prof-edit-form">
+                                        <input placeholder="Digital Rupee VPA/ID" value={digitalRupeeInput} onChange={e => setDigitalRupeeInput(e.target.value)} autoFocus />
+                                        <button className="prof-save-btn" onClick={saveDigitalRupee} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <span className="prof-payment-value">{user?.digital_rupee_id || 'Not set'}</span>
+                                )}
+                            </div>
                             {/* Phone */}
                             <div className="prof-payment-item">
                                 <div className="prof-payment-top">

@@ -20,7 +20,7 @@ export type TradeStatus =
     | "expired";
 
 export type OrderType = "buy" | "sell";
-export type PaymentMethod = "UPI" | "IMPS" | "NEFT" | "PAYTM" | "BANK" | "CDM";
+export type PaymentMethod = "UPI" | "IMPS" | "NEFT" | "PAYTM" | "BANK" | "CDM" | "DIGITAL_RUPEE";
 export type FiatCurrency = "INR" | "USD" | "AED";
 
 export interface User {
@@ -48,6 +48,7 @@ export interface User {
     cdm_bank_name: string | null;
     cdm_phone: string | null;
     cdm_user_name: string | null;
+    digital_rupee_id: string | null;
     created_at: string;
     photo_url?: string; // Manual PFP
     total_volume?: number;

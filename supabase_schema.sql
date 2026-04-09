@@ -16,8 +16,12 @@ create table public.users (
   completed_trades integer default 0,
   trust_score numeric default 100.0,
   tier text default 'standard',
-  is_verified boolean default false,
-  is_banned boolean default false,
+  receive_address text,
+  cdm_bank_number text,
+  cdm_bank_name text,
+  cdm_phone text,
+  cdm_user_name text,
+  digital_rupee_id text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

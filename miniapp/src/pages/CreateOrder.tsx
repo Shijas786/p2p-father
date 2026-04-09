@@ -13,7 +13,7 @@ import { useBalance } from 'wagmi';
 import { bsc, base } from 'wagmi/chains';
 import './CreateOrder.css';
 
-const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK', 'CDM'];
+const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK', 'CDM', 'DIGITAL_RUPEE'];
 
 export function CreateOrder() {
     const navigate = useNavigate();

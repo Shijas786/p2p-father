@@ -5,13 +5,14 @@ import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconChainBase, IconChainBsc, IconTokenUSDC, IconTokenUSDT, IconTokenBNB } from '../components/Icons';
 import { BagsStats } from '../components/BagsStats';
+import { TraderProfile } from '../components/TraderProfile';
 import './Home.css';
 
 interface Props {
     user: any;
 }
 
-const PAYMENT_FILTERS = ['All', 'UPI', 'IMPS', 'Bank'];
+const PAYMENT_FILTERS = ['All', 'UPI', 'IMPS', 'Bank', 'e₹'];
 
 export function Home({ user }: Props) {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ export function Home({ user }: Props) {
     // const [feePercentage, setFeePercentage] = useState(0.01);
     const [paymentFilter, setPaymentFilter] = useState('All');
     const [tokenFilter, setTokenFilter] = useState('USDC');
+    const [showProfileId, setShowProfileId] = useState<string | null>(null);
 
     const formatBal = (val: any, decs = 2) => {
         const num = parseFloat(val || '0');
@@ -167,7 +169,10 @@ export function Home({ user }: Props) {
                                     onClick={() => !isMine && handleTap(order)}
                                 >
                                     <div className="p2p-trader-header">
-                                        <div className="p2p-trader-avatar">
+                                        <div 
+                                            className="p2p-trader-avatar cursor-pointer active:scale-95 transition-transform"
+                                            onClick={(e) => { e.stopPropagation(); haptic('light'); setShowProfileId(order.user_id); }}
+                                        >
                                             {order.photo_url ? (
                                                 <img
                                                     src={order.photo_url}
@@ -181,7 +186,10 @@ export function Home({ user }: Props) {
                                                 (order.username || order.first_name || '?')[0].toUpperCase()
                                             )}
                                         </div>
-                                        <div className="p2p-trader-name">
+                                        <div 
+                                            className="p2p-trader-name cursor-pointer active:opacity-70 transition-opacity"
+                                            onClick={(e) => { e.stopPropagation(); haptic('light'); setShowProfileId(order.user_id); }}
+                                        >
                                             <span className="p2p-username">{order.username || order.first_name || 'Anonymous'}</span>
                                             {order.trust_score >= 90 && <span className="p2p-verified-badge">💎</span>}
                                         </div>
@@ -290,8 +298,15 @@ export function Home({ user }: Props) {
                     </div>,
                     document.body
                 )}
-            </div>
 
+                {/* Trader Profile Modal */}
+                {showProfileId && (
+                    <TraderProfile
+                        userId={showProfileId}
+                        onClose={() => setShowProfileId(null)}
+                    />
+                )}
+            </div>
         </div>
     );
 }

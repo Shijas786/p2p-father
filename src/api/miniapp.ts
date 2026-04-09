@@ -1438,7 +1438,7 @@ router.put("/profile", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const { upi_id, phone_number, bank_account_number, bank_ifsc, bank_name, receive_address, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name } = req.body;
+        const { upi_id, phone_number, bank_account_number, bank_ifsc, bank_name, receive_address, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name, digital_rupee_id } = req.body;
         const updates: Record<string, any> = {};
         if (upi_id !== undefined) updates.upi_id = upi_id;
         if (phone_number !== undefined) updates.phone_number = phone_number;
@@ -1450,6 +1450,7 @@ router.put("/profile", async (req: Request, res: Response) => {
         if (cdm_bank_name !== undefined) updates.cdm_bank_name = cdm_bank_name;
         if (cdm_phone !== undefined) updates.cdm_phone = cdm_phone;
         if (cdm_user_name !== undefined) updates.cdm_user_name = cdm_user_name;
+        if (digital_rupee_id !== undefined) updates.digital_rupee_id = digital_rupee_id;
 
         if (Object.keys(updates).length > 0) {
             await db.updateUser(user.id, updates as any);
@@ -1644,6 +1645,73 @@ router.get("/bags/stats", async (req: Request, res: Response) => {
     } catch (e) {
         console.error("Bags API Error:", e);
         res.status(500).json({ error: "Failed to fetch Bags.fm stats" });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TRADER PROFILE — Public stats for any user
+// ═══════════════════════════════════════════════════════════════
+
+router.get("/users/:userId/profile", async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const client = (db as any).getClient();
+
+        // Fetch user basic info
+        const { data: user, error: userErr } = await client
+            .from("users")
+            .select("id, username, first_name, photo_url, completed_trades, created_at")
+            .eq("id", userId)
+            .single();
+
+        if (userErr || !user) return res.status(404).json({ error: "User not found" });
+
+        // Fetch their completed trades for volume + recent history
+        const { data: trades } = await client
+            .from("trades")
+            .select("id, amount, token, status, created_at, seller_id, buyer_id")
+            .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+            .eq("status", "completed")
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+        // Fetch total trades attempted (for completion rate)
+        const { count: totalAttempted } = await client
+            .from("trades")
+            .select("id", { count: "exact", head: true })
+            .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+            .neq("status", "waiting_for_escrow"); // exclude never-started
+
+        const completedCount = trades?.length || user.completed_trades || 0;
+        const totalVolumeUsdt = (trades || []).reduce((sum: number, t: any) => sum + parseFloat(t.amount || 0), 0);
+        const completionRate = totalAttempted > 0 ? Math.round((completedCount / totalAttempted) * 100) : 100;
+
+        const buyCount = (trades || []).filter((t: any) => t.buyer_id === userId).length;
+        const sellCount = (trades || []).filter((t: any) => t.seller_id === userId).length;
+
+        // Derive level
+        let level = 1;
+        if (completedCount >= 5) level = 2;
+        if (completedCount >= 15) level = 3;
+        if (completedCount >= 50) level = 4;
+        if (completedCount >= 100) level = 5;
+
+        res.json({
+            id: user.id,
+            username: user.username,
+            first_name: user.first_name,
+            photo_url: user.photo_url,
+            completed_trades: completedCount,
+            buy_count: buyCount,
+            sell_count: sellCount,
+            total_volume: parseFloat(totalVolumeUsdt.toFixed(2)),
+            completion_rate: completionRate,
+            level,
+            member_since: user.created_at,
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Trader profile error:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 

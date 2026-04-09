@@ -9,6 +9,7 @@ import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import { copyToClipboard } from '../lib/utils';
 import { appKit } from '../lib/wagmi';
 import { useToast } from '../components/Toast';
+import { TraderProfile } from '../components/TraderProfile';
 import { bsc, base } from 'wagmi/chains';
 import './TradeDetail.css';
 
@@ -65,6 +66,7 @@ export function TradeDetail({ user }: Props) {
     const chatEndRef = useRef<HTMLDivElement>(null);
     const prevStatusRef = useRef<string | null>(null);
     const actionSectionRef = useRef<HTMLDivElement>(null);
+    const [showProfileId, setShowProfileId] = useState<string | null>(null);
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
@@ -692,9 +694,25 @@ export function TradeDetail({ user }: Props) {
                 </div>
             )}
 
-            {/* User Profile Section */}
             {(trade || order) && (
-                <div className="px-4 mb-4 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 mx-4">
+                <div
+                    className="px-4 mb-4 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 mx-4 active:bg-white/10 transition-colors cursor-pointer"
+                    onClick={() => {
+                        let targetId = null;
+                        const isTradeSeller = trade ? user?.id === trade.seller_id : false;
+                        if (trade) {
+                            targetId = isTradeSeller ? trade.buyer_id : trade.seller_id;
+                        } else if (order) {
+                            if (user?.id !== order.user_id) {
+                                targetId = order.user_id;
+                            }
+                        }
+                        if (targetId) {
+                            haptic('light');
+                            setShowProfileId(targetId);
+                        }
+                    }}
+                >
                     <div className="flex items-center gap-3">
                         {/* Determine Counterparty */}
                         {(() => {
@@ -726,42 +744,37 @@ export function TradeDetail({ user }: Props) {
                             }
 
                             return (
-                                <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%', background: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
-                                            {cpPhoto ? (
-                                                <img src={cpPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                                            ) : (
-                                                <span style={{ fontSize: '14px', fontWeight: 700, color: '#9ca3af' }}>{cpName[0]?.toUpperCase()}</span>
-                                            )}
-                                            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #000', background: trade ? '#22c55e' : '#6b7280' }}></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%', background: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
+                                        {cpPhoto ? (
+                                            <img src={cpPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#9ca3af' }}>{cpName[0]?.toUpperCase()}</span>
+                                        )}
+                                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #000', background: trade ? '#22c55e' : '#6b7280' }}></div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>{cpName}</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--green)', opacity: 0.8 }}>View Stats ›</span>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>{cpName}</span>
-                                            </div>
-                                            <div style={{ fontSize: '10px', color: '#848e9c', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                {trade ? (
-                                                    <span className={`status-badge ${trade.status}`} style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px' }}>
-                                                        {trade.status.replace('_', ' ').toUpperCase()}
-                                                    </span>
-                                                ) : (
-                                                    <span>Level 1 Trader</span>
-                                                )}
-                                                {cpUsername && <span style={{ color: '#4b5563' }}>@{cpUsername}</span>}
-                                            </div>
+                                        <div style={{ fontSize: '10px', color: '#848e9c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {trade ? (
+                                                <span className={`status-badge ${trade.status}`} style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px' }}>
+                                                    {trade.status.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                            ) : (
+                                                <span>Verified Trader</span>
+                                            )}
+                                            {cpUsername && <span style={{ color: '#4b5563' }}>@{cpUsername}</span>}
                                         </div>
                                     </div>
-
-                                    {/* Call Button - REMOVED */}
-                                </>
-
+                                </div>
                             );
                         })()}
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* Standard Actions (Fiat Sent, Release, Dispute) */}
             <div ref={actionSectionRef}>
@@ -783,6 +796,19 @@ export function TradeDetail({ user }: Props) {
                             <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
 
                             {/* Seller Payment Details */}
+                            {trade.seller_digital_rupee_id && (
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-blue/30">
+                                    <div className="text-[10px] text-blue uppercase font-bold mb-1">💳 Digital Rupee (e₹)</div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-mono text-lg text-white select-all">{trade.seller_digital_rupee_id}</span>
+                                        <button className="btn btn-xs btn-outline" onClick={async () => {
+                                            const success = await copyToClipboard(trade.seller_digital_rupee_id || '');
+                                            if (success) haptic('success');
+                                        }}>Copy</button>
+                                    </div>
+                                </div>
+                            )}
+
                             {trade.seller_upi_id && (
                                 <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
                                     <div className="text-[10px] text-muted uppercase font-bold mb-1">📱 Pay to UPI ID</div>
@@ -942,8 +968,8 @@ export function TradeDetail({ user }: Props) {
                         </div>
                     )}
 
-                    {/* Trade Chat */}
-                </div>{/* end actionSectionRef */}
+                </div>
+
                 {trade && (
                     <div className="td-chat">
                         <div className="chat-header">
@@ -1065,8 +1091,17 @@ export function TradeDetail({ user }: Props) {
                     </div>
                 )}
             </div>
+
             {/* Error Display */}
             {error && !showLockUI && <div className="co-error mt-3">{error}</div>}
-        </div >
+
+            {/* Trader Profile Modal */}
+            {showProfileId && (
+                <TraderProfile
+                    userId={showProfileId}
+                    onClose={() => setShowProfileId(null)}
+                />
+            )}
+        </div>
     );
 }

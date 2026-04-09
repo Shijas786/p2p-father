@@ -181,10 +181,9 @@ export const api = {
         },
     },
 
-    // ---- Profile ----
     profile: {
         get: () => request<{ user: any }>('/profile'),
-        update: (data: { upi_id?: string }) =>
+        update: (data: Record<string, any>) =>
             request<{ user: any }>('/profile', {
                 method: 'PUT',
                 body: JSON.stringify(data),
@@ -261,5 +260,18 @@ export const api = {
             }
             return res.json();
         },
+        getProfile: (userId: string) => request<{
+            id: string;
+            username: string;
+            first_name: string;
+            photo_url: string;
+            completed_trades: number;
+            buy_count: number;
+            sell_count: number;
+            total_volume: number;
+            completion_rate: number;
+            level: number;
+            member_since: string;
+        }>(`/users/${userId}/profile`),
     },
 };
