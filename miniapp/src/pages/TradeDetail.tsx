@@ -10,6 +10,7 @@ import { copyToClipboard } from '../lib/utils';
 import { appKit } from '../lib/wagmi';
 import { useToast } from '../components/Toast';
 import { TraderProfile } from '../components/TraderProfile';
+import { CompactStats } from '../components/CompactStats';
 import { bsc, base } from 'wagmi/chains';
 import './TradeDetail.css';
 
@@ -67,6 +68,7 @@ export function TradeDetail({ user }: Props) {
     const prevStatusRef = useRef<string | null>(null);
     const actionSectionRef = useRef<HTMLDivElement>(null);
     const [showProfileId, setShowProfileId] = useState<string | null>(null);
+    const [showInlineStats, setShowInlineStats] = useState(false);
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
@@ -720,8 +722,10 @@ export function TradeDetail({ user }: Props) {
                             let cpPhoto = null;
                             let cpUsername = null;
                             const isTradeSeller = trade ? user?.id === trade.seller_id : false;
+                            let cpUserId = null;
 
                             if (trade) {
+                                cpUserId = isTradeSeller ? trade.buyer_id : trade.seller_id;
                                 if (isTradeSeller) { // I am Seller, CP is Buyer
                                     cpName = trade.buyer_username || trade.buyer_first_name || 'Buyer';
                                     cpPhoto = trade.buyer_photo_url;
@@ -733,6 +737,7 @@ export function TradeDetail({ user }: Props) {
                                 }
                             } else if (order) {
                                 // Viewing Order (I am potential Taker)
+                                cpUserId = order.user_id;
                                 if (user?.id === order.user_id) {
                                     cpName = 'You';
                                     cpPhoto = user.photo_url;
@@ -754,11 +759,36 @@ export function TradeDetail({ user }: Props) {
                                         <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #000', background: trade ? '#22c55e' : '#6b7280' }}></div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div 
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                haptic('light');
+                                                setShowInlineStats(!showInlineStats);
+                                            }}
+                                        >
                                             <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>{cpName}</span>
-                                            <span style={{ fontSize: '10px', color: 'var(--green)', opacity: 0.8 }}>View Stats ›</span>
+                                            <span style={{ 
+                                                fontSize: '10px', 
+                                                color: 'var(--green)', 
+                                                opacity: 0.8,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '2px'
+                                            }}>
+                                                {showInlineStats ? 'Hide Stats' : 'View Stats'}
+                                                <span style={{ 
+                                                    display: 'inline-block', 
+                                                    transition: 'transform 0.2s',
+                                                    transform: showInlineStats ? 'rotate(90deg)' : 'rotate(0deg)',
+                                                    fontSize: '12px'
+                                                }}>›</span>
+                                            </span>
                                         </div>
-                                        <div style={{ fontSize: '10px', color: '#848e9c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {showInlineStats && cpUserId && (
+                                            <CompactStats userId={cpUserId} />
+                                        )}
+                                        <div style={{ fontSize: '10px', color: '#848e9c', display: 'flex', alignItems: 'center', gap: '4px', marginTop: showInlineStats ? '6px' : '0' }}>
                                             {trade ? (
                                                 <span className={`status-badge ${trade.status}`} style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px' }}>
                                                     {trade.status.replace('_', ' ').toUpperCase()}
