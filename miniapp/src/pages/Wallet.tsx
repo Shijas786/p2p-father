@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconLock, IconCopy, IconQr, IconInfo } from '../components/Icons';
 import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain, useChainId, useBalance } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, maxUint256 } from 'viem';
 import { appKit } from '../lib/wagmi';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
@@ -245,7 +245,7 @@ export function Wallet({ user }: Props) {
             const switched = await smartSwitch(targetChainId);
             if (!switched) return;
 
-            const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
+            // Unlimited approval using maxUint256
             const isBsc = vaultChain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
@@ -254,7 +254,7 @@ export function Wallet({ user }: Props) {
                 address: vaultTokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: 'approve',
-                args: [vaultEscrowAddress as `0x${string}`, parsedAmount],
+                args: [vaultEscrowAddress as `0x${string}`, maxUint256],
                 gasPrice,
                 gas: isBsc ? 100000n : undefined
             });

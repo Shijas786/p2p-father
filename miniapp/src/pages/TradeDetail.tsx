@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, useChainId } from 'wagmi';
-import { parseUnits } from 'viem';
+import { parseUnits, maxUint256 } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { sounds } from '../lib/sounds';
@@ -344,7 +344,7 @@ export function TradeDetail({ user }: Props) {
                 address: tokenAddress,
                 abi: ERC20_ABI,
                 functionName: 'approve',
-                args: [escrowAddress, tradeAmountBigInt],
+                args: [escrowAddress, maxUint256],
                 gasPrice,
                 gas: isBsc ? 100000n : undefined
             });

