@@ -74,4 +74,16 @@ export const env = {
     FEE_PERCENTAGE: parseInt(parsed.data.FEE_BPS) / 10000,
     IS_DEV: parsed.data.NODE_ENV === "development",
     IS_TESTNET: parsed.data.DEFAULT_CHAIN.includes("sepolia"),
+
+    /**
+     * Get the fee percentage for a specific chain.
+     * New policy: 0% fee on Base chain.
+     */
+    getFeePercentage: (chain?: string): number => {
+        const c = (chain || parsed.data.DEFAULT_CHAIN).toLowerCase();
+        if (c === 'base' || c === 'base-mainnet' || c === 'base-sepolia') {
+            return 0;
+        }
+        return parseInt(parsed.data.FEE_BPS) / 10000;
+    }
 };

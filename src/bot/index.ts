@@ -705,7 +705,7 @@ bot.command("help", async (ctx) => {
         "/ads • /newad • /wallet • /payment",
         "/market • /profile • /dispute",
         "",
-        `💰 Fee: ${(env.FEE_PERCENTAGE * 50).toFixed(2)}% per side`,
+        `💰 Fee: 0% on Base, 0.25% per side elsewhere`,
         "",
         "📱 Everything in one place → /start",
     ].join("\n");
@@ -1926,19 +1926,20 @@ bot.on("callback_query:data", async (ctx) => {
                         // I'll update service later if needed.
 
                         // 4. Create local Trade record
+                        const feePercent = env.getFeePercentage(order.chain);
                         const trade = await db.createTrade({
                             order_id: order.id,
                             buyer_id: user.id,
                             seller_id: order.user_id,
                             token: tokenSymbol,
-                            chain: "base",
+                            chain: order.chain || "base",
                             amount: order.amount,
                             rate: order.rate,
-                            fiat_amount: order.amount * order.rate * (1 - (env.FEE_PERCENTAGE / 2)),
+                            fiat_amount: order.amount * order.rate * (1 - (feePercent / 2)),
                             fiat_currency: "INR",
-                            fee_amount: order.amount * env.FEE_PERCENTAGE,
-                            fee_percentage: env.FEE_PERCENTAGE,
-                            buyer_receives: order.amount * (1 - env.FEE_PERCENTAGE),
+                            fee_amount: order.amount * feePercent,
+                            fee_percentage: feePercent,
+                            buyer_receives: order.amount * (1 - feePercent),
                             payment_method: "UPI",
                             status: "in_escrow",
                             on_chain_trade_id: Number(tradeId),
@@ -2004,19 +2005,20 @@ bot.on("callback_query:data", async (ctx) => {
                         };
 
                         // 4. Create Trade Record
+                        const feePercent = env.getFeePercentage(order.chain);
                         const trade = await db.createTrade({
                             order_id: order.id,
                             buyer_id: order.user_id, // Maker (Buyer)
                             seller_id: seller.id,    // Taker (Seller)
                             token: tokenSymbol,
-                            chain: "base",
+                            chain: order.chain || "base",
                             amount: order.amount,
                             rate: order.rate,
-                            fiat_amount: order.amount * order.rate * (1 - (env.FEE_PERCENTAGE / 2)),
+                            fiat_amount: order.amount * order.rate * (1 - (feePercent / 2)),
                             fiat_currency: "INR",
-                            fee_amount: order.amount * env.FEE_PERCENTAGE,
-                            fee_percentage: env.FEE_PERCENTAGE,
-                            buyer_receives: order.amount * (1 - env.FEE_PERCENTAGE),
+                            fee_amount: order.amount * feePercent,
+                            fee_percentage: feePercent,
+                            buyer_receives: order.amount * (1 - feePercent),
                             payment_method: "UPI",
                             status: "in_escrow",
                             on_chain_trade_id: Number(tradeId),
@@ -2069,7 +2071,8 @@ bot.on("callback_query:data", async (ctx) => {
 
             // Show trade confirmation
             const available = order.amount - order.filled_amount;
-            const feeAmount = available * env.FEE_PERCENTAGE;
+            const feePercent = env.getFeePercentage(order.chain);
+            const feeAmount = available * feePercent;
             const buyerReceives = available - feeAmount;
 
             const keyboard = new InlineKeyboard()
@@ -2080,11 +2083,11 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "🤝 *Confirm Trade*",
                     "",
-                    `Amount: ${formatTokenAmount(available)}`,
-                    `Rate: ${formatINR(order.rate)}/USDC`,
+                    `Amount: ${formatTokenAmount(available, order.token)}`,
+                    `Rate: ${formatINR(order.rate)}/${order.token}`,
                     `Total Fiat: ${formatINR(available * order.rate)}`,
-                    `Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(feeAmount)}`,
-                    `You receive: ${formatTokenAmount(buyerReceives)}`,
+                    `Fee (${(feePercent * 50).toFixed(1)}%): ${formatTokenAmount(feeAmount, order.token)}`,
+                    `You receive: ${formatTokenAmount(buyerReceives, order.token)}`,
                     "",
                     `Payment: ${order.payment_methods.join(", ")}`,
                     `Seller: @${order.username || "anon"}`,

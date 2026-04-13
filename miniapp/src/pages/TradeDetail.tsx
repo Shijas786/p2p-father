@@ -641,7 +641,8 @@ export function TradeDetail({ user }: Props) {
                     {(() => {
                         const amount = parseFloat(disp.amount);
                         const rate = parseFloat(disp.rate || 0);
-                        const feePercent = feePercentage || 0.005;
+                        const orderChain = (trade?.chain || order?.chain || 'base').toLowerCase();
+                        const feePercent = (orderChain === 'base' || orderChain === 'base-mainnet' || orderChain === 'base-sepolia') ? 0 : (feePercentage || 0.005);
 
                         const sellerLock = amount.toFixed(4);
                         // Fiat Amount is what Buyer sends and Seller receives
@@ -673,7 +674,9 @@ export function TradeDetail({ user }: Props) {
                                             </div>
                                         </div>
                                         <div className="text-[10px] text-gray-500 mt-1">
-                                            (0.25% fee deducted)
+                                            {feePercent === 0 
+                                                ? "(0% Fee - No hidden charges)" 
+                                                : `(${(feePercent * 50).toFixed(2)}% fee deducted)`}
                                         </div>
                                     </>
                                 ) : (
@@ -690,7 +693,9 @@ export function TradeDetail({ user }: Props) {
                                             <span className="font-mono text-green font-bold">{buyerGets} {disp.token}</span>
                                         </div>
                                         <div className="text-[10px] text-right text-gray-500 mt-1">
-                                            (0.25% fee deducted)
+                                            {feePercent === 0 
+                                                ? "(0% Fee - No hidden charges)" 
+                                                : `(${(feePercent * 50).toFixed(2)}% fee deducted)`}
                                         </div>
                                     </>
                                 )}

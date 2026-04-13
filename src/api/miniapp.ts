@@ -730,9 +730,10 @@ router.post("/trades", async (req: Request, res: Response) => {
             return res.status(409).json({ error: "Order already filled or no longer active" });
         }
 
-        const fiatAmount = tradeAmount * (1 - (env.FEE_PERCENTAGE / 2)) * order.rate; // 0.25% Seller Fee deducted from fiat
-        const feeAmount = tradeAmount * env.FEE_PERCENTAGE;      // Total Fee (usually 0.5%)
-        const buyerReceives = tradeAmount - feeAmount; // Gets 99.5% of locked amount (split 0.5% total fee)
+        const feePercent = env.getFeePercentage(order.chain);
+        const fiatAmount = tradeAmount * (1 - (feePercent / 2)) * order.rate; // Split fee logic
+        const feeAmount = tradeAmount * feePercent;                         // Total Fee
+        const buyerReceives = tradeAmount - feeAmount;                       // Net to buyer
 
         try {
             // ═══ ESCROW: Lock seller's funds on-chain ═══
@@ -811,7 +812,7 @@ router.post("/trades", async (req: Request, res: Response) => {
                 rate: order.rate,
                 status: "in_escrow",
                 fee_amount: feeAmount as any,
-                fee_percentage: env.FEE_PERCENTAGE as any,
+                fee_percentage: feePercent as any,
                 buyer_receives: buyerReceives as any,
                 escrow_tx_hash: escrowTxHash as any,
                 on_chain_trade_id: onChainTradeId as any,
@@ -1507,8 +1508,8 @@ router.get("/stats", async (req: Request, res: Response) => {
             total_volume_usdc: stats.total_volume_generic || 0,
             total_fees_amount: stats.total_fees_amount || 0,
             active_orders: stats.active_orders,
-            fee_percentage: env.FEE_PERCENTAGE,
-            fee_bps: parseInt(env.FEE_BPS),
+            fee_percentage: env.getFeePercentage(), // Default chain fee
+            fee_bps: env.getFeePercentage() * 10000,
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });

@@ -130,9 +130,14 @@ export function CreateOrder() {
                 setReserved(parseFloat(res));
             }).catch(console.error);
         }
-        // Fetch fee from stats
+        // Fetch base fee from stats but override locally based on selected chain
         api.stats.get().then(data => {
-            if (data.fee_percentage) setFeePercentage(data.fee_percentage);
+            const baseFee = data.fee_percentage || 0.005;
+            if (chain === 'base') {
+                setFeePercentage(0);
+            } else {
+                setFeePercentage(baseFee === 0 ? 0.005 : baseFee); // Fallback to 0.5% if stats says 0 but we're on non-base
+            }
         }).catch(console.error);
     }, [type, chain, token]);
 
@@ -489,9 +494,9 @@ export function CreateOrder() {
                                     </span>
                                 </div>
                                 <div className="border-t border-white/10 my-2"></div>
-                                <div className="flex justify-between items-center text-[10px] text-muted">
-                                    <span>Trading Fee ({(feePercentage * 100).toFixed(2)}%)</span>
-                                    <span>{(feePercentage * 50).toFixed(2)}% Buyer + {(feePercentage * 50).toFixed(2)}% Seller</span>
+                                 <div className="flex justify-between items-center text-[10px] text-muted">
+                                    <span>Trading Fee ({feePercentage === 0 ? '0%' : (feePercentage * 100).toFixed(2) + '%'})</span>
+                                    <span>{feePercentage === 0 ? 'Free Promotion' : `${(feePercentage * 50).toFixed(2)}% Buyer + ${(feePercentage * 50).toFixed(2)}% Seller`}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] mt-1">
                                     <span className="text-orange">You (Seller) Lock:</span>
