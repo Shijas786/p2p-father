@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="24" cy="42" rx="10" ry="4" fill="#1a6b4a"/>
+  <rect x="14" y="30" width="20" height="12" fill="#1a6b4a"/>
+  <ellipse cx="24" cy="30" rx="10" ry="4" fill="#26a371"/>
+  <ellipse cx="24" cy="30" rx="7" ry="2.8" fill="#1a8a5c"/>
+  <text x="24" y="34" font-size="6" font-weight="700" fill="#00e5a0" text-anchor="middle" font-family="monospace">₮</text>
+  <ellipse cx="38" cy="40" rx="10" ry="4" fill="#1a3a7a"/>
+  <rect x="28" y="28" width="20" height="12" fill="#1a3a7a"/>
+  <ellipse cx="38" cy="28" rx="10" ry="4" fill="#2563eb"/>
+  <ellipse cx="38" cy="28" rx="7" ry="2.8" fill="#1d4ed8"/>
+  <text x="38" y="32" font-size="6" font-weight="700" fill="#93c5fd" text-anchor="middle" font-family="monospace">$</text>
+  <circle cx="46" cy="20" r="11" fill="#1a2a3a" stroke="#00e5a0" stroke-width="1.5"/>
+  <rect x="41" y="20" width="10" height="8" rx="2" fill="#0a2540" stroke="#00c080" stroke-width="0.8"/>
+  <path d="M43 20 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="46" cy="24" r="1.5" fill="#00e5a0"/>
+  <rect x="45.2" y="24" width="1.6" height="2.5" rx="0.8" fill="#00e5a0"/>
+</svg>

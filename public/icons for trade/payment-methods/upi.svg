@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Smartphone Body -->
+  <rect x="20" y="10" width="24" height="44" rx="4" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  <rect x="22" y="14" width="20" height="36" rx="2" fill="#0d3358"/>
+  
+  <!-- Screen Content: Pulse -->
+  <circle cx="32" cy="32" r="6" fill="#00e5a0" opacity="0.2">
+    <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="32" cy="32" r="2" fill="#00e5a0"/>
+  
+  <!-- Incoming Transfer Arrow -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 -4; 0 4; 0 -4" dur="2s" repeatCount="indefinite" />
+    <path d="M32 18 L32 30 M28 26 L32 30 L36 26" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Button Detail -->
+  <rect x="28" y="51" width="8" height="1" rx="0.5" fill="#1a4060"/>
+</svg>

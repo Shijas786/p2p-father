@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Connection Sphere -->
+  <circle cx="32" cy="32" r="22" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  
+  <!-- Outer Ring (Connection Aura - Now Stable) -->
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#00e5a0" stroke-width="0.5" stroke-dasharray="2 6" opacity="0.4" />
+
+  <!-- Wallet Icon Inside -->
+  <rect x="22" y="26" width="20" height="14" rx="2" fill="#0a2540" stroke="#00e5a0" stroke-width="1.2"/>
+  <rect x="36" y="30" width="6" height="4" rx="1" fill="#00e5a0"/>
+
+  <!-- Connection Links (Subtle Pulse) -->
+  <path d="M12 32 L20 32 M44 32 L52 32 M32 12 L32 20 M32 44 L32 52" stroke="#00e5a0" stroke-width="2" stroke-linecap="round" opacity="0.6">
+    <animate attributeName="opacity" values="0.2;0.6;0.2" dur="3s" repeatCount="indefinite" />
+  </path>
+  
+  <!-- Status Indicator (Live Dot) -->
+  <circle cx="32" cy="32" r="3" fill="#00e5a0">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+  </circle>
+</svg>

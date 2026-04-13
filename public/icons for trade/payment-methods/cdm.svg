@@ -1,0 +1,24 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- CDM (Cash Deposit Machine) Kiosk -->
+  <rect x="18" y="10" width="28" height="44" rx="3" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  
+  <!-- Screen Area -->
+  <rect x="22" y="14" width="20" height="14" rx="1" fill="#0d3358" stroke="#1a4060" stroke-width="1"/>
+  <rect x="24" y="16" width="16" height="10" rx="0.5" fill="#00e5a0" opacity="0.1">
+    <animate attributeName="opacity" values="0.1;0.3;0.1" dur="2s" repeatCount="indefinite" />
+  </rect>
+
+  <!-- Cash Deposit Slot -->
+  <rect x="22" y="32" width="20" height="4" rx="1" fill="#051525" stroke="#00e5a0" stroke-width="1"/>
+  
+  <!-- Banknote sliding in -->
+  <g>
+    <rect x="25" y="36" width="14" height="8" rx="1" fill="#00e5a0" opacity="0.8"/>
+    <text x="32" y="42" font-size="4" font-weight="900" fill="#0a1e38" text-anchor="middle" font-family="monospace">$$</text>
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -6; 0 0" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="1;0;0" dur="2s" repeatCount="indefinite" />
+  </g>
+
+  <!-- Keypad Area -->
+  <rect x="24" y="44" width="16" height="6" rx="1" fill="#1a4060" opacity="0.5"/>
+</svg>
