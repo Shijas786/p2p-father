@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { isTelegramEnvironment } from '../lib/telegram';
+import { IconHistory, IconStar, IconMarket } from './Icons';
 import './CompactStats.css';
 
 interface Props {
     userId: string;
+}
+
+// Demo stats for local dev — each trader index gets slightly varied numbers
+function getMockStats(userId: string) {
+    const seed = userId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const trades  = 30 + (seed % 400);
+    const rate    = 88 + (seed % 12);
+    const volume  = 5000 + (seed % 95000);
+    return { completed_trades: trades, completion_rate: rate, total_volume: volume };
 }
 
 export function CompactStats({ userId }: Props) {
@@ -15,6 +26,13 @@ export function CompactStats({ userId }: Props) {
     }, [userId]);
 
     async function loadProfile() {
+        // ── DEV MODE: instant mock stats ──────────────────────────────
+        if (!isTelegramEnvironment()) {
+            setProfile(getMockStats(userId));
+            setLoading(false);
+            return;
+        }
+        // ── PRODUCTION ────────────────────────────────────────────────
         try {
             const data = await api.users.getProfile(userId);
             setProfile(data);
@@ -30,11 +48,21 @@ export function CompactStats({ userId }: Props) {
 
     return (
         <div className="cs-container animate-in">
-            <span className="cs-item">{profile.completed_trades} Trades</span>
-            <span className="cs-divider">|</span>
-            <span className="cs-item text-green">{profile.completion_rate}% Rate</span>
-            <span className="cs-divider">|</span>
-            <span className="cs-item">${profile.total_volume?.toLocaleString()} Vol</span>
+            <div className="cs-chip">
+                <IconHistory size={12} color="#848e9c" />
+                <span className="cs-value">{profile.completed_trades}</span>
+                <span className="cs-label">Trades</span>
+            </div>
+            <div className="cs-chip">
+                <IconStar size={12} color="#22c55e" />
+                <span className="cs-value text-green">{profile.completion_rate}%</span>
+                <span className="cs-label">Rate</span>
+            </div>
+            <div className="cs-chip">
+                <IconMarket size={12} color="#848e9c" />
+                <span className="cs-value">${(profile.total_volume / 1000).toFixed(1)}k</span>
+                <span className="cs-label">Vol</span>
+            </div>
         </div>
     );
 }

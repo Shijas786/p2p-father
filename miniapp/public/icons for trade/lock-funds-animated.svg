@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Asset 1: Lock Funds Animated (GOLD VERSION) -->
+  <g fill="none" stroke="#f0b90b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(14, 12)">
+    
+    <!-- Padlock Body -->
+    <rect x="0" y="16" width="36" height="24" rx="4" />
+    <circle cx="18" cy="28" r="3" />
+    <line x1="18" y1="31" x2="18" y2="35" />
+
+    <!-- Padlock Shackle -->
+    <g>
+      <path d="M7 16 V10 a11 11 0 0 1 22 0 V16">
+        <animate attributeName="d" 
+                 values="M7 16 V10 a11 11 0 0 1 22 0 V16; 
+                         M7 16 V14 a11 11 0 0 1 22 0 V16; 
+                         M7 16 V10 a11 11 0 0 1 22 0 V16" 
+                 dur="2s" 
+                 repeatCount="indefinite" 
+                 keyTimes="0; 0.2; 1" />
+      </path>
+    </g>
+
+    <!-- Success Pulse -->
+    <circle cx="18" cy="28" r="2" opacity="0">
+      <animate attributeName="r" values="2; 10" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.8; 0" dur="2s" repeatCount="indefinite" />
+    </circle>
+
+    <!-- Global Floating -->
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -1; 0 0" dur="4s" repeatCount="indefinite" additive="sum" />
+  </g>
+</svg>

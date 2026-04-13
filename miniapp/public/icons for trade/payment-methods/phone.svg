@@ -1,0 +1,20 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Phone Handset -->
+  <path d="M15 15 Q20 10 25 10 L45 10 Q50 10 50 15 L50 25 Q50 30 45 30 L30 30 L10 50 L10 15 Z" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5" transform="rotate(-10 32 32)"/>
+  
+  <!-- Signal Waves -->
+  <g transform="translate(32, 28) rotate(-10)">
+    <path d="M12 -12 Q18 -6 12 0" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite" />
+      <animate attributeName="d" values="M12 -12 Q18 -6 12 0; M14 -14 Q22 -8 14 2; M12 -12 Q18 -6 12 0" dur="1.5s" repeatCount="indefinite" />
+    </path>
+    <path d="M8 -8 Q12 -4 8 0" fill="none" stroke="#00e5a0" stroke-width="1.5" stroke-linecap="round">
+      <animate attributeName="opacity" values="0.1;0.8;0.1" dur="1.5s" begin="0.3s" repeatCount="indefinite" />
+    </path>
+  </g>
+
+  <!-- Incoming Dot -->
+  <circle cx="20" cy="20" r="3" fill="#00e5a0">
+    <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite" />
+  </circle>
+</svg>

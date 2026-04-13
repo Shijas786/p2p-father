@@ -524,7 +524,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -597,7 +597,8 @@ router.post("/orders", async (req: Request, res: Response) => {
             payment_methods: payment_methods || ["UPI"],
             payment_details: {
                 upi: user.upi_id || "",
-                group_id: group_id ? parseInt(group_id.toString()) : undefined
+                group_id: group_id ? parseInt(group_id.toString()) : undefined,
+                note: note ? note.toString().slice(0, 200) : undefined,
             },
         });
 
@@ -1438,7 +1439,11 @@ router.put("/profile", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const { upi_id, phone_number, bank_account_number, bank_ifsc, bank_name, receive_address, cdm_bank_number, cdm_bank_name, cdm_phone, cdm_user_name, digital_rupee_id } = req.body;
+        const { 
+            upi_id, phone_number, bank_account_number, bank_ifsc, bank_name, 
+            receive_address, cdm_bank_number, cdm_bank_name, cdm_phone, 
+            cdm_user_name, digital_rupee_id, bio, instagram_handle, x_handle 
+        } = req.body;
         const updates: Record<string, any> = {};
         if (upi_id !== undefined) updates.upi_id = upi_id;
         if (phone_number !== undefined) updates.phone_number = phone_number;
@@ -1451,6 +1456,9 @@ router.put("/profile", async (req: Request, res: Response) => {
         if (cdm_phone !== undefined) updates.cdm_phone = cdm_phone;
         if (cdm_user_name !== undefined) updates.cdm_user_name = cdm_user_name;
         if (digital_rupee_id !== undefined) updates.digital_rupee_id = digital_rupee_id;
+        if (bio !== undefined) updates.bio = bio;
+        if (instagram_handle !== undefined) updates.instagram_handle = instagram_handle;
+        if (x_handle !== undefined) updates.x_handle = x_handle;
 
         if (Object.keys(updates).length > 0) {
             await db.updateUser(user.id, updates as any);

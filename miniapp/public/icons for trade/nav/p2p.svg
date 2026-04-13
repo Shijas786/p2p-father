@@ -1,0 +1,31 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- P2P Icon: XL & Close Persons (V16) -->
+  <g transform="translate(4, 4)">
+    <!-- Person Top-Left (XL Size) -->
+    <g transform="translate(6, 4)">
+      <path d="M0 22v-1a8 8 0 0 1 8-8h6a8 8 0 0 1 8 8v1" fill="none" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="11" cy="8" r="7.5" fill="none" stroke="#00e5a0" stroke-width="3"/>
+    </g>
+
+    <!-- Person Bottom-Right (XL Size) -->
+    <g transform="translate(30, 30)">
+      <path d="M0 22v-1a8 8 0 0 1 8-8h6a8 8 0 0 1 8 8v1" fill="none" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="11" cy="8" r="7.5" fill="none" stroke="#00e5a0" stroke-width="3"/>
+    </g>
+
+    <!-- Two Exchange Arrows (Tightened for XL silhouettes) -->
+    <g>
+      <!-- Top Arrow -->
+      <path d="M34 10 Q54 10 54 30 L50 26 M54 30 L58 26" fill="none" stroke="#00e5a0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.6">
+         <animate attributeName="opacity" values="0.4; 1; 0.4" dur="2s" repeatCount="indefinite" />
+      </path>
+      <!-- Bottom Arrow -->
+      <path d="M22 46 Q2 46 2 26 L-2 30 M2 26 L6 30" fill="none" stroke="#00e5a0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.6">
+         <animate attributeName="opacity" values="0.4; 1; 0.4" dur="2s" repeatCount="indefinite" begin="1s" />
+      </path>
+    </g>
+
+    <!-- Global Floating Movement -->
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -1; 0 0" dur="4s" repeatCount="indefinite" />
+  </g>
+</svg>

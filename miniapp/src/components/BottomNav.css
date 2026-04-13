@@ -24,7 +24,6 @@
     gap: 2px;
     padding: 6px 10px;
     text-decoration: none;
-    color: #5e6673;
     transition: color 0.2s ease;
     position: relative;
     min-width: 50px;
@@ -39,14 +38,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
+}
+
+.nav-icon-img {
+    width: 100%;
+    height: 100%;
+    filter: grayscale(100%) opacity(0.85) brightness(1.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-tab.active .nav-icon-img {
+    filter: grayscale(0%) opacity(1) brightness(1) drop-shadow(0 0 5px rgba(0, 229, 160, 0.3));
+    transform: scale(1.1);
 }
 
 .nav-label {
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.02em;
+    color: #848e9c; /* Lighter inactive label */
+}
+
+.nav-tab.active .nav-label {
+    color: #f0b90b;
 }
 
 .nav-badge {

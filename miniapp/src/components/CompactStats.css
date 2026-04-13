@@ -1,31 +1,47 @@
 .cs-container {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: #848e9c;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.cs-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     background: rgba(255, 255, 255, 0.03);
-    padding: 4px 10px;
-    border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    margin-top: 6px;
-    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
-.cs-item {
+.cs-chip:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.cs-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.cs-label {
+    font-size: 10px;
     font-weight: 500;
+    color: #4b5563;
+    text-transform: lowercase;
 }
 
-.cs-divider {
-    opacity: 0.2;
+.cs-value.text-green {
+    color: var(--green);
 }
 
 .cs-loading {
     font-size: 10px;
     color: var(--secondary);
     opacity: 0.5;
-}
-
-.cs-item.text-green {
-    color: var(--green);
 }

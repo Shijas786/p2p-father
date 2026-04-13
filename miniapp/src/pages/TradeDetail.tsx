@@ -6,11 +6,13 @@ import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
-import { copyToClipboard } from '../lib/utils';
+import { copyToClipboard, formatError } from '../lib/utils';
 import { appKit } from '../lib/wagmi';
 import { useToast } from '../components/Toast';
 import { TraderProfile } from '../components/TraderProfile';
 import { CompactStats } from '../components/CompactStats';
+import { SlideButton } from '../components/SlideButton';
+import { DEMO_TRADES, DEMO_ORDERS } from '../lib/devMocks';
 import { bsc, base } from 'wagmi/chains';
 import './TradeDetail.css';
 
@@ -31,11 +33,11 @@ const ESCROW_CREATE_TRADE_ABI = [
 ] as const;
 
 const STEPS = [
-    { key: 'waiting_for_escrow', label: 'Lock Funds', icon: '⏳' },
-    { key: 'in_escrow', label: 'Escrow Locked', icon: '🔒' },
-    { key: 'fiat_sent', label: 'Fiat Sent', icon: '💸' },
-    { key: 'fiat_confirmed', label: 'Fiat Confirmed', icon: '✅' },
-    { key: 'completed', label: 'Completed', icon: '🎉' },
+    { key: 'waiting_for_escrow', label: 'Lock Funds', icon: '/icons for trade/lock-funds-animated.svg?v=2' },
+    { key: 'in_escrow', label: 'Escrow Locked', icon: '/icons for trade/escrow-locked-animated.svg?v=2' },
+    { key: 'fiat_sent', label: 'Fiat Sent', icon: '/icons for trade/fiat-sent-animated.svg?v=9' },
+    { key: 'fiat_confirmed', label: 'Fiat Confirmed', icon: '/icons for trade/fiat-confirmed-animated.svg?v=2' },
+    { key: 'completed', label: 'Completed', icon: '/icons for trade/trade-completed-animated.svg?v=4' },
 ];
 
 interface Props {
@@ -46,6 +48,7 @@ export function TradeDetail({ user }: Props) {
     const { id, orderId } = useParams<{ id: string; orderId: string }>();
     const navigate = useNavigate();
     const { address: externalAddress, isConnected } = useAccount();
+    const isDemo = id?.startsWith('demo-');
 
     // State
     const [trade, setTrade] = useState<any>(null);
@@ -69,6 +72,8 @@ export function TradeDetail({ user }: Props) {
     const actionSectionRef = useRef<HTMLDivElement>(null);
     const [showProfileId, setShowProfileId] = useState<string | null>(null);
     const [showInlineStats, setShowInlineStats] = useState(false);
+    const [flowingStep, setFlowingStep] = useState<number | null>(null);
+    const prevStepIdx = useRef<number>(-1);
 
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
@@ -149,9 +154,28 @@ export function TradeDetail({ user }: Props) {
         }
     }, [trade]);
 
+    function getStepIndex(status: string): number {
+        const idx = STEPS.findIndex(s => s.key === status);
+        return idx >= 0 ? idx : (status === 'completed' ? 4 : -1);
+    }
+
+    const currentStep = trade ? getStepIndex(trade.status) : -1;
+
+    // Trigger 'Liquid Pour' animation when step increases
+    useEffect(() => {
+        if (currentStep > prevStepIdx.current && prevStepIdx.current >= 0) {
+            setFlowingStep(prevStepIdx.current);
+            const timer = setTimeout(() => setFlowingStep(null), 2500);
+            return () => clearTimeout(timer);
+        }
+        prevStepIdx.current = currentStep;
+    }, [currentStep]);
+
     async function refreshData() {
         if (!id) return;
         try {
+            if (id.startsWith('demo-')) return; // No need to poll mock trades
+
             const { trade: data } = await api.trades.getById(id);
             // Detect status change and trigger feedback
             if (prevStatusRef.current && data.status !== prevStatusRef.current) {
@@ -189,6 +213,13 @@ export function TradeDetail({ user }: Props) {
         if (!orderId) return;
         setLoading(true);
         try {
+            if (orderId.startsWith('demo-')) {
+                const found = DEMO_ORDERS.find(o => o.id === orderId);
+                if (found) {
+                    setOrder(found);
+                    return;
+                }
+            }
             const { order: data } = await api.orders.getById(orderId);
             setOrder(data);
         } catch (err: any) {
@@ -202,6 +233,13 @@ export function TradeDetail({ user }: Props) {
         if (!id) return;
         setLoading(true);
         try {
+            if (id.startsWith('demo-')) {
+                const found = DEMO_TRADES.find(t => t.id === id);
+                if (found) {
+                    setTrade(found);
+                    return;
+                }
+            }
             const { trade: data } = await api.trades.getById(id);
             setTrade(data);
         } catch (err: any) {
@@ -214,6 +252,10 @@ export function TradeDetail({ user }: Props) {
     async function loadMessages() {
         if (!id) return;
         try {
+            if (id.startsWith('demo-')) {
+                setMessages([]); // Demo trades don't have mock messages yet
+                return;
+            }
             const { messages: data } = await api.trades.getMessages(id);
             setMessages(data);
         } catch (err) {
@@ -323,6 +365,17 @@ export function TradeDetail({ user }: Props) {
 
     // 1. Approve Token
     async function handleApprove() {
+        if (isDemo) {
+            setActionLoading(true);
+            setTimeout(() => {
+                setApproveTxHash('0x' + '0'.repeat(64) as `0x${string}`);
+                haptic('success');
+                showToast("Approval simulated (Demo Mode)", "success");
+                setActionLoading(false);
+            }, 1000);
+            return;
+        }
+
         if (isExternalWallet && (!externalAddress || !isConnected)) {
             showToast("Connect your wallet first", "warning");
             appKit.open();
@@ -354,7 +407,9 @@ export function TradeDetail({ user }: Props) {
             showToast("Approval sent!", "success");
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Approval failed');
+            const cleanMsg = formatError(err);
+            setError(cleanMsg);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setActionLoading(false);
@@ -363,6 +418,18 @@ export function TradeDetail({ user }: Props) {
 
     // 2. Lock Funds (Create Trade on Chain)
     async function handleLockFunds() {
+        if (isDemo) {
+            setActionLoading(true);
+            setTimeout(() => {
+                setLockTxHash('0x' + '0'.repeat(64) as `0x${string}`);
+                setTrade((prev: any) => ({ ...prev, status: 'in_escrow' }));
+                haptic('heavy');
+                showToast("Funds locked in escrow (Demo Mode)", "success");
+                setActionLoading(false);
+            }, 1500);
+            return;
+        }
+
         if (isExternalWallet && (!externalAddress || !isConnected)) {
             showToast("Connect your wallet first", "warning");
             appKit.open();
@@ -454,9 +521,15 @@ export function TradeDetail({ user }: Props) {
         setActionLoading(true);
         setError('');
         try {
-            await api.trades.confirmPayment(id, "NOT_PROVIDED");
+            if (isDemo) {
+                await new Promise(r => setTimeout(r, 1000));
+                setTrade((prev: any) => ({ ...prev, status: 'fiat_sent' }));
+                haptic('success');
+            } else {
+                await api.trades.confirmPayment(id, "NOT_PROVIDED");
+                await loadTrade();
+            }
             haptic('success');
-            await loadTrade();
         } catch (err: any) {
             setError(err.message);
             haptic('error');
@@ -471,10 +544,16 @@ export function TradeDetail({ user }: Props) {
         setActionLoading(true);
         setError('');
         try {
-            await api.trades.confirmReceipt(id);
+            if (isDemo) {
+                await new Promise(r => setTimeout(r, 1500));
+                setTrade((prev: any) => ({ ...prev, status: 'completed' }));
+                sounds.play('trade_complete');
+            } else {
+                await api.trades.confirmReceipt(id);
+                await loadTrade();
+                sounds.play('trade_complete');
+            }
             haptic('success');
-            sounds.play('trade_complete');
-            await loadTrade();
         } catch (err: any) {
             setError(err.message);
             haptic('error');
@@ -490,10 +569,17 @@ export function TradeDetail({ user }: Props) {
         if (!reason) return;
         setActionLoading(true);
         try {
-            await api.trades.dispute(id, reason);
-            haptic('warning');
-            sounds.play('dispute');
-            await loadTrade();
+            if (isDemo) {
+                await new Promise(r => setTimeout(r, 1000));
+                setTrade((prev: any) => ({ ...prev, status: 'disputed' }));
+                haptic('warning');
+                sounds.play('dispute');
+            } else {
+                await api.trades.dispute(id, reason);
+                await loadTrade();
+                haptic('warning');
+                sounds.play('dispute');
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -501,11 +587,6 @@ export function TradeDetail({ user }: Props) {
         }
     }
 
-
-    function getStepIndex(status: string): number {
-        const idx = STEPS.findIndex(s => s.key === status);
-        return idx >= 0 ? idx : (status === 'completed' ? 4 : -1);
-    }
 
     const showLockUI = trade?.status === 'waiting_for_escrow';
 
@@ -535,7 +616,6 @@ export function TradeDetail({ user }: Props) {
 
     // Use order details during initiation
     const disp = trade || order;
-    const currentStep = trade ? getStepIndex(trade.status) : -1;
 
     return (
         <div className="page animate-in">
@@ -634,22 +714,35 @@ export function TradeDetail({ user }: Props) {
                     </div>
                 )}
 
-                {showLockUI && isSeller && (
-                    <div className="mt-2 p-2 bg-warning-soft rounded text-sm text-warning">
-                        Action Required: Lock funds ({trade.amount} {trade.token}) to start escrow.
-                    </div>
-                )}
             </div>
+            
+            {/* Note (Conditional - Simple Version) */}
+            {(trade?.payment_details?.note || order?.note) && (
+                <div className="mx-4 mb-6 p-4 bg-white/5 rounded-2xl border border-white/5 animate-in">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted">Note from Trader</span>
+                    </div>
+                    <div className="text-[13px] text-white/80 leading-relaxed italic">
+                        "{trade?.payment_details?.note || order?.note}"
+                    </div>
+                </div>
+            )}
 
             {/* Progress Steps */}
             <div className="td-steps">
                 {STEPS.map((step, i) => (
-                    <div key={step.key} className={`td-step ${i <= currentStep ? 'done' : ''} ${i === currentStep ? 'current' : ''}`}>
+                    <div key={step.key} className={`td-step ${i <= currentStep ? 'done' : ''} ${i === currentStep ? 'current' : ''} ${step.key === 'completed' && trade?.status === 'completed' ? 'final-success' : ''}`}>
                         <div className="td-step-dot">
-                            {i <= currentStep ? step.icon : <span className="td-step-num">{i + 1}</span>}
+                            {i <= currentStep ? (
+                                <img src={step.icon} alt="" style={{ width: '32px', height: '32px' }} />
+                            ) : (
+                                <span className="td-step-num">{i + 1}</span>
+                            )}
                         </div>
                         <span className="td-step-label">{step.label}</span>
-                        {i < STEPS.length - 1 && <div className="td-step-line" />}
+                        {i < STEPS.length - 1 && (
+                            <div className={`td-step-line ${flowingStep === i ? 'flowing' : ''} ${i < currentStep ? 'filled' : ''}`} />
+                        )}
                     </div>
                 ))}
             </div>
@@ -917,50 +1010,56 @@ export function TradeDetail({ user }: Props) {
 
                             <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller using one of the payment methods above.</p>
 
-                            <button
-                                className="btn btn-primary btn-block btn-lg"
-                                onClick={confirmPayment}
-                                disabled={actionLoading}
-                            >
-                                {actionLoading ? <span className="spinner" /> : '💸 I have sent the payment'}
-                            </button>
+                            <div className="mt-6 flex justify-center">
+                                <SlideButton
+                                    onComplete={confirmPayment}
+                                    isLoading={actionLoading}
+                                    text="Slide to Confirm Payment"
+                                    color="var(--green)"
+                                />
+                            </div>
                         </div>
                     )}
 
                     {trade && trade.status === 'fiat_sent' && isSeller && (
-                        <div className="card-glass border-orange p-3 animate-in">
-                            <h4 className="mb-1 text-sm font-bold uppercase tracking-wider text-orange">📢 Payment Reported</h4>
-                            <p className="text-xs text-muted mb-3">The buyer has submitted a UTR. Follow these steps to verify:</p>
+                        <div className="card-glass border-green p-5 animate-in" style={{ borderRadius: '24px' }}>
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-xl">📢</span>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-green">Payment Reported</h4>
+                            </div>
+                            
+                            <p className="text-[11px] text-muted mb-6 leading-relaxed">The buyer has reported a payment. Please follow these steps to verify before you release the crypto:</p>
 
-                            <div className="verification-steps mb-4">
-                                <div className="v-step">
-                                    <span className="v-num">1</span>
-                                    <span className="v-text">Open your bank/UPI app.</span>
+                            <div className="verification-steps space-y-4 mb-8">
+                                <div className="v-step flex items-start gap-3">
+                                    <div className="v-num-small">1</div>
+                                    <div className="v-text-small">Open your <span className="text-white font-bold">Bank or UPI app</span></div>
                                 </div>
-                                <div className="v-step">
-                                    <span className="v-num">2</span>
-                                    <span className="v-text">Check for <b>₹{trade.fiat_amount}</b> from the buyer.</span>
+                                <div className="v-step flex items-start gap-3">
+                                    <div className="v-num-small">2</div>
+                                    <div className="v-text-small">Check for <span className="text-green font-bold">₹{trade.fiat_amount}</span> from the buyer</div>
                                 </div>
-                                <div className="v-step">
-                                    <span className="v-num">3</span>
-                                    <span className="v-text">Match the UTR: <b>{trade.payment_proofs?.[0]?.utr || 'Pending'}</b></span>
+                                <div className="v-step flex items-start gap-3">
+                                    <div className="v-num-small">3</div>
+                                    <div className="v-text-small">Carefully <span className="text-white font-bold">check and verify</span> the payment</div>
                                 </div>
                             </div>
 
-                            <button
-                                className="btn btn-success btn-block btn-lg mb-2"
-                                onClick={confirmReceipt}
-                                disabled={actionLoading}
-                            >
-                                {actionLoading ? <span className="spinner" /> : '✅ Confirm & Release Crypto'}
-                            </button>
+                            <div className="mt-8 flex justify-center">
+                                <SlideButton
+                                    onComplete={confirmReceipt}
+                                    isLoading={actionLoading}
+                                    text="Slide to Confirm & Release Crypto"
+                                    color="var(--green)"
+                                />
+                            </div>
                         </div>
                     )}
 
                     {trade && trade.status === 'fiat_sent' && !isSeller && (
                         <div className="text-center p-4">
                             <div className="loading-dots mb-2">Waiting for seller to release...</div>
-                            <p className="text-xs text-muted">The seller is verifying your UTR.</p>
+                            <p className="text-xs text-muted">The seller is verifying your payment.</p>
                         </div>
                     )}
 
@@ -992,7 +1091,7 @@ export function TradeDetail({ user }: Props) {
 
                     {trade && trade.status === 'completed' && (
                         <div className="td-completed text-center animate-in">
-                            <span className="td-check">🎉</span>
+                            <img src="/icons for trade/trade-completed-animated.svg?v=4" alt="Success" style={{ width: '120px', height: '120px', margin: '0 auto 1rem' }} />
                             <h3 className="text-green">Trade Completed!</h3>
                             <p className="text-sm text-muted mt-1">Funds have been released successfully</p>
                         </div>

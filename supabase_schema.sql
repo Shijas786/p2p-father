@@ -22,6 +22,9 @@ create table public.users (
   cdm_phone text,
   cdm_user_name text,
   digital_rupee_id text,
+  bio text,
+  instagram_handle text,
+  x_handle text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

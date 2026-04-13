@@ -1,0 +1,259 @@
+.sb-track {
+    position: relative;
+    width: 100%;
+    height: 72px;
+    background: rgba(5, 8, 15, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 40px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    user-select: none;
+    backdrop-filter: blur(40px) saturate(200%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 20px rgba(0, 0, 0, 1);
+}
+
+/* 🌌 High-Fidelity Glass Crypto River */
+.sb-liquid-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    transform: translateX(calc(var(--progress) * -0.2));
+    transition: transform 0.1s linear;
+}
+
+.completed .sb-liquid-container {
+    transform: none !important;
+}
+
+.sb-glass-glare {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, 
+        rgba(255,255,255,0.05) 0%, 
+        transparent 50%, 
+        rgba(255,255,255,0.01) 100%
+    );
+    z-index: 25;
+}
+
+/* 🌊 Continuous Glass Token Matrix */
+.sb-matrix {
+    position: absolute;
+    inset: 0;
+    mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+}
+
+.sb-token {
+    position: absolute;
+    left: var(--x-start);
+    top: var(--y-start);
+    width: 22px; /* Much smaller for a clinical look */
+    height: 22px;
+    pointer-events: none;
+    animation: flow-right-3d var(--speed) infinite linear;
+    animation-delay: var(--delay);
+    perspective: 1000px;
+}
+
+.sb-token-glass {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.05); /* Slightly more visible glass */
+    border-radius: 50%;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    box-shadow: 
+        inset 0 1px 2px rgba(255,255,255,0.3),
+        0 2px 8px rgba(0,0,0,0.4);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sb-token-glare {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.4) 0%, 
+        transparent 40%, 
+        rgba(255, 255, 255, 0.1) 100%
+    );
+    opacity: 0.6;
+    animation: glare-sweep 3s ease-in-out infinite alternate;
+}
+
+@keyframes glare-sweep {
+    from { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    to { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.sb-token svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+}
+
+@keyframes flow-right-3d {
+    0% { transform: translateX(-150px) rotateX(10deg) rotateY(-20deg) scale(0.8); opacity: 0; }
+    15% { opacity: var(--max-opacity); }
+    85% { opacity: var(--max-opacity); }
+    100% { transform: translateX(500px) rotateX(-10deg) rotateY(20deg) scale(1.1); opacity: 0; }
+}
+
+/* 🏛 Ultra-Vibrant Neon Glows */
+.sb-usdt .sb-token-glass { 
+    border-color: rgba(38, 161, 123, 0.4);
+    box-shadow: 
+        inset 0 0 10px rgba(38, 161, 123, 0.2),
+        0 0 20px rgba(38, 161, 123, 0.3); 
+}
+.sb-usdc .sb-token-glass { 
+    border-color: rgba(39, 117, 202, 0.4);
+    box-shadow: 
+        inset 0 0 10px rgba(39, 117, 202, 0.2),
+        0 0 20px rgba(39, 117, 202, 0.3); 
+}
+
+/* Professional Parallax Layers */
+.depth-1 { 
+    --speed: 8s; /* Slower for hypnotic flow */
+    --max-opacity: 1; 
+    width: 24px; height: 24px;
+    z-index: 10; 
+}
+
+.depth-2 { 
+    --speed: 12s; /* Slower */
+    --max-opacity: 0.6; 
+    width: 18px; height: 18px;
+    filter: blur(0.5px); 
+    z-index: 8; 
+}
+
+.depth-3 { 
+    --speed: 18s; /* Slower */
+    --max-opacity: 0.3; 
+    width: 12px; height: 12px;
+    filter: blur(2px); 
+    z-index: 5; 
+}
+
+.completed .sb-token,
+.completed .sb-matrix,
+.completed .sb-aurora {
+    display: none !important;
+}
+
+/* 🌊 Fill Stream Overlay */
+.sb-fill-stream {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--progress);
+    background: linear-gradient(to right, #0ecb81, #1fd491);
+    border-right: 2px solid #fff;
+    box-shadow: 10px 0 45px rgba(14, 203, 129, 0.7);
+    transition: width 0.1s linear, opacity 0.2s ease;
+    opacity: 0; /* Hidden by default */
+}
+
+.sb-track:not([style*="--progress: 0%"]) .sb-fill-stream {
+    opacity: 1; /* Only show when progress > 0% */
+}
+
+.completed .sb-fill-stream {
+    opacity: 1 !important;
+    width: 100% !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    transition: width 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* 📺 Scanlines (Ultra-Clean) */
+.sb-scanlines {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.05) 50%
+    );
+    background-size: 100% 4px;
+    z-index: 30;
+    opacity: 0.1;
+}
+
+/* Center Text Logic */
+.sb-text-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 64px; 
+    z-index: 40;
+}
+
+.sb-text {
+    font-size: 10px;
+    font-weight: 950;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    text-shadow: 0 4px 15px rgba(0,0,0,1);
+    transition: all 0.3s ease;
+}
+
+.completed .sb-text {
+    font-size: 13px;
+    font-weight: 950;
+    letter-spacing: 0.45em;
+    text-shadow: 0 0 30px rgba(255,255,255,0.6);
+}
+
+/* 🎚️ Handle Design */
+.sb-handle {
+    position: absolute;
+    left: 8px;
+    width: 56px;
+    height: 56px;
+    background: var(--accent);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    z-index: 50;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.9), 0 0 40px var(--accent);
+    touch-action: none;
+    transition: transform 0.15s linear, opacity 0.3s ease;
+}
+
+.completed .sb-handle {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

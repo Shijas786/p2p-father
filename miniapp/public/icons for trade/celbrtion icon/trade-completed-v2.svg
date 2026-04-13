@@ -1,0 +1,50 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- outer glow ring -->
+  <circle cx="60" cy="60" r="48" fill="none" stroke="#00e5a0" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>
+  <circle cx="60" cy="60" r="40" fill="none" stroke="#00e5a0" stroke-width="0.6" opacity="0.2"/>
+
+  <!-- main circle bg -->
+  <circle cx="60" cy="60" r="34" fill="#071a2e" stroke="#00e5a0" stroke-width="2"/>
+
+  <!-- big checkmark -->
+  <circle cx="60" cy="60" r="22" fill="#042d1a" stroke="#00e5a0" stroke-width="1.2"/>
+  <path d="M47 60 L55 68 L73 50" stroke="#00e5a0" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- USDC coin top-left flying out -->
+  <circle cx="22" cy="26" r="13" fill="#1d4ed8" stroke="#60a5fa" stroke-width="1.5"/>
+  <circle cx="22" cy="26" r="9" fill="#2563eb"/>
+  <text x="22" y="30" font-size="11" font-weight="700" fill="#bfdbfe" text-anchor="middle" font-family="monospace">$</text>
+  <text x="22" y="16" font-size="5" font-weight="600" fill="#93c5fd" text-anchor="middle" font-family="sans-serif">USDC</text>
+
+  <!-- USDT coin top-right flying out -->
+  <circle cx="98" cy="26" r="13" fill="#065f46" stroke="#34d399" stroke-width="1.5"/>
+  <circle cx="98" cy="26" r="9" fill="#047857"/>
+  <text x="98" y="30" font-size="11" font-weight="700" fill="#6ee7b7" text-anchor="middle" font-family="monospace">₮</text>
+  <text x="98" y="16" font-size="5" font-weight="600" fill="#6ee7b7" text-anchor="middle" font-family="sans-serif">USDT</text>
+
+  <!-- motion lines from coins toward center -->
+  <line x1="33" y1="32" x2="42" y2="42" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.6"/>
+  <line x1="86" y1="32" x2="77" y2="42" stroke="#34d399" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.6"/>
+
+  <!-- confetti scattered -->
+  <rect x="8" y="55" width="6" height="6" rx="1" fill="#f472b6" transform="rotate(20 11 58)"/>
+  <rect x="106" y="52" width="5" height="7" rx="1" fill="#facc15" transform="rotate(-25 108 55)"/>
+  <rect x="14" y="82" width="5" height="5" rx="1" fill="#60a5fa" transform="rotate(35 16 84)"/>
+  <rect x="100" y="80" width="6" height="5" rx="1" fill="#f472b6" transform="rotate(-15 103 82)"/>
+  <rect x="38" y="6" width="5" height="5" rx="1" fill="#34d399" transform="rotate(10 40 8)"/>
+  <rect x="76" y="8" width="4" height="6" rx="1" fill="#facc15" transform="rotate(-30 78 11)"/>
+  <rect x="50" y="104" width="6" height="4" rx="1" fill="#f472b6" transform="rotate(15 53 106)"/>
+  <rect x="65" y="106" width="5" height="5" rx="1" fill="#60a5fa" transform="rotate(-20 67 108)"/>
+
+  <!-- star sparkles -->
+  <path d="M60 8 L61.4 12.3 L66 12.3 L62.3 14.9 L63.7 19.2 L60 16.6 L56.3 19.2 L57.7 14.9 L54 12.3 L58.6 12.3Z" fill="#facc15"/>
+  <path d="M10 36 L11 39 L14.2 39 L11.6 40.8 L12.6 44 L10 42.2 L7.4 44 L8.4 40.8 L5.8 39 L9 39Z" fill="#f472b6"/>
+  <path d="M110 36 L111 39 L114.2 39 L111.6 40.8 L112.6 44 L110 42.2 L107.4 44 L108.4 40.8 L105.8 39 L109 39Z" fill="#34d399"/>
+
+  <!-- bottom ribbon streaks -->
+  <path d="M40 96 Q35 110 45 112" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>
+  <path d="M60 100 Q58 112 65 114" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round"/>
+  <path d="M80 96 Q85 110 75 112" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+
+</svg>

@@ -1,0 +1,31 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Digital Rupee (eR) Icon -->
+  <defs>
+    <filter id="glow-rupee" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Central Coin -->
+  <circle cx="32" cy="32" r="24" fill="#042d1a" stroke="#00e5a0" stroke-width="2"/>
+  <circle cx="32" cy="32" r="18" fill="#064024" stroke="#00e5a0" stroke-width="0.5" stroke-dasharray="2 2">
+    <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="6s" repeatCount="indefinite" />
+  </circle>
+
+  <!-- Digital Pulse Rings -->
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#00e5a0" stroke-width="1" opacity="0">
+    <animate attributeName="r" values="24;30" dur="1.5s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.6;0" dur="1.5s" repeatCount="indefinite" />
+  </circle>
+
+  <!-- Rupee Symbol -->
+  <g filter="url(#glow-rupee)">
+    <text x="32" y="42" font-size="28" font-weight="700" fill="#00e5a0" text-anchor="middle" font-family="monospace">₹</text>
+    <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+  </g>
+  
+  <!-- "e" digital tag -->
+  <circle cx="48" cy="20" r="8" fill="#00e5a0"/>
+  <text x="48" y="24" font-size="10" font-weight="900" fill="#0a1e38" text-anchor="middle" font-family="sans-serif">e</text>
+</svg>

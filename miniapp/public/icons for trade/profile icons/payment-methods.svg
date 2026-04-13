@@ -1,0 +1,28 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Clean, Clinical Wallet Base (Subtle Floating Movement) -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -1.5; 0 0" dur="4s" repeatCount="indefinite" />
+    
+    <rect x="14" y="24" width="36" height="24" rx="3" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5" />
+    
+    <!-- Front Flap / Card Peek -->
+    <rect x="14" y="30" width="36" height="18" rx="3" fill="#0a2540" stroke="#00e5a0" stroke-width="1.2" stroke-dasharray="2 1">
+       <animate attributeName="opacity" values="0.8; 1; 0.8" dur="4s" repeatCount="indefinite" />
+    </rect>
+
+    <!-- Interactive Slot Glow -->
+    <path d="M14 30 Q32 26 50 30" fill="none" stroke="#1a4060" stroke-width="2"/>
+
+    <!-- Pulsing "Active" Status Dot -->
+    <circle cx="42" cy="38" r="3" fill="#00e5a0">
+      <animate attributeName="opacity" values="1; 0.3; 1" dur="2s" repeatCount="indefinite" />
+    </circle>
+
+    <!-- Small floating coin accent -->
+    <g transform="translate(22, 40)">
+      <circle cx="0" cy="0" r="4" fill="#042d1a" stroke="#00e5a0" stroke-width="0.8"/>
+      <text x="0" y="2" font-size="5" font-weight="900" fill="#00e5a0" text-anchor="middle" font-family="monospace">₹</text>
+      <animateTransform attributeName="transform" type="scale" values="1;1.15;1" dur="3s" repeatCount="indefinite" additive="sum" />
+    </g>
+  </g>
+</svg>

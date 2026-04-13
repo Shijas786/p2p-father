@@ -167,20 +167,27 @@ export async function broadcastAd(order: any, user: any) {
         const totalFiat = (order.amount * order.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
         const chain = order.chain?.toUpperCase() || 'BSC';
 
-        const msg = [
+        // Trader note (stored in payment_details.note)
+        const traderNote = order.payment_details?.note;
+
+        const lines = [
             `📢 *New ${typeLabel} Ad!*`,
             "",
             `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${formatTokenAmount(order.amount, order.token)}*`,
             `💰 Rate: ₹${order.rate.toLocaleString()}/${order.token}`,
             `🧾 Total: ₹${totalFiat}`,
             `🔗 Chain: ${chain}`,
-        ].join("\n");
+        ];
+
+        if (traderNote) {
+            lines.push("", `📝 *Note:* ${escapeMarkdown(traderNote)}`);
+        }
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const miniAppLink = `https://t.me/${botUser.username}?start=buy_${order.id}`;
         const keyboard = new InlineKeyboard().url(actionLabel, miniAppLink);
 
-        await broadcast(msg, keyboard);
+        await broadcast(lines.join("\n"), keyboard);
     } catch (e) {
         console.error("BroadcastAd error:", e);
     }

@@ -49,6 +49,9 @@ export interface User {
     cdm_phone: string | null;
     cdm_user_name: string | null;
     digital_rupee_id: string | null;
+    bio: string | null;
+    instagram_handle: string | null;
+    x_handle: string | null;
     created_at: string;
     photo_url?: string; // Manual PFP
     total_volume?: number;

@@ -1,0 +1,30 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- podium bars -->
+  <!-- 2nd place -->
+  <rect x="8" y="34" width="14" height="20" rx="2" fill="#0a2540" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="15" y="29" font-size="9" font-weight="700" fill="#3b82f6" text-anchor="middle" font-family="sans-serif">2</text>
+  
+  <!-- 1st place -->
+  <rect x="25" y="24" width="14" height="30" rx="2" fill="#0d3358" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="32" y="19" font-size="9" font-weight="700" fill="#f59e0b" text-anchor="middle" font-family="sans-serif">1</text>
+  
+  <!-- 3rd place -->
+  <rect x="42" y="40" width="14" height="14" rx="2" fill="#0a2540" stroke="#00e5a0" stroke-width="1.2"/>
+  <text x="49" y="35" font-size="9" font-weight="700" fill="#00e5a0" text-anchor="middle" font-family="sans-serif">3</text>
+  
+  <!-- crown on 1st -->
+  <path d="M26 24 L29 18 L32 22 L35 16 L38 22 L41 18 L38 24 Z" fill="#f59e0b" stroke="#d97706" stroke-width="0.8" stroke-linejoin="round">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
+  </path>
+
+  <!-- base line -->
+  <rect x="6" y="54" width="52" height="2.5" rx="1" fill="#1a2a3a"/>
+  
+  <!-- star sparkle top -->
+  <g>
+    <path d="M32 6 L33 9 L36.2 9 L33.6 10.8 L34.6 14 L32 12.2 L29.4 14 L30.4 10.8 L27.8 9 L31 9Z" fill="#f59e0b">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
+    </path>
+    <animateTransform attributeName="transform" type="scale" values="1;1.2;1" dur="2s" repeatCount="indefinite" additive="sum" pivot="32 10" />
+  </g>
+</svg>

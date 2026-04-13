@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { haptic } from '../lib/telegram';
+import { haptic, isTelegramEnvironment } from '../lib/telegram';
 import { IconChainBase, IconChainBsc, IconTokenUSDC, IconTokenUSDT, IconTokenBNB } from '../components/Icons';
 import { BagsStats } from '../components/BagsStats';
 import { TraderProfile } from '../components/TraderProfile';
+import { DEMO_ORDERS } from '../lib/devMocks';
 import './Home.css';
 
 interface Props {
@@ -19,9 +20,10 @@ export function Home({ user }: Props) {
     const [tab, setTab] = useState<'buy' | 'sell'>('buy');
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    // const [feePercentage, setFeePercentage] = useState(0.01);
     const [paymentFilter, setPaymentFilter] = useState('All');
     const [tokenFilter, setTokenFilter] = useState('USDC');
+    const [amountFilter] = useState(0);
+
     const [showProfileId, setShowProfileId] = useState<string | null>(null);
 
     const formatBal = (val: any, decs = 2) => {
@@ -31,12 +33,8 @@ export function Home({ user }: Props) {
         return num.toFixed(decs);
     };
     const [confirmOrder, setConfirmOrder] = useState<any>(null);
-    const [tokenDropdown, setTokenDropdown] = useState(false);
 
     useEffect(() => {
-        // api.stats.get().then(data => {
-        //     if (data.fee_percentage) setFeePercentage(data.fee_percentage);
-        // }).catch(console.error);
     }, []);
 
     useEffect(() => {
@@ -46,6 +44,12 @@ export function Home({ user }: Props) {
     async function loadOrders() {
         setLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                const orderType = tab === 'buy' ? 'sell' : 'buy';
+                setOrders(DEMO_ORDERS.filter(o => o.type === orderType));
+                setLoading(false);
+                return;
+            }
             const orderType = tab === 'buy' ? 'sell' : 'buy';
             const { orders: data } = await api.orders.list(orderType);
             setOrders(data || []);
@@ -71,7 +75,10 @@ export function Home({ user }: Props) {
 
     // Filter orders
     const filteredOrders = orders.filter(order => {
+        // Asset Token
         if (order.token !== tokenFilter) return false;
+        
+        // Payment Method
         if (paymentFilter !== 'All') {
             const methods = order.payment_methods || [];
             if (paymentFilter === 'Bank') {
@@ -80,66 +87,74 @@ export function Home({ user }: Props) {
                 if (!methods.includes(paymentFilter.toUpperCase())) return false;
             }
         }
+
+        // Amount Filter (INR Value)
+        if (amountFilter > 0) {
+            const available = order.amount - (order.filled_amount || 0);
+            const totalInr = available * order.rate;
+            if (totalInr < amountFilter) return false;
+        }
+
         return true;
     });
 
     return (
         <div className="p2p-container">
             <div className="page p2p-page animate-in">
-                {/* Buy/Sell Toggle */}
-                <div className="p2p-toggle">
-                    <button
-                        className={`p2p-toggle-btn ${tab === 'buy' ? 'active buy' : ''}`}
-                        onClick={() => { haptic('selection'); setTab('buy'); }}
-                    >
-                        Buy
-                    </button>
-                    <button
-                        className={`p2p-toggle-btn ${tab === 'sell' ? 'active sell' : ''}`}
-                        onClick={() => { haptic('selection'); setTab('sell'); }}
-                    >
-                        Sell
-                    </button>
-                </div>
-
-                {/* Filters Row */}
-                <div className="p2p-filters">
-                    <div className="p2p-token-selector" onClick={() => setTokenDropdown(!tokenDropdown)}>
-                        <span className="p2p-token-icon">
-                            {tokenFilter === 'USDC' ? <IconTokenUSDC size={20} /> : tokenFilter === 'USDT' ? <IconTokenUSDT size={20} /> : <IconTokenBNB size={20} />}
-                        </span>
-                        <span>{tokenFilter}</span>
-                        <span className="p2p-chevron">▼</span>
-                        {tokenDropdown && (
-                            <div className="p2p-dropdown">
-                                {['USDC', 'USDT', 'BNB'].map(t => (
-                                    <div
-                                        key={t}
-                                        className={`p2p-dropdown-item ${tokenFilter === t ? 'active' : ''}`}
-                                        onClick={(e) => { e.stopPropagation(); setTokenFilter(t); setTokenDropdown(false); }}
-                                    >
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                            {t === 'USDC' ? <IconTokenUSDC size={16} /> : t === 'USDT' ? <IconTokenUSDT size={16} /> : <IconTokenBNB size={16} />}
-                                            {t}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="p2p-payment-filters">
-                        {PAYMENT_FILTERS.map(f => (
+                
+                {/* ── Smart Filter Header ── */}
+                <header className="p2p-header-search">
+                    {/* Buy/Sell Segmented */}
+                    <div className="p2p-segmented-container">
+                        <div className="p2p-segmented-control">
                             <button
-                                key={f}
-                                className={`p2p-filter-chip ${paymentFilter === f ? 'active' : ''}`}
-                                onClick={() => { haptic('selection'); setPaymentFilter(f); }}
+                                className={`p2p-segmented-btn ${tab === 'buy' ? 'active buy' : ''}`}
+                                onClick={() => { haptic('selection'); setTab('buy'); }}
                             >
-                                {f}
+                                Buy
                             </button>
-                        ))}
+                            <button
+                                className={`p2p-segmented-btn ${tab === 'sell' ? 'active sell' : ''}`}
+                                onClick={() => { haptic('selection'); setTab('sell'); }}
+                            >
+                                Sell
+                            </button>
+                        </div>
                     </div>
-                </div>
+
+                    {/* Payment Row */}
+                    <div className="p2p-filter-row">
+                        <div className="p2p-payment-filters">
+                            {PAYMENT_FILTERS.map(f => (
+                                <button
+                                    key={f}
+                                    className={`p2p-filter-chip ${paymentFilter === f ? 'active' : ''}`}
+                                    onClick={() => { haptic('selection'); setPaymentFilter(f); }}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Persistent Asset Tabs (Under Payment Methods) */}
+                    <div className="p2p-asset-tabs-wrap">
+                        <div className="p2p-asset-tabs">
+                            {['USDC', 'USDT', 'BNB'].map(t => (
+                                <button
+                                    key={t}
+                                    className={`p2p-asset-tab ${tokenFilter === t ? 'active' : ''}`}
+                                    onClick={() => { haptic('light'); setTokenFilter(t); }}
+                                >
+                                    <span className="p2p-asset-icon" style={{ display: 'flex', alignItems: 'center' }}>
+                                        {t === 'USDC' ? <IconTokenUSDC size={14} /> : t === 'USDT' ? <IconTokenUSDT size={14} /> : <IconTokenBNB size={14} />}
+                                    </span>
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </header>
 
                 {/* Trader List */}
                 <div className="p2p-list">
@@ -289,7 +304,33 @@ export function Home({ user }: Props) {
                                         <span>@{confirmOrder.username || confirmOrder.first_name || 'Trader'}</span>
                                     </div>
                                 )}
+                                {(confirmOrder.payment_methods || []).length > 0 && (
+                                    <div className="p2p-modal-row" style={{ borderTop: '1px solid #2b2f36', paddingTop: 10, alignItems: 'flex-start' }}>
+                                        <span style={{ paddingTop: 2 }}>Accepts</span>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'flex-end' }}>
+                                            {(confirmOrder.payment_methods as string[]).map((m: string) => (
+                                                <span key={m} style={{
+                                                    fontSize: '10px',
+                                                    fontWeight: 700,
+                                                    padding: '2px 8px',
+                                                    borderRadius: '20px',
+                                                    background: 'rgba(14,203,129,0.12)',
+                                                    color: '#0ecb81',
+                                                    border: '1px solid rgba(14,203,129,0.25)',
+                                                    letterSpacing: '0.03em',
+                                                }}>{m}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                            {/* Show trader's note if set */}
+                            {confirmOrder.payment_details?.note && (
+                                <div style={{ margin: '10px 0 4px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '10px', padding: '10px 12px' }}>
+                                    <div style={{ fontSize: '9px', color: '#eab308', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>📝 Trader's Note</div>
+                                    <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>{confirmOrder.payment_details.note}</div>
+                                </div>
+                            )}
                             <div className="p2p-modal-actions">
                                 <button className="p2p-modal-cancel" onClick={() => setConfirmOrder(null)}>Cancel</button>
                                 <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>

@@ -4,7 +4,7 @@ import { WagmiProvider } from 'wagmi';
 import { useAccount } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig, appKit } from './lib/wagmi';
-import { getTelegramWebApp, setupTelegramApp } from './lib/telegram';
+import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
 
@@ -75,11 +75,18 @@ class ErrorBoundary extends Component<
   }
 }
 
+// ── Dev / local shortcut ──────────────────────────────────────────────────
+// When running outside of Telegram (e.g. `npm run dev` in the browser),
+// skip the wallet selector and the WalletConnect popup entirely so you can
+// iterate on UI without the full auth ceremony every refresh.
+const IS_DEV_MODE = !isTelegramEnvironment();
+
 function AppInner() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, refreshUser, setUser } = useAuth();
   const { address, isConnected } = useAccount();
-  const [walletChosen, setWalletChosen] = useState(false);
-  const [walletMode, setWalletMode] = useState<'bot' | 'external' | null>(null);
+  // In dev mode start with wallet already "chosen" so the selector is skipped
+  const [walletChosen, setWalletChosen] = useState(IS_DEV_MODE);
+  const [walletMode, setWalletMode] = useState<'bot' | 'external' | null>(IS_DEV_MODE ? 'bot' : null);
   const [connecting, setConnecting] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
 
@@ -162,11 +169,26 @@ function AppInner() {
     try {
       console.log('[P2P] Toggling wallet. Current mode:', user?.wallet_type);
 
-      if (user?.wallet_type === 'external') {
-        // We do NOT disconnect Wagmi here.
-        // We want to keep the session alive so they can switch back instantly.
+      // 🧪 High-Priority Demo/Dev Override
+      if (IS_DEV_MODE) {
+        setConnecting(true);
+        setTimeout(() => {
+          const isCurrentlyExternal = user?.wallet_type === 'external';
+          const nextMode = isCurrentlyExternal ? 'bot' : 'external';
+          const nextAddr = isCurrentlyExternal 
+            ? '0x1234567890abcdef1234567890abcdef12345678'  // Bot Demo
+            : '0xabcdef1234567890abcdef1234567890abcdef12'; // Ext Demo
 
-        // Instantly switch back to Bot Wallet
+          setUser({ ...user, wallet_type: nextMode, wallet_address: nextAddr } as any);
+          setWalletMode(nextMode);
+          setConnecting(false);
+          console.log('[P2P] Demo Switch Completed:', nextMode);
+        }, 300);
+        return;
+      }
+
+      // ── Real API Logic (Production) ─────────────────────────────────────────
+      if (user?.wallet_type === 'external') {
         setConnecting(true);
         api.wallet.connectBot()
           .then(() => refreshUser())
@@ -175,33 +197,21 @@ function AppInner() {
             setConnecting(false);
           })
           .catch(err => {
-            console.error('[P2P] Error auto-switching to bot wallet:', err);
+            console.error('[P2P] Switch failed:', err);
             setConnecting(false);
           });
-
       } else {
-        // Switching to External Wallet
         setWalletMode('external');
-
-        // If they already have an active WalletConnect session, just use it!
         if (isConnected && address) {
-          console.log('[P2P] Existing Wagmi session found. Reconnecting instantly...');
           setConnecting(true);
           api.wallet.connectExternal(address)
             .then(() => refreshUser())
-            .then(() => {
-              setConnecting(false);
-            })
-            .catch(err => {
-              console.error('[P2P] Error reconnecting to external wallet:', err);
-              setConnecting(false);
-            });
+            .then(() => setConnecting(false))
+            .catch(() => setConnecting(false));
         } else {
-          // No active session, they must connect
           await appKit.open();
         }
       }
-
     } catch (err) {
       console.error('[P2P] Error toggling wallet:', err);
     }

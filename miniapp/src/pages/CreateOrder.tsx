@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
 import { useBalance } from 'wagmi';
 import { bsc, base } from 'wagmi/chains';
+import { formatError } from '../lib/utils';
 import './CreateOrder.css';
 
 const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK', 'CDM', 'DIGITAL_RUPEE'];
@@ -27,6 +28,7 @@ export function CreateOrder() {
     const [amount, setAmount] = useState('');
     const [rate, setRate] = useState('');
     const [methods, setMethods] = useState<string[]>(['UPI']);
+    const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
@@ -177,15 +179,8 @@ export function CreateOrder() {
             return true;
         } catch (err: any) {
             console.error("[SmartSwitch] Error:", err);
-            if (err.message === "SWITCH_TIMEOUT" || (err.code && err.code !== 4001)) {
-                showToast("Wallet unresponsive. Please switch manually.", "warning");
-                appKit.open({ view: 'Networks' });
-            } else if (err.code === 4001) {
-                showToast("Switch rejected by user", "error");
-            } else {
-                showToast("Switch failed. Try the network menu.", "error");
-                appKit.open({ view: 'Networks' });
-            }
+            const cleanMsg = formatError(err);
+            showToast(cleanMsg, "error");
             setSubmitting(false);
             return false;
         }
@@ -252,7 +247,9 @@ export function CreateOrder() {
             showToast("Approved successfully!", "success");
         } catch (err: any) {
             console.error(err);
-            setError(err.shortMessage || err.message || 'Approval failed');
+            const cleanMsg = formatError(err);
+            setError(cleanMsg);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setSubmitting(false);
@@ -325,13 +322,16 @@ export function CreateOrder() {
                 amount: parseFloat(amount),
                 rate: effectiveRate,
                 payment_methods: methods,
+                note: note.trim() || undefined,
             });
 
             haptic('success');
             navigate('/');
         } catch (err: any) {
             console.error(err);
-            setError(err.shortMessage || err.message || 'Failed to create order');
+            const cleanMsg = formatError(err);
+            setError(cleanMsg);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setSubmitting(false);
@@ -458,6 +458,23 @@ export function CreateOrder() {
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Note for traders */}
+                            <div className="co-section-title" style={{ marginTop: '16px' }}>7. Note <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '11px' }}>(optional)</span></div>
+                            <textarea
+                                className="co-textarea"
+                                placeholder="e.g. UPI transfer only, no GPay. Trades above ₹10k only."
+                                value={note}
+                                onChange={e => setNote(e.target.value)}
+                                maxLength={200}
+                                rows={3}
+                                style={{ resize: 'none', lineHeight: '1.5' }}
+                            />
+                            {note && (
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '2px' }}>
+                                    {note.length}/200
+                                </div>
+                            )}
                         </div>
 
                         {/* Summary & Vault */}

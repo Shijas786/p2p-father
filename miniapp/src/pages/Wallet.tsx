@@ -8,7 +8,7 @@ import { appKit } from '../lib/wagmi';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
-import { copyToClipboard } from '../lib/utils';
+import { copyToClipboard, formatError } from '../lib/utils';
 import { useToast } from '../components/Toast';
 import './Wallet.css';
 
@@ -128,7 +128,9 @@ export function Wallet({ user }: Props) {
             setSendAmount('');
             setTimeout(() => setShowSend(false), 2000);
         } catch (err: any) {
-            setSendResult(`error:${err.message}`);
+            const cleanMsg = formatError(err);
+            setSendResult(`error:${cleanMsg}`);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setSending(false);
@@ -267,8 +269,9 @@ export function Wallet({ user }: Props) {
             await refetchVaultAllowance();
         } catch (err: any) {
             console.error(err);
-            setVaultError(err.message || 'Approval failed');
-            showToast("Approval failed", "error");
+            const cleanMsg = formatError(err);
+            setVaultError(cleanMsg);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setVaultLoading(false);
@@ -373,8 +376,9 @@ export function Wallet({ user }: Props) {
             }, 1500);
         } catch (err: any) {
             console.error(err);
-            setVaultError(err.message || 'Operation failed');
-            showToast("Operation failed", "error");
+            const cleanMsg = formatError(err);
+            setVaultError(cleanMsg);
+            showToast(cleanMsg, "error");
             haptic('error');
         } finally {
             setVaultLoading(false);
@@ -461,8 +465,7 @@ export function Wallet({ user }: Props) {
 
                 {showVaultInfo && (
                     <div className="vault-info-banner animate-in">
-                        <IconInfo size={12} color="#6366f1" />
-                        <span>Funds here are dedicated to your active P2P sell listings.</span>
+                        <span>Funds in the P2P Vault are held securely on-chain. You must deposit funds here before you can create P2P Sell ads.</span>
                     </div>
                 )}
 

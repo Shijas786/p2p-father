@@ -115,6 +115,7 @@ export const api = {
             amount: number;
             rate: number;
             payment_methods: string[];
+            note?: string;
         }) =>
             request<{ order: any }>('/orders', {
                 method: 'POST',

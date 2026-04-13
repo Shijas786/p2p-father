@@ -118,6 +118,31 @@
     width: 0;
 }
 
+/* Standalone Note Textarea */
+.co-textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #fff;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.co-textarea:focus {
+    border-color: var(--green);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.co-textarea::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
 .co-input-label {
     font-weight: 800;
     color: var(--text-muted);

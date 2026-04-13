@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { haptic } from '../lib/telegram';
+import { haptic, isTelegramEnvironment } from '../lib/telegram';
+import { DEMO_TRADES } from '../lib/devMocks';
 import './Orders.css';
 
 interface Props {
@@ -34,6 +35,12 @@ export function Orders({ user }: Props) {
     async function loadTrades() {
         setLoading(true);
         try {
+            // Dev mode: use demo trades so both tabs are populated
+            if (!isTelegramEnvironment()) {
+                setTrades(DEMO_TRADES);
+                setLoading(false);
+                return;
+            }
             const data = await api.trades.list();
             setTrades(data.trades || []);
         } catch {

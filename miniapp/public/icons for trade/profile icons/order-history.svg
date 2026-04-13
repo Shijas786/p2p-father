@@ -1,0 +1,47 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- document base -->
+  <rect x="14" y="8" width="32" height="42" rx="4" fill="#0a2030" stroke="#1a4060" stroke-width="1.2"/>
+  <!-- dog ear -->
+  <path d="M38 8 L46 16 L38 16 Z" fill="#071520" stroke="#1a4060" stroke-width="1"/>
+  <rect x="38" y="8" width="8" height="8" rx="0" fill="#071520" stroke="#1a4060" stroke-width="1"/>
+  
+  <!-- line items with green ticks (completed trades) -->
+  <g>
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="4s" repeatCount="indefinite" />
+    <circle cx="21" cy="24" r="3" fill="#042d1a" stroke="#00e5a0" stroke-width="1"/>
+    <path d="M19.5 24 L21 25.5 L22.8 22.5" stroke="#00e5a0" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <line x1="27" y1="24" x2="38" y2="24" stroke="#1a4060" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <g>
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="4s" begin="1s" repeatCount="indefinite" />
+    <circle cx="21" cy="33" r="3" fill="#042d1a" stroke="#00e5a0" stroke-width="1"/>
+    <path d="M19.5 33 L21 34.5 L22.8 31.5" stroke="#00e5a0" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <line x1="27" y1="33" x2="40" y2="33" stroke="#1a4060" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- pending row -->
+  <circle cx="21" cy="42" r="3" fill="#1a1500" stroke="#f59e0b" stroke-width="1">
+    <animate attributeName="stroke-opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="21" cy="42" r="1" fill="#f59e0b"/>
+  <line x1="27" y1="42" x2="36" y2="42" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- clock overlay bottom right -->
+  <g>
+    <circle cx="46" cy="46" r="12" fill="#071a2e" stroke="#00e5a0" stroke-width="1.5"/>
+    <circle cx="46" cy="46" r="8" fill="#0a2540"/>
+    
+    <!-- Minute Hand -->
+    <line x1="46" y1="41" x2="46" y2="46" stroke="#00e5a0" stroke-width="1.5" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="rotate" from="0 46 46" to="360 46 46" dur="60s" repeatCount="indefinite" />
+    </line>
+    
+    <!-- Hour Hand -->
+    <line x1="46" y1="46" x2="50" y2="48" stroke="#00e5a0" stroke-width="1.5" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="rotate" from="0 46 46" to="360 46 46" dur="720s" repeatCount="indefinite" />
+    </line>
+    
+    <circle cx="46" cy="46" r="1.2" fill="#00e5a0"/>
+  </g>
+</svg>

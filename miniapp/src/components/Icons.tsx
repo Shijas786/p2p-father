@@ -76,6 +76,34 @@ export function IconUser({ size = defaults.size, color = defaults.color, classNa
     );
 }
 
+/** 🕶️ Custom Profile Icon with Cooling Glasses */
+/** 👤 Professional Binance-style Profile Icon */
+export function IconProfile({ size = 28, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+            {/* Minimalist Outer Ring */}
+            <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeWidth="1.2" opacity="0.1" />
+            
+            {/* Professional Silhouette Head */}
+            <circle cx="12" cy="8.5" r="3.8" fill="currentColor" stroke="currentColor" strokeWidth="0.5" />
+            
+            {/* Professional Silhouette Shoulders */}
+            <path 
+                d="M5.5 19.5C5.5 16.5 8.5 14 12 14C15.5 14 18.5 16.5 18.5 19.5" 
+                stroke="currentColor" 
+                strokeWidth="1.8" 
+                strokeLinecap="round" 
+            />
+            
+            <style>{`
+                .active .IconProfile, .nav-tab.active svg {
+                    filter: drop-shadow(0 0 3px rgba(240, 185, 11, 0.2));
+                }
+            `}</style>
+        </svg>
+    );
+}
+
 export function IconSell({ size = defaults.size, className }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -384,6 +412,68 @@ export function IconArrowLeft({ size = defaults.size, color = defaults.color, cl
     );
 }
 
+export function IconMegaphone({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M18.8 6c.45 0 .8.36.8.8V17.2c0 .44-.35.8-.8.8l-4.3-.4c-.45-.04-1.3-.1-1.3-.1s-4.8 5.4-5.2 5.4-.4-.4-.4-.4l.8-5.7H4.4c-.44 0-.8-.36-.8-.8V6.8c0-.44.36-.8.8-.8h14.4z" />
+            <path d="M13.2 6V5a2 2 0 00-2-2 2 2 0 00-2 2v1" opacity="0.5" />
+        </svg>
+    );
+}
+
+export function IconPhoneMock({ size = 40, className }: IconProps) {
+    return (
+        <svg width={size} height={size * 1.5} viewBox="0 0 24 36" fill="none" className={className}>
+            <rect width="24" height="36" rx="4" fill="#374151" />
+            <rect x="2" y="3" width="20" height="26" rx="1" fill="#1f2937" />
+            <rect x="8" y="31" width="8" height="2" rx="1" fill="#4B5563" />
+            <rect x="10" y="31" width="4" height="2" rx="1" fill="#1f2937" opacity="0.3" />
+            <path d="M6 8h12M6 12h12M6 16h8" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+        </svg>
+    );
+}
+
+export function IconCoins({ size = 40, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 40 40" fill="none" className={className}>
+            <circle cx="20" cy="20" r="14" fill="#4b5563" />
+            <circle cx="20" cy="20" r="14" stroke="#9ca3af" strokeWidth="2" />
+            <text x="20" y="27" textAnchor="middle" fill="white" fontSize="20" fontWeight="bold" fontFamily="system-ui">₹</text>
+            <circle cx="12" cy="28" r="10" fill="#374151" stroke="#9ca3af" strokeWidth="1.5" />
+            <text x="12" y="34" textAnchor="middle" fill="#9ca3af" fontSize="14" fontWeight="bold" fontFamily="system-ui">₹</text>
+        </svg>
+    );
+}
+
+export function IconSearchMagnify({ size = 40, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 40 40" fill="none" className={className}>
+            <rect x="5" y="5" width="25" height="25" rx="2" fill="#374151" opacity="0.5" />
+            <path d="M8 10h19M8 15h19M8 20h12" stroke="#4b5563" strokeWidth="2" />
+            <circle cx="25" cy="25" r="8" fill="#1f2937" stroke="#3b82f6" strokeWidth="2" />
+            <line x1="30" y1="30" x2="36" y2="36" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
+            <text x="25" y="27" textAnchor="middle" fill="#3b82f6" fontSize="6" fontWeight="800">Match</text>
+        </svg>
+    );
+}
+
+export function IconChevronRight({ size = defaults.size, color = 'white', className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <polyline points="9 18 15 12 9 6" />
+        </svg>
+    );
+}
+
+export function IconTokenBTC({ size = defaults.size, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+            <circle cx="12" cy="12" r="12" fill="#f7931a" />
+            <text x="12" y="16.5" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="system-ui">₿</text>
+        </svg>
+    );
+}
+
 export function IconQr({ size = defaults.size, color = defaults.color, className }: IconProps) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -392,6 +482,68 @@ export function IconQr({ size = defaults.size, color = defaults.color, className
             <line x1="8" y1="8" x2="8" y2="8"></line>
             <line x1="8" y1="16" x2="8" y2="16"></line>
             <line x1="16" y1="16" x2="16" y2="16"></line>
+        </svg>
+    );
+}
+export function IconFilter({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <line x1="4" y1="21" x2="4" y2="14" />
+            <line x1="4" y1="10" x2="4" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="3" />
+            <line x1="20" y1="21" x2="20" y2="16" />
+            <line x1="20" y1="12" x2="20" y2="3" />
+            <line x1="2" y1="14" x2="6" y2="14" />
+            <line x1="10" y1="8" x2="14" y2="8" />
+            <line x1="18" y1="16" x2="22" y2="16" />
+        </svg>
+    );
+}
+
+export function IconExternalLink({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+    );
+}
+
+export function IconHourglass({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M5 2h14M5 22h14M15 2v5l-3 3-3-3V2M9 22v-5l3-3 3 3v5" />
+        </svg>
+    );
+}
+
+export function IconAlertCircle({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+    );
+}
+
+export function IconInstagram({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+            <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+        </svg>
+    );
+}
+
+export function IconSocialX({ size = defaults.size, color = defaults.color, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M4 4l11.733 16h4.267l-11.733-16z" />
+            <path d="M4 20l6.768-6.768m2.464-2.464l6.768-6.768" opacity="0.5" />
         </svg>
     );
 }

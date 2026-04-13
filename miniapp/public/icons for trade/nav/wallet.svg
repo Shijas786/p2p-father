@@ -1,0 +1,27 @@
+<svg width="64" height="64" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Asset: Wallet Nav Icon (V4 - USDC/USDT Coin Drop) -->
+  <g fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Professional Wallet Silhouette -->
+    <path d="M20 12V8H4a2 2 0 0 0-2 2v9a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V15" />
+    <rect x="18" y="12" width="4" height="3" rx="1" />
+
+    <!-- USDC Drop (Blueish) -->
+    <g opacity="0">
+      <circle cx="8" cy="14" r="3" fill="#00d2ff" stroke="none" />
+      <text x="8" y="16" font-size="5" font-weight="900" fill="#fff" text-anchor="middle" font-family="sans-serif" stroke="none">$</text>
+      <animate attributeName="opacity" values="0; 1; 1; 0" keyTimes="0; 0.2; 0.8; 1" dur="4s" repeatCount="indefinite" />
+      <animateTransform attributeName="transform" type="translate" values="0 -10; 0 0" dur="4s" repeatCount="indefinite" />
+    </g>
+
+    <!-- USDT Drop (Greenish) -->
+    <g opacity="0">
+      <circle cx="15" cy="14" r="3" fill="#00e5a0" stroke="none" />
+      <text x="15" y="16" font-size="5" font-weight="900" fill="#fff" text-anchor="middle" font-family="sans-serif" stroke="none">₮</text>
+      <animate attributeName="opacity" values="0; 1; 1; 0" keyTimes="0; 0.2; 0.8; 1" dur="4s" begin="2s" repeatCount="indefinite" />
+      <animateTransform attributeName="transform" type="translate" values="0 -10; 0 0" dur="4s" begin="2s" repeatCount="indefinite" />
+    </g>
+
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -0.5; 0 0" dur="4s" repeatCount="indefinite" additive="sum" />
+  </g>
+</svg>
