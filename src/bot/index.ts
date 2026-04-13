@@ -177,6 +177,7 @@ export async function broadcastAd(order: any, user: any) {
             `💰 Rate: ₹${order.rate.toLocaleString()}/${order.token}`,
             `🧾 Total: ₹${totalFiat}`,
             `🔗 Chain: ${chain}`,
+            `💳 Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
         ];
 
         if (traderNote) {
