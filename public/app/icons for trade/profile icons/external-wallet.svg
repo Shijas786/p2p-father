@@ -1,0 +1,36 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- External Wallet (WalletConnect) Beacon Concept -->
+  <defs>
+    <filter id="beacon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Global Connectivity Shell -->
+  <path d="M32 10 Q54 10 54 32 Q54 54 32 54 Q10 54 10 32 Q10 10 32 10" fill="none" stroke="#1a4060" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.4"/>
+  
+  <!-- Central Link Hub -->
+  <circle cx="32" cy="32" r="16" fill="#0a1e38" stroke="#00e5a0" stroke-width="2"/>
+  
+  <!-- Pulsing Connection Nodes -->
+  <g filter="url(#beacon-glow)">
+    <circle cx="24" cy="24" r="3" fill="#00e5a0">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="40" cy="24" r="3" fill="#00e5a0">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" begin="0.5s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="24" cy="40" r="3" fill="#00e5a0">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" begin="1s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="40" cy="40" r="3" fill="#00e5a0">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" begin="1.5s" repeatCount="indefinite" />
+    </circle>
+  </g>
+
+  <!-- Hub Core Status -->
+  <circle cx="32" cy="32" r="6" fill="#00e5a0">
+    <animate attributeName="r" values="5;7;5" dur="3s" repeatCount="indefinite" />
+  </circle>
+</svg>

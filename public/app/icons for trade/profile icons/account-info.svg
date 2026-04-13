@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Profile/Info Circle -->
+  <circle cx="32" cy="32" r="26" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  
+  <!-- "i" Info Symbol Design -->
+  <circle cx="32" cy="22" r="3" fill="#00e5a0"/>
+  <rect x="29" y="30" width="6" height="16" rx="1.5" fill="#00e5a0"/>
+  <rect x="27" y="44" width="10" height="2" rx="1" fill="#00e5a0" opacity="0.6"/>
+
+  <!-- Decorative Orbit -->
+  <path d="M12 32 A20 20 0 0 1 52 32" fill="none" stroke="#00e5a0" stroke-width="0.8" stroke-dasharray="2 4" opacity="0.4"/>
+  
+  <!-- Subtle Corner Accents -->
+  <path d="M14 14 L20 14 M14 14 L14 20" stroke="#1a4060" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M50 50 L44 50 M50 50 L50 44" stroke="#1a4060" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cool Animated Ads Icon (Bold Default Style) -->
+  <g fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Monitor Frame -->
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+
+    <!-- Animated Scanning Line -->
+    <line x1="4" y1="6" x2="20" y2="6" stroke-width="1" opacity="0.6">
+       <animate attributeName="y1" values="6; 14; 6" dur="3s" repeatCount="indefinite" />
+       <animate attributeName="y2" values="6; 14; 6" dur="3s" repeatCount="indefinite" />
+       <animate attributeName="opacity" values="0.2; 0.8; 0.2" dur="3s" repeatCount="indefinite" />
+    </line>
+
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -0.5; 0 0" dur="4s" repeatCount="indefinite" />
+  </g>
+</svg>

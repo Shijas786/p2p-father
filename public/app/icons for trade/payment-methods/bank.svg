@@ -1,0 +1,23 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bank Pillars and Pediment -->
+  <!-- Roof/Pediment -->
+  <path d="M10 24 L32 10 L54 24 Z" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  
+  <!-- Pillars -->
+  <rect x="14" y="24" width="6" height="24" fill="#0d3358" stroke="#1a4060" stroke-width="1"/>
+  <rect x="29" y="24" width="6" height="24" fill="#0d3358" stroke="#1a4060" stroke-width="1"/>
+  <rect x="44" y="24" width="6" height="24" fill="#0d3358" stroke="#1a4060" stroke-width="1"/>
+  
+  <!-- Steps/Base -->
+  <rect x="8" y="48" width="48" height="6" rx="1" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+
+  <!-- Shimmering Pillar (Highlight) -->
+  <rect x="29" y="24" width="6" height="24" fill="#00e5a0" opacity="0.1">
+    <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2s" repeatCount="indefinite" />
+  </rect>
+
+  <!-- Glowing Door/Center -->
+  <rect x="30" y="38" width="4" height="10" rx="1" fill="#00e5a0">
+    <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite" />
+  </rect>
+</svg>

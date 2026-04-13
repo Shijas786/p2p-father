@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Wallet Body (Back) -->
+  <rect x="12" y="24" width="40" height="28" rx="4" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5"/>
+  
+  <!-- Wallet Flap/Front Layer -->
+  <rect x="12" y="32" width="40" height="20" rx="4" fill="#0a2540" stroke="#00e5a0" stroke-width="1.2" stroke-dasharray="2 1"/>
+  
+  <!-- Wallet Slot/Opening -->
+  <path d="M12 32 Q32 26 52 32" fill="none" stroke="#1a4060" stroke-width="2"/>
+  
+  <!-- Receiving Arrow (Dynamic) -->
+  <g>
+    <!-- Sliding animation -->
+    <animateTransform attributeName="transform" type="translate" values="42 8; 42 12; 42 8" dur="2s" repeatCount="indefinite" />
+    
+    <!-- Downward incoming arrow -->
+    <path d="M0 0 L0 18 M-6 12 L0 18 L6 12" fill="none" stroke="#00e5a0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Glow effect -->
+    <circle cx="0" cy="18" r="5" fill="#00e5a0" opacity="0.1">
+      <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="r" values="4;7;4" dur="2s" repeatCount="indefinite" />
+    </circle>
+  </g>
+
+  <!-- Accent Detail -->
+  <rect x="18" y="40" width="8" height="4" rx="1" fill="#1a4060"/>
+  <rect x="30" y="40" width="12" height="4" rx="1" fill="#1a4060"/>
+</svg>
