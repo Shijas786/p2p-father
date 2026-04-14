@@ -925,17 +925,10 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
             auto_release_at: new Date(Date.now() + parseInt(env.AUTO_RELEASE_SECONDS) * 1000).toISOString() as any,
         });
 
-        // SYNC ON-CHAIN if it's a contract trade
-        if (trade.on_chain_trade_id) {
-            try {
-                console.log(`[MINIAPP] Syncing fiat payment for trade ${trade.on_chain_trade_id} on-chain...`);
-                await escrow.markFiatSent(trade.on_chain_trade_id, trade.chain as any);
-            } catch (err: any) {
-                console.error(`[MINIAPP] Failed to sync fiat status on-chain for trade ${trade.on_chain_trade_id}:`, err.message);
-                // We don't fail the request here, standard practice for post-DB side effects
-                // but ideally we should have a retry queue.
-            }
-        }
+        // Note: We no longer sync 'markFiatSent' on-chain from the backend.
+        // The contract correctly requires ONLY the buyer to perform this action.
+        // The buyer's own interaction via the Mini App frontend handles the on-chain status,
+        // while our database handles the internal status for notifications and auto-release timers.
 
         res.json({ success: true });
 

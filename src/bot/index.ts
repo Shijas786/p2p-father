@@ -59,6 +59,16 @@ function getExplorerUrl(txHash: string, chain: 'base' | 'bsc' = 'base'): string 
     return `${baseUrl}/tx/${txHash}`;
 }
 
+async function safeEditMessage(ctx: BotContext, text: string, extra: any = {}) {
+    try {
+        await ctx.editMessageText(text, extra);
+    } catch (err: any) {
+        // Fallback to regular reply if edit fails
+        console.warn("[Bot] safeEditMessage failing, falling back to ctx.reply:", err.message);
+        await ctx.reply(text, extra);
+    }
+}
+
 let cachedBotInfo: any = null;
 async function getBotInfo() {
     if (!cachedBotInfo) {
@@ -87,7 +97,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
         
         while (attempts < maxAttempts) {
             try {
-                await bot.api.sendMessage(chatId, message, { parse_mode: "Markdown", reply_markup: keyboard });
+                await bot.api.sendMessage(chatId, message, { parse_mode: "MarkdownV2", reply_markup: keyboard });
                 return; // Success
             } catch (error: any) {
                 attempts++;
@@ -117,7 +127,9 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
 
 // Escape Markdown special characters in text to prevent parse failures
 function escapeMarkdown(text: string): string {
-    return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+    if (!text) return "";
+    // Telegram MarkdownV2 requires escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
+    return text.toString().replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
@@ -133,18 +145,18 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         const chain = trade.chain || order?.chain || 'bsc';
 
         // Build tx link
-        let txLine = "✅ Escrowed & settled on-chain";
+        let txLine = "✅ Escrowed \\& settled on\\-chain";
         if (trade.release_tx_hash && !trade.release_tx_hash.startsWith('relayed')) {
             const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
-            txLine = `✅ [View Transaction](${explorer}${trade.release_tx_hash})`;
+            txLine = `✅ [View Transaction](${escapeMarkdown(explorer)}${escapeMarkdown(trade.release_tx_hash)})`;
         }
 
         const msg = [
-            "🎉 *Trade Completed!*",
+            "🎉 *Trade Completed\\!*",
             "",
-            `${seller} sold *${formatTokenAmount(trade.amount, trade.token)}* to ${buyer}`,
-            `💰 Deal: ₹${totalFiat}`,
-            `🔗 Chain: ${chain.toUpperCase()}`,
+            `${seller} sold *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}* to ${buyer}`,
+            `💰 Deal: ₹${escapeMarkdown(totalFiat)}`,
+            `🔗 Chain: ${escapeMarkdown(chain.toUpperCase())}`,
             "",
             txLine,
             "⚡ Trade safe with P2PFather → /start",
@@ -171,13 +183,13 @@ export async function broadcastAd(order: any, user: any) {
         const traderNote = order.payment_details?.note;
 
         const lines = [
-            `📢 *New ${typeLabel} Ad!*`,
+            `📢 *New ${typeLabel} Ad\\!*`,
             "",
-            `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${formatTokenAmount(order.amount, order.token)}*`,
-            `💰 Rate: ₹${order.rate.toLocaleString()}/${order.token}`,
-            `🧾 Total: ₹${totalFiat}`,
-            `🔗 Chain: ${chain}`,
-            `💳 Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
+            `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${escapeMarkdown(formatTokenAmount(order.amount, order.token))}*`,
+            `💰 Rate: ₹${escapeMarkdown(order.rate.toLocaleString())}/${escapeMarkdown(order.token)}`,
+            `🧾 Total: ₹${escapeMarkdown(totalFiat)}`,
+            `🔗 Chain: ${escapeMarkdown(chain)}`,
+            `💳 Payment: ${escapeMarkdown(order.payment_methods?.join(", ") || "UPI")}`,
         ];
 
         if (traderNote) {
@@ -1558,7 +1570,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const allOrders = await db.getActiveOrders(filterType, undefined, 100);
 
                 if (allOrders.length === 0) {
-                    await ctx.editMessageText(
+                    await safeEditMessage(ctx, 
                         [
                             `📢 *${label} Ads*`,
                             "",
@@ -1622,7 +1634,7 @@ bot.on("callback_query:data", async (ctx) => {
                 }
                 keyboard.text("🔄 Refresh", `ads:${filterKey}:${page}`).text("⬅️ Back", "ads_back");
 
-                await ctx.editMessageText(
+                await safeEditMessage(ctx, 
                     [
                         `📢 *Live ${label} Ads*`,
                         `   _${allOrders.length} ads  •  Page ${page + 1}/${totalPages}_`,
@@ -1635,7 +1647,7 @@ bot.on("callback_query:data", async (ctx) => {
                     { parse_mode: "Markdown", reply_markup: keyboard }
                 );
             } catch (error) {
-                await ctx.editMessageText("❌ Failed to load ads. Database may not be configured.");
+                await safeEditMessage(ctx, "❌ Failed to load ads. Database may not be configured.");
             }
             await ctx.answerCallbackQuery();
         }
