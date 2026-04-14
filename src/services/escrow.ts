@@ -336,9 +336,13 @@ class EscrowService {
                 const balanceStr = await this.getVaultBalance(order.wallet_address, tokenAddress, order.chain);
                 const balance = parseFloat(balanceStr);
 
-                // This check is simplistic (order vs total balance). 
-                // Ideally we should sum up all orders for a user and compare vs balance.
-                // But for "ghost ad" detection, if balance < order.amount, it's definitely invalid.
+                if (balance < order.amount) {
+                    invalidOrderIds.add(order.id);
+                }
+            } catch (err) {
+                console.error(`[ESCROW] Failed to validate order ${order.id}:`, err);
+            }
+        }));
 
         return invalidOrderIds;
     }
