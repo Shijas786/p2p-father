@@ -128,8 +128,8 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
 // Escape Markdown special characters in text to prevent parse failures
 function escapeMarkdown(text: string): string {
     if (!text) return "";
-    // Telegram MarkdownV2 requires escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
-    return text.toString().replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+    // Telegram MarkdownV2 requires escaping: _ * [ ] ( ) ~ ` > # + - = | { } . ! \
+    return text.toString().replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 }
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
@@ -258,12 +258,12 @@ bot.use(async (ctx, next) => {
                 [
                     "💸 *Ready to Trade?* ⚡",
                     "",
-                    "Browsing and listing ads is super easy, but we jump into DMs to keep your details safe.",
+                    "Browsing and listing ads is super easy, but we jump into DMs to keep your details safe\\.",
                     "",
-                    "📦 *Tap below to Open Bot*, then launch the *P2PFather App* to finish! 🏁",
+                    "📦 *Tap below to Open Bot*, then launch the *P2PFather App* to finish\\! 🏁",
                 ].join("\n"),
                 {
-                    parse_mode: "Markdown",
+                    parse_mode: "MarkdownV2",
                     reply_markup: keyboard
                 }
             );
@@ -292,8 +292,8 @@ bot.on("my_chat_member", async (ctx) => {
         if (oldStatus === "left" || oldStatus === "kicked" || oldStatus === "restricted") {
             await groupManager.addGroup(chat.id);
             await ctx.reply(
-                "🚀 *P2PFather Bot Activated!*\n\nI will post live buy/sell ads here.",
-                { parse_mode: "Markdown" }
+                "🚀 *P2PFather Bot Activated\\!*\n\nI will post live buy/sell ads here\\.",
+                { parse_mode: "MarkdownV2" }
             );
         }
     } else if (status === "left" || status === "kicked") {
@@ -316,12 +316,12 @@ bot.command("broadcast", async (ctx) => {
 
     for (const userId of userIds) {
         try {
-            await ctx.api.sendMessage(userId, `📢 *Announcement*\n\n${message}`, { parse_mode: "Markdown" });
+            await ctx.api.sendMessage(userId, `📢 *Announcement*\\n\\n${escapeMarkdown(message)}`, { parse_mode: "MarkdownV2" });
             sent++;
             await new Promise(r => setTimeout(r, 50)); // Rate limit safety
         } catch (e) { /* ignore blocked users */ }
     }
-    await ctx.reply(`✅ Broadcast complete! Sent to ${sent}/${userIds.length} users.`);
+    await ctx.reply(`✅ Broadcast complete\\! Sent to ${sent}/${userIds.length} users\\.`);
 });
 
 bot.command("ping", async (ctx) => {
@@ -346,11 +346,11 @@ bot.command(["start", "open"], async (ctx) => {
                 [
                     "📢 *Create a New Ad*",
                     "",
-                    "Use our Mini App for the best experience! 🚀",
+                    "Use our Mini App for the best experience\\! 🚀",
                     "",
                     "Tap below to open the ad creation page:",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             return;
         }
@@ -366,11 +366,11 @@ bot.command(["start", "open"], async (ctx) => {
             [
                 "📢 *Create a New Ad*",
                 "",
-                "Use our Mini App for the best experience! 🚀",
+                "Use our Mini App for the best experience\\! 🚀",
                 "",
                 "Tap below to open the ad creation page:",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
         return;
     }
@@ -383,7 +383,7 @@ bot.command(["start", "open"], async (ctx) => {
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
-            await ctx.reply(`🔍 *Viewing Ad #${orderId.slice(0, 8)}*`, { parse_mode: "Markdown", reply_markup: keyboard });
+            await ctx.reply(`🔍 *Viewing Ad \\#${escapeMarkdown(orderId.slice(0, 8))}*`, { parse_mode: "MarkdownV2", reply_markup: keyboard });
             return;
         } else {
             await ctx.reply("❌ Ad not found or no longer active.");
@@ -430,13 +430,13 @@ bot.command(["start", "open"], async (ctx) => {
     const welcome = [
         `👋 *Welcome to the P2PFather Platform*`,
         "",
-        "Secure, decentralized settlement at your fingertips.",
+        "Secure, decentralized settlement at your fingertips\\.",
         "",
         "🔐 *Your Wallet Address:*",
-        `\`${user.wallet_address}\``,
+        `\`${escapeMarkdown(user.wallet_address || '')}\``,
         "",
-        "🚀 **Ready to Trade?**",
-        "Open our Mini App to browse ads, manage your portfolio, and list your own offers in a few taps!",
+        "🚀 *Ready to Trade?*",
+        "Open our Mini App to browse ads, manage your portfolio, and list your own offers in a few taps\\!",
     ].join("\n");
 
     const cacheBuster = `?v=${Date.now()}`;
@@ -456,7 +456,7 @@ bot.command(["start", "open"], async (ctx) => {
         });
     } catch (err) {
         console.error("Failed to update user specific menu button:", err);
-        await ctx.reply(`*🛠 System Debug Error*\nFailed to update menu button: ${err}`, { parse_mode: "Markdown" });
+        await ctx.reply(`*🛠 System Debug Error*\\nFailed to update menu button: ${escapeMarkdown(String(err))}`, { parse_mode: "MarkdownV2" });
     }
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
@@ -470,7 +470,7 @@ bot.command(["start", "open"], async (ctx) => {
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
         caption: welcome,
-        parse_mode: "Markdown",
+        parse_mode: "MarkdownV2",
         reply_markup: startKeyboard
     });
 
@@ -486,16 +486,16 @@ bot.command(["start", "open"], async (ctx) => {
                 [
                     "📱 *One more step — Set your UPI ID*",
                     "",
-                    "You'll need UPI to receive/send fiat payments.",
+                    "You\\'ll need UPI to receive/send fiat payments\\.",
                     "",
                     "Examples:",
-                    "• `yourname@upi`",
-                    "• `9876543210@paytm`",
-                    "• `yourname@okicici`",
+                    "• \\`yourname@upi\\`",
+                    "• \\`9876543210@paytm\\`",
+                    "• \\`yourname@okicici\\`",
                     "",
                     "Tap below or just type your UPI ID:",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             ctx.session.awaiting_input = "upi_id";
         }, 1500); // Small delay so user reads welcome first
@@ -512,7 +512,7 @@ bot.command(["start", "open"], async (ctx) => {
 
 async function notifyTrader(telegramId: number, message: string) {
     try {
-        await bot.api.sendMessage(telegramId, message, { parse_mode: "Markdown" });
+        await bot.api.sendMessage(telegramId, escapeMarkdown(message), { parse_mode: "MarkdownV2" });
     } catch (err) {
         console.error(`Failed to notify user ${telegramId}:`, err);
     }
@@ -550,7 +550,7 @@ bot.command("payment", async (ctx) => {
         .row()
         .text("🏦 Set Bank", "setup_bank");
 
-    await ctx.reply(status, { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.reply(status, { parse_mode: "MarkdownV2", reply_markup: keyboard });
 });
 
 // /upi alias (kept for backward compat)
@@ -568,7 +568,7 @@ bot.command("upi", async (ctx) => {
                 "",
                 "You're all set to trade! Try /newad",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
         return;
     }
@@ -586,7 +586,7 @@ bot.command("upi", async (ctx) => {
                 "",
                 "Want to change it?",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
     } else {
         ctx.session.awaiting_input = "upi_id";
@@ -602,7 +602,7 @@ bot.command("upi", async (ctx) => {
                 "• `yourname@okaxis`",
                 "• `yourname@okicici`",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
     }
 });
@@ -615,7 +615,7 @@ bot.command("phone", async (ctx) => {
 
     if (cleaned.length >= 10) {
         await db.updateUser(user.id, { phone_number: cleaned });
-        await ctx.reply(`✅ Phone number updated: \`${cleaned}\``, { parse_mode: "Markdown" });
+        await ctx.reply(`✅ Phone number updated: \\`${escapeMarkdown(cleaned)}\\``, { parse_mode: "MarkdownV2" });
         return;
     }
 
@@ -624,11 +624,11 @@ bot.command("phone", async (ctx) => {
         [
             "📞 *Set Your Phone Number*",
             "",
-            user.phone_number ? `Current: \`${user.phone_number}\`` : "Not set yet.",
+            user.phone_number ? `Current: \\`${escapeMarkdown(user.phone_number)}\\`` : "Not set yet\\.",
             "",
-            "Send your 10-digit mobile number:",
+            "Send your 10\\-digit mobile number:",
         ].join("\n"),
-        { parse_mode: "Markdown" }
+        { parse_mode: "MarkdownV2" }
     );
 });
 
@@ -648,13 +648,13 @@ bot.command("bank", async (ctx) => {
             await db.updateUser(user.id, updates as any);
             await ctx.reply(
                 [
-                    "✅ *Bank Details Updated!*",
+                    "✅ *Bank Details Updated\\!*",
                     "",
-                    `🏦 Account: \`${parts[0]}\``,
-                    `IFSC: \`${parts[1].toUpperCase()}\``,
-                    parts[2] ? `Bank: ${parts.slice(2).join(' ')}` : "",
+                    `🏦 Account: \\`${escapeMarkdown(parts[0])}\\``,
+                    `IFSC: \\`${escapeMarkdown(parts[1].toUpperCase())}\\``,
+                    parts[2] ? `Bank: ${escapeMarkdown(parts.slice(2).join(' '))}` : "",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             return;
         }
@@ -666,69 +666,13 @@ bot.command("bank", async (ctx) => {
             "🏦 *Set Your Bank Details*",
             "",
             user.bank_account_number
-                ? `Current: \`${user.bank_account_number}\` (${user.bank_ifsc || ''})`
-                : "Not set yet.",
+                ? `Current: \\`${escapeMarkdown(user.bank_account_number)}\\` \\(${escapeMarkdown(user.bank_ifsc || '')}\\)`
+                : "Not set yet\\.",
             "",
-            "Send: `ACCOUNT_NUMBER IFSC_CODE BANK_NAME`",
-            "Example: `1234567890 SBIN0001234 SBI`",
+            "Send: \\`ACCOUNT_NUMBER IFSC_CODE BANK_NAME\\`",
+            "Example: \\`1234567890 SBIN0001234 SBI\\`",
         ].join("\n"),
-        { parse_mode: "Markdown" }
-    );
-});
-
-
-// ═══════════════════════════════════════════════════════════════
-//                     /market COMMAND
-// ═══════════════════════════════════════════════════════════════
-
-bot.command("market", async (ctx) => {
-    await ctx.reply("📰 *Fetching Market Digest...*", { parse_mode: "Markdown" });
-    const digest = await market.getMarketDigest();
-    await ctx.reply(digest, { parse_mode: "Markdown" });
-});
-
-// ═══════════════════════════════════════════════════════════════
-//                     /help COMMAND
-// ═══════════════════════════════════════════════════════════════
-
-bot.command("help", async (ctx) => {
-    const help = [
-        "🤖 *P2PFather — Your P2P Crypto Exchange*",
-        "",
-        "Buy & sell crypto directly with real people using UPI, Bank Transfer or Paytm. No middleman — just a smart contract keeping everyone safe! 🔒",
-        "",
-        "📌 *First time? Do this:*",
-        "1\\. /payment → Add your UPI ID",
-        "2\\. /ads → Browse available trades",
-        "3\\. Tap a trade → Follow the steps!",
-        "",
-        "📌 *Want to sell?*",
-        "1\\. /wallet → Deposit crypto to Vault",
-        "2\\. /newad → Set your rate & amount",
-        "3\\. Wait for a buyer → Confirm payment → Done!",
-        "",
-        "🔒 *Your protection:*",
-        "• Crypto locked in smart contract escrow",
-        "• Payment proof required for every trade",
-        "• /dispute for any issues — admin resolves it",
-        "• Trust score tracks reliable traders ⭐",
-        "",
-        "⚡ *Commands:*",
-        "/ads • /newad • /wallet • /payment",
-        "/market • /profile • /dispute",
-        "",
-        `💰 Fee: 0% on Base, 0.25% per side elsewhere`,
-        "",
-        "📱 Everything in one place → /start",
-    ].join("\n");
-
-    await ctx.reply(help, { parse_mode: "Markdown" });
-});
-
-// ═══════════════════════════════════════════════════════════════
-//                     /newad COMMAND (Create Ad)
-// ═══════════════════════════════════════════════════════════════
-
+        { parse_mode: "MarkdownV2" }
 bot.command("newad", async (ctx) => {
     const cacheBuster = `?v=${Date.now()}`;
     const miniAppUrl = `https://p2pfather.com/miniapp/create${cacheBuster}`;
@@ -739,11 +683,11 @@ bot.command("newad", async (ctx) => {
         [
             "📢 *Create a New Ad*",
             "",
-            "Use our Mini App for the best experience! 🚀",
+            "Use our Mini App for the best experience\\! 🚀",
             "",
             "Tap below to open the ad creation page:",
         ].join("\n"),
-        { parse_mode: "Markdown", reply_markup: keyboard }
+        { parse_mode: "MarkdownV2", reply_markup: keyboard }
     );
 });
 
@@ -751,7 +695,7 @@ bot.command("send", async (ctx) => {
     const user = await ensureUser(ctx);
 
     if (!user.wallet_address) {
-        await ctx.reply("⚠️ Set up your wallet first! Type /start to create one.");
+        await ctx.reply("⚠️ Set up your wallet first\\! Type /start to create one\\.");
         return;
     }
 
@@ -768,11 +712,11 @@ bot.command("send", async (ctx) => {
         [
             "💸 *Send Crypto*",
             "",
-            "Withdraw your funds to any external wallet on Base.",
+            "Withdraw your funds to any external wallet on Base\\.",
             "",
             "Select the token to send:",
         ].join("\n"),
-        { parse_mode: "Markdown", reply_markup: keyboard }
+        { parse_mode: "MarkdownV2", reply_markup: keyboard }
     );
 });
 
@@ -787,11 +731,11 @@ bot.command("sell", async (ctx) => {
         [
             "📢 *Create a New Ad*",
             "",
-            "Use our Mini App for the best experience! 🚀",
+            "Use our Mini App for the best experience\\! 🚀",
             "",
             "Tap below to open the ad creation page:",
         ].join("\n"),
-        { parse_mode: "Markdown", reply_markup: keyboard }
+        { parse_mode: "MarkdownV2", reply_markup: keyboard }
     );
 });
 
@@ -815,14 +759,14 @@ bot.command(["ads", "liveads"], async (ctx) => {
         [
             "📢 *Live P2P Ads*",
             "",
-            "Browse active trading ads from the community.",
+            "Browse active trading ads from the community\\.",
             "",
-            "🔴 *Sell Ads* — Traders selling crypto (you buy from them)",
-            "🟢 *Buy Ads* — Traders buying crypto (you sell to them)",
+            "🔴 *Sell Ads* — Traders selling crypto \\(you buy from them\\)",
+            "🟢 *Buy Ads* — Traders buying crypto \\(you sell to them\\)",
             "",
             "Select a category below:",
         ].join("\n"),
-        { parse_mode: "Markdown", reply_markup: keyboard }
+        { parse_mode: "MarkdownV2", reply_markup: keyboard }
     );
 });
 
@@ -846,10 +790,10 @@ bot.command("myads", async (ctx) => {
                 [
                     "📋 *My Ads*",
                     "",
-                    "You don't have any ads yet!",
-                    "Create your first ad to start trading.",
+                    "You don\\'t have any ads yet\\!",
+                    "Create your first ad to start trading\\.",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             return;
         }
@@ -857,25 +801,25 @@ bot.command("myads", async (ctx) => {
         const sections: string[] = ["📋 *My Ads*", ""];
 
         if (activeOrders.length > 0) {
-            sections.push(`🟢 *Active Ads (${activeOrders.length})*`);
+            sections.push(`🟢 *Active Ads \\(${activeOrders.length}\\)*`);
             sections.push("");
             activeOrders.forEach((o: any, i: number) => {
                 const emoji = o.type === "sell" ? "🔴" : "🟢";
                 const available = o.amount - (o.filled_amount || 0);
                 sections.push([
-                    `${i + 1}. ${emoji} *${o.type.toUpperCase()}* ${formatTokenAmount(available)}`,
-                    `   Rate: ${formatINR(o.rate)}/USDC | Total: ${formatINR(available * o.rate)}`,
-                    `   Payment: ${o.payment_methods?.join(", ") || "UPI"}`,
-                    `   ID: \`${o.id.slice(0, 8)}\``,
+                    `${i + 1}\\. ${emoji} *${o.type.toUpperCase()}* ${escapeMarkdown(formatTokenAmount(available))}`,
+                    `   Rate: ${escapeMarkdown(formatINR(o.rate))}/USDC | Total: ${escapeMarkdown(formatINR(available * o.rate))}`,
+                    `   Payment: ${escapeMarkdown(o.payment_methods?.join(", ") || "UPI")}`,
+                    `   ID: \\`${escapeMarkdown(o.id.slice(0, 8))}\\``,
                 ].join("\n"));
                 sections.push("");
             });
         }
 
         if (pausedOrders.length > 0) {
-            sections.push(`⏸️ *Paused Ads (${pausedOrders.length})*`);
+            sections.push(`⏸️ *Paused Ads \\(${pausedOrders.length}\\)*`);
             pausedOrders.forEach((o: any, i: number) => {
-                sections.push(`  ${i + 1}. ${o.type.toUpperCase()} ${formatTokenAmount(o.amount)} at ${formatINR(o.rate)}`);
+                sections.push(`  ${i + 1}\\. ${escapeMarkdown(o.type.toUpperCase())} ${escapeMarkdown(formatTokenAmount(o.amount))} at ${escapeMarkdown(formatINR(o.rate))}`);
             });
             sections.push("");
         }
@@ -888,12 +832,12 @@ bot.command("myads", async (ctx) => {
 
         sections.push(
             "━━━━━━━━━━━━━━━━━━━",
-            "Actions: Tap ad ID to edit, or use buttons below."
+            "Actions: Tap ad ID to edit, or use buttons below\\."
         );
 
-        await ctx.reply(sections.join("\n"), { parse_mode: "Markdown", reply_markup: keyboard });
+        await ctx.reply(sections.join("\n"), { parse_mode: "MarkdownV2", reply_markup: keyboard });
     } catch (error) {
-        await ctx.reply("❌ Failed to load your ads.");
+        await ctx.reply("❌ Failed to load your ads\\.");
     }
 });
 
@@ -907,7 +851,7 @@ bot.command("mytrades", async (ctx) => {
         const trades = await db.getUserTrades(user.id);
 
         if (trades.length === 0) {
-            await ctx.reply("📭 You have no active trades.");
+            await ctx.reply("📭 You have no active trades\\.");
             return;
         }
 
@@ -932,13 +876,13 @@ bot.command("mytrades", async (ctx) => {
             keyboard.text(`${role} ${amt} (${status}) | ${date}`, `trade_view:${t.id}`).row();
         });
 
-        await ctx.reply("📋 *Your Trades*\nSelect a trade to view actions:", {
-            parse_mode: "Markdown",
+        await ctx.reply("📋 *Your Trades*\\nSelect a trade to view actions:", {
+            parse_mode: "MarkdownV2",
             reply_markup: keyboard
         });
     } catch (e) {
         console.error("MyTrades error:", e);
-        await ctx.reply("❌ Failed to fetch trades.");
+        await ctx.reply("❌ Failed to fetch trades\\.");
     }
 });
 
@@ -958,17 +902,17 @@ bot.command("buy", async (ctx) => {
                 [
                     "📊 *No sell orders available right now*",
                     "",
-                    "Be the first! 🚀 Launch the Mini App to create a sell order!",
+                    "Be the first\\! 🚀 Launch the Mini App to create a sell order\\!",
                 ].join("\n"),
                 {
-                    parse_mode: "Markdown",
+                    parse_mode: "MarkdownV2",
                     reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                 }
             );
             return;
         }
 
-        const orderList = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
+        const orderList = orders.map((o, i) => escapeMarkdown(formatOrder(o, i))).join("\n\n");
 
         const keyboard = new InlineKeyboard();
         orders.slice(0, 5).forEach((o) => {
@@ -982,12 +926,12 @@ bot.command("buy", async (ctx) => {
                 orderList,
                 "",
                 "━━━━━━━━━━━━━━━━━━━",
-                "Tap a button below or type the order ID to buy.",
+                "Tap a button below or type the order ID to buy\\.",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
     } catch (error) {
-        await ctx.reply("❌ Failed to load orders. Database may not be configured yet.\n\nRun /help for setup instructions.");
+        await ctx.reply("❌ Failed to load orders\\. Database may not be configured yet\\.\\n\\nRun /help for setup instructions\\.");
     }
 });
 
@@ -1006,10 +950,10 @@ bot.command("orders", async (ctx) => {
         const keyboard = new InlineKeyboard();
 
         if (sellOrders.length > 0) {
-            sections.push("🔴 *SELL ORDERS* (Buy these)");
+            sections.push("🔴 *SELL ORDERS* \\(Buy these\\)");
             sections.push("");
             sellOrders.forEach((o, i) => {
-                sections.push(formatOrder(o, i));
+                sections.push(escapeMarkdown(formatOrder(o, i)));
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🟢 Buy ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
@@ -1020,10 +964,10 @@ bot.command("orders", async (ctx) => {
         sections.push("");
 
         if (buyOrders.length > 0) {
-            sections.push("🟢 *BUY ORDERS* (Sell to these)");
+            sections.push("🟢 *BUY ORDERS* \\(Sell to these\\)");
             sections.push("");
             buyOrders.forEach((o, i) => {
-                sections.push(formatOrder(o, i));
+                sections.push(escapeMarkdown(formatOrder(o, i)));
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🔴 Sell ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
@@ -1034,13 +978,13 @@ bot.command("orders", async (ctx) => {
         sections.push(
             "",
             "━━━━━━━━━━━━━━━━━━━",
-            "Select an order above to start a trade.",
-            "Or use /newad to list your own."
+            "Select an order above to start a trade\\.",
+            "Or use /newad to list your own\\."
         );
 
-        await ctx.reply(sections.join("\n"), { parse_mode: "Markdown", reply_markup: keyboard });
+        await ctx.reply(sections.join("\n"), { parse_mode: "MarkdownV2", reply_markup: keyboard });
     } catch (error) {
-        await ctx.reply("❌ Failed to load orders. Database may not be configured yet.");
+        await ctx.reply("❌ Failed to load orders\\. Database may not be configured yet\\.");
     }
 });
 
@@ -1056,11 +1000,11 @@ bot.command(["balance", "portfolio"], async (ctx) => {
             [
                 "💰 *Wallet Balance*",
                 "",
-                "⚠️ No wallet connected yet!",
+                "⚠️ No wallet connected yet\\!",
                 "",
-                "Use /wallet to set up your wallet address.",
+                "Use /wallet to set up your wallet address\\.",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
         return;
     }
@@ -1079,26 +1023,26 @@ bot.command(["balance", "portfolio"], async (ctx) => {
             [
                 "💰 *Your Portfolio*",
                 "",
-                `Address: \`${truncateAddress(user.wallet_address)}\``,
+                `Address: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``,
                 "",
-                `💵 *USDC*: ${balances.usdc}`,
-                `💵 *USDT*: ${balances.usdt}`,
-                `💎 *ETH*: ${balances.eth}`,
+                `💵 *USDC*: ${escapeMarkdown(balances.usdc)}`,
+                `💵 *USDT*: ${escapeMarkdown(balances.usdt)}`,
+                `💎 *ETH*: ${escapeMarkdown(balances.eth)}`,
                 "",
                 "━━━━━━━━━━━━━━━━━━━",
                 "Select a token to withdraw or create a trade:",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
     } catch (error) {
         await ctx.reply(
             [
                 "💰 *Your Wallet*",
                 "",
-                `Address: \`${truncateAddress(user.wallet_address)}\``,
-                "⚠️ Could not fetch balance. RPC may be unavailable.",
+                `Address: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``,
+                "⚠️ Could not fetch balance\\. RPC may be unavailable\\.",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
     }
 });
@@ -1122,13 +1066,13 @@ bot.command("wallet", async (ctx) => {
             [
                 "🔑 *Your Wallet*",
                 "",
-                `💳 Address: \`${user.wallet_address}\``,
-                `📱 UPI: ${user.upi_id || "Not set"}`,
+                `💳 Address: \\`${escapeMarkdown(user.wallet_address)}\\``,
+                `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
                 "",
-                "Your wallet was created automatically.",
-                "You OWN this wallet — export your key anytime!",
+                "Your wallet was created automatically\\.",
+                "You OWN this wallet — export your key anytime\\!",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
     } else {
         await ctx.reply(
@@ -1137,11 +1081,11 @@ bot.command("wallet", async (ctx) => {
                 "",
                 "Send me your Base wallet address:",
                 "",
-                "Example: `0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18`",
+                "Example: \\`0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18\\`",
                 "",
-                "This is where you'll receive USDC from trades.",
+                "This is where you\\'ll receive USDC from trades\\.",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
         ctx.session.awaiting_input = "wallet_address";
     }
@@ -1154,14 +1098,14 @@ bot.command("wallet", async (ctx) => {
 bot.command("export", async (ctx) => {
     // Only allow in private chats (NEVER expose keys in groups)
     if (ctx.chat.type !== "private") {
-        await ctx.reply("⚠️ For security, key export is only available in DM. Message me directly!");
+        await ctx.reply("⚠️ For security, key export is only available in DM\\. Message me directly\\!");
         return;
     }
 
     const user = await ensureUser(ctx);
 
     if (!user.wallet_address || !env.MASTER_WALLET_SEED) {
-        await ctx.reply("❌ No wallet found. Type /start to create one.");
+        await ctx.reply("❌ No wallet found\\. Type /start to create one\\.");
         return;
     }
 
@@ -1182,7 +1126,7 @@ bot.command("export", async (ctx) => {
             "",
             "Are you sure you want to see your private key?",
         ].join("\n"),
-        { parse_mode: "Markdown", reply_markup: keyboard }
+        { parse_mode: "MarkdownV2", reply_markup: keyboard }
     );
 });
 
@@ -1202,53 +1146,20 @@ bot.command("profile", async (ctx) => {
         [
             "👤 *Your Profile*",
             "",
-            `Name: ${user.first_name || "Anonymous"}`,
-            `Username: @${user.username || "not set"}`,
-            `Tier: ${user.tier.toUpperCase()}`,
+            `Name: ${escapeMarkdown(user.first_name || "Anonymous")}`,
+            `Username: @${escapeMarkdown(user.username || "not set")}`,
+            `Tier: ${escapeMarkdown(user.tier.toUpperCase())}`,
             "",
             "━━━━━━━━━━━━━━━━",
-            `${stars} Trust: ${user.trust_score}%`,
-            `📈 Total Trades: ${user.trade_count}`,
-            `✅ Completed: ${user.completed_trades}`,
-            `📊 Success Rate: ${user.trade_count > 0 ? ((user.completed_trades / user.trade_count) * 100).toFixed(0) : 0}%`,
+            `${escapeMarkdown(stars)} Trust: ${escapeMarkdown(String(user.trust_score))}%`,
+            `📈 Total Trades: ${escapeMarkdown(String(user.trade_count))}`,
+            `✅ Completed: ${escapeMarkdown(String(user.completed_trades))}`,
+            `📊 Success Rate: ${user.trade_count > 0 ? escapeMarkdown(((user.completed_trades / user.trade_count) * 100).toFixed(0)) : 0}%`,
             "",
-            `💳 Wallet: ${user.wallet_address ? `\`${truncateAddress(user.wallet_address)}\`` : "Not set"}`,
-            `📱 UPI: ${user.upi_id || "Not set"}`,
+            `💳 Wallet: ${user.wallet_address ? `\\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\`` : "Not set"}`,
+            `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
             "",
-            `Member since: ${new Date(user.created_at).toLocaleDateString()}`,
-        ].join("\n"),
-        { parse_mode: "Markdown" }
-    );
-});
-
-// ═══════════════════════════════════════════════════════════════
-//                     /admin COMMAND
-// ═══════════════════════════════════════════════════════════════
-
-bot.command("admin", async (ctx) => {
-    if (!isAdmin(ctx)) return;
-
-    try {
-        const [stats, relayerUsdc, relayerEth, contractFees] = await Promise.all([
-            db.getStats(),
-            wallet.getTokenBalance(env.ADMIN_WALLET_ADDRESS, env.USDC_ADDRESS, 'base'),
-            wallet.getBalances(env.ADMIN_WALLET_ADDRESS).then(b => b.eth),
-            wallet.getTokenBalance(env.ESCROW_CONTRACT_ADDRESS, env.USDC_ADDRESS, 'base')
-        ]);
-
-        const keyboard = new InlineKeyboard()
-            .text("⚖️ View Active Disputes", "admin_disputes_list").row()
-            .text("🔄 Refresh Stats", "admin_stats_refresh");
-
-        await ctx.reply(
-            [
-                "⚙️ *Admin Dashboard*",
-                "",
-                "📈 *System Stats*",
-                `Users: ${stats.total_users}`,
-                `Ads: ${stats.active_orders} active`,
-                `Trades: ${stats.total_trades} (${stats.completed_trades} ok)`,
                 `Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
                 "",
                 "💰 *Relayer Wallet*",
@@ -1496,17 +1407,17 @@ bot.on("callback_query:data", async (ctx) => {
 
             await ctx.editMessageText(
                 [
-                    `📢 *Create ${draft.type.toUpperCase()} Ad — Step 2/3*`,
+                    `📢 *Create ${escapeMarkdown(draft.type.toUpperCase())} Ad — Step 2/3*`,
                     "",
-                    `Selected: *${token}* ✅`,
+                    `Selected: *${escapeMarkdown(token)}* ✅`,
                     "",
-                    `How much ${token} do you want to ${draft.type}?`,
+                    `How much ${escapeMarkdown(token)} do you want to ${escapeMarkdown(draft.type)}?`,
                     "",
-                    `Minimum: *${minAmount} ${token}*`,
+                    `Minimum: *${escapeMarkdown(String(minAmount))} ${escapeMarkdown(token)}*`,
                     "",
-                    "Send the amount (e.g., `100` or `50.5`):",
+                    "Send the amount (e.g., \\`100\\` or \\`50.5\\`):",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             await ctx.answerCallbackQuery();
             handled = true;
@@ -1526,13 +1437,13 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "💸 *Send Crypto — Step 1/3*",
                     "",
-                    `Token: *${token}*`,
+                    `Token: *${escapeMarkdown(token)}*`,
                     "",
                     "Please send the *destination wallet address* (Base network):",
                     "",
                     "_Example: 0x123..._",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1547,9 +1458,9 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "📢 *Create a New Ad*",
                     "",
-                    "Use our Mini App for the best experience! 🚀",
+                    "Use our Mini App for the best experience\\! 🚀",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1572,14 +1483,14 @@ bot.on("callback_query:data", async (ctx) => {
                 if (allOrders.length === 0) {
                     await safeEditMessage(ctx, 
                         [
-                            `📢 *${label} Ads*`,
+                            `📢 *${escapeMarkdown(label)} Ads*`,
                             "",
-                            "No ads available right now! 😔",
+                            "No ads available right now\\! 😔",
                             "",
-                            "Be the first! 🚀 Launch the Mini App and create an ad!",
+                            "Be the first\\! 🚀 Launch the Mini App and create an ad\\!",
                         ].join("\n"),
                         {
-                            parse_mode: "Markdown",
+                            parse_mode: "MarkdownV2",
                             reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                         }
                     );
@@ -1599,12 +1510,12 @@ bot.on("callback_query:data", async (ctx) => {
                         (o.trust_score ?? 0) >= 70 ? "⭐" : "🟢";
 
                     return [
-                        `${startIdx + i + 1}. ${emoji} *${formatTokenAmount(sellable, o.token)}*`,
-                        `   💰 Rate: ${formatINR(o.rate)}/${o.token}`,
-                        `   💵 Total: ${formatINR(sellable * o.rate)}`,
-                        `   💳 ${o.payment_methods?.join(", ") || "UPI"}`,
-                        `   👤 @${o.username || "anon"} ${stars}`,
-                        `   🆔 \`${o.id.slice(0, 8)}\``,
+                        `${startIdx + i + 1}\\. ${emoji} *${escapeMarkdown(formatTokenAmount(sellable, o.token))}*`,
+                        `   💰 Rate: ${escapeMarkdown(formatINR(o.rate))}/${escapeMarkdown(o.token)}`,
+                        `   💵 Total: ${escapeMarkdown(formatINR(sellable * o.rate))}`,
+                        `   💳 ${escapeMarkdown(o.payment_methods?.join(", ") || "UPI")}`,
+                        `   👤 @${escapeMarkdown(o.username || "anon")} ${escapeMarkdown(stars)}`,
+                        `   🆔 \`${escapeMarkdown(o.id.slice(0, 8))}\``,
                     ].join("\n");
                 }).join("\n\n");
 
@@ -1636,15 +1547,15 @@ bot.on("callback_query:data", async (ctx) => {
 
                 await safeEditMessage(ctx, 
                     [
-                        `📢 *Live ${label} Ads*`,
-                        `   _${allOrders.length} ads  •  Page ${page + 1}/${totalPages}_`,
+                        `📢 *Live ${escapeMarkdown(label)} Ads*`,
+                        `   _${escapeMarkdown(String(allOrders.length))} ads  •  Page ${escapeMarkdown(String(page + 1))}/${escapeMarkdown(String(totalPages))}_`,
                         "",
                         adList,
                         "",
                         "━━━━━━━━━━━━━━━━━━━",
                         "Tap an ad below to start a trade:",
                     ].join("\n"),
-                    { parse_mode: "Markdown", reply_markup: keyboard }
+                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
                 );
             } catch (error) {
                 await safeEditMessage(ctx, "❌ Failed to load ads. Database may not be configured.");
@@ -1666,7 +1577,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Select a category:",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1699,25 +1610,25 @@ bot.on("callback_query:data", async (ctx) => {
 
             await ctx.editMessageText(
                 [
-                    `🤝 *${action} this trader?*`,
+                    `🤝 *${escapeMarkdown(action)} this trader?*`,
                     "",
-                    `Amount: *${formatTokenAmount(sellable, order.token)}*`,
-                    `Rate: *${formatINR(order.rate)}/${order.token}*`,
-                    `Total Fiat: *${formatINR(sellable * order.rate)}*`,
+                    `Amount: *${escapeMarkdown(formatTokenAmount(sellable, order.token))}*`,
+                    `Rate: *${escapeMarkdown(formatINR(order.rate))}/${escapeMarkdown(order.token)}*`,
+                    `Total Fiat: *${escapeMarkdown(formatINR(sellable * order.rate))}*`,
                     "",
                     `⚖️ *Symmetry Fee Split (1%)*:`,
-                    `• Your Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${formatTokenAmount(buyerFee, order.token)}`,
-                    `• You Receive: *${formatTokenAmount(buyerReceives, order.token)}*`,
+                    `• Your Fee (${(env.FEE_PERCENTAGE * 50).toFixed(1)}%): ${escapeMarkdown(formatTokenAmount(buyerFee, order.token))}`,
+                    `• You Receive: *${escapeMarkdown(formatTokenAmount(buyerReceives, order.token))}*`,
                     "",
-                    `Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
-                    `Trader: ${order.username ? "@" + order.username.replace(/_/g, "\\_") : "anon"} (⭐ ${order.trust_score ?? 0}%)`,
-                    (order as any).upi_id ? `📱 UPI: ${(order as any).upi_id}` : "",
+                    `Payment: ${escapeMarkdown(order.payment_methods?.join(", ") || "UPI")}`,
+                    `Trader: ${order.username ? "@" + escapeMarkdown(order.username) : "anon"} (⭐ ${escapeMarkdown(String(order.trust_score ?? 0))}%)`,
+                    (order as any).upi_id ? `📱 UPI: ${escapeMarkdown((order as any).upi_id)}` : "",
                     "",
                     order.type === "sell"
                         ? "⚠️ Seller deposits USDC to escrow → You send fiat → Crypto released to you"
                         : "⚠️ You deposit USDC to escrow → Buyer sends fiat → You confirm → Crypto released",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1756,14 +1667,14 @@ bot.on("callback_query:data", async (ctx) => {
 
                 await ctx.editMessageText(
                     [
-                        "✅ *Tokens Sent!* 🚀",
+                        "✅ *Tokens Sent\\!* 🚀",
                         "",
-                        `Amount: *${draft.amount} ${draft.token}*`,
-                        `To: \`${draft.to_address}\``,
+                        `Amount: *${escapeMarkdown(String(draft.amount))} ${escapeMarkdown(draft.token)}*`,
+                        `To: \\`${escapeMarkdown(draft.to_address)}\\``,
                         "",
                         `🔗 [View on BaseScan](${getExplorerUrl(txHash)})`,
                     ].join("\n"),
-                    { parse_mode: "Markdown" }
+                    { parse_mode: "MarkdownV2" }
                 );
             } catch (error) {
                 console.error("Send error:", error);
@@ -1800,12 +1711,12 @@ bot.on("callback_query:data", async (ctx) => {
                         [
                             "✅ *Ad Cancelled & Funds Unlocked*",
                             "",
-                            `Refunded: *${formatTokenAmount(order.amount)}*`,
-                            `To: \`${truncateAddress(user.wallet_address!)}\``,
+                            `Refunded: *${escapeMarkdown(formatTokenAmount(order.amount))}*`,
+                            `To: \\`${escapeMarkdown(truncateAddress(user.wallet_address!))}\\``,
                             "",
                             `🔗 [View Refund Tx](${getExplorerUrl(refundTx)})`,
                         ].join("\n"),
-                        { parse_mode: "Markdown" }
+                        { parse_mode: "MarkdownV2" }
                     );
                 } catch (error) {
                     console.error("Refund failed:", error);
@@ -1889,8 +1800,8 @@ bot.on("callback_query:data", async (ctx) => {
                         if (seller.wallet_type === 'external') {
                             await db.revertFillOrder(order.id, order.amount);
                             await ctx.editMessageText(
-                                "❌ *Trade Failed*\n\nSeller (External Wallet) has insufficient Vault balance.\nFunds must be deposited to Vault manually via Mini App.",
-                                { parse_mode: "Markdown" }
+                                "❌ *Trade Failed*\n\nSeller \\(External Wallet\\) has insufficient Vault balance\\.\nFunds must be deposited to Vault manually via Mini App\\.",
+                                { parse_mode: "MarkdownV2" }
                             );
                             return;
                         }
@@ -1967,8 +1878,8 @@ bot.on("callback_query:data", async (ctx) => {
                         if (seller.telegram_id) {
                             await ctx.api.sendMessage(
                                 seller.telegram_id,
-                                `🔔 *New Trade Started!*\n\nBuyer matches your ad for ${formatTokenAmount(order.amount, order.token)}.\nThey will send payment soon.\n\nCheck /mytrades to monitor status.`,
-                                { parse_mode: "Markdown" }
+                                `🔔 *New Trade Started\\!*\\n\\nBuyer matches your ad for ${escapeMarkdown(formatTokenAmount(order.amount, order.token))}\\.\\nThey will send payment soon\\.\\n\\nCheck /mytrades to monitor status\\.`,
+                                { parse_mode: "MarkdownV2" }
                             );
                         }
                     } catch (blockchainError: any) {
@@ -1990,8 +1901,8 @@ bot.on("callback_query:data", async (ctx) => {
                     const totalRequired = order.amount;
                     if (parseFloat(balance) < totalRequired) {
                         await ctx.editMessageText(
-                            `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${formatTokenAmount(totalRequired, tokenSymbol)}* but have *${formatTokenAmount(parseFloat(balance), tokenSymbol)}*.\n\nDeposit funds to your wallet: \`${seller.wallet_address}\``,
-                            { parse_mode: "Markdown" }
+                            `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${escapeMarkdown(formatTokenAmount(totalRequired, tokenSymbol))}* but have *${escapeMarkdown(formatTokenAmount(parseFloat(balance), tokenSymbol))}*.\n\nDeposit funds to your wallet: \`${escapeMarkdown(seller.wallet_address!)}\``,
+                            { parse_mode: "MarkdownV2" }
                         );
                         return;
                     }
@@ -2049,8 +1960,8 @@ bot.on("callback_query:data", async (ctx) => {
                         if (buyerUser && buyerUser.telegram_id) {
                             await ctx.api.sendMessage(
                                 buyerUser.telegram_id,
-                                `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${formatTokenAmount(order.amount, tokenSymbol)}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
-                                { parse_mode: "Markdown" }
+                                `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${escapeMarkdown(formatTokenAmount(order.amount, tokenSymbol))}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
+                                { parse_mode: "MarkdownV2" }
                             );
                         }
                     } catch (blockchainError: any) {
@@ -2095,19 +2006,19 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "🤝 *Confirm Trade*",
                     "",
-                    `Amount: ${formatTokenAmount(available, order.token)}`,
-                    `Rate: ${formatINR(order.rate)}/${order.token}`,
-                    `Total Fiat: ${formatINR(available * order.rate)}`,
-                    `Fee (${(feePercent * 50).toFixed(1)}%): ${formatTokenAmount(feeAmount, order.token)}`,
-                    `You receive: ${formatTokenAmount(buyerReceives, order.token)}`,
+                    `Amount: ${escapeMarkdown(formatTokenAmount(available, order.token))}`,
+                    `Rate: ${escapeMarkdown(formatINR(order.rate))}/${escapeMarkdown(order.token)}`,
+                    `Total Fiat: ${escapeMarkdown(formatINR(available * order.rate))}`,
+                    `Fee (${(feePercent * 50).toFixed(1)}%): ${escapeMarkdown(formatTokenAmount(feeAmount, order.token))}`,
+                    `You receive: ${escapeMarkdown(formatTokenAmount(buyerReceives, order.token))}`,
                     "",
-                    `Payment: ${order.payment_methods.join(", ")}`,
-                    `Seller: @${order.username || "anon"}`,
+                    `Payment: ${escapeMarkdown(order.payment_methods.join(", "))}`,
+                    `Seller: @${escapeMarkdown(order.username || "anon")}`,
                     "",
                     "⚠️ After confirming, seller will deposit USDC to escrow.",
                     "You'll then send fiat via the specified payment method.",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
 
             await ctx.answerCallbackQuery();
@@ -2142,26 +2053,26 @@ bot.on("callback_query:data", async (ctx) => {
             };
 
             const details = [
-                `💰 *Trade #${trade.on_chain_trade_id || trade.id.slice(0, 4)}*`,
+                `💰 *Trade #${escapeMarkdown(trade.on_chain_trade_id?.toString() || trade.id.slice(0, 4))}*`,
                 "",
                 `Role: ${isBuyer ? "🟢 Buyer" : "🔴 Seller"}`,
-                `Status: *${trade.status.toUpperCase()}*`,
-                `ℹ️ ${statusDescriptions[trade.status] || ""}`,
+                `Status: *${escapeMarkdown(trade.status.toUpperCase())}*`,
+                `ℹ️ ${escapeMarkdown(statusDescriptions[trade.status] || "")}`,
                 "",
-                `Amount: *${formatTokenAmount(trade.amount, trade.token)}*`,
-                `Fiat: *${formatINR(trade.fiat_amount)}*`,
-                `Rate: ${formatINR(trade.rate)}/${trade.token}`,
+                `Amount: *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}*`,
+                `Fiat: *${escapeMarkdown(formatINR(trade.fiat_amount))}*`,
+                `Rate: ${escapeMarkdown(formatINR(trade.rate))}/${escapeMarkdown(trade.token)}`,
                 "",
                 `⚖️ Fee Split (1%):`,
                 isSeller
-                    ? `🔐 You Locked: *${formatTokenAmount(trade.amount, trade.token)}*`
-                    : `🔐 Seller Locked: *${formatTokenAmount(trade.amount, trade.token)}*`,
+                    ? `🔐 You Locked: *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}*`
+                    : `🔐 Seller Locked: *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}*`,
                 isBuyer
-                    ? `📥 You Receive: *${formatTokenAmount(trade.amount * 0.99, trade.token)}*`
-                    : `📥 Buyer Receives: *${formatTokenAmount(trade.amount * 0.99, trade.token)}*`,
+                    ? `📥 You Receive: *${escapeMarkdown(formatTokenAmount(trade.amount * 0.99, trade.token))}*`
+                    : `📥 Buyer Receives: *${escapeMarkdown(formatTokenAmount(trade.amount * 0.99, trade.token))}*`,
                 "",
-                `Partner: ${partner?.username ? "@" + partner.username.replace(/_/g, "\\_") : "anon"}`,
-                `Payment Method: ${trade.payment_method}`,
+                `Partner: ${partner?.username ? "@" + escapeMarkdown(partner.username.replace(/_/g, "\\_")) : "anon"}`,
+                `Payment Method: ${escapeMarkdown(trade.payment_method)}`,
             ];
 
             // If user is buyer, show seller's payment details
@@ -2171,7 +2082,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const upiId = upiFromOrder || partner?.upi_id;
 
                 if (upiId) {
-                    details.push(`💳 Seller UPI: ${upiId}`);
+                    details.push(`💳 Seller UPI: \\`${escapeMarkdown(upiId)}\\``);
                 } else {
                     details.push("⚠️ Seller hasn't shared UPI in profile.");
                 }
@@ -2200,7 +2111,7 @@ bot.on("callback_query:data", async (ctx) => {
             // Actually I'll use text list for now as handler isn't registered for text command but I can use same logic.
 
             await ctx.editMessageText(details.join("\n"), {
-                parse_mode: "Markdown",
+                parse_mode: "MarkdownV2",
                 reply_markup: keyboard
             });
             await ctx.answerCallbackQuery();
@@ -2265,7 +2176,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "Trade completed successfully.",
                         `🔗 [View Transaction](${getExplorerUrl(txHash)})`,
                     ].join("\n"),
-                    { parse_mode: "Markdown" }
+                    { parse_mode: "MarkdownV2" }
                 );
 
                 // Unified Success Broadcast
@@ -2293,8 +2204,8 @@ bot.on("callback_query:data", async (ctx) => {
                 if (buyer && buyer.telegram_id) {
                     await ctx.api.sendMessage(
                         buyer.telegram_id,
-                        `✅ *Trade Completed!*\n\nSeller has released ${formatTokenAmount(trade.amount, trade.token)}.\nThe funds are now in your wallet (smart contract release).\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
-                        { parse_mode: "Markdown" }
+                        `✅ *Trade Completed\\!*\n\nSeller has released ${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}\\.\nThe funds are now in your wallet \\(smart contract release\\)\\.\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
+                        { parse_mode: "MarkdownV2" }
                     );
                 }
 
@@ -2336,8 +2247,8 @@ bot.on("callback_query:data", async (ctx) => {
                     .text("🔁 Resolve (Refund)", `resolve:${tradeId}:seller`).row()
                     .text("🤖 AI Analysis", `ai_analyze_dispute:${tradeId}`);
 
-                await ctx.api.sendMessage(adminId, `🚨 *New Dispute Raised!*\nTrade: \`${tradeId}\`\nPlease review carefully.`, {
-                    parse_mode: "Markdown",
+                await ctx.api.sendMessage(adminId, `🚨 *New Dispute Raised\\!*\nTrade: \\`${escapeMarkdown(tradeId)}\\`\nPlease review carefully\\.`, {
+                    parse_mode: "MarkdownV2",
                     reply_markup: kb
                 });
             }
@@ -2374,12 +2285,12 @@ bot.on("callback_query:data", async (ctx) => {
                 [
                     "🤖 *AI Dispute Analysis*",
                     "",
-                    `Recommendation: *${analysis.recommendation.toUpperCase()}*`,
-                    `Confidence: ${Math.round(analysis.confidence * 100)}%`,
+                    `Recommendation: *${escapeMarkdown(analysis.recommendation.toUpperCase())}*`,
+                    `Confidence: ${escapeMarkdown(Math.round(analysis.confidence * 100).toString())}%`,
                     "",
-                    `Reasoning: _${analysis.reasoning}_`,
+                    `Reasoning: _${escapeMarkdown(analysis.reasoning)}_`,
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
         }
 
@@ -2400,7 +2311,7 @@ bot.on("callback_query:data", async (ctx) => {
             keyboard.text("🔙 Back to Dashboard", "admin_stats_refresh");
 
             await ctx.editMessageText("⚖️ *Active Disputes*\nSelect a trade to investigate:", {
-                parse_mode: "Markdown",
+                parse_mode: "MarkdownV2",
                 reply_markup: keyboard
             });
             await ctx.answerCallbackQuery();
@@ -2426,23 +2337,23 @@ bot.on("callback_query:data", async (ctx) => {
                         "⚙️ *Admin Dashboard*",
                         "",
                         "📈 *System Stats*",
-                        `Users: ${stats.total_users}`,
-                        `Ads: ${stats.active_orders} active`,
-                        `Trades: ${stats.total_trades} (${stats.completed_trades} ok)`,
-                        `Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
+                        `Users: ${escapeMarkdown(String(stats.total_users))}`,
+                        `Ads: ${escapeMarkdown(String(stats.active_orders))} active`,
+                        `Trades: ${escapeMarkdown(String(stats.total_trades))} (${escapeMarkdown(String(stats.completed_trades))} ok)`,
+                        `Volume: ${escapeMarkdown(formatTokenAmount(stats.total_volume_generic))}`,
                         "",
                         "💰 *Relayer Wallet*",
-                        `Address: \`${truncateAddress(env.ADMIN_WALLET_ADDRESS)}\``,
-                        `Balance: *${relayerUsdc} USDC*`,
-                        `Gas: *${relayerEth} ETH*`,
+                        `Address: \\`${escapeMarkdown(truncateAddress(env.ADMIN_WALLET_ADDRESS))}\\``,
+                        `Balance: *${escapeMarkdown(String(relayerUsdc))} USDC*`,
+                        `Gas: *${escapeMarkdown(String(relayerEth))} ETH*`,
                         "",
                         "🏧 *Escrow Contract*",
-                        `Collected Fees: *${contractFees} USDC*`,
+                        `Collected Fees: *${escapeMarkdown(String(contractFees))} USDC*`,
                         "",
                         "━━━━━━━━━━━━━━━━",
-                        "Fees are sent to your wallet automatically upon release."
+                        "Fees are sent to your wallet automatically upon release\\.",
                     ].join("\n"),
-                    { parse_mode: "Markdown", reply_markup: keyboard }
+                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
                 );
             } catch (e) {
                 await ctx.answerCallbackQuery({ text: "❌ Refresh failed." });
@@ -2482,7 +2393,7 @@ bot.on("callback_query:data", async (ctx) => {
                 });
 
                 await ctx.editMessageText("📋 *Your Trades*\nSelect a trade to view actions:", {
-                    parse_mode: "Markdown",
+                    parse_mode: "MarkdownV2",
                     reply_markup: keyboard
                 });
             } catch (e) {
@@ -2550,9 +2461,9 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Type your UPI ID below:",
                     "",
-                    "Examples: `yourname@upi`, `9876543210@paytm`",
+                    "Examples: \\`yourname@upi\\`, \\`9876543210@paytm\\`",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             await ctx.answerCallbackQuery();
         }
@@ -2582,7 +2493,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Are you sure?",
                 ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                { parse_mode: "MarkdownV2", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -2604,9 +2515,9 @@ bot.on("callback_query:data", async (ctx) => {
                     [
                         "🔐 *YOUR PRIVATE KEY*",
                         "",
-                        `\`${derived.privateKey}\``,
+                        `\\`${escapeMarkdown(derived.privateKey)}\\``,
                         "",
-                        `Address: \`${derived.address}\``,
+                        `Address: \\`${escapeMarkdown(derived.address)}\\``,
                         "",
                         "⚠️ This message will self-destruct in 60 seconds.",
                         "📸 Screenshot it NOW and store it safely!",
@@ -2617,7 +2528,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "• Rabby",
                         "• Any EVM wallet",
                     ].join("\n"),
-                    { parse_mode: "Markdown" }
+                    { parse_mode: "MarkdownV2" }
                 );
 
                 // Delete the confirmation message
@@ -2712,7 +2623,7 @@ bot.on("message:text", async (ctx) => {
             await db.updateUser(user.id, { wallet_address: text.trim() });
             ctx.session.awaiting_input = undefined;
             ctx.session.wallet_address = text.trim();
-            await ctx.reply(`✅ Wallet set to \`${truncateAddress(text.trim())}\`\n\nYou're ready to trade! Try /sell or /buy`, { parse_mode: "Markdown" });
+            await ctx.reply(`✅ Wallet set to \\`${escapeMarkdown(truncateAddress(text.trim()))}\\`\\n\\nYou\\'re ready to trade\\! Try /sell or /buy`, { parse_mode: "MarkdownV2" });
             return;
         } else {
             await ctx.reply("❌ Invalid address. Please send a valid Base wallet address (0x...)");
@@ -2733,14 +2644,14 @@ bot.on("message:text", async (ctx) => {
                 [
                     "💸 *Send Crypto — Step 2/3*",
                     "",
-                    `Token: *${token}*`,
-                    `To: \`${truncateAddress(addr)}\``,
+                    `Token: *${escapeMarkdown(token)}*`,
+                    `To: \\`${escapeMarkdown(truncateAddress(addr))}\\``,
                     "",
-                    `How much ${token} do you want to send?`,
+                    `How much ${escapeMarkdown(token)} do you want to send?`,
                     "",
-                    "Send the amount (e.g., `100`):",
+                    "Send the amount (e.g., \\`100\\`):",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             return;
         } else {
@@ -2785,14 +2696,14 @@ bot.on("message:text", async (ctx) => {
             [
                 "💸 *Send Crypto — Final Step*",
                 "",
-                `Token: *${token}*`,
-                `Amount: *${amount} ${token}*`,
-                `To: \`${addr}\``,
+                `Token: *${escapeMarkdown(token)}*`,
+                `Amount: *${escapeMarkdown(String(amount))} ${escapeMarkdown(token)}*`,
+                `To: \\`${escapeMarkdown(addr)}\\``,
                 "",
                 "⚠️ *Confirm this transaction?*",
-                "This action cannot be undone.",
+                "This action cannot be undone\\.",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
         return;
     }
@@ -2806,11 +2717,11 @@ bot.on("message:text", async (ctx) => {
                 [
                     "❌ Invalid UPI format.",
                     "",
-                    "UPI IDs look like: `yourname@upi`",
+                    "UPI IDs look like: \\`yourname@upi\\`",
                     "",
-                    "Try again or send /upi to skip.",
+                    "Try again or send /upi to skip\\.",
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "MarkdownV2" }
             );
             return;
         }
@@ -2824,13 +2735,13 @@ bot.on("message:text", async (ctx) => {
 
         await ctx.reply(
             [
-                "✅ *UPI ID Saved!*",
+                "✅ *UPI ID Saved\\!*",
                 "",
-                `📱 UPI: \`${upiId}\``,
+                `📱 UPI: \\`${escapeMarkdown(upiId)}\\``,
                 "",
-                "You're all set! What would you like to do?",
+                "You\\'re all set\\! What would you like to do?",
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
         return;
     }
@@ -2885,11 +2796,11 @@ bot.on("message:text", async (ctx) => {
                     [
                         "📢 *Create a New Ad*",
                         "",
-                        "Ad creation has moved to the Mini App for a faster and more secure experience! 🚀",
+                        "Ad creation has moved to the Mini App for a faster and more secure experience\\! 🚀",
                         "",
                         "Tap below to get started:",
                     ].join("\n"),
-                    { parse_mode: "Markdown", reply_markup: keyboard }
+                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
                 );
                 break;
             }
@@ -2910,14 +2821,14 @@ bot.on("message:text", async (ctx) => {
                         await ctx.reply(
                             "No orders available right now. Be the first! 🚀 Launch the Mini App and create an ad!",
                             {
-                                parse_mode: "Markdown",
+                                parse_mode: "MarkdownV2",
                                 reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                             }
                         );
                     } else {
                         const list = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
                         try {
-                            await ctx.reply(`📊 *Order Book*\n\n${list}`, { parse_mode: "Markdown" });
+                            await ctx.reply(`📊 *Market Order Book — ${escapeMarkdown(intent.params.token || "USDC")} on ${escapeMarkdown((intent.params.chain || "base").toUpperCase())}*\\n\\n${escapeMarkdown(list)}`, { parse_mode: "MarkdownV2" });
                         } catch (err: any) {
                             console.error("VIEW_ORDERS Markdown Error:", err);
                             console.log("Failed Payload:", list);
@@ -2936,7 +2847,7 @@ bot.on("message:text", async (ctx) => {
                     try {
                         const balance = await wallet.getTokenBalance(user.wallet_address, env.USDC_ADDRESS, 'base');
                         const ethBalance = await wallet.getBalances(user.wallet_address).then(b => b.eth);
-                        await ctx.reply(`💰 Balance: *${balance} USDC*\n⛽ Gas: *${ethBalance} ETH*\n\nAddress: \`${truncateAddress(user.wallet_address)}\``, { parse_mode: "Markdown" });
+                        await ctx.reply(`💰 Balance: *${escapeMarkdown(balance)} USDC*\n⛽ Gas: *${escapeMarkdown(ethBalance)} ETH*\n\nAddress: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``, { parse_mode: "MarkdownV2" });
                     } catch {
                         await ctx.reply("⚠️ Could not fetch balance right now.");
                     }
@@ -2980,14 +2891,14 @@ bot.on("message:text", async (ctx) => {
                             [
                                 "💸 *Send Crypto — AI Confirmation*",
                                 "",
-                                `Token: *${token.toUpperCase()}*`,
-                                `Amount: *${amount} ${token.toUpperCase()}*`,
-                                `To: \`${addr}\``,
+                                `Token: *${escapeMarkdown(token.toUpperCase())}*`,
+                                `Amount: *${escapeMarkdown(amount)} ${escapeMarkdown(token.toUpperCase())}*`,
+                                `To: \\`${escapeMarkdown(addr)}\\``,
                                 "",
                                 "⚠️ *Confirm this transaction?*",
-                                "This action cannot be undone.",
+                                "This action cannot be undone\\.",
                             ].join("\n"),
-                            { parse_mode: "Markdown", reply_markup: keyboard }
+                            { parse_mode: "MarkdownV2", reply_markup: keyboard }
                         );
                     } else {
                         // Not enough details, start the flow
@@ -3003,11 +2914,11 @@ bot.on("message:text", async (ctx) => {
                             [
                                 "💸 *Withdraw Crypto*",
                                 "",
-                                "I can help you send crypto to any Base wallet.",
+                                "I can help you send crypto to any Base wallet\\.",
                                 "",
                                 "Which token would you like to send?",
                             ].join("\n"),
-                            { parse_mode: "Markdown", reply_markup: keyboard }
+                            { parse_mode: "MarkdownV2", reply_markup: keyboard }
                         );
                     }
                 }
@@ -3027,10 +2938,10 @@ bot.on("message:text", async (ctx) => {
                 break;
 
             case "MARKET_NEWS":
-                await ctx.reply("📰 *Checking Market Data...*", { parse_mode: "Markdown" });
+                await ctx.reply("📰 *Checking Market Data...*", { parse_mode: "MarkdownV2" });
                 const queryText = cleanText.startsWith("/") ? "" : cleanText;
                 const digest = await market.getMarketDigest(queryText);
-                await ctx.reply(digest, { parse_mode: "Markdown" });
+                await ctx.reply(digest, { parse_mode: "MarkdownV2" });
                 break;
 
             default:
@@ -3058,7 +2969,7 @@ bot.on("message:photo", async (ctx) => {
         const file = await ctx.api.getFile(photo.file_id);
         const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
 
-        const statusMsg = await ctx.reply("📸 *Analyzing payment proof with AI...*", { parse_mode: "Markdown" });
+        const statusMsg = await ctx.reply("📸 *Analyzing payment proof with AI...*", { parse_mode: "MarkdownV2" });
 
         // AI Vision Analysis
         const analysis = await ai.analyzePaymentProof(
@@ -3086,9 +2997,9 @@ bot.on("message:photo", async (ctx) => {
                 verificationText,
                 "",
                 "The seller has been notified to check their account.",
-                "If they don't respond, you can open a dispute via the Mini App.",
+                "If they don\\'t respond, you can open a dispute via the Mini App\\.",
             ].join("\n"),
-            { parse_mode: "Markdown" }
+            { parse_mode: "MarkdownV2" }
         );
 
         // Notify Seller

@@ -950,7 +950,17 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
         if (trade.seller_id !== user.id) return res.status(403).json({ error: "Only the seller can confirm receipt" });
-        if (trade.status !== "fiat_sent") return res.status(400).json({ error: "Buyer hasn't confirmed fiat sent yet" });
+        if (trade.status !== "fiat_sent") {
+            if (trade.status === "completed") return res.json({ success: true, message: "Trade already completed." });
+            if (trade.status === "releasing") return res.status(409).json({ error: "Release in progress..." });
+            return res.status(400).json({ error: "Buyer hasn't confirmed fiat sent yet" });
+        }
+
+        // 🛡️ ATOMIC LOCK: Transition from 'fiat_sent' to 'releasing'
+        const locked = await db.updateTradeStatusAtomic(trade.id, "fiat_sent", "releasing");
+        if (!locked) {
+            return res.status(409).json({ error: "Trade is already being processed. Please refresh." });
+        }
 
         // Release escrow on-chain if trade has on_chain_trade_id
         let releaseTxHash: string | null = null;
@@ -959,12 +969,15 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
                 releaseTxHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
             } catch (escrowErr: any) {
                 console.error("[MINIAPP] Escrow release failed:", escrowErr);
+                // Revert to 'fiat_sent' so user can retry
+                await db.updateTrade(trade.id, { status: "fiat_sent" });
                 return res.status(500).json({ error: "Failed to release escrow: " + escrowErr.message });
             }
         }
 
         await db.updateTrade(req.params.id as string, {
             status: "completed",
+
             fiat_confirmed_at: new Date().toISOString() as any,
             completed_at: new Date().toISOString() as any,
             release_tx_hash: releaseTxHash as any,

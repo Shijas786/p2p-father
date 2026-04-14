@@ -484,6 +484,43 @@ class Database {
             .eq("id", tradeId);
     }
 
+    /**
+     * Atomically transition a trade status from one state to another.
+     * Prevents race conditions where multiple requests attempt the same transition.
+     */
+    async updateTradeStatusAtomic(
+        tradeId: string, 
+        fromStatus: string | string[], 
+        toStatus: string, 
+        updates: Partial<Trade> = {}
+    ): Promise<boolean> {
+        const db = this.getClient();
+        let query = db
+            .from("trades")
+            .update({ 
+                status: toStatus, 
+                ...updates,
+                updated_at: new Date().toISOString() 
+            })
+            .eq("id", tradeId);
+
+        if (Array.isArray(fromStatus)) {
+            query = query.in("status", fromStatus);
+        } else {
+            query = query.eq("status", fromStatus);
+        }
+
+        const { data, error } = await query.select();
+
+        if (error) {
+            console.error(`[DB] updateTradeStatusAtomic error: ${error.message}`);
+            return false;
+        }
+
+        return !!(data && data.length > 0);
+    }
+
+
     async getTradesNeedingAutoRelease(): Promise<Trade[]> {
         const db = this.getClient();
         const { data } = await db
