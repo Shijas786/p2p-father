@@ -340,18 +340,51 @@ class EscrowService {
                 // Ideally we should sum up all orders for a user and compare vs balance.
                 // But for "ghost ad" detection, if balance < order.amount, it's definitely invalid.
 
-                if (balance < order.amount) {
-                    invalidOrderIds.add(order.id);
-                }
-            } catch (err) {
-                console.error(`[ESCROW] Failed to validate order ${order.id}:`, err);
-                // If we can't check, we usually default to safe? or risky? 
-                // Let's assume safe for network errors, but maybe invalidIds is safer if we want strictness.
-                // For now, let's not block on RPC errors to avoid downtime.
-            }
-        }));
-
         return invalidOrderIds;
+    }
+
+    /**
+     * Get the balance of the relayer (ETH/BNB or ERC20)
+     */
+    async getRelayerBalance(tokenAddress?: string, chain: Chain = 'base'): Promise<string> {
+        try {
+            const relayer = this.getRelayer(chain);
+            let balance: bigint;
+            let decimals = 18;
+
+            if (tokenAddress) {
+                const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.getProvider(chain));
+                balance = await contract.balanceOf(relayer.address);
+                if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
+                    decimals = 6;
+                }
+            } else {
+                balance = await this.getProvider(chain).getBalance(relayer.address);
+            }
+
+            return ethers.formatUnits(balance, decimals);
+        } catch (err) {
+            console.error(`[ESCROW] Failed to get relayer balance on ${chain}:`, err);
+            return "0";
+        }
+    }
+
+    /**
+     * Get the total fees collected by the escrow contract
+     */
+    async getContractFees(tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+        try {
+            const contract = this.getEscrowContract(chain);
+            const fees: bigint = await contract.totalFeesCollected(tokenAddress);
+            let decimals = 18;
+            if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
+                decimals = 6;
+            }
+            return ethers.formatUnits(fees, decimals);
+        } catch (err) {
+            console.error(`[ESCROW] Failed to get contract fees on ${chain}:`, err);
+            return "0";
+        }
     }
 }
 
