@@ -662,7 +662,6 @@ bot.command("bank", async (ctx) => {
             "🏦 *Set Your Bank Details*",
             "",
             user.bank_account_number
-            user.bank_account_number
                 ? `Current: \`${escapeMarkdown(user.bank_account_number)}\` (${escapeMarkdown(user.bank_ifsc || '')})`
                 : "Not set yet\\.",
             "",
@@ -670,6 +669,9 @@ bot.command("bank", async (ctx) => {
             "Example: \`1234567890 SBIN0001234 SBI\`",
         ].join("\n"),
         { parse_mode: "MarkdownV2" }
+    );
+});
+
 bot.command("newad", async (ctx) => {
     const cacheBuster = `?v=${Date.now()}`;
     const miniAppUrl = `https://p2pfather.com/miniapp/create${cacheBuster}`;
@@ -1156,7 +1158,40 @@ bot.command("profile", async (ctx) => {
             `💳 Wallet: ${user.wallet_address ? `\`${escapeMarkdown(truncateAddress(user.wallet_address))}\`` : "Not set"}`,
             `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
-            "",
+        ].join("\n"),
+        { parse_mode: "MarkdownV2" }
+    );
+});
+
+// ═══════════════════════════════════════════════════════════════
+//                     /admin COMMAND
+// ═══════════════════════════════════════════════════════════════
+
+bot.command("admin", async (ctx) => {
+    if (!env.ADMIN_IDS.includes(ctx.from?.id || 0)) {
+        await ctx.reply("⛔️ Access Denied. Admins only.");
+        return;
+    }
+
+    try {
+        const stats = await db.getStats();
+        const { escrow: escrowSvc } = await import("../services/escrow");
+        const relayerUsdc = await escrowSvc.getRelayerBalance(env.USDC_ADDRESS);
+        const relayerEth = await escrowSvc.getRelayerBalance();
+        const contractFees = await escrowSvc.getContractFees(env.USDC_ADDRESS);
+
+        const keyboard = new InlineKeyboard()
+            .text("🔄 Refresh Stats", "admin_stats")
+            .row()
+            .text("⚖️ View Trades", "admin_trades");
+
+        await ctx.reply(
+            [
+                "⚙️ *Admin Dashboard*",
+                "",
+                `Total Users: ${stats.total_users}`,
+                `Active Orders: ${stats.active_orders}`,
+                `Completed Trades: ${stats.completed_trades}`,
                 `Volume: ${formatTokenAmount(stats.total_volume_generic)}`,
                 "",
                 "💰 *Relayer Wallet*",
@@ -1170,8 +1205,9 @@ bot.command("profile", async (ctx) => {
                 "━━━━━━━━━━━━━━━━",
                 "Fees are sent to your wallet automatically upon release."
             ].join("\n"),
-            { parse_mode: "Markdown", reply_markup: keyboard }
+            { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
+
     } catch (e) {
         console.error("Admin error:", e);
         await ctx.reply("❌ Failed to load admin stats.");
