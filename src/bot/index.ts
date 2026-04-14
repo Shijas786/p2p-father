@@ -16,6 +16,7 @@ import {
     formatTimeRemaining,
     truncateAddress,
     formatShortDate,
+    escapeMarkdown,
 } from "../utils/formatters";
 import type { SessionData, User } from "../types";
 
@@ -125,12 +126,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
     }));
 }
 
-// Escape Markdown special characters in text to prevent parse failures
-function escapeMarkdown(text: string): string {
-    if (!text) return "";
-    // Telegram MarkdownV2 requires escaping: _ * [ ] ( ) ~ ` > # + - = | { } . ! \
-    return text.toString().replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
-}
+
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
@@ -486,12 +482,12 @@ bot.command(["start", "open"], async (ctx) => {
                 [
                     "📱 *One more step — Set your UPI ID*",
                     "",
-                    "You\\'ll need UPI to receive/send fiat payments\\.",
+                    "You'll need UPI to receive/send fiat payments\\.",
                     "",
                     "Examples:",
-                    "• \\`yourname@upi\\`",
-                    "• \\`9876543210@paytm\\`",
-                    "• \\`yourname@okicici\\`",
+                    "• \`yourname@upi\`",
+                    "• \`9876543210@paytm\`",
+                    "• \`yourname@okicici\`",
                     "",
                     "Tap below or just type your UPI ID:",
                 ].join("\n"),
@@ -615,7 +611,7 @@ bot.command("phone", async (ctx) => {
 
     if (cleaned.length >= 10) {
         await db.updateUser(user.id, { phone_number: cleaned });
-        await ctx.reply(`✅ Phone number updated: \\`${escapeMarkdown(cleaned)}\\``, { parse_mode: "MarkdownV2" });
+        await ctx.reply(`✅ Phone number updated: \`${escapeMarkdown(cleaned)}\``, { parse_mode: "MarkdownV2" });
         return;
     }
 
@@ -624,7 +620,7 @@ bot.command("phone", async (ctx) => {
         [
             "📞 *Set Your Phone Number*",
             "",
-            user.phone_number ? `Current: \\`${escapeMarkdown(user.phone_number)}\\`` : "Not set yet\\.",
+            user.phone_number ? `Current: \`${escapeMarkdown(user.phone_number)}\`` : "Not set yet\\.",
             "",
             "Send your 10\\-digit mobile number:",
         ].join("\n"),
@@ -650,8 +646,8 @@ bot.command("bank", async (ctx) => {
                 [
                     "✅ *Bank Details Updated\\!*",
                     "",
-                    `🏦 Account: \\`${escapeMarkdown(parts[0])}\\``,
-                    `IFSC: \\`${escapeMarkdown(parts[1].toUpperCase())}\\``,
+                    `🏦 Account: \`${escapeMarkdown(parts[0])}\``,
+                    `IFSC: \`${escapeMarkdown(parts[1].toUpperCase())}\``,
                     parts[2] ? `Bank: ${escapeMarkdown(parts.slice(2).join(' '))}` : "",
                 ].join("\n"),
                 { parse_mode: "MarkdownV2" }
@@ -666,11 +662,12 @@ bot.command("bank", async (ctx) => {
             "🏦 *Set Your Bank Details*",
             "",
             user.bank_account_number
-                ? `Current: \\`${escapeMarkdown(user.bank_account_number)}\\` \\(${escapeMarkdown(user.bank_ifsc || '')}\\)`
+            user.bank_account_number
+                ? `Current: \`${escapeMarkdown(user.bank_account_number)}\` (${escapeMarkdown(user.bank_ifsc || '')})`
                 : "Not set yet\\.",
             "",
-            "Send: \\`ACCOUNT_NUMBER IFSC_CODE BANK_NAME\\`",
-            "Example: \\`1234567890 SBIN0001234 SBI\\`",
+            "Send: \`ACCOUNT_NUMBER IFSC_CODE BANK_NAME\`",
+            "Example: \`1234567890 SBIN0001234 SBI\`",
         ].join("\n"),
         { parse_mode: "MarkdownV2" }
 bot.command("newad", async (ctx) => {
@@ -790,7 +787,7 @@ bot.command("myads", async (ctx) => {
                 [
                     "📋 *My Ads*",
                     "",
-                    "You don\\'t have any ads yet\\!",
+                    "You don't have any ads yet\\!",
                     "Create your first ad to start trading\\.",
                 ].join("\n"),
                 { parse_mode: "MarkdownV2", reply_markup: keyboard }
@@ -810,7 +807,7 @@ bot.command("myads", async (ctx) => {
                     `${i + 1}\\. ${emoji} *${o.type.toUpperCase()}* ${escapeMarkdown(formatTokenAmount(available))}`,
                     `   Rate: ${escapeMarkdown(formatINR(o.rate))}/USDC | Total: ${escapeMarkdown(formatINR(available * o.rate))}`,
                     `   Payment: ${escapeMarkdown(o.payment_methods?.join(", ") || "UPI")}`,
-                    `   ID: \\`${escapeMarkdown(o.id.slice(0, 8))}\\``,
+                    `   🆔 \`${escapeMarkdown(o.id.slice(0, 8))}\``,
                 ].join("\n"));
                 sections.push("");
             });
@@ -1023,7 +1020,7 @@ bot.command(["balance", "portfolio"], async (ctx) => {
             [
                 "💰 *Your Portfolio*",
                 "",
-                `Address: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``,
+                `Address: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``,
                 "",
                 `💵 *USDC*: ${escapeMarkdown(balances.usdc)}`,
                 `💵 *USDT*: ${escapeMarkdown(balances.usdt)}`,
@@ -1039,7 +1036,7 @@ bot.command(["balance", "portfolio"], async (ctx) => {
             [
                 "💰 *Your Wallet*",
                 "",
-                `Address: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``,
+                `Address: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``,
                 "⚠️ Could not fetch balance\\. RPC may be unavailable\\.",
             ].join("\n"),
             { parse_mode: "MarkdownV2" }
@@ -1066,7 +1063,7 @@ bot.command("wallet", async (ctx) => {
             [
                 "🔑 *Your Wallet*",
                 "",
-                `💳 Address: \\`${escapeMarkdown(user.wallet_address)}\\``,
+                `💳 Address: \`${escapeMarkdown(user.wallet_address)}\``,
                 `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
                 "",
                 "Your wallet was created automatically\\.",
@@ -1081,9 +1078,9 @@ bot.command("wallet", async (ctx) => {
                 "",
                 "Send me your Base wallet address:",
                 "",
-                "Example: \\`0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18\\`",
+                "Example: \`0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18\`",
                 "",
-                "This is where you\\'ll receive USDC from trades\\.",
+                "This is where you'll receive USDC from trades\\.",
             ].join("\n"),
             { parse_mode: "MarkdownV2" }
         );
@@ -1156,7 +1153,7 @@ bot.command("profile", async (ctx) => {
             `✅ Completed: ${escapeMarkdown(String(user.completed_trades))}`,
             `📊 Success Rate: ${user.trade_count > 0 ? escapeMarkdown(((user.completed_trades / user.trade_count) * 100).toFixed(0)) : 0}%`,
             "",
-            `💳 Wallet: ${user.wallet_address ? `\\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\`` : "Not set"}`,
+            `💳 Wallet: ${user.wallet_address ? `\`${escapeMarkdown(truncateAddress(user.wallet_address))}\`` : "Not set"}`,
             `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
             "",
@@ -1415,7 +1412,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     `Minimum: *${escapeMarkdown(String(minAmount))} ${escapeMarkdown(token)}*`,
                     "",
-                    "Send the amount (e.g., \\`100\\` or \\`50.5\\`):",
+                    "Send the amount (e.g., \`100\` or \`50.5\`):",
                 ].join("\n"),
                 { parse_mode: "MarkdownV2" }
             );
@@ -1670,7 +1667,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "✅ *Tokens Sent\\!* 🚀",
                         "",
                         `Amount: *${escapeMarkdown(String(draft.amount))} ${escapeMarkdown(draft.token)}*`,
-                        `To: \\`${escapeMarkdown(draft.to_address)}\\``,
+                        `To: \`${escapeMarkdown(draft.to_address)}\``,
                         "",
                         `🔗 [View on BaseScan](${getExplorerUrl(txHash)})`,
                     ].join("\n"),
@@ -1712,7 +1709,7 @@ bot.on("callback_query:data", async (ctx) => {
                             "✅ *Ad Cancelled & Funds Unlocked*",
                             "",
                             `Refunded: *${escapeMarkdown(formatTokenAmount(order.amount))}*`,
-                            `To: \\`${escapeMarkdown(truncateAddress(user.wallet_address!))}\\``,
+                            `To: \`${escapeMarkdown(truncateAddress(user.wallet_address!))}\``,
                             "",
                             `🔗 [View Refund Tx](${getExplorerUrl(refundTx)})`,
                         ].join("\n"),
@@ -2082,7 +2079,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const upiId = upiFromOrder || partner?.upi_id;
 
                 if (upiId) {
-                    details.push(`💳 Seller UPI: \\`${escapeMarkdown(upiId)}\\``);
+                    details.push(`💳 Seller UPI: \`${escapeMarkdown(upiId)}\``);
                 } else {
                     details.push("⚠️ Seller hasn't shared UPI in profile.");
                 }
@@ -2247,7 +2244,7 @@ bot.on("callback_query:data", async (ctx) => {
                     .text("🔁 Resolve (Refund)", `resolve:${tradeId}:seller`).row()
                     .text("🤖 AI Analysis", `ai_analyze_dispute:${tradeId}`);
 
-                await ctx.api.sendMessage(adminId, `🚨 *New Dispute Raised\\!*\nTrade: \\`${escapeMarkdown(tradeId)}\\`\nPlease review carefully\\.`, {
+                await ctx.api.sendMessage(adminId, `🚨 *New Dispute Raised\\!*\nTrade: \`${escapeMarkdown(tradeId)}\`\nPlease review carefully\\.`, {
                     parse_mode: "MarkdownV2",
                     reply_markup: kb
                 });
@@ -2343,7 +2340,7 @@ bot.on("callback_query:data", async (ctx) => {
                         `Volume: ${escapeMarkdown(formatTokenAmount(stats.total_volume_generic))}`,
                         "",
                         "💰 *Relayer Wallet*",
-                        `Address: \\`${escapeMarkdown(truncateAddress(env.ADMIN_WALLET_ADDRESS))}\\``,
+                        `Address: \`${escapeMarkdown(truncateAddress(env.ADMIN_WALLET_ADDRESS))}\``,
                         `Balance: *${escapeMarkdown(String(relayerUsdc))} USDC*`,
                         `Gas: *${escapeMarkdown(String(relayerEth))} ETH*`,
                         "",
@@ -2461,7 +2458,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Type your UPI ID below:",
                     "",
-                    "Examples: \\`yourname@upi\\`, \\`9876543210@paytm\\`",
+                    "Examples: \`yourname@upi\`, \`9876543210@paytm\`",
                 ].join("\n"),
                 { parse_mode: "MarkdownV2" }
             );
@@ -2515,9 +2512,9 @@ bot.on("callback_query:data", async (ctx) => {
                     [
                         "🔐 *YOUR PRIVATE KEY*",
                         "",
-                        `\\`${escapeMarkdown(derived.privateKey)}\\``,
+                        `\`${escapeMarkdown(derived.privateKey)}\``,
                         "",
-                        `Address: \\`${escapeMarkdown(derived.address)}\\``,
+                        `Address: \`${escapeMarkdown(derived.address)}\``,
                         "",
                         "⚠️ This message will self-destruct in 60 seconds.",
                         "📸 Screenshot it NOW and store it safely!",
@@ -2623,7 +2620,7 @@ bot.on("message:text", async (ctx) => {
             await db.updateUser(user.id, { wallet_address: text.trim() });
             ctx.session.awaiting_input = undefined;
             ctx.session.wallet_address = text.trim();
-            await ctx.reply(`✅ Wallet set to \\`${escapeMarkdown(truncateAddress(text.trim()))}\\`\\n\\nYou\\'re ready to trade\\! Try /sell or /buy`, { parse_mode: "MarkdownV2" });
+            await ctx.reply(`✅ Wallet set to \`${escapeMarkdown(truncateAddress(text.trim()))}\`\\n\\nYou're ready to trade\\! Try /sell or /buy`, { parse_mode: "MarkdownV2" });
             return;
         } else {
             await ctx.reply("❌ Invalid address. Please send a valid Base wallet address (0x...)");
@@ -2645,11 +2642,11 @@ bot.on("message:text", async (ctx) => {
                     "💸 *Send Crypto — Step 2/3*",
                     "",
                     `Token: *${escapeMarkdown(token)}*`,
-                    `To: \\`${escapeMarkdown(truncateAddress(addr))}\\``,
+                    `To: \`${escapeMarkdown(truncateAddress(addr))}\``,
                     "",
                     `How much ${escapeMarkdown(token)} do you want to send?`,
                     "",
-                    "Send the amount (e.g., \\`100\\`):",
+                    "Send the amount (e.g., \`100\`):",
                 ].join("\n"),
                 { parse_mode: "MarkdownV2" }
             );
@@ -2698,7 +2695,7 @@ bot.on("message:text", async (ctx) => {
                 "",
                 `Token: *${escapeMarkdown(token)}*`,
                 `Amount: *${escapeMarkdown(String(amount))} ${escapeMarkdown(token)}*`,
-                `To: \\`${escapeMarkdown(addr)}\\``,
+                `To: \`${escapeMarkdown(addr)}\``,
                 "",
                 "⚠️ *Confirm this transaction?*",
                 "This action cannot be undone\\.",
@@ -2717,7 +2714,7 @@ bot.on("message:text", async (ctx) => {
                 [
                     "❌ Invalid UPI format.",
                     "",
-                    "UPI IDs look like: \\`yourname@upi\\`",
+                    "UPI IDs look like: \`yourname@upi\`",
                     "",
                     "Try again or send /upi to skip\\.",
                 ].join("\n"),
@@ -2737,9 +2734,9 @@ bot.on("message:text", async (ctx) => {
             [
                 "✅ *UPI ID Saved\\!*",
                 "",
-                `📱 UPI: \\`${escapeMarkdown(upiId)}\\``,
+                `📱 UPI: \`${escapeMarkdown(upiId)}\``,
                 "",
-                "You\\'re all set\\! What would you like to do?",
+                "You're all set\\! What would you like to do?",
             ].join("\n"),
             { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
@@ -2847,7 +2844,7 @@ bot.on("message:text", async (ctx) => {
                     try {
                         const balance = await wallet.getTokenBalance(user.wallet_address, env.USDC_ADDRESS, 'base');
                         const ethBalance = await wallet.getBalances(user.wallet_address).then(b => b.eth);
-                        await ctx.reply(`💰 Balance: *${escapeMarkdown(balance)} USDC*\n⛽ Gas: *${escapeMarkdown(ethBalance)} ETH*\n\nAddress: \\`${escapeMarkdown(truncateAddress(user.wallet_address))}\\``, { parse_mode: "MarkdownV2" });
+                        await ctx.reply(`💰 Balance: *${escapeMarkdown(balance)} USDC*\n⛽ Gas: *${escapeMarkdown(ethBalance)} ETH*\n\nAddress: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``, { parse_mode: "MarkdownV2" });
                     } catch {
                         await ctx.reply("⚠️ Could not fetch balance right now.");
                     }
@@ -2893,7 +2890,7 @@ bot.on("message:text", async (ctx) => {
                                 "",
                                 `Token: *${escapeMarkdown(token.toUpperCase())}*`,
                                 `Amount: *${escapeMarkdown(amount)} ${escapeMarkdown(token.toUpperCase())}*`,
-                                `To: \\`${escapeMarkdown(addr)}\\``,
+                                `To: \`${escapeMarkdown(addr)}\``,
                                 "",
                                 "⚠️ *Confirm this transaction?*",
                                 "This action cannot be undone\\.",
@@ -2997,7 +2994,7 @@ bot.on("message:photo", async (ctx) => {
                 verificationText,
                 "",
                 "The seller has been notified to check their account.",
-                "If they don\\'t respond, you can open a dispute via the Mini App\\.",
+                "If they don't respond, you can open a dispute via the Mini App\\.",
             ].join("\n"),
             { parse_mode: "MarkdownV2" }
         );
