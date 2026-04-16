@@ -192,9 +192,12 @@ export async function broadcastAd(order: any, user: any) {
             lines.push("", `📝 *Note:* ${escapeMarkdown(traderNote)}`);
         }
 
+        // NOTE: web_app buttons are NOT allowed in supergroups (Telegram returns BUTTON_TYPE_INVALID).
+        // We deep-link into the bot DM via /start, where the private-chat handler opens the mini app.
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
-        const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${order.id}`;
-        const keyboard = new InlineKeyboard().webApp(actionLabel, miniAppUrl);
+        const botUsername = botUser.username;
+        const keyboard = new InlineKeyboard()
+            .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
 
         await broadcast(lines.join("\n"), keyboard);
     } catch (e) {

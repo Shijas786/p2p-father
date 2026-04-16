@@ -595,6 +595,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             rate: parsedRate,
             fiat_currency: "INR",
             payment_methods: payment_methods || ["UPI"],
+            expires_at: expiresAt as any,
             payment_details: {
                 upi: user.upi_id || "",
                 group_id: group_id ? parseInt(group_id.toString()) : undefined,
