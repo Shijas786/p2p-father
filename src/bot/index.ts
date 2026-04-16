@@ -193,8 +193,8 @@ export async function broadcastAd(order: any, user: any) {
         }
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
-        const miniAppLink = `https://t.me/${botUser.username}?start=buy_${order.id}`;
-        const keyboard = new InlineKeyboard().url(actionLabel, miniAppLink);
+        const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${order.id}`;
+        const keyboard = new InlineKeyboard().webApp(actionLabel, miniAppUrl);
 
         await broadcast(lines.join("\n"), keyboard);
     } catch (e) {
