@@ -328,6 +328,9 @@ bot.command("ping", async (ctx) => {
 });
 
 bot.command(["start", "open"], async (ctx) => {
+    // 🛡️ Restrict command to Private Chats ONLY (prevents errors/spam in groups)
+    if (ctx.chat.type !== "private") return;
+
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
 
