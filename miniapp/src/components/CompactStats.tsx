@@ -1,20 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { isTelegramEnvironment } from '../lib/telegram';
 import { IconHistory, IconStar, IconMarket } from './Icons';
 import './CompactStats.css';
 
 interface Props {
     userId: string;
-}
-
-// Demo stats for local dev — each trader index gets slightly varied numbers
-function getMockStats(userId: string) {
-    const seed = userId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const trades  = 30 + (seed % 400);
-    const rate    = 88 + (seed % 12);
-    const volume  = 5000 + (seed % 95000);
-    return { completed_trades: trades, completion_rate: rate, total_volume: volume };
 }
 
 export function CompactStats({ userId }: Props) {
