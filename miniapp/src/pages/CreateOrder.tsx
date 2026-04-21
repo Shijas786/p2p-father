@@ -29,6 +29,7 @@ export function CreateOrder() {
     const [rate, setRate] = useState('');
     const [methods, setMethods] = useState<string[]>(['UPI']);
     const [note, setNote] = useState('');
+    const [expiryMinutes, setExpiryMinutes] = useState(60); // 1 hour default
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
@@ -328,6 +329,7 @@ export function CreateOrder() {
                 rate: effectiveRate,
                 payment_methods: methods,
                 note: note.trim() || undefined,
+                expires_in: expiryMinutes,
             });
 
             haptic('success');
@@ -480,6 +482,28 @@ export function CreateOrder() {
                                     {note.length}/200
                                 </div>
                             )}
+
+                            <div className="co-section-title" style={{ marginTop: '16px' }}>8. Ad Duration</div>
+                            <div className="co-presets-row mb-2">
+                                {[
+                                    { label: '30m', val: 30 },
+                                    { label: '1h', val: 60 },
+                                    { label: '6h', val: 360 },
+                                    { label: '12h', val: 720 }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.val}
+                                        className={`btn-preset-sm ${expiryMinutes === opt.val ? 'active' : ''}`}
+                                        onClick={() => { haptic('selection'); setExpiryMinutes(opt.val); }}
+                                        style={{ minWidth: '60px' }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="text-[10px] text-muted mb-2">
+                                Ad will automatically cancel after this time.
+                            </div>
                         </div>
 
                         {/* Summary & Vault */}

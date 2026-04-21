@@ -116,6 +116,7 @@ export const api = {
             rate: number;
             payment_methods: string[];
             note?: string;
+            expires_in?: number;
         }) =>
             request<{ order: any }>('/orders', {
                 method: 'POST',

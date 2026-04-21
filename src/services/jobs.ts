@@ -7,17 +7,20 @@ export function startExpiryJob() {
     // Check every 1 minute
     setInterval(async () => {
         try {
-            // Expiry job disabled until expires_at column is added to DB
-            /*
             const now = new Date().toISOString();
             const client = (db as any).getClient(); 
             const { data: expiredOrders, error } = await client
                 .from("orders")
-                .select("id")
+                .update({ status: "expired", updated_at: now })
                 .eq("status", "active")
-                .lt("expires_at", now);
-            ...
-            */
+                .lt("expires_at", now)
+                .select("id");
+
+            if (error) throw error;
+            
+            if (expiredOrders && expiredOrders.length > 0) {
+                console.log(`[JOB] Auto-expired ${expiredOrders.length} ads: ${expiredOrders.map((o: any) => o.id).join(", ")}`);
+            }
         } catch (err) {
             console.error("[JOB] Expiry job error:", err);
         }

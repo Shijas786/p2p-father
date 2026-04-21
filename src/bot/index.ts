@@ -917,7 +917,7 @@ bot.command("buy", async (ctx) => {
             return;
         }
 
-        const orderList = orders.map((o, i) => escapeMarkdown(formatOrder(o, i))).join("\n\n");
+        const orderList = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
 
         const keyboard = new InlineKeyboard();
         orders.slice(0, 5).forEach((o) => {
@@ -958,7 +958,7 @@ bot.command("orders", async (ctx) => {
             sections.push("🔴 *SELL ORDERS* \\(Buy these\\)");
             sections.push("");
             sellOrders.forEach((o, i) => {
-                sections.push(escapeMarkdown(formatOrder(o, i)));
+                sections.push(formatOrder(o, i));
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🟢 Buy ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
@@ -972,7 +972,7 @@ bot.command("orders", async (ctx) => {
             sections.push("🟢 *BUY ORDERS* \\(Sell to these\\)");
             sections.push("");
             buyOrders.forEach((o, i) => {
-                sections.push(escapeMarkdown(formatOrder(o, i)));
+                sections.push(formatOrder(o, i));
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🔴 Sell ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
@@ -2867,7 +2867,7 @@ bot.on("message:text", async (ctx) => {
                     } else {
                         const list = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
                         try {
-                            await ctx.reply(`📊 *Market Order Book — ${escapeMarkdown(intent.params.token || "USDC")} on ${escapeMarkdown((intent.params.chain || "base").toUpperCase())}*\\n\\n${escapeMarkdown(list)}`, { parse_mode: "MarkdownV2" });
+                            await ctx.reply(list, { parse_mode: "MarkdownV2" });
                         } catch (err: any) {
                             console.error("VIEW_ORDERS Markdown Error:", err);
                             console.log("Failed Payload:", list);
