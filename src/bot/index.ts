@@ -331,6 +331,9 @@ bot.command(["start", "open"], async (ctx) => {
     // 🛡️ Restrict command to Private Chats ONLY (prevents errors/spam in groups)
     if (ctx.chat.type !== "private") return;
 
+    // ✨ UI Feedback
+    await ctx.replyWithChatAction("typing").catch(() => {});
+
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
 
@@ -749,6 +752,7 @@ bot.command("sell", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command(["ads", "liveads"], async (ctx) => {
+    await ctx.replyWithChatAction("typing").catch(() => {});
     await ensureUser(ctx);
 
     const keyboard = new InlineKeyboard()
@@ -2615,6 +2619,7 @@ bot.on("callback_query:data", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.on("message:text", async (ctx) => {
+    await ctx.replyWithChatAction("typing").catch(() => {});
     const text = ctx.message.text;
     console.log(`[BOT] Received text: "${text}" from ${ctx.from.id} in ${ctx.chat.type} (${ctx.chat.id})`);
 
