@@ -118,6 +118,22 @@ export function MyAds() {
                                             ))}
                                         </div>
                                     </div>
+                                    {order.status === 'active' && order.expires_at && (
+                                        <div className="ads-detail-row mt-2">
+                                            <span className="ads-detail-label">Time Left</span>
+                                            <span className="ads-expiry-timer">
+                                                {(() => {
+                                                    const diff = new Date(order.expires_at).getTime() - Date.now();
+                                                    if (diff <= 0) return 'Expired';
+                                                    const mins = Math.floor(diff / 60000);
+                                                    if (mins < 60) return `⏳ ${mins}m remaining`;
+                                                    const hrs = Math.floor(mins / 60);
+                                                    const remMins = mins % 60;
+                                                    return `⏳ ${hrs}h ${remMins}m remaining`;
+                                                })()}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 {tab === 'active' && (
                                     <div className="ads-card-actions">

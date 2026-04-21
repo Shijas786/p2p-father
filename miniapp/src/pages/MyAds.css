@@ -161,6 +161,17 @@
     color: #b7bdc6;
 }
 
+.ads-expiry-timer {
+    font-size: 11px;
+    color: #f0b90b;
+    font-weight: 500;
+    font-family: 'Space Grotesk', monospace;
+}
+
+.mt-2 {
+    margin-top: 8px;
+}
+
 .ads-card-actions {
     padding-top: 10px;
     border-top: 1px solid #2b2f36;
