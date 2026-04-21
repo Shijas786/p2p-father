@@ -1593,42 +1593,56 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
 
-        const PAGE_SIZE = 50;
+        const timeframe = (req.query.timeframe as string) || "all";
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
-        const from = (page - 1) * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
+        const PAGE_SIZE = 50;
+        const offset = (page - 1) * PAGE_SIZE;
 
-        // Get total count
-        const { count: totalCount } = await supabase
-            .from("users")
-            .select("id", { count: "exact", head: true });
+        let days = 0;
+        if (timeframe === "7d") days = 7;
+        else if (timeframe === "30d") days = 30;
 
-        const { data: users, error } = await supabase
-            .from("users")
-            .select("id, username, first_name, photo_url, wallet_address, points, total_volume, trade_count, telegram_id")
-            .order("points", { ascending: false })
-            .range(from, to);
+        // Call RPC for timeframe-aware leaderboard
+        const { data: users, error } = await supabase.rpc("get_timeframe_leaderboard", {
+            p_days: days,
+            p_limit: PAGE_SIZE,
+            p_offset: offset
+        });
 
         if (error) throw error;
 
-        // Mask addresses for privacy if no username
-        // "Name": Show Username if available, else 0x12...34
-        const leaderboard = (users || []).map((u: any, index: number) => ({
-            rank: from + index + 1,
+        // For total count, we'll use a simplified approach for now:
+        // All-time: total users count.
+        // Timeframe: we use the returned list length + offset if it matches limit, otherwise it's the end.
+        // Better: Query count based on timeframe if not 'all'
+        let totalCount = 0;
+        if (days === 0) {
+            const { count } = await supabase.from("users").select("id", { count: "exact", head: true });
+            totalCount = count || 0;
+        } else {
+             // For simplicity in this version, we'll estimate total count or just check if has_more
+             // A real production app might need a secondary RPC for count.
+             totalCount = (users?.length || 0) + offset;
+             if (users?.length === PAGE_SIZE) totalCount += PAGE_SIZE; // Dummy 'has more' hint
+        }
+
+        const leaderboard = (users || []).map((u: any) => ({
+            rank: u.rank,
             id: u.id,
-            name: u.username || u.first_name || (u.wallet_address ? `${u.wallet_address.slice(0, 6)}...${u.wallet_address.slice(-4)}` : "Anon"),
+            name: u.name,
             photo_url: u.photo_url,
-            points: u.points || 0,
-            volume: u.total_volume || 0,
-            trades: u.trade_count || 0,
+            points: parseFloat(u.points || 0),
+            volume: parseFloat(u.volume || 0),
+            trades: parseInt(u.trades || 0),
             is_me: req.telegramUser?.id === u.telegram_id
         }));
 
         res.json({
             leaderboard,
             page,
-            total_count: totalCount || 0,
-            has_more: (totalCount || 0) > page * PAGE_SIZE,
+            total_count: totalCount,
+            has_more: (users || []).length === PAGE_SIZE,
+            timeframe
         });
     } catch (err: any) {
         console.error("[MINIAPP] Leaderboard error:", err);
@@ -1676,13 +1690,13 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
         // Fetch user basic info
         const { data: user, error: userErr } = await client
             .from("users")
-            .select("id, username, first_name, photo_url, completed_trades, created_at")
+            .select("id, username, first_name, photo_url, completed_trades, total_volume, trade_count, created_at")
             .eq("id", userId)
             .single();
 
         if (userErr || !user) return res.status(404).json({ error: "User not found" });
 
-        // Fetch their completed trades for volume + recent history
+        // Fetch their recent completed trades for history/context ONLY (not for stats)
         const { data: trades } = await client
             .from("trades")
             .select("id, amount, token, status, created_at, seller_id, buyer_id")
@@ -1691,16 +1705,12 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
             .order("created_at", { ascending: false })
             .limit(20);
 
-        // Fetch total trades attempted (for completion rate)
-        const { count: totalAttempted } = await client
-            .from("trades")
-            .select("id", { count: "exact", head: true })
-            .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-            .neq("status", "waiting_for_escrow"); // exclude never-started
-
-        const completedCount = trades?.length || user.completed_trades || 0;
-        const totalVolumeUsdt = (trades || []).reduce((sum: number, t: any) => sum + parseFloat(t.amount || 0), 0);
-        const completionRate = totalAttempted > 0 ? Math.round((completedCount / totalAttempted) * 100) : 100;
+        // Fetch total trades attempted (for confirmation count if needed, but we use trade_count for total)
+        // However, we already have all-time stats in the 'user' object.
+        const completedCount = user.completed_trades || 0;
+        const totalVolumeUsdt = user.total_volume || 0;
+        const totalAttempted = user.trade_count || 1; // avoid div by zero
+        const completionRate = Math.round((completedCount / totalAttempted) * 100);
 
         const buyCount = (trades || []).filter((t: any) => t.buyer_id === userId).length;
         const sellCount = (trades || []).filter((t: any) => t.seller_id === userId).length;
@@ -1717,10 +1727,10 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
             username: user.username,
             first_name: user.first_name,
             photo_url: user.photo_url,
-            completed_trades: completedCount,
+            completed_trades: totalAttempted, // Using total attempts to match leaderboard 'Trades'
             buy_count: buyCount,
             sell_count: sellCount,
-            total_volume: parseFloat(totalVolumeUsdt.toFixed(2)),
+            total_volume: parseFloat(totalVolumeUsdt.toString()),
             completion_rate: completionRate,
             level,
             member_since: user.created_at,

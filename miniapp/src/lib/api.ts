@@ -226,7 +226,10 @@ export const api = {
         }>('/bags/stats'),
     },
 
-    getLeaderboard: (page = 1) => request<{ leaderboard: any[]; page: number; total_count: number; has_more: boolean }>(`/leaderboard?page=${page}`),
+    getLeaderboard: (page = 1, timeframe = 'all') => 
+        request<{ leaderboard: any[]; page: number; total_count: number; has_more: boolean; timeframe: string }>(
+            `/leaderboard?page=${page}&timeframe=${timeframe}`
+        ),
 
     // ---- Admin ----
     admin: {

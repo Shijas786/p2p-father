@@ -628,8 +628,19 @@ export function TradeDetail({ user }: Props) {
 
             {/* Amount Card */}
             <div className="td-amount-card card-glass glow-green">
-                <div className="td-amount font-mono">
-                    {formatBal(disp.amount, disp.token === 'BNB' ? 4 : 2)} <span className="text-muted">{disp.token}</span>
+                <div className="flex items-center gap-3">
+                    <div className="td-amount font-mono">
+                        {formatBal(disp.amount, disp.token === 'BNB' ? 4 : 2)} <span className="text-muted">{disp.token}</span>
+                    </div>
+                    {disp.chain && (
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                            disp.chain.toLowerCase().includes('bsc') 
+                                ? 'bg-[#F3BA2F]/10 text-[#F3BA2F] border-[#F3BA2F]/20' 
+                                : 'bg-[#0052FF]/10 text-[#0052FF] border-[#0052FF]/20'
+                        }`}>
+                            {disp.chain.toLowerCase().includes('bsc') ? 'BNB Chain' : 'Base'}
+                        </span>
+                    )}
                 </div>
                 <div className="td-fiat font-mono text-secondary mb-2">
                     ₹{disp.fiat_amount?.toLocaleString() || (disp.amount * disp.rate).toLocaleString()} @ ₹{disp.rate?.toLocaleString()}
@@ -919,9 +930,12 @@ export function TradeDetail({ user }: Props) {
                 )}
 
                 <div className="td-actions">
-                    {trade && trade.status === 'in_escrow' && !isSeller && (
-                        <div className="card-glass border-green p-3 animate-in">
-                            <h4 className="mb-2 text-sm font-bold uppercase tracking-wider">📤 Confirm Transfer</h4>
+                    {trade && (trade.status === 'in_escrow' || trade.status === 'fiat_sent' || trade.status === 'disputed') && (
+                        <div className={`card-glass p-3 animate-in mb-4 ${trade.status === 'in_escrow' ? 'border-green' : 'border-white/10'}`}>
+                            <h4 className="mb-2 text-sm font-bold uppercase tracking-wider flex items-center justify-between">
+                                <span>{trade.status === 'in_escrow' ? '📤 Confirm Transfer' : '💳 Payment Details'}</span>
+                                {trade.status === 'disputed' && <span className="text-[10px] bg-red/20 text-red px-2 py-0.5 rounded-full">Viewing in Dispute</span>}
+                            </h4>
 
                             {/* Seller Payment Details */}
                             {trade.seller_digital_rupee_id && (
@@ -944,19 +958,6 @@ export function TradeDetail({ user }: Props) {
                                         <span className="font-mono text-lg text-white select-all">{trade.seller_upi_id}</span>
                                         <button className="btn btn-xs btn-outline" onClick={async () => {
                                             const success = await copyToClipboard(trade.seller_upi_id || '');
-                                            if (success) haptic('success');
-                                        }}>Copy</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {trade.seller_phone && (
-                                <div className="bg-white/5 rounded p-3 mb-2 border border-white/10">
-                                    <div className="text-[10px] text-muted uppercase font-bold mb-1">📞 Phone Number</div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-mono text-lg text-white select-all">{trade.seller_phone}</span>
-                                        <button className="btn btn-xs btn-outline" onClick={async () => {
-                                            const success = await copyToClipboard(trade.seller_phone || '');
                                             if (success) haptic('success');
                                         }}>Copy</button>
                                     </div>
@@ -1004,25 +1005,28 @@ export function TradeDetail({ user }: Props) {
                                 </div>
                             )}
 
-                            {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && (
+                            {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && !trade.seller_cdm_bank_number && !trade.seller_digital_rupee_id && (
                                 <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
-                                    <div className="text-sm text-orange">⚠️ Seller has not set up payment details yet. Contact them via chat.</div>
+                                    <div className="text-sm text-orange">⚠️ No payment details found. Please contact the counterparty.</div>
                                 </div>
                             )}
 
-                            <div className="text-[10px] text-orange mt-1 mb-3">Pay exactly ₹{trade.fiat_amount}</div>
+                            <div className="text-[11px] text-orange mt-1 mb-2 font-bold tracking-tight">Amount: ₹{trade.fiat_amount?.toLocaleString()}</div>
 
-
-                            <p className="text-xs text-muted mb-3">Please transfer exactly <b>₹{trade.fiat_amount}</b> to the seller using one of the payment methods above.</p>
-
-                            <div className="mt-6 flex justify-center">
-                                <SlideButton
-                                    onComplete={confirmPayment}
-                                    isLoading={actionLoading}
-                                    text="Slide to Confirm Payment"
-                                    color="var(--green)"
-                                />
-                            </div>
+                            {/* Action Button: Only for Buyer in Escrow */}
+                            {trade.status === 'in_escrow' && !isSeller && (
+                                <>
+                                    <p className="text-xs text-muted mb-4 mt-2">Please transfer exactly <b>₹{trade.fiat_amount?.toLocaleString()}</b> to the seller, then slide below to confirm.</p>
+                                    <div className="mt-4 flex justify-center">
+                                        <SlideButton
+                                            onComplete={confirmPayment}
+                                            isLoading={actionLoading}
+                                            text="Slide to Confirm Payment"
+                                            color="var(--green)"
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 

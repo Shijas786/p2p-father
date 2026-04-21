@@ -26,13 +26,7 @@ export function CompactStats({ userId }: Props) {
     }, [userId]);
 
     async function loadProfile() {
-        // ── DEV MODE: instant mock stats ──────────────────────────────
-        if (!isTelegramEnvironment()) {
-            setProfile(getMockStats(userId));
-            setLoading(false);
-            return;
-        }
-        // ── PRODUCTION ────────────────────────────────────────────────
+        setLoading(true);
         try {
             const data = await api.users.getProfile(userId);
             setProfile(data);

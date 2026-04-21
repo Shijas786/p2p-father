@@ -21,18 +21,19 @@ export function Leaderboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
+    const [timeframe, setTimeframe] = useState('all');
     const [totalCount, setTotalCount] = useState(0);
     const [hasMore, setHasMore] = useState(false);
 
     useEffect(() => {
-        loadLeaderboard(page);
-    }, [page]);
+        loadLeaderboard(page, timeframe);
+    }, [page, timeframe]);
 
-    async function loadLeaderboard(p: number) {
+    async function loadLeaderboard(p: number, tf: string) {
         setLoading(true);
         setError('');
         try {
-            const data = await api.getLeaderboard(p);
+            const data = await api.getLeaderboard(p, tf);
             setUsers(data.leaderboard);
             setTotalCount(data.total_count);
             setHasMore(data.has_more);
@@ -79,6 +80,28 @@ export function Leaderboard() {
                 </div>
             </div>
 
+            {/* Timeframe Tabs */}
+            <div className="lb-tabs">
+                <button 
+                    className={`lb-tab ${timeframe === '7d' ? 'active' : ''}`} 
+                    onClick={() => { haptic('light'); setTimeframe('7d'); setPage(1); }}
+                >
+                    7 Days
+                </button>
+                <button 
+                    className={`lb-tab ${timeframe === '30d' ? 'active' : ''}`} 
+                    onClick={() => { haptic('light'); setTimeframe('30d'); setPage(1); }}
+                >
+                    30 Days
+                </button>
+                <button 
+                    className={`lb-tab ${timeframe === 'all' ? 'active' : ''}`} 
+                    onClick={() => { haptic('light'); setTimeframe('all'); setPage(1); }}
+                >
+                    All Time
+                </button>
+            </div>
+
             {/* Page Info */}
             {!loading && !error && totalCount > 0 && (
                 <div className="lb-page-info">
@@ -114,8 +137,13 @@ export function Leaderboard() {
                             </div>
 
                             <div className="lb-points">
-                                <span className="lb-points-val">{parseFloat(user.points.toFixed(1))}</span>
-                                <span className="lb-points-label">PTS</span>
+                                <span className="lb-points-val">
+                                    {timeframe === 'all' 
+                                        ? parseFloat(user.points.toFixed(1)).toLocaleString()
+                                        : `${parseFloat((user.volume / 1000).toFixed(1))}k`
+                                    }
+                                </span>
+                                <span className="lb-points-label">{timeframe === 'all' ? 'PTS' : 'VOL'}</span>
                             </div>
                         </div>
                     ))
