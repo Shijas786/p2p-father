@@ -930,7 +930,7 @@ export function TradeDetail({ user }: Props) {
                 )}
 
                 <div className="td-actions">
-                    {trade && (trade.status === 'in_escrow' || trade.status === 'fiat_sent' || trade.status === 'disputed') && (
+                    {trade && !isSeller && (trade.status === 'in_escrow' || trade.status === 'fiat_sent' || trade.status === 'disputed') && (
                         <div className={`card-glass p-3 animate-in mb-4 ${trade.status === 'in_escrow' ? 'border-green' : 'border-white/10'}`}>
                             <h4 className="mb-2 text-sm font-bold uppercase tracking-wider flex items-center justify-between">
                                 <span>{trade.status === 'in_escrow' ? '📤 Confirm Transfer' : '💳 Payment Details'}</span>
