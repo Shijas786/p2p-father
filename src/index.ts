@@ -55,7 +55,7 @@ async function main() {
     app.use(express.static(path.join(process.cwd(), "public")));
 
     // Serve Mini App frontend — NUCLEAR NO CACHING
-    const miniAppDist = path.join(process.cwd(), "public", "app");
+    const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
     const noCacheHeaders = (res: any) => {
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
         res.setHeader("Pragma", "no-cache");

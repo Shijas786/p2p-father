@@ -9,7 +9,10 @@ RUN npm install
 # Copy all source files
 COPY . .
 
-# Miniapp is pre-built and synced to public/app in Git, skipping Vite build to save memory
+# Build the miniapp
+WORKDIR /app/miniapp
+RUN npm install
+RUN npm run build
 
 # Build the backend
 WORKDIR /app
@@ -20,3 +23,4 @@ EXPOSE 8000
 
 # Start the server
 CMD ["node", "--max-old-space-size=384", "dist/index.js"]
+

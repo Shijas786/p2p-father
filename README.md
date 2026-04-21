@@ -1,23 +1,10 @@
 # P2PFather — Telegram P2P Crypto Exchange
 
-## 🚀 Deployment Workflow (IMPORTANT)
+## 🚀 Deployment
 
-This project is configured to skip the Mini App build on the server (Railway/Docker) to save memory. All Mini App changes **must be pre-built and synchronized** before pushing to `main`.
+This project is configured for automated deployment. Simply push your changes to the `main` branch, and the server (Railway/Docker) will automatically build both the backend and the Mini App frontend.
 
-### Steps to Deploy Frontend Changes:
-1.  **Build locally**: 
-    ```bash
-    cd miniapp && npm run build
-    ```
-2.  **Sync to Public**: 
-    Remove old files and copy new build to the root `/public/app` directory:
-    ```bash
-    rm -rf public/app/* && cp -r miniapp/dist/* public/app/
-    ```
-3.  **Push to Git**:
-    ```bash
-    git add . && git commit -m "..." && git push origin main
-    ```
+---
 
 ---
 
