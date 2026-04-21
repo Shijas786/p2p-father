@@ -130,6 +130,9 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
+        // ✨ Liveness Feedback - A small delay gives a "live processing" feel for completions
+        await new Promise(r => setTimeout(r, 1200));
+        
         const buyerUsername = trade.buyer_username;
         const buyerFirstName = trade.buyer_first_name || "Buyer";
         const buyer = buyerUsername ? `@${escapeMarkdown(buyerUsername)}` : escapeMarkdown(buyerFirstName);
@@ -330,9 +333,6 @@ bot.command("ping", async (ctx) => {
 bot.command(["start", "open"], async (ctx) => {
     // 🛡️ Restrict command to Private Chats ONLY (prevents errors/spam in groups)
     if (ctx.chat.type !== "private") return;
-
-    // ✨ UI Feedback
-    await ctx.replyWithChatAction("typing").catch(() => {});
 
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
@@ -730,6 +730,7 @@ bot.command("send", async (ctx) => {
 
 // Also keep /sell as alias
 bot.command("sell", async (ctx) => {
+    await ctx.replyWithChatAction("typing").catch(() => {});
     const cacheBuster = `?v=${Date.now()}`;
     const miniAppUrl = `https://p2pfather.com/miniapp/create${cacheBuster}`;
     const keyboard = new InlineKeyboard()
@@ -900,6 +901,7 @@ bot.command("mytrades", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("buy", async (ctx) => {
+    await ctx.replyWithChatAction("typing").catch(() => {});
     await ensureUser(ctx);
 
     // Show available sell orders
@@ -949,6 +951,7 @@ bot.command("buy", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("orders", async (ctx) => {
+    await ctx.replyWithChatAction("typing").catch(() => {});
     try {
         const [sellOrders, buyOrders] = await Promise.all([
             db.getActiveOrders("sell", undefined, 5),
