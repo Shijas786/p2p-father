@@ -48,7 +48,7 @@ BEGIN
       u.id,
       COALESCE(u.username, u.first_name, 'Anon') as name,
       u.photo_url,
-      s.period_volume as points, -- For timeframe, points = volume for local sorting
+      u.points as points, -- Return actual global points even when sorting by period volume
       s.period_volume as volume,
       s.period_trades::bigint as trades,
       u.telegram_id,
