@@ -138,12 +138,12 @@ export function Leaderboard() {
 
                             <div className="lb-points">
                                 <span className="lb-points-val">
-                                    {timeframe === 'all' 
-                                        ? parseFloat(user.points.toFixed(1)).toLocaleString()
-                                        : `${parseFloat((user.volume / 1000).toFixed(1))}k`
+                                    {user.points >= 1000 
+                                        ? `${(user.points / 1000).toFixed(1)}k`
+                                        : parseFloat(user.points.toFixed(1)).toLocaleString()
                                     }
                                 </span>
-                                <span className="lb-points-label">{timeframe === 'all' ? 'PTS' : 'VOL'}</span>
+                                <span className="lb-points-label">PTS</span>
                             </div>
                         </div>
                     ))
