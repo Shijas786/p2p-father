@@ -16,16 +16,16 @@ export function formatTokenAmount(amount: number, token: string = "USDC"): strin
  * Format an order for Telegram display
  */
 export function formatOrder(order: Order, index?: number): string {
-    const prefix = index !== undefined ? `${index + 1}.` : "•";
+    const prefix = index !== undefined ? `${index + 1}\\.` : "•";
     const emoji = order.type === "sell" ? "🔴" : "🟢";
     const available = order.amount - (order.filled_amount || 0);
 
     return [
-        `${prefix} ${emoji} *${order.type.toUpperCase()}* ${formatTokenAmount(available, order.token)}`,
-        `   Rate: ${formatINR(order.rate)}/${order.token || "USDC"}`,
-        `   Total: ${formatINR(available * order.rate)}`,
-        `   Payment: ${order.payment_methods?.join(", ") || "UPI"}`,
-        `   Trader: @${escapeMarkdown(order.username || "anon")} (⭐ ${order.trust_score?.toFixed(0) || "?"}%)`,
+        `${prefix} ${emoji} *${order.type.toUpperCase()}* ${escapeMarkdown(formatTokenAmount(available, order.token))}`,
+        `   Rate: ${escapeMarkdown(formatINR(order.rate))}/${escapeMarkdown(order.token || "USDC")}`,
+        `   Total: ${escapeMarkdown(formatINR(available * order.rate))}`,
+        `   Payment: ${escapeMarkdown(order.payment_methods?.join(", ") || "UPI")}`,
+        `   Trader: @${escapeMarkdown(order.username || "anon")} (⭐ ${escapeMarkdown(order.trust_score?.toFixed(0) || "?")}%)`,
         `   ID: \`${order.id.slice(0, 8)}\``,
     ].join("\n");
 }

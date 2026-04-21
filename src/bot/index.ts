@@ -2872,7 +2872,7 @@ bot.on("message:text", async (ctx) => {
                             console.error("VIEW_ORDERS Markdown Error:", err);
                             console.log("Failed Payload:", list);
                             // Fallback to plain text
-                            await ctx.reply(`📊 Order Book (Plain Text - Format Error)\n\n${list}`);
+                            await ctx.reply(list);
                         }
                     }
                 } catch (err) {
