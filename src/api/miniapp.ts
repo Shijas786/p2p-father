@@ -1049,6 +1049,22 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Cannot dispute in current state" });
         }
 
+        // 🛡️ ENFORCE 1-HOUR DISPUTE DELAY
+        const baseTimeStr = trade.fiat_sent_at || trade.escrow_locked_at || trade.created_at;
+        if (baseTimeStr) {
+            const startTime = new Date(baseTimeStr).getTime();
+            const now = Date.now();
+            const diff = now - startTime;
+            const oneHour = 60 * 60 * 1000;
+
+            if (diff < oneHour) {
+                const remaining = Math.ceil((oneHour - diff) / 60000);
+                return res.status(400).json({ 
+                    error: `Dispute button is meditating. Please wait ${remaining} more minutes.` 
+                });
+            }
+        }
+
         const { reason } = req.body;
         const previousStatus = trade.status; // capture before updating
         const stageInfo = previousStatus === 'in_escrow' ? '[Escrow Locked - No fiat sent]' : '[Fiat Sent]';

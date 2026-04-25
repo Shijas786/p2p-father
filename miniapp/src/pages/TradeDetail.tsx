@@ -134,11 +134,19 @@ export function TradeDetail({ user }: Props) {
     const [disputeTimer, setDisputeTimer] = useState<number>(0);
 
     useEffect(() => {
-        if (trade && trade.fiat_sent_at) {
+        if (trade) {
             const calculateTime = () => {
-                const sentTime = new Date(trade.fiat_sent_at).getTime();
+                // If fiat sent, wait 1 hour from fiat_sent_at
+                // If only escrow locked, wait 1 hour from escrow_locked_at
+                const baseTimeStr = trade.fiat_sent_at || trade.escrow_locked_at || trade.created_at;
+                if (!baseTimeStr) {
+                    setDisputeTimer(0);
+                    return;
+                }
+
+                const startTime = new Date(baseTimeStr).getTime();
                 const now = Date.now();
-                const diff = now - sentTime;
+                const diff = now - startTime;
                 const oneHour = 60 * 60 * 1000;
 
                 if (diff < oneHour) {
@@ -152,7 +160,7 @@ export function TradeDetail({ user }: Props) {
             const interval = setInterval(calculateTime, 1000);
             return () => clearInterval(interval);
         }
-    }, [trade]);
+    }, [trade?.status, trade?.fiat_sent_at, trade?.escrow_locked_at]);
 
     function getStepIndex(status: string): number {
         const idx = STEPS.findIndex(s => s.key === status);
@@ -1076,9 +1084,9 @@ export function TradeDetail({ user }: Props) {
                     {trade && ['fiat_sent', 'in_escrow'].includes(trade.status) && (
                         <div className="mt-4 animate-in">
                             <button
-                                className={`btn btn-danger btn-block ${disputeTimer > 0 && trade.status === 'fiat_sent' ? 'opacity-50' : ''}`}
+                                className={`btn btn-danger btn-block ${disputeTimer > 0 ? 'opacity-50' : ''}`}
                                 onClick={() => {
-                                    if (disputeTimer > 0 && trade.status === 'fiat_sent') {
+                                    if (disputeTimer > 0) {
                                         const minutes = Math.floor(disputeTimer / 60000);
                                         const seconds = (Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0');
                                         alert(`The dispute button is meditating 🧘‍♂️\n\nAppeal available in ${minutes}:${seconds}`);
@@ -1090,7 +1098,7 @@ export function TradeDetail({ user }: Props) {
                             >
                                 ⚠️ Raise Dispute
                             </button>
-                            {disputeTimer > 0 && trade.status === 'fiat_sent' && (
+                            {disputeTimer > 0 && (
                                 <p className="text-[10px] text-muted text-center mt-2">
                                     Appeal available in {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
                                 </p>
