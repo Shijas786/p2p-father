@@ -19,7 +19,8 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.3",
     "viem": "^2.45.3",
-    "wagmi": "^3.4.3"
+    "wagmi": "^3.4.3",
+    "ox": "0.12.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
