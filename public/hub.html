@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2PFather — Hub</title>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-secondary: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5; /* Indigo */
+            --primary-light: #818cf8;
+            --success: #10b981;
+            
+            --font-main: 'Inter', sans-serif;
+            --radius: 12px;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-main);
+            background: var(--bg-secondary);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        /* ══════════════════════════════════════
+           NAVIGATION
+        ══════════════════════════════════════ */
+        nav {
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 4rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-group { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.25rem; letter-spacing: -0.025em; text-decoration: none; color: inherit; }
+        .logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; }
+        
+        .nav-links { display: flex; gap: 2.5rem; }
+        .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-main); }
+
+        /* ══════════════════════════════════════
+           LAYOUT (3 COLUMNS)
+        ══════════════════════════════════════ */
+        .container { 
+            max-width: 1400px; margin: 0 auto; padding: 3rem 2rem; 
+            display: grid; grid-template-columns: 240px 1fr 320px; gap: 2.5rem; 
+        }
+
+        /* ══════════════════════════════════════
+           SIDEBARS
+        ══════════════════════════════════════ */
+        .sidebar-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 1rem; }
+        .filter-list { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+        .filter-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 0.75rem; border-radius: 8px; cursor: pointer; transition: 0.2s;
+            font-size: 0.9rem; font-weight: 500; color: var(--text-muted);
+        }
+        .filter-btn:hover, .filter-btn.active { background: #f1f5f9; color: var(--text-main); }
+        .filter-btn.active { background: #eef2ff; color: var(--primary); }
+
+        /* ══════════════════════════════════════
+           MAIN FEED
+        ══════════════════════════════════════ */
+        .main-content { display: flex; flex-direction: column; gap: 1rem; }
+        .opportunity-card {
+            background: var(--bg-main); border: 1px solid var(--border-color);
+            border-radius: var(--radius); padding: 1.25rem;
+            display: flex; align-items: center; gap: 1.25rem;
+            transition: 0.2s; cursor: pointer; text-decoration: none; color: inherit;
+        }
+        .opportunity-card:hover { border-color: var(--primary-light); background: #fafafa; }
+        .card-icon { width: 48px; height: 48px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid var(--border-color); }
+        .card-body { flex: 1; }
+        .card-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+        .card-meta { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: var(--text-muted); }
+        .tag { background: #f1f5f9; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; color: var(--text-main); }
+        .card-reward { text-align: right; min-width: 100px; }
+        .reward-val { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
+
+        /* ══════════════════════════════════════
+           RIGHT SIDEBAR (LIVE PULSE)
+        ══════════════════════════════════════ */
+        .right-sidebar { display: flex; flex-direction: column; gap: 2rem; }
+        .live-pulse-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1.5rem; }
+        .pulse-item { display: flex; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; line-height: 1.4; }
+        .pulse-item:last-child { border: none; }
+        .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 8px var(--success); }
+
+        @media (max-width: 1200px) {
+            .container { grid-template-columns: 1fr; }
+            .sidebar, .right-sidebar { display: none; }
+            nav { padding: 1rem 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ═══ NAVIGATION ═══ -->
+    <nav>
+        <a href="/" class="logo-group">
+            <div class="logo-icon"></div>
+            <span>P2PFATHER</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/hub" class="nav-link active">Hub</a>
+            <a href="#" class="nav-link">Rewards</a>
+        </div>
+        <appkit-button></appkit-button>
+    </nav>
+
+    <div class="container">
+        <!-- ═══ LEFT SIDEBAR ═══ -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h4>Categories</h4>
+                <div class="filter-list">
+                    <div class="filter-btn active"><span>All Hub Items</span></div>
+                    <div class="filter-btn"><span>Leaderboard</span></div>
+                    <div class="filter-btn"><span>Giveaways</span></div>
+                    <div class="filter-btn"><span>Liquidity</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN HUB ═══ -->
+        <main class="main-content">
+            <div style="margin-bottom: 2.5rem;">
+                <h1 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.02em;">Father's Hub</h1>
+                <p style="color: var(--text-muted);">Trade, compete, and claim your share of the treasury.</p>
+            </div>
+
+            <!-- CARDS -->
+            <a href="#" class="opportunity-card">
+                <div class="card-icon">🏆</div>
+                <div class="card-body">
+                    <div class="card-title">Weekly Leaderboard</div>
+                    <div class="card-meta">
+                        <span class="tag">Trading</span>
+                        <span>• 4 days left</span>
+                    </div>
+                </div>
+                <div class="card-reward"><div class="reward-val">$5,000</div></div>
+            </a>
+
+            <a href="#" class="opportunity-card">
+                <div class="card-icon">🎁</div>
+                <div class="card-body">
+                    <div class="card-title">Volume Giveaway</div>
+                    <div class="card-meta">
+                        <span class="tag">Community</span>
+                        <span>• 2 days left</span>
+                    </div>
+                </div>
+                <div class="card-reward"><div class="reward-val">$250 ea.</div></div>
+            </a>
+            
+            <a href="#" class="opportunity-card">
+                <div class="card-icon">💧</div>
+                <div class="card-body">
+                    <div class="card-title">SOL/USDC Liquidity Pool</div>
+                    <div class="card-meta">
+                        <span class="tag">Protocol</span>
+                        <span>• Ongoing</span>
+                    </div>
+                </div>
+                <div class="card-reward"><div class="reward-val">0.5% Fee</div></div>
+            </a>
+        </main>
+
+        <!-- ═══ RIGHT SIDEBAR (LIVE) ═══ -->
+        <aside class="right-sidebar">
+            <div class="live-pulse-card">
+                <h4 style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="pulse-dot"></div> Live Activity
+                </h4>
+                <div id="live-feed">
+                    <div class="pulse-item">
+                        <div><strong>@cryptowolf</strong> completed a $2,400 trade.</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div>New Ad: <strong>89.2 INR</strong> posted by @anon_p2p</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div><strong>@shijas</strong> just reached #1 on the leaderboard!</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script type="module">
+        import { createAppKit } from 'https://esm.sh/@reown/appkit'
+        import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
+
+        const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+        createAppKit({
+            networks: [bsc, base],
+            projectId,
+            metadata: { name: 'P2PFather', description: 'Trading Hub', url: 'https://p2pfather.com' },
+            themeMode: 'light',
+            themeVariables: { 
+                '--w3m-accent': '#4f46e5',
+                '--w3m-background-color': '#ffffff'
+            }
+        })
+    </script>
+</body>
+</html>

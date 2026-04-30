@@ -3,346 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2PFather — Decentralized Liquidity Architecture</title>
+    <title>P2PFather — The Future of P2P</title>
     <link rel="icon" href="/favicon.png" type="image/png">
-    <link rel="apple-touch-icon" href="/favicon.png">
     
-    <!-- Professional Typography -->
+    <!-- Modern Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            /* Binance Dark Professional Theme */
-            --bg: #0b0e11;
-            --bg-elevated: #1e2329;
-            --primary: #0ecb81;
-            --primary-rgb: 14, 203, 129;
-            --text: #eaecef;
-            --text-secondary: #b7bdc6;
-            --text-muted: #5e6673;
-            --border: #2b2f36;
-            --edge: rgba(255, 255, 255, 0.05);
-            
-            --font-h: 'Space Grotesk', sans-serif;
-            --font-b: 'Inter', sans-serif;
+            --bg-main: #ffffff;
+            --bg-secondary: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5; /* Indigo */
+            --font-main: 'Inter', sans-serif;
+            --radius: 16px;
         }
 
-        html { scroll-behavior: smooth; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: var(--font-b);
-            background: var(--bg);
-            color: var(--text);
-            margin: 0;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
+            font-family: var(--font-main);
+            background: var(--bg-secondary);
+            color: var(--text-main);
+            line-height: 1.6;
         }
-
-        /* ══════════════════════════════════════
-           TYPOGRAPHY SYSTEM
-        ══════════════════════════════════════ */
-        h1, h2, h3 { font-family: var(--font-h); font-weight: 700; letter-spacing: -0.04em; line-height: 0.9; margin: 0; }
-        .mega-title { font-size: clamp(4rem, 15vw, 12rem); }
-        .sub-title { font-size: clamp(2.5rem, 5vw, 4.5rem); color: var(--text); margin-bottom: 2rem; }
-        .caption { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--primary); margin-bottom: 1.5rem; display: block; font-weight: 800; }
-
-        /* ══════════════════════════════════════
-           LAYOUT UTILITIES
-        ══════════════════════════════════════ */
-        .section { padding: 10rem 4rem; position: relative; max-width: 1400px; margin: 0 auto; }
-        .split-layout { display: flex; gap: 4rem; align-items: flex-start; }
-        .asym-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6rem; align-items: center; }
 
         /* ══════════════════════════════════════
            NAVIGATION
         ══════════════════════════════════════ */
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-            padding: 2.5rem 4rem; display: flex; justify-content: space-between; align-items: center;
-            transition: all 0.4s ease;
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 4rem;
+            position: sticky; top: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        nav.scrolled { padding: 1.2rem 4rem; background: rgba(11, 14, 17, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
-        .nav-logo { font-family: var(--font-h); font-weight: 800; font-size: 1.3rem; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.02em; }
-        .nav-logo .dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 15px var(--primary); }
-        .nav-links { display: flex; gap: 3rem; }
-        .nav-links a { text-decoration: none; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; transition: 0.3s; }
-        .nav-links a:hover { color: var(--primary); }
+        .logo-group { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.25rem; letter-spacing: -0.025em; text-decoration: none; color: inherit; }
+        .logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; }
+        
+        .nav-links { display: flex; gap: 2.5rem; }
+        .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-main); }
 
         /* ══════════════════════════════════════
-           HERO SECTION
+           LAYOUT (HOME)
         ══════════════════════════════════════ */
-        .hero { min-height: 100vh; padding: 12rem 4rem 6rem; position: relative; display: flex; align-items: flex-end; overflow: hidden; }
-        .hero-bg { position: absolute; top: 10%; right: -5%; font-size: 35vw; font-weight: 900; color: rgba(255,255,255,0.02); pointer-events: none; line-height: 1; font-family: var(--font-h); }
-        .hero-content { position: relative; z-index: 10; width: 100%; max-width: 1400px; margin: 0 auto; }
-        .hero-desc { max-width: 550px; color: var(--text-secondary); font-size: 1.25rem; line-height: 1.6; margin-top: 4rem; font-weight: 300; }
-
-        .btn-main {
-            display: inline-flex; align-items: center; gap: 1rem;
-            background: var(--primary); color: var(--bg);
-            padding: 1.4rem 4rem; border-radius: 2px; font-weight: 800; text-decoration: none;
-            margin-top: 4rem; transition: 0.3s; font-size: 1rem;
+        .container { 
+            max-width: 1400px; margin: 0 auto; padding: 4rem 2rem; 
+            display: grid; grid-template-columns: 1fr 320px; gap: 4rem; 
         }
-        .btn-main:hover { transform: translateY(-3px); background: #2ed29d; box-shadow: 0 10px 30px rgba(14, 203, 129, 0.2); }
 
         /* ══════════════════════════════════════
-           STATS HEADER
+           HERO & STORY
         ══════════════════════════════════════ */
-        .stats-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 3rem 4rem; display: flex; gap: 8rem; margin: 0 auto; max-width: 1400px; }
-        .stat-item-pro { display: flex; flex-direction: column; }
-        .stat-val-pro { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-h); }
-        .stat-lbl-pro { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.15em; margin-top: 0.75rem; font-weight: 700; }
+        .hero { margin-bottom: 6rem; }
+        .hero h1 { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 1.5rem; }
+        .hero p { font-size: 1.25rem; color: var(--text-muted); max-width: 700px; margin-bottom: 2.5rem; }
+
+        .btn-primary {
+            background: var(--primary); color: white; padding: 1rem 2rem; 
+            border-radius: 12px; font-weight: 700; text-decoration: none; 
+            display: inline-block; transition: 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2); }
+
+        .section-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem; }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+        .story-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .story-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 2.5rem; }
+        .story-card h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; }
+        .story-card p { color: var(--text-muted); }
 
         /* ══════════════════════════════════════
-           PROTOCOL FLOW (DIAGRAM)
+           RIGHT SIDEBAR (LIVE FEED)
         ══════════════════════════════════════ */
-        .architecture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); margin-top: 8rem; border: 1px solid var(--border); }
-        .arch-cell { background: var(--bg); padding: 5rem 4rem; transition: 0.4s; }
-        .arch-cell:hover { background: #0e1115; }
-        .arch-num { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3rem; display: block; font-weight: 700; }
-        .arch-title { font-size: 1.8rem; margin-bottom: 1.5rem; display: block; color: var(--primary); font-family: var(--font-h); }
-        .arch-desc { color: var(--text-secondary); font-size: 1rem; line-height: 1.7; font-weight: 300; }
+        .right-sidebar { display: flex; flex-direction: column; gap: 2rem; }
+        .live-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1.5rem; position: sticky; top: 100px; }
+        .pulse-item { display: flex; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; line-height: 1.4; }
+        .pulse-item:last-child { border: none; }
+        .pulse-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 8px #10b981; }
 
-        /* ══════════════════════════════════════
-           WORKFLOW TYPOGRAPHY
-        ══════════════════════════════════════ */
-        .workflow-stack { margin-top: 10rem; }
-        .workflow-row { margin-bottom: 10rem; display: grid; grid-template-columns: 120px 1.2fr 1.5fr; gap: 4rem; align-items: baseline; }
-        .w-num { font-family: var(--font-h); font-size: 1.8rem; color: var(--text-muted); font-weight: 300; }
-        .w-title { font-size: 3.5rem; }
-        .w-desc { color: var(--text-secondary); font-size: 1.15rem; line-height: 1.7; padding-left: 3rem; border-left: 1px solid var(--border); font-weight: 300; }
-
-        /* ══════════════════════════════════════
-        .t-header { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr; padding: 1.2rem; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 800; }
-        .t-row { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr; padding: 2rem 1.2rem; border-bottom: 1px solid var(--edge); align-items: center; transition: 0.3s; text-decoration: none; color: inherit; }
-        .t-row:hover { background: rgba(14, 203, 129, 0.03); }
-        .t-op { font-weight: 800; font-size: 1rem; color: #fff; }
-        .t-meta { font-size: 0.8rem; color: var(--text-muted); }
-        .t-price { color: var(--primary); font-weight: 800; font-family: var(--font-h); font-size: 1.5rem; text-align: right; }
-        .t-btn { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--bg); background: var(--primary); padding: 0.8rem 1.5rem; border-radius: 2px; text-align: center; }
-
-        /* ══════════════════════════════════════
-           FOOTER
-        ══════════════════════════════════════ */
-        footer { padding: 8rem 4rem 4rem; border-top: 1px solid var(--border); background: #010101; }
-        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6rem; margin-bottom: 6rem; max-width: 1400px; margin-left: auto; margin-right: auto; }
-        .f-logo { font-family: var(--font-h); font-weight: 800; font-size: 1.5rem; margin-bottom: 2rem; display: block; }
-        .f-links h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-muted); margin-bottom: 2rem; }
-        .f-links a { display: block; color: var(--text-secondary); text-decoration: none; margin-bottom: 1rem; font-size: 0.95rem; transition: 0.3s; }
-        .f-links a:hover { color: var(--primary); transform: translateX(8px); }
-        .footer-bottom { border-top: 1px solid var(--border); padding-top: 3rem; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; max-width: 1400px; margin: 0 auto; }
-
-        /* ══════════════════════════════════════
-           ANIMATIONS & REVEALS
-        ══════════════════════════════════════ */
-        .reveal { opacity: 0; transform: translateY(60px); transition: 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
-        .d1 { transition-delay: 0.15s; }
-        .d2 { transition-delay: 0.3s; }
-        .d3 { transition-delay: 0.45s; }
+        footer { background: var(--bg-main); border-top: 1px solid var(--border-color); padding: 6rem 4rem; margin-top: 6rem; text-align: center; }
 
         @media (max-width: 1024px) {
-            .section, nav, .stats-strip, footer { padding: 4rem 2rem; }
-            .asym-grid, .split-layout, .footer-grid { grid-template-columns: 1fr; gap: 4rem; }
-            .workflow-row { grid-template-columns: 1fr; gap: 1rem; }
-            .w-desc { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 2rem; }
-            .t-header { display: none; }
-            .t-row { grid-template-columns: 1fr 1fr; gap: 1rem; }
-            .t-price { text-align: left; }
+            .container { grid-template-columns: 1fr; }
+            .right-sidebar { display: none; }
+            nav { padding: 1rem 2rem; }
         }
     </style>
 </head>
 <body>
-
     <!-- ═══ NAVIGATION ═══ -->
-    <nav id="nav">
-        <a href="/" class="nav-logo">
-            <div class="dot"></div>
-            P2PFATHER
+    <nav>
+        <a href="/" class="logo-group">
+            <div class="logo-icon"></div>
+            <span>P2PFATHER</span>
         </a>
         <div class="nav-links">
+            <a href="/" class="nav-link active">Home</a>
+            <a href="/hub" class="nav-link">Hub</a>
+            <a href="#" class="nav-link">Rewards</a>
         </div>
-        <a href="https://t.me/P2pFatherBot" target="_blank" style="text-decoration: none;">
-            <span style="color: var(--primary); font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em;">LAUNCH APP ⚡</span>
-        </a>
+        <appkit-button></appkit-button>
     </nav>
 
-    <!-- ═══ HERO SECTION ═══ -->
-    <section class="hero">
-        <div class="hero-bg">P2P</div>
-        <div class="hero-content">
-            <span class="caption reveal">PROTOCOL // VERSION 2.0.4</span>
-            <h1 class="mega-title reveal d1">Pure.<br>Private.<br>Permissionless.</h1>
-            <div class="asym-grid">
-                <p class="hero-desc reveal d2">Building on-chain trust for global liquidity. Secure, decentralized P2P exchange for the next generation of finance.</p>
-                <div class="reveal d3">
-                    <a href="https://t.me/P2pFatherBot" target="_blank" class="btn-main">
-                        ENTER THE APP
-                    </a>
+    <div class="container">
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <main>
+            <section class="hero">
+                <h1>Secure P2P Trading,<br><span style="color: var(--primary);">Simplified for Everyone.</span></h1>
+                <p>We built P2PFather to solve the problems we faced: bank freezes, unreliable dealers, and complex escrow. Join the community and trade with confidence.</p>
+                <div style="display: flex; gap: 1.5rem;">
+                    <a href="/hub" class="btn-primary">Explore the Hub</a>
+                    <a href="https://t.me/P2pFatherBot" target="_blank" style="padding: 1rem 2rem; font-weight: 700; color: var(--text-main); text-decoration: none;">Launch Bot →</a>
+                </div>
+            </section>
+
+            <section>
+                <div class="section-title">OUR_STORY</div>
+                <div class="story-grid">
+                    <div class="story-card">
+                        <h3>The Problem</h3>
+                        <p>We were tired of getting our bank accounts blocked while transacting with unknown dealers. The existing solutions were slow and expensive.</p>
+                    </div>
+                    <div class="story-card">
+                        <h3>The Solution</h3>
+                        <p>P2PFather was born as a decentralized alternative. We sketch out trust using smart contracts, ensuring both parties are protected automatically.</p>
+                    </div>
+                    <div class="story-card">
+                        <h3>The Vision</h3>
+                        <p>To create a global network of trusted traders where reputation is earned and rewards are shared among the community.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section style="margin-top: 6rem;">
+                <div class="section-title">HOW_IT_WORKS</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 2rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">💼</div>
+                        <h4 style="font-weight: 700;">1. Create Ad</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Set your price and terms for buying or selling crypto.</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">🛡️</div>
+                        <h4 style="font-weight: 700;">2. Escrow Lock</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Funds are safely locked in our smart contract until both sides confirm.</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
+                        <h4 style="font-weight: 700;">3. Settlement</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Transaction completes instantly upon payment verification.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ═══ RIGHT SIDEBAR (LIVE) ═══ -->
+        <aside class="right-sidebar">
+            <div class="live-card">
+                <h4 style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="pulse-dot"></div> Live Network Activity
+                </h4>
+                <div id="live-feed">
+                    <div class="pulse-item">
+                        <div><strong>@cryptowolf</strong> completed a $2,400 trade.</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div>New Ad: <strong>89.2 INR</strong> posted by @anon_p2p</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div><strong>@shijas</strong> just reached #1 on the leaderboard!</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- ═══ STATS STRIP ═══ -->
-    <div class="stats-strip reveal">
-        <div class="stat-item-pro">
-            <span class="stat-val-pro" id="stat-vol">0</span>
-            <span class="stat-lbl-pro">Total Throughput ($)</span>
-        </div>
-        <div class="stat-item-pro">
-            <span class="stat-val-pro" id="stat-users">0</span>
-            <span class="stat-lbl-pro">Active Traders</span>
-        </div>
-        <div class="stat-item-pro">
-            <span class="stat-val-pro" id="stat-bags-mcap">0</span>
-            <span class="stat-lbl-pro">Protocol Equity ($)</span>
-        </div>
-        <div class="stat-item-pro">
-            <span class="stat-val-pro">0.5%</span>
-            <span class="stat-lbl-pro">Flat Protocol Fee</span>
-        </div>
-        <div class="stat-item-pro">
-            <span class="stat-val-pro">99.9%</span>
-            <span class="stat-lbl-pro">Network Uptime</span>
-        </div>
+        </aside>
     </div>
 
-    <!-- ═══ PROTOCOL WORKFLOW ═══ -->
-    <section class="section" id="how">
-        <span class="caption reveal">Protocol Workflow</span>
-        <h2 class="sub-title reveal d1">The Liquidity Lifecycle.</h2>
-        
-        <div class="workflow-stack">
-            <div class="workflow-row reveal">
-                <span class="w-num">01</span>
-                <span class="w-title">Initialize Node</span>
-                <p class="w-desc">Connect directly via the Telegram interface. Your non-custodial wallet is deployed instantly on the Base or BSC network, granting you total sovereignty over your private keys and assets.</p>
-            </div>
-            
-            <div class="workflow-row reveal">
-                <span class="w-num">02</span>
-                <span class="w-title">Secure Escrow</span>
-                <p class="w-desc">Assets are locked within a decentralized smart contract. No central authority can access or freeze your liquidity during the trade execution phase.</p>
-            </div>
-            
-            <div class="workflow-row reveal">
-                <span class="w-num">03</span>
-                <span class="w-title">Atomic Settlement</span>
-                <p class="w-desc">Upon mutual signal confirmation, the protocol triggers an atomic release. Instant settlement, sub-cent transaction fees, and zero counterparty risk.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ═══ SYSTEMS ARCHITECTURE ═══ -->
-    <section class="section" id="ecosystem" style="background: #010101; max-width: 100%;">
-        <div class="section" style="padding: 0; max-width: 1400px; margin: 0 auto;">
-            <span class="caption reveal">Systems Architecture</span>
-            <h2 class="sub-title reveal d1">Engineered for Absolute Integrity.</h2>
-
-            <div class="architecture-grid reveal">
-                <div class="arch-cell">
-                    <span class="arch-num">PHASE_01</span>
-                    <span class="arch-title">Multi-Chain Escrow</span>
-                    <p class="arch-desc">Native integration with Base L2 and Binance Smart Chain (BSC) ensures maximum liquidity coverage and minimal overhead for all trades.</p>
-                </div>
-                <div class="arch-cell">
-                    <span class="arch-num">PHASE_02</span>
-                    <span class="arch-title">Non-Custodial</span>
-                    <p class="arch-desc">Your funds, your keys. The protocol facilitates secure movement without ever touching or holding your underlying liquidity.</p>
-                </div>
-                <div class="arch-cell">
-                    <span class="arch-num">PHASE_03</span>
-                    <span class="arch-title">DEX Gateway</span>
-                    <p class="arch-desc">A seamless, trustless bridge between traditional fiat liquidity and decentralized on-chain assets via the Telegram gateway.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    </section>
-
-    <!-- ═══ FOOTER ═══ -->
     <footer>
-        <div class="footer-grid">
-            <div>
-                <span class="f-logo">P2PFATHER</span>
-                <p style="color: var(--text-muted); line-height: 1.8; font-size: 0.95rem; font-weight: 300;">The preeminent decentralized P2P trading architecture. Bridging the gap between legacy fiat and future-proof on-chain assets via the Telegram ecosystem.</p>
-            </div>
-            <div class="f-links">
-                <h4>Network</h4>
-                <a href="https://t.me/P2pFatherGroup" target="_blank">Trade Group & Support</a>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <span>&copy; 2026 P2PFATHER ARCHITECTURE. SECURE_DECENTRALIZED_PERMANENT.</span>
-            <span>OS_STATUS: OPERATIONAL // NETWORK: BASE_MAIN_01</span>
+        <p style="font-weight: 800; font-size: 1.5rem; margin-bottom: 1.5rem;">P2PFATHER</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 3rem;">The peer-to-peer network designed for trust, safety, and community rewards.</p>
+        <div style="display: flex; justify-content: center; gap: 3rem;">
+            <a href="#" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Twitter</a>
+            <a href="#" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Telegram</a>
+            <a href="#" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Docs</a>
         </div>
     </footer>
 
-    <!-- ══════════════════════════════════════
-       JAVASCRIPT LOGIC
-    ══════════════════════════════════════ -->
-    <script>
-        /* ═════════════════════════════════════
-           SCROLL EFFECTS
-        ═════════════════════════════════════ */
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('nav');
-            if (window.scrollY > 50) nav.classList.add('scrolled');
-            else nav.classList.remove('scrolled');
-        });
+    <script type="module">
+        import { createAppKit } from 'https://esm.sh/@reown/appkit'
+        import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    if (entry.target.classList.contains('stats-strip')) fetchStats();
-                }
-            });
-        }, { threshold: 0.1 });
-
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-        /* ═════════════════════════════════════
-           ANIMATED COUNTERS
-        ═════════════════════════════════════ */
-        function animateVal(el, end, prefix = '', suffix = '') {
-            if (!el) return;
-            const dur = 2000, start = performance.now();
-            function tick(now) {
-                const t = Math.min((now - start) / dur, 1);
-                const v = 1 - Math.pow(1 - t, 3);
-                el.textContent = prefix + Math.round(end * v).toLocaleString() + suffix;
-                if (t < 1) requestAnimationFrame(tick);
+        const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+        createAppKit({
+            networks: [bsc, base],
+            projectId,
+            metadata: { name: 'P2PFather', description: 'Secure P2P Trading', url: 'https://p2pfather.com' },
+            themeMode: 'light',
+            themeVariables: { 
+                '--w3m-accent': '#4f46e5',
+                '--w3m-background-color': '#ffffff'
             }
-            requestAnimationFrame(tick);
-        }
-
-        async function fetchStats() {
-            try {
-                const r = await fetch('/api/stats');
-                const d = await r.json();
-                animateVal(document.getElementById('stat-users'), d.total_users || 400, '', '+');
-                animateVal(document.getElementById('stat-vol'), d.total_volume_usdc || 1600, '', 'K+');
-                if (d.bags && d.bags.mcap) {
-                    animateVal(document.getElementById('stat-bags-mcap'), d.bags.mcap / 1000, '$', 'K+');
-                } else {
-                    animateVal(document.getElementById('stat-bags-mcap'), 120, '$', 'K+'); // Proxy if API low
-                }
-            } catch (e) {
-                animateVal(document.getElementById('stat-users'), 400, '', '+');
-                animateVal(document.getElementById('stat-vol'), 1600, '', 'K+');
-                animateVal(document.getElementById('stat-bags-mcap'), 120, '$', 'K+');
-            }
-        }
-
-        /* ═════════════════════════════════════
-           MARKET TERMINAL LOGIC
-        ═════════════════════════════════════ */
-        let currentAds = { sell: [], buy: [] }, activeTab = 'sell';
-
-        fetchStats();
+        })
     </script>
 </body>
 </html>

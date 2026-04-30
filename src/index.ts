@@ -120,6 +120,12 @@ async function main() {
         res.sendFile(path.join(process.cwd(), "public", "guide.html"));
     });
 
+    // Father's Hub (Web3 dApp Page)
+    app.get("/hub", (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(process.cwd(), "public", "hub.html"));
+    });
+
     // Fallback file serving
     app.get(/^.*$/, (req, res) => {
         noCacheHeaders(res);
