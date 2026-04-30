@@ -10,7 +10,7 @@ import { env } from "../config/env";
 import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
-import { bot, broadcastTradeSuccess, broadcastAd } from "../bot";
+import { bot, broadcastTradeSuccess, broadcastAd, deleteAdBroadcasts } from "../bot";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -624,6 +624,12 @@ router.post("/orders/:id/cancel", async (req: Request, res: Response) => {
         if (order.status !== 'active') return res.status(400).json({ error: "Order is not active" });
 
         await db.cancelOrder(req.params.id as string);
+        
+        // Trigger broadcast cleanup immediately
+        deleteAdBroadcasts(req.params.id as string).catch(err => {
+            console.error("[MINIAPP] Failed to cleanup broadcasts on cancel:", err);
+        });
+
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });

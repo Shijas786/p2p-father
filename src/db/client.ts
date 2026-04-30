@@ -582,6 +582,35 @@ class Database {
         });
     }
 
+    // ═══════════════════════════════════════
+    //           AD BROADCASTS
+    // ═══════════════════════════════════════
+
+    async saveAdBroadcasts(broadcasts: { order_id: string; chat_id: number; message_id: number }[]): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db.from("ad_broadcasts").insert(broadcasts);
+        if (error) console.error("Failed to save ad broadcasts:", error.message);
+    }
+
+    async getAdBroadcasts(orderId: string): Promise<{ chat_id: number; message_id: number }[]> {
+        const db = this.getClient();
+        const { data, error } = await db
+            .from("ad_broadcasts")
+            .select("chat_id, message_id")
+            .eq("order_id", orderId);
+        if (error) {
+            console.error("Failed to get ad broadcasts:", error.message);
+            return [];
+        }
+        return data || [];
+    }
+
+    async deleteAdBroadcasts(orderId: string): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db.from("ad_broadcasts").delete().eq("order_id", orderId);
+        if (error) console.error("Failed to delete ad broadcast records:", error.message);
+    }
+
     async getTotalFees(): Promise<number> {
         const db = this.getClient();
         const { data } = await db.from("fees").select("amount");

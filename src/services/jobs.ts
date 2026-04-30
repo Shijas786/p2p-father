@@ -1,5 +1,6 @@
 import { db } from "../db/client";
 import { env } from "../config/env";
+import { deleteAdBroadcasts } from "../bot";
 
 export function startExpiryJob() {
     console.log("⏰ Starting Ad Expiry Job...");
@@ -9,17 +10,60 @@ export function startExpiryJob() {
         try {
             const now = new Date().toISOString();
             const client = (db as any).getClient(); 
-            const { data: expiredOrders, error } = await client
-                .from("orders")
-                .update({ status: "expired", updated_at: now })
-                .eq("status", "active")
-                .lt("expires_at", now)
-                .select("id");
-
-            if (error) throw error;
             
-            if (expiredOrders && expiredOrders.length > 0) {
-                console.log(`[JOB] Auto-expired ${expiredOrders.length} ads: ${expiredOrders.map((o: any) => o.id).join(", ")}`);
+            // Get ads that ARE about to expire
+            const { data: toExpire, error: fetchError } = await client
+                .from("orders")
+                .select("id")
+                .eq("status", "active")
+                .lt("expires_at", now);
+
+            if (fetchError) throw fetchError;
+
+            if (toExpire && toExpire.length > 0) {
+                const ids = toExpire.map((o: any) => o.id);
+                
+                // Update status in bulk
+                const { error: updateError } = await client
+                    .from("orders")
+                    .update({ status: "expired", updated_at: now })
+                    .in("id", ids);
+
+                if (updateError) throw updateError;
+
+                console.log(`[JOB] Auto-expired ${ids.length} ads. Cleaning up broadcasts...`);
+
+                // Trigger cleanup for each
+                for (const id of ids) {
+                    deleteAdBroadcasts(id).catch(err => {
+                        console.error(`[JOB] Failed to cleanup broadcasts for order ${id}:`, err);
+                    });
+                }
+            }
+
+            // ═══ ROBUSTNESS: Cleanup Orphaned Broadcasts ═══
+            // Find any ads that are NOT 'active' but still have broadcast records in the DB
+            const { data: orphaned, error: orphanError } = await client
+                .from("ad_broadcasts")
+                .select("order_id")
+                .limit(20); // Process in small batches
+
+            if (!orphanError && orphaned && orphaned.length > 0) {
+                const uniqueOrderIds = Array.from(new Set(orphaned.map((b: any) => b.order_id)));
+                for (const orderId of uniqueOrderIds) {
+                    const { data: order } = await client
+                        .from("orders")
+                        .select("status")
+                        .eq("id", orderId)
+                        .single();
+                    
+                    // If order is gone or not active (and not 'filled'), clean up
+                    // Exception: we keep 'filled' ads as proof (user request)
+                    if (!order || (order.status !== 'active' && order.status !== 'filled')) {
+                        console.log(`[JOB] Cleaning up orphaned broadcasts for order ${orderId} (Status: ${order?.status || 'deleted'})`);
+                        deleteAdBroadcasts(orderId as string).catch(() => {});
+                    }
+                }
             }
         } catch (err) {
             console.error("[JOB] Expiry job error:", err);
@@ -96,6 +140,12 @@ export function startLiquiditySyncJob(escrowService: any) {
 
                                         console.log(`[SYNC] Auto-cancelling ad ${ad.id} due to insufficient vault balance.`);
                                         await client.from("orders").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", ad.id);
+                                        
+                                        // Broadcast cleanup
+                                        deleteAdBroadcasts(ad.id).catch(err => {
+                                            console.error(`[SYNC] Failed to cleanup broadcasts for auto-cancelled ad ${ad.id}:`, err);
+                                        });
+
                                         currentReserved -= (ad.amount - (ad.filled_amount || 0));
                                     }
                                 }

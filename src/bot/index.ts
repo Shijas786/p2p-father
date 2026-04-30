@@ -78,7 +78,7 @@ async function getBotInfo() {
     return cachedBotInfo;
 }
 
-async function broadcast(message: string, keyboard?: InlineKeyboard) {
+async function broadcast(message: string, keyboard?: InlineKeyboard): Promise<{ chatId: number; messageId: number }[]> {
     const groups = await groupManager.getGroups();
     // Include ENV broadcast channel if set
     if (env.BROADCAST_CHANNEL_ID) {
@@ -88,18 +88,18 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
         }
     }
 
-    if (groups.length === 0) return;
+    if (groups.length === 0) return [];
 
     console.log(`📡 Broadcasting to ${groups.length} groups...`);
 
-    await Promise.allSettled(groups.map(async (chatId) => {
+    const results = await Promise.allSettled(groups.map(async (chatId) => {
         let attempts = 0;
         const maxAttempts = 3;
         
         while (attempts < maxAttempts) {
             try {
-                await bot.api.sendMessage(chatId, message, { parse_mode: "MarkdownV2", reply_markup: keyboard });
-                return; // Success
+                const msg = await bot.api.sendMessage(chatId, message, { parse_mode: "MarkdownV2", reply_markup: keyboard });
+                return { chatId, messageId: msg.message_id }; // Success
             } catch (error: any) {
                 attempts++;
                 const isPermanent = error.description?.includes("kicked") || 
@@ -110,12 +110,12 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
                 if (isPermanent) {
                     console.log(`❌ Removing invalid group ${chatId}`);
                     groupManager.removeGroup(chatId).catch(console.error);
-                    return;
+                    return null;
                 }
 
                 if (attempts >= maxAttempts) {
                     console.error(`⚠️ Broadcast FAILED to ${chatId} after ${maxAttempts} attempts:`, error.message);
-                    return;
+                    return null;
                 }
 
                 const delay = 1000 * attempts;
@@ -123,7 +123,14 @@ async function broadcast(message: string, keyboard?: InlineKeyboard) {
                 await new Promise(r => setTimeout(r, delay));
             }
         }
+        return null;
     }));
+
+    return results
+        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> => 
+            r.status === 'fulfilled' && r.value !== null
+        )
+        .map(r => r.value);
 }
 
 
@@ -202,9 +209,34 @@ export async function broadcastAd(order: any, user: any) {
         const keyboard = new InlineKeyboard()
             .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
 
-        await broadcast(lines.join("\n"), keyboard);
+        const sentMessages = await broadcast(lines.join("\n"), keyboard);
+        if (sentMessages && sentMessages.length > 0) {
+            await db.saveAdBroadcasts(sentMessages.map(m => ({
+                order_id: order.id,
+                chat_id: m.chatId,
+                message_id: m.messageId
+            })));
+        }
     } catch (e) {
         console.error("BroadcastAd error:", e);
+    }
+}
+
+export async function deleteAdBroadcasts(orderId: string) {
+    try {
+        const broadcasts = await db.getAdBroadcasts(orderId);
+        if (broadcasts.length === 0) return;
+
+        console.log(`🧹 Cleaning up ${broadcasts.length} broadcast messages for order ${orderId}...`);
+        
+        await Promise.allSettled(broadcasts.map(async (b) => {
+            // Use bot.api directly as we might not have a ctx
+            await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => {});
+        }));
+
+        await db.deleteAdBroadcasts(orderId);
+    } catch (e) {
+        console.error("deleteAdBroadcasts error:", e);
     }
 }
 
