@@ -1,13 +1,14 @@
 import { db } from "../src/db/client";
 
 export default async function handler(req: any, res: any) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.method === 'GET') {
         try {
             const stats = await db.getStats();
             res.json({
                 total_users: stats.total_users,
-                total_volume_usdc: stats.total_volume_usdc || 0,
-                active_orders: stats.active_orders
+                total_trades: stats.completed_trades,
+                total_volume: stats.total_volume_generic,
             });
         } catch (e) {
             console.error("API Error:", e);

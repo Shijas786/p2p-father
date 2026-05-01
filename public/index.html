@@ -78,6 +78,7 @@ h1{
   font-family:'Instrument Serif',Georgia,serif;
   font-size:clamp(3.2rem,7.5vw,8rem);line-height:.98;letter-spacing:-.025em;
   max-width:920px;margin-bottom:2.5rem;
+  font-weight:400;
   opacity:0;animation:fadeup 1s .4s forwards;
 }
 h1 em{font-style:italic;color:var(--gold);font-family:'Caveat',cursive;font-size:1.08em;display:inline-block;transform:rotate(-1.5deg);}
@@ -388,6 +389,33 @@ hr.rule{border:none;border-top:1px solid var(--rule);}
 }
 .cta-sub{font-size:.95rem;color:var(--ink-soft);max-width:380px;margin:0 auto 2.5rem;line-height:1.8;font-weight:300;}
 
+/* FAQ */
+.faq-grid { display: flex; flex-direction: column; gap: 0; margin-top: 3rem; }
+.faq-item { border-top: 1px solid var(--rule); }
+.faq-item:last-child { border-bottom: 1px solid var(--rule); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.6rem 0; cursor: pointer; gap: 1rem;
+  font-family: 'Instrument Serif', Georgia, serif; font-size: 1.2rem;
+  font-weight: 400; color: var(--ink); transition: color .2s;
+}
+.faq-q:hover { color: var(--gold); }
+.faq-icon {
+  font-size: 1.4rem; line-height: 1; color: var(--gold);
+  flex-shrink: 0; transition: transform .3s cubic-bezier(.16,1,.3,1);
+  font-family: 'Space Mono', monospace; font-weight: 400;
+}
+.faq-item.open .faq-icon { transform: rotate(45deg); }
+.faq-a {
+  max-height: 0; overflow: hidden;
+  transition: max-height .45s cubic-bezier(.16,1,.3,1);
+  font-size: .92rem; color: var(--ink-soft); line-height: 1.85;
+  font-weight: 300;
+}
+.faq-a-inner { padding-bottom: 1.8rem; }
+.faq-item.open .faq-a { max-height: 400px; }
+.faq-a .chip { display: inline-block; background: var(--paper2); border: 1px solid var(--rule); border-radius: 4px; padding: .1rem .45rem; font-family: 'Space Mono', monospace; font-size: .62rem; color: var(--ink-muted); vertical-align: middle; }
+
 /* footer */
 footer{
   border-top:1px solid var(--rule);padding:2.5rem 3rem;
@@ -462,7 +490,14 @@ footer{
 
 <style>
 /* --- DEMO CONTAINER --- */
-.demo-container { display: flex; gap: 4rem; margin-top: 3rem; align-items: center; }
+.demo-container { display: flex; gap: 3rem; margin-top: 3rem; align-items: center; }
+.demo-explanation { flex: 1.3; }
+.demo-explanation .step-row { padding: 1.5rem 0; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: 2.5rem 1fr; gap: 1rem; align-items: start; }
+.demo-explanation .step-row:first-child { padding-top: 0; }
+.demo-explanation .step-row:last-child { border-bottom: none; }
+.demo-explanation .step-n { font-family: 'Caveat', cursive; font-size: 1.6rem; font-weight: 700; color: var(--gold); opacity: 0.7; line-height: 1; }
+.demo-explanation h3 { font-family: 'Instrument Serif', Georgia, serif; font-size: 1.3rem; font-weight: 400; color: var(--ink); margin-bottom: 0.3rem; }
+.demo-explanation p { font-size: 0.85rem; color: var(--ink-soft); line-height: 1.6; font-weight: 300; }
 .demo-menu { flex: 1; display: flex; flex-direction: column; gap: 1rem; }
 .demo-step { display: flex; align-items: flex-start; gap: 1rem; padding: 1.5rem; border-radius: 16px; background: var(--paper); border: 1px solid var(--rule); cursor: pointer; transition: all 0.3s; }
 .demo-step:hover { background: var(--paper2); }
@@ -769,7 +804,7 @@ footer{
 
   <div class="hero-tag">Telegram P2P Exchange · India · Live on Base &amp; BSC</div>
 
-  <h1>Buy &amp; sell crypto<br>with <em>real people</em> —<br>safely.</h1>
+  <h1>Buy &amp; sell crypto<br>with <em>real people</em>—<br>safely.</h1>
 
   <p class="hero-sub">
     No more getting blocked after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
@@ -789,8 +824,8 @@ footer{
 <div class="stats">
   <div class="stat r on"><span class="stat-n" data-count="4.2" data-prefix="$" data-suffix="M+">$4.2M+</span><span class="stat-l">Volume Traded</span></div>
   <div class="stat r d1 on"><span class="stat-n" data-count="1847" data-suffix="">1,847</span><span class="stat-l">Trades Done</span></div>
-  <div class="stat r d2 on"><span class="stat-n" data-count="98" data-suffix="%">98%</span><span class="stat-l">Completion Rate</span></div>
-  <div class="stat r d3 on"><span class="stat-n" data-count="0.5" data-suffix="%" data-prefix="">0.5%</span><span class="stat-l">Flat Fee</span></div>
+  <div class="stat r d2 on"><span class="stat-n" data-count="12492" data-suffix="">12,492</span><span class="stat-l">App Users</span></div>
+  <div class="stat r d3 on"><span class="stat-n" style="font-size:1.1rem;">0.25% BSC · 0% Base</span><span class="stat-l">Platform Fee</span></div>
 </div>
 
 <!-- STORY -->
@@ -838,52 +873,8 @@ footer{
 
 <hr class="rule">
 
-<!-- HOW IT WORKS -->
-<section class="section" id="how">
-  <div class="eyebrow r on">How it works</div>
-  <h2 class="steps-h r d1 on">Four steps.<br>Total safety.</h2>
-  <p class="steps-intro r d2 on">Everything happens inside Telegram. No separate app, no browser tab, no setup.</p>
-
-  <div>
-    <div class="step-row r on">
-      <div class="step-n">01</div>
-      <div>
-        <h3>Post or find an offer</h3>
-        <p>Sellers list their USDT or USDC — amount, INR rate, payment methods accepted. Buyers browse live offers in the mini app and pick the best rate.</p>
-        <span class="step-tag">Marketplace</span>
-      </div>
-    </div>
-    <div class="step-row r on">
-      <div class="step-n">02</div>
-      <div>
-        <h3>Crypto gets locked on-chain</h3>
-        <p>The moment a buyer accepts an offer, P2PFather locks the seller's crypto inside the P2P Escrow Vault on Base or BSC. The seller cannot withdraw it. The trade has begun.</p>
-        <span class="step-tag">Smart Contract · Base &amp; BSC</span>
-      </div>
-    </div>
-    <div class="step-row r on">
-      <div class="step-n">03</div>
-      <div>
-        <h3>Buyer sends INR</h3>
-        <p>The buyer pays via UPI, NEFT, IMPS, or bank transfer — whatever was agreed. Then uploads a screenshot of the payment confirmation in the Telegram chat.</p>
-        <span class="step-tag">UPI · NEFT · IMPS · Bank</span>
-      </div>
-    </div>
-    <div class="step-row r on">
-      <div class="step-n">04</div>
-      <div>
-        <h3>Crypto released. Trade done.</h3>
-        <p>Once the seller confirms the payment landed, the smart contract releases the crypto straight to the buyer's receiving wallet. 0.5% platform fee is the only cost — no hidden charges.</p>
-        <span class="step-tag">Auto-release · 0.5% fee</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="rule">
-
-<!-- MINI APP SECTION -->
-<section class="section-wide" id="miniapp">
+<!-- HOW IT WORKS & DEMO -->
+<section class="section-wide" id="how">
   <div class="eyebrow r on">Interactive Demo</div>
   <h2 class="miniapp-h r d1 on">See how easy it is to<br>trade <em>securely</em></h2>
   <p class="miniapp-body r d2 on" style="max-width:500px;">
@@ -892,6 +883,37 @@ footer{
   </p>
 
   <div class="demo-container r d3 on">
+    <div class="demo-explanation">
+      <div class="step-row">
+        <div class="step-n">01</div>
+        <div>
+          <h3>Post or find an offer</h3>
+          <p>Sellers list their USDT or USDC — amount, INR rate, payment methods accepted. Buyers browse live offers in the mini app and pick the best rate.</p>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-n">02</div>
+        <div>
+          <h3>Crypto gets locked on-chain</h3>
+          <p>The moment a buyer accepts an offer, P2PFather locks the seller's crypto inside the P2P Escrow Vault on Base or BSC. The seller cannot withdraw it.</p>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-n">03</div>
+        <div>
+          <h3>Buyer sends INR</h3>
+          <p>The buyer pays via UPI, NEFT, IMPS, or bank transfer — whatever was agreed. Then uploads a screenshot of the payment confirmation.</p>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-n">04</div>
+        <div>
+          <h3>Crypto released. Trade done.</h3>
+          <p>Once the seller confirms the payment landed, the smart contract releases the crypto straight to the buyer's receiving wallet. 0.25% fee on BSC, free on Base.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="demo-menu">
       <div class="demo-step active" onclick="playFlow('profile')">
         <div class="step-num" style="background:rgba(240, 185, 11, 0.2); color:#f0b90b;">01</div>
@@ -1040,6 +1062,88 @@ footer{
   </a>
 </section>
 
+<hr class="rule">
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="eyebrow r on">FAQ</div>
+  <h2 class="steps-h r d1 on">Got questions?<br>We've got answers.</h2>
+
+  <div class="faq-grid">
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Do I pay gas fees when creating an ad?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        <strong>No.</strong> Creating a buy or sell ad is completely <span class="chip">off-chain</span> and free. You only pay a gas fee when you actually deposit crypto into the escrow vault before a trade starts. That's a one-time on-chain transaction on Base or BSC — usually under $0.05.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Which blockchains does P2PFather support?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        We support two chains — <span class="chip">Base</span> (Coinbase's L2, for USDC) and <span class="chip">BSC</span> (Binance Smart Chain, for USDT). Both are fast and cheap. You choose the chain when you set up your trade.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What tokens can I trade?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        Currently <span class="chip">USDT</span> (BEP-20 on BSC) and <span class="chip">USDC</span> (ERC-20 on Base). These are the two most trusted stablecoins, traded against Indian Rupee (INR) via UPI, NEFT, IMPS, or bank transfer.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How does the escrow work? Is my crypto safe?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        When a trade starts, the seller's crypto is locked inside our audited smart contract on-chain. <strong>Neither party can touch it</strong> until both sides confirm. The contract only releases crypto to the buyer after the seller verifies the INR payment landed. If there's a dispute, an admin can step in to resolve it.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What are the fees?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        P2PFather charges <span class="chip">0.25%</span> on BSC and <span class="chip">0%</span> on Base — deducted from the released crypto. There are no hidden charges, no monthly subscriptions, no KYC fees.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Do I need to install any app or create an account?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        No. Everything runs inside <span class="chip">Telegram</span> as a Mini App. Just open @p2pfather_bot, connect your wallet, and you're trading. No new app download, no sign-up form, no seed phrase entry.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What happens if a seller doesn't release my crypto after I pay INR?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        You can raise a dispute directly in the Telegram trade chat. An admin will review the payment screenshot and transaction evidence. If your payment is verified, the smart contract can be triggered to release the crypto to you. Your funds are always secured on-chain — no one can just disappear with them.
+      </div></div>
+    </div>
+
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <span class="logo">P2P<em>Father</em></span>
@@ -1053,6 +1157,58 @@ footer{
 </footer>
 
 <script>
+// Live stats from API
+(async function fetchLiveStats() {
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    function animateCount(el, target, prefix, suffix, decimals) {
+      const duration = 1800;
+      const start = performance.now();
+      const from = 0;
+      function step(now) {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const val = from + (target - from) * eased;
+        el.textContent = prefix + (decimals ? val.toFixed(decimals) : Math.floor(val).toLocaleString('en-IN')) + suffix;
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Volume: convert from token units to $M
+    const volM = (data.total_volume || 0) / 1_000_000;
+    const volEl = document.querySelector('.stat-n[data-prefix="$"]');
+    if (volEl && data.total_volume > 0) {
+      animateCount(volEl, volM, '$', 'M+', 1);
+    }
+
+    // Trades
+    const tradeEl = document.querySelectorAll('.stat-n')[1];
+    if (tradeEl && data.total_trades > 0) {
+      animateCount(tradeEl, data.total_trades, '', '', 0);
+    }
+
+    // Users
+    const userEl = document.querySelectorAll('.stat-n')[2];
+    if (userEl && data.total_users > 0) {
+      animateCount(userEl, data.total_users, '', '', 0);
+    }
+  } catch (e) {
+    // silently fail — hardcoded fallback values stay visible
+  }
+})();
+
+// FAQ accordion
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
 // progress
 window.addEventListener('scroll',()=>{
   const p=window.scrollY/(document.body.scrollHeight-window.innerHeight)
@@ -2491,7 +2647,7 @@ function playFlow(flow) {
         <div id="ad-list"></div>
         <div class="fab" id="btn-fab">+</div>
       </div>
-      \${renderNav('ads')}
+      ${renderNav('ads')}
     `;
 
     const c = document.getElementById('cursor');
