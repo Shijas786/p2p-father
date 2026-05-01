@@ -1183,11 +1183,13 @@ footer{
       animateCount(volEl, Math.floor(rawVol), v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'K+' : v + '+'));
     }
 
-    // Trades — handle both field names
-    const rawTrades = data.total_trades || data.completed_trades || 0;
+    // Trades — handle all possible field names across API versions
+    const rawTrades = data.total_trades || data.completed_trades || data.total_trade_count || 0;
     const tradeEl = document.getElementById('stat-trades');
     if (tradeEl && rawTrades > 0) {
       animateCount(tradeEl, rawTrades, v => v.toLocaleString('en-IN'));
+    } else if (tradeEl) {
+      tradeEl.textContent = '—';
     }
 
     // Users
