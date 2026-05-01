@@ -430,17 +430,24 @@ footer{
 @keyframes fadeup{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);}}
 
 @media(max-width:900px){
-  nav{padding:1.2rem 1.5rem;}
+  nav{padding:1rem 1.2rem; gap:0.5rem;}
   .navlinks{display:none;}
-  .hero{padding:6rem 1.5rem 4rem;}
+  .hero{padding:5rem 1.2rem 3rem;}
   .hero-phone-wrap{display:none;}
-  h1{font-size:clamp(2.8rem,10vw,5rem);}
-  .section,.section-wide{padding:5rem 1.5rem;}
-  .stats{grid-template-columns:1fr 1fr;}
-  .stat{border-bottom:1px solid var(--rule);}
-  .miniapp-grid{grid-template-columns:1fr;gap:3rem;}
+  h1{font-size:clamp(2.4rem,8vw,4.5rem);}
+  .section,.section-wide{padding:3.5rem 1.2rem;}
+  .stats{grid-template-columns:1fr; gap:0;}
+  .stat{border-bottom:1px solid var(--rule); border-right:none; padding:1.8rem 1.5rem;}
+  .stat:last-child{border-bottom:none;}
+  .miniapp-grid{grid-template-columns:1fr;gap:2rem;}
   .tok-row{grid-template-columns:1fr;}
-  footer{flex-direction:column;align-items:flex-start;gap:1.5rem;}
+  footer{flex-direction:column;align-items:flex-start;gap:1.2rem; padding:3rem 1.2rem;}
+}
+@media(max-width:600px){
+  .logo span{font-size:1.3rem;}
+  .navcta{font-size:0.8rem; padding:0.4rem 0.8rem;}
+  .hero-btns { flex-direction: column; width: 100%; gap: 1rem; }
+  .btn { width: 100%; justify-content: center; }
 }
 
 /* Profile UI */
@@ -786,13 +793,16 @@ footer{
 
 <!-- NAV -->
 <nav id="nav" class="solid">
-  <a class="logo" href="http://localhost:8000/#">P2P<em>Father</em></a>
+  <a class="logo" href="/#" style="display:flex; align-items:center; gap:0.6rem;">
+    <img src="favicon.png" style="width:34px; height:34px; border-radius:50%;" alt="P2PFather Logo"/>
+    <span>P2P<em>Father</em></span>
+  </a>
   <ul class="navlinks">
-    <li><a href="http://localhost:8000/#story">Story</a></li>
-    <li><a href="http://localhost:8000/#how">How it works</a></li>
-    <li><a href="http://localhost:8000/#miniapp">Mini App</a></li>
+    <li><a href="/#story">Story</a></li>
+    <li><a href="/#how">How it works</a></li>
+    <li><a href="/#miniapp">Mini App</a></li>
   </ul>
-  <div style="display:flex; gap:1rem; align-items:center;">
+  <div class="nav-right-wrap" style="display:flex; gap:1rem; align-items:center;">
     <appkit-button></appkit-button>
     <a class="navcta" href="https://t.me/p2pfather_bot">Open in Telegram →</a>
   </div>
@@ -815,7 +825,7 @@ footer{
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       Start Trading
     </a>
-    <a href="http://localhost:8000/#story" class="btn btn-line">Read the story ↓</a>
+    <a href="/#story" class="btn btn-line">Read the story ↓</a>
   </div>
 
   </section>
@@ -1145,12 +1155,15 @@ footer{
 
 <!-- FOOTER -->
 <footer>
-  <span class="logo">P2P<em>Father</em></span>
+  <span class="logo" style="display:flex; align-items:center; gap:0.6rem;">
+    <img src="favicon.png" style="width:34px; height:34px; border-radius:50%;" alt="P2PFather Logo"/>
+    <span>P2P<em>Father</em></span>
+  </span>
   <div class="footer-links">
     <a href="https://github.com/Shijas786/p2p-father">GitHub</a>
     <a href="https://t.me/p2pfather_bot">Telegram</a>
-    <a href="http://localhost:8000/#story">Story</a>
-    <a href="http://localhost:8000/#how">How it works</a>
+    <a href="/#story">Story</a>
+    <a href="/#how">How it works</a>
   </div>
   <div class="footer-copy">© 2025 P2PFather · Built in Kerala</div>
 </footer>
