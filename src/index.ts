@@ -82,6 +82,7 @@ async function main() {
 
             res.json({
                 total_users: stats.total_users,
+                total_trades: stats.completed_trades,
                 total_volume_usdc: stats.total_volume_generic || 0,
                 total_fees_amount: stats.total_fees_amount || 0,
                 active_orders: stats.active_orders,
@@ -100,6 +101,7 @@ async function main() {
             res.status(500).json({ error: "Failed to fetch stats" });
         }
     });
+
 
     // Health Check (Koyeb needs a 200 OK)
     app.get("/health", (req, res) => res.send("OK"));
