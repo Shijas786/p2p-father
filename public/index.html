@@ -480,11 +480,11 @@ footer{
 .pf-input-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
 .pf-input { background: transparent; border: 1px solid var(--ma-border); border-radius: 8px; padding: 0.8rem; color: #fff; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
 .pf-input span { color: var(--ma-sub); }
-.pf-btn-solid { width: 100%; background: #f0b90b; color: #000; border-radius: 8px; padding: 1rem; font-weight: 700; font-size: 0.9rem; text-align: center; cursor: pointer; transition: transform 0.2s; }
+.pf-btn-solid { width: 100%; background: #f0b90b; color: #000; border-radius: 8px; padding: 0.55rem; font-weight: 700; font-size: 0.75rem; text-align: center; cursor: pointer; transition: transform 0.2s; }
 
-.pf-rw-form { padding: 1rem 1.5rem; display: none; border-bottom: 1px solid var(--ma-border); }
-.pf-rw-input { width: 100%; background: transparent; border: 1px solid #f0b90b; border-radius: 8px; padding: 0.8rem; color: #fff; font-size: 0.85rem; margin-bottom: 1rem; box-sizing: border-box; }
-.pf-rw-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.pf-rw-form { padding: 0.7rem 1rem; display: none; border-bottom: 1px solid var(--ma-border); }
+.pf-rw-input { width: 100%; background: transparent; border: 1px solid #f0b90b; border-radius: 8px; padding: 0.5rem 0.7rem; color: #fff; font-size: 0.72rem; margin-bottom: 0.6rem; box-sizing: border-box; }
+.pf-rw-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 
 </style>
 
@@ -508,31 +508,25 @@ footer{
 .step-desc { font-size: 0.85rem; color: var(--ink-soft); line-height: 1.5; }
 .demo-step.active .step-desc { color: rgba(255,255,255,0.6); }
 
-.demo-phone { width: 280px; flex-shrink: 0; filter: drop-shadow(0 30px 60px rgba(0,0,0,.25)); }
-.phone-shell { background: #0f0f11; border-radius: 40px; padding: 10px; box-shadow: inset 0 0 0 2px #3a3a3c, inset 0 0 0 6px #121212; position: relative; overflow: hidden; }
-.phone-screen { background: #000; border-radius: 30px; overflow: hidden; position: relative; display: flex; flex-direction: column; height: 570px; }
-.notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 80px; height: 24px; background: #000; border-radius: 20px; z-index: 999; box-shadow: 0 0 0 1px rgba(255,255,255,0.05); }
+.demo-phone { width: 300px; flex-shrink: 0; filter: drop-shadow(0 30px 60px rgba(0,0,0,.25)); }
+.phone-shell { background: #0f0f11; border-radius: 40px; padding: 12px; box-shadow: inset 0 0 0 2px #3a3a3c, inset 0 0 0 6px #121212; position: relative; overflow: hidden; }
+.phone-screen { background: #000; border-radius: 30px; overflow: hidden; position: relative; display: flex; flex-direction: column; height: 600px; }
+.notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; background: #000; border-radius: 20px; z-index: 999; box-shadow: 0 0 0 1px rgba(255,255,255,0.05); }
 
 /* iOS App Layers */
-.app-layer {
-  position: absolute; inset: 0; background: var(--ma-bg);
-  display: flex; flex-direction: column; overflow: hidden;
-  transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
-  font-size: 0.82rem;
-  transform-origin: top left;
-}
+.app-layer { position: absolute; inset: 0; background: var(--ma-bg); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1); }
 
 /* --- TRUE MINIAPP UI SETTINGS --- */
 :root { --ma-bg: #0b0e11; --ma-surface: #1e2026; --ma-border: #2a2d35; --ma-green: #0ecb81; --ma-red: #f6465d; --ma-text: #ffffff; --ma-sub: #848e9c; }
-.ma-content { flex: 1; overflow-y: auto; padding: 34px 0 60px 0; scroll-behavior: smooth; font-size: 0.82rem; }
+.ma-content { flex: 1; overflow-y: auto; padding: 34px 0 60px 0; scroll-behavior: smooth; }
 .ma-nav { height: 60px; background: rgba(11, 14, 17, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--ma-border); display: flex; justify-content: space-around; align-items: center; position: absolute; bottom: 0; width: 100%; z-index: 10; }
 .ma-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ma-sub); font-size: 0.55rem; font-weight: 500; }
 .ma-nav-item.active { color: var(--ma-text); }
 .ma-nav-item svg { width: 22px; height: 22px; fill: none; stroke: var(--ma-sub); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .ma-nav-item.active svg { stroke: var(--ma-text); }
-.ma-header { padding: 0.7rem 0.9rem; }
-.ma-title { font-size: 1rem; font-weight: 700; color: var(--ma-text); font-family: 'DM Sans', sans-serif;}
-.ma-subtitle { font-size: 0.65rem; color: var(--ma-sub); margin-top: 0.2rem; }
+.ma-header { padding: 1rem; }
+.ma-title { font-size: 1.2rem; font-weight: 700; color: var(--ma-text); font-family: 'DM Sans', sans-serif;}
+.ma-subtitle { font-size: 0.75rem; color: var(--ma-sub); margin-top: 0.2rem; }
 
 /* My Ads Screen */
 .ma-tabs { display: flex; border-bottom: 1px solid var(--ma-border); padding: 0 1rem; gap: 1.5rem; }
@@ -588,20 +582,20 @@ footer{
 .compact-form .ma-header { padding: 0.5rem 1rem !important; }
 
 /* Wallet Screen */
-.aw-hero { padding: 0 1rem; margin-bottom: 1rem; }
-.aw-label { font-size: 0.65rem; color: var(--ma-sub); text-transform: uppercase; font-weight: 600;}
-.aw-amount { font-size: 2rem; font-weight: 700; color: #fff; margin: 0.2rem 0; }
-.aw-inr { font-size: 0.7rem; color: var(--ma-sub); }
-.aw-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
-.aw-dep { background: rgba(255,255,255,0.1); color: #fff; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 600; flex:1; text-align:center;}
-.aw-send { background: var(--ma-text); color: #000; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; flex:1; text-align:center;}
-.ma-vault-card { margin: 0 1rem; padding: 1rem; border-radius: 12px; background: var(--ma-surface); border: 1px solid var(--ma-border); }
-.ma-bal-lbl { font-size: 0.7rem; color: #fff; font-weight: 600; display:flex; align-items:center; gap:0.4rem; }
-.ma-bal-val { font-size: 1.4rem; font-weight: 700; color: var(--ma-text); margin: 0.5rem 0; transition: color 0.3s; }
-.ma-bal-btn { background: var(--ma-green); color: #000; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-block;}
-.ma-btn-outline { border: 1px solid var(--ma-border); color: var(--ma-text); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
-.aw-assets-hd { font-size: 0.8rem; font-weight: 700; color: #fff; padding: 1.5rem 1rem 0.5rem; }
-.aw-asset-row { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid var(--ma-border); }
+.aw-hero { padding: 0 1rem; margin-bottom: 0.7rem; }
+.aw-label { font-size: 0.6rem; color: var(--ma-sub); text-transform: uppercase; font-weight: 600;}
+.aw-amount { font-size: 1.5rem; font-weight: 700; color: #fff; margin: 0.15rem 0; }
+.aw-inr { font-size: 0.65rem; color: var(--ma-sub); }
+.aw-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
+.aw-dep { background: rgba(255,255,255,0.1); color: #fff; border-radius: 8px; padding: 0.45rem 0.8rem; font-size: 0.72rem; font-weight: 600; flex:1; text-align:center;}
+.aw-send { background: var(--ma-text); color: #000; border-radius: 8px; padding: 0.45rem 0.8rem; font-size: 0.72rem; font-weight: 700; flex:1; text-align:center;}
+.ma-vault-card { margin: 0 1rem; padding: 0.7rem; border-radius: 10px; background: var(--ma-surface); border: 1px solid var(--ma-border); }
+.ma-bal-lbl { font-size: 0.62rem; color: #fff; font-weight: 600; display:flex; align-items:center; gap:0.3rem; }
+.ma-bal-val { font-size: 1.05rem; font-weight: 700; color: var(--ma-text); margin: 0.35rem 0; transition: color 0.3s; }
+.ma-bal-btn { background: var(--ma-green); color: #000; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.68rem; font-weight: 700; display: inline-block;}
+.ma-btn-outline { border: 1px solid var(--ma-border); color: var(--ma-text); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.68rem; font-weight: 600; }
+.aw-assets-hd { font-size: 0.72rem; font-weight: 700; color: #fff; padding: 0.9rem 1rem 0.4rem; }
+.aw-asset-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; border-bottom: 1px solid var(--ma-border); }
 .aw-asset-left { display: flex; align-items: center; gap: 0.6rem; }
 .aw-asset-ico { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #fff; }
 .aw-asset-nm { font-size: 0.8rem; font-weight: 600; color: #fff; }
@@ -610,26 +604,26 @@ footer{
 .aw-asset-usd { font-size: 0.6rem; color: var(--ma-sub); text-align: right; }
 
 .ma-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; opacity: 0; animation: fadeOverlay 0.3s forwards; }
-.ma-modal-content { background: var(--ma-surface); border-radius: 16px 16px 0 0; padding: 1.2rem 1rem; transform: translateY(100%); animation: slidePopup 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; font-size: 0.8rem; }
+.ma-modal-content { background: var(--ma-surface); border-radius: 20px 20px 0 0; padding: 2rem 1.5rem; transform: translateY(100%); animation: slidePopup 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .mm-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: flex; align-items: center; justify-content: center; opacity: 0; animation: fadeOverlay 0.2s forwards; }
-.mm-popup { background: #fff; width: 88%; border-radius: 14px; padding: 1rem; transform: scale(0.9); animation: popMsg 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.28) forwards; }
-.mm-logo { width: 32px; height: 32px; background: url('https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg') center/contain no-repeat; margin: 0 auto 0.7rem; }
-.mm-title { font-size: 0.9rem; font-weight: 700; color: #000; text-align: center; margin-bottom: 0.4rem; }
-.mm-sub { font-size: 0.7rem; color: #666; text-align: center; margin-bottom: 1rem; }
-.mm-btn { background: #037dd6; color: #fff; border-radius: 100px; padding: 0.6rem; text-align: center; font-weight: 600; font-size: 0.78rem; }
+.mm-popup { background: #fff; width: 85%; border-radius: 16px; padding: 1.5rem; transform: scale(0.9); animation: popMsg 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.28) forwards; }
+.mm-logo { width: 40px; height: 40px; background: url('https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg') center/contain no-repeat; margin: 0 auto 1rem; }
+.mm-title { font-size: 1.1rem; font-weight: 700; color: #000; text-align: center; margin-bottom: 0.5rem; }
+.mm-sub { font-size: 0.8rem; color: #666; text-align: center; margin-bottom: 1.5rem; }
+.mm-btn { background: #037dd6; color: #fff; border-radius: 100px; padding: 0.8rem; text-align: center; font-weight: 600; font-size: 0.9rem; }
 
 /* Rabby specific */
 .rw-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: flex; flex-direction: column; justify-content: flex-end; opacity: 0; animation: fadeOverlay 0.2s forwards; }
-.rw-popup { background: #fff; border-radius: 14px 14px 0 0; padding: 0.8rem 1rem 1rem; transform: translateY(100%); animation: slidePopup 0.3s forwards; }
-.rw-header { display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-size: 0.75rem; font-weight: 600; color: #000; margin-bottom: 1rem; }
-.rw-header img { width: 16px; height: 16px; border-radius: 4px; }
-.rw-row { background: #f5f6f8; border-radius: 10px; padding: 0.7rem; margin-bottom: 1rem; }
-.rw-row-title { font-size: 0.7rem; color: #000; font-weight: 600; margin-bottom: 0.4rem; }
-.rw-row-val { font-size: 0.9rem; font-weight: 700; color: #f6465d; display:flex; align-items:center; gap:0.4rem;}
-.rw-row-val svg { width:14px; height:14px; fill:#2775ca; }
-.rw-detail { display: flex; justify-content: space-between; font-size: 0.7rem; color: #666; margin-bottom: 0.4rem; }
+.rw-popup { background: #fff; border-radius: 16px 16px 0 0; padding: 1rem 1.5rem 1.5rem; transform: translateY(100%); animation: slidePopup 0.3s forwards; }
+.rw-header { display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-size: 0.85rem; font-weight: 600; color: #000; margin-bottom: 1.5rem; }
+.rw-header img { width: 20px; height: 20px; border-radius: 4px; }
+.rw-row { background: #f5f6f8; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
+.rw-row-title { font-size: 0.8rem; color: #000; font-weight: 600; margin-bottom: 0.5rem; }
+.rw-row-val { font-size: 1.1rem; font-weight: 700; color: #f6465d; display:flex; align-items:center; gap:0.5rem;}
+.rw-row-val svg { width:18px; height:18px; fill:#2775ca; }
+.rw-detail { display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; margin-bottom: 0.5rem; }
 .rw-detail span { color: #000; font-weight: 600; }
-.rw-btn { background: #4d7cff; color: #fff; border-radius: 8px; padding: 0.6rem; text-align: center; font-weight: 600; font-size: 0.78rem; margin-top: 0.7rem; }
+.rw-btn { background: #4d7cff; color: #fff; border-radius: 8px; padding: 0.8rem; text-align: center; font-weight: 600; font-size: 0.9rem; margin-top: 1rem; }
 
 .toast { position: absolute; top: 40px; left: 50%; transform: translateX(-50%) translateY(-20px); background: #2e7d32; color: #fff; padding: 0.6rem 1rem; border-radius: 100px; font-size: 0.8rem; font-weight: 600; z-index: 200; opacity: 0; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -2833,66 +2827,66 @@ function playFlow(flow) {
       
       <!-- Top Up Modal -->
       <div class="ma-modal" id="modal" style="display:none; opacity:0;">
-        <div class="ma-modal-content">
-          <div style="font-size:1.2rem; font-weight:700; color:#fff; margin-bottom:1.5rem;">Top Up Vault</div>
+        <div class="ma-modal-content" style="padding:1rem;">
+          <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-bottom:1rem;">Top Up Vault</div>
           
-          <div class="ma-label" style="margin:0 0 0.5rem;">SELECT CHAIN</div>
-          <div class="ma-toggle-group" style="padding:0; margin-bottom:1.2rem;">
-            <div class="ma-chip active" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#1b253b; border:1px solid #104afb; color:#fff;">
+          <div class="ma-label" style="margin:0 0 0.4rem;">SELECT CHAIN</div>
+          <div class="ma-toggle-group" style="padding:0; margin-bottom:0.9rem;">
+            <div class="ma-chip active" style="display:flex; align-items:center; justify-content:center; gap:0.4rem; background:#1b253b; border:1px solid #104afb; color:#fff; font-size:0.75rem; padding:0.4rem;">
               <span style="color:#627eea;">Ξ</span> Base
             </div>
-            <div class="ma-chip" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#1e2026; border:1px solid var(--ma-border);">
+            <div class="ma-chip" style="display:flex; align-items:center; justify-content:center; gap:0.4rem; background:#1e2026; border:1px solid var(--ma-border); font-size:0.75rem; padding:0.4rem;">
               <span style="color:#f3ba2f;">🟡</span> BSC
             </div>
           </div>
 
-          <div class="ma-label" style="margin:0 0 0.5rem;">SELECT TOKEN</div>
-          <div class="ma-toggle-group" style="padding:0; margin-bottom:1.2rem;">
-            <div class="ma-chip active" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#0f2c24; border:1px solid #0ecb81; color:#fff;">
+          <div class="ma-label" style="margin:0 0 0.4rem;">SELECT TOKEN</div>
+          <div class="ma-toggle-group" style="padding:0; margin-bottom:0.9rem;">
+            <div class="ma-chip active" style="display:flex; align-items:center; justify-content:center; gap:0.4rem; background:#0f2c24; border:1px solid #0ecb81; color:#fff; font-size:0.75rem; padding:0.4rem;">
               <span style="color:#2775ca;">🔵</span> USDC
             </div>
-            <div class="ma-chip" style="display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+            <div class="ma-chip" style="display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.75rem; padding:0.4rem;">
               <span style="color:#26a17b;">₮</span> USDT
             </div>
           </div>
 
-          <div class="ma-label" style="margin:0 0 0.5rem; display:flex; justify-content:space-between; align-items:center;">
+          <div class="ma-label" style="margin:0 0 0.4rem; display:flex; justify-content:space-between; align-items:center;">
             <span>WALLET BALANCE</span>
             <span style="color:#fff; font-weight:700;">43.00</span>
           </div>
           
-          <div class="ma-input" style="margin:0; background:#1e2026; border:1px solid #0ecb81;">
-            <div class="ma-input-val">1</div>
+          <div class="ma-input" style="margin:0; background:#1e2026; border:1px solid #0ecb81; padding:0.5rem 0.8rem;">
+            <div class="ma-input-val" style="font-size:0.85rem;">1</div>
             <div class="ma-input-suffix">▼</div>
           </div>
           
-          <div id="v-status" style="display:none; text-align:center; color:#0ecb81; font-size:0.8rem; font-weight:600; margin-top:1rem;">Deposit pending...</div>
+          <div id="v-status" style="display:none; text-align:center; color:#0ecb81; font-size:0.72rem; font-weight:600; margin-top:0.6rem;">Deposit pending...</div>
           
-          <div class="ma-btn ma-btn-green" style="margin:1.5rem 0 0; background:#0ecb81; color:#000; font-weight:bold; letter-spacing:0.5px;" id="btn-conf">SWITCH TO BASE</div>
+          <div class="ma-btn ma-btn-green" style="margin:0.9rem 0 0; background:#0ecb81; color:#000; font-weight:bold; letter-spacing:0.5px; font-size:0.78rem; padding:0.55rem;" id="btn-conf">SWITCH TO BASE</div>
         </div>
       </div>
 
       <!-- Rabby Wallet Notification Popup -->
       <div class="rw-overlay" id="mm-overlay" style="display:none;">
-        <div class="rw-popup">
-          <div class="rw-header">
-            <svg style="width:20px; height:20px; fill:#00bcd4;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Z"></path></svg>
+        <div class="rw-popup" style="padding:0.7rem 1rem 1rem;">
+          <div class="rw-header" style="font-size:0.72rem; margin-bottom:0.8rem;">
+            <svg style="width:14px; height:14px; fill:#00bcd4;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Z"></path></svg>
             https://p2pfather.com
           </div>
-          <div class="rw-row" style="background:#f4f5f7; padding:1.2rem; border-radius:12px; margin-bottom:1.5rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
-              <span style="color:#000; font-size:0.85rem; font-weight:600;">Simulation Results</span>
-              <span style="color:#666; font-size:0.85rem;">- $1.00</span>
+          <div class="rw-row" style="background:#f4f5f7; padding:0.7rem; border-radius:10px; margin-bottom:0.8rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <span style="color:#000; font-size:0.72rem; font-weight:600;">Simulation Results</span>
+              <span style="color:#666; font-size:0.72rem;">- $1.00</span>
             </div>
-            <div class="rw-row-val" style="color:#f6465d; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+            <div class="rw-row-val" style="color:#f6465d; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:0.3rem;">
               <span style="color:#2775ca;">🔵</span> - 1.0000 USDC
             </div>
           </div>
-          <div class="rw-detail">Unknown Signature Type <span>View Raw ></span></div>
-          <div class="rw-detail" style="margin-top:0.8rem;">Chain <span><span style="color:#627eea;">Ξ</span> Base</span></div>
-          <div class="rw-detail" style="margin-top:0.8rem; padding-bottom:1rem; border-bottom:1px solid #eee;">Operation <span>deposit</span></div>
+          <div class="rw-detail" style="font-size:0.7rem;">Unknown Signature Type <span>View Raw ></span></div>
+          <div class="rw-detail" style="margin-top:0.5rem; font-size:0.7rem;">Chain <span><span style="color:#627eea;">Ξ</span> Base</span></div>
+          <div class="rw-detail" style="margin-top:0.5rem; padding-bottom:0.7rem; border-bottom:1px solid #eee; font-size:0.7rem;">Operation <span>deposit</span></div>
           
-          <div class="rw-btn" id="btn-mm-sign" style="background:#4d7cff; font-weight:bold;">Sign</div>
+          <div class="rw-btn" id="btn-mm-sign" style="background:#4d7cff; font-weight:bold; padding:0.55rem; font-size:0.78rem; margin-top:0.6rem;">Sign</div>
         </div>
       </div>
     `;
