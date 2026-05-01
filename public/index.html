@@ -1176,17 +1176,18 @@ footer{
       requestAnimationFrame(step);
     }
 
-    // Volume: show as $XK+ or $X.XK+
+    // Volume — handle both field names (old: total_volume_usdc, new: total_volume)
+    const rawVol = data.total_volume || data.total_volume_usdc || 0;
     const volEl = document.getElementById('stat-volume');
-    if (volEl && data.total_volume > 0) {
-      const volK = data.total_volume / 1000;
-      animateCount(volEl, Math.floor(data.total_volume), v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'K+' : v + '+'));
+    if (volEl && rawVol > 0) {
+      animateCount(volEl, Math.floor(rawVol), v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'K+' : v + '+'));
     }
 
-    // Trades
+    // Trades — handle both field names
+    const rawTrades = data.total_trades || data.completed_trades || 0;
     const tradeEl = document.getElementById('stat-trades');
-    if (tradeEl && data.total_trades > 0) {
-      animateCount(tradeEl, data.total_trades, v => v.toLocaleString('en-IN'));
+    if (tradeEl && rawTrades > 0) {
+      animateCount(tradeEl, rawTrades, v => v.toLocaleString('en-IN'));
     }
 
     // Users
