@@ -153,7 +153,7 @@ h1 em{font-style:italic;color:var(--gold);font-family:'Caveat',cursive;font-size
 
 /* ── STATS ── */
 .stats{
-  display:grid;grid-template-columns:repeat(4,1fr);
+  display:grid;grid-template-columns:repeat(3,1fr);
   border-bottom:1px solid var(--rule);
   background:var(--paper2);
 }
@@ -822,10 +822,9 @@ footer{
 
 <!-- STATS -->
 <div class="stats">
-  <div class="stat r on"><span class="stat-n" data-count="4.2" data-prefix="$" data-suffix="M+">$4.2M+</span><span class="stat-l">Volume Traded</span></div>
-  <div class="stat r d1 on"><span class="stat-n" data-count="1847" data-suffix="">1,847</span><span class="stat-l">Trades Done</span></div>
-  <div class="stat r d2 on"><span class="stat-n" data-count="12492" data-suffix="">12,492</span><span class="stat-l">App Users</span></div>
-  <div class="stat r d3 on"><span class="stat-n" style="font-size:1.1rem;">0.25% BSC · 0% Base</span><span class="stat-l">Platform Fee</span></div>
+  <div class="stat r on"><span class="stat-n" id="stat-volume">$20K+</span><span class="stat-l">Volume Traded</span></div>
+  <div class="stat r d1 on"><span class="stat-n" id="stat-trades">—</span><span class="stat-l">Trades Done</span></div>
+  <div class="stat r d2 on"><span class="stat-n" id="stat-users">—</span><span class="stat-l">App Users</span></div>
 </div>
 
 <!-- STORY -->
@@ -1164,40 +1163,39 @@ footer{
     if (!res.ok) return;
     const data = await res.json();
 
-    function animateCount(el, target, prefix, suffix, decimals) {
+    function animateCount(el, target, format) {
       const duration = 1800;
       const start = performance.now();
-      const from = 0;
       function step(now) {
         const p = Math.min((now - start) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        const val = from + (target - from) * eased;
-        el.textContent = prefix + (decimals ? val.toFixed(decimals) : Math.floor(val).toLocaleString('en-IN')) + suffix;
+        const val = Math.floor(target * eased);
+        el.textContent = format(val);
         if (p < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
     }
 
-    // Volume: convert from token units to $M
-    const volM = (data.total_volume || 0) / 1_000_000;
-    const volEl = document.querySelector('.stat-n[data-prefix="$"]');
+    // Volume: show as $XK+ or $X.XK+
+    const volEl = document.getElementById('stat-volume');
     if (volEl && data.total_volume > 0) {
-      animateCount(volEl, volM, '$', 'M+', 1);
+      const volK = data.total_volume / 1000;
+      animateCount(volEl, Math.floor(data.total_volume), v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'K+' : v + '+'));
     }
 
     // Trades
-    const tradeEl = document.querySelectorAll('.stat-n')[1];
+    const tradeEl = document.getElementById('stat-trades');
     if (tradeEl && data.total_trades > 0) {
-      animateCount(tradeEl, data.total_trades, '', '', 0);
+      animateCount(tradeEl, data.total_trades, v => v.toLocaleString('en-IN'));
     }
 
     // Users
-    const userEl = document.querySelectorAll('.stat-n')[2];
+    const userEl = document.getElementById('stat-users');
     if (userEl && data.total_users > 0) {
-      animateCount(userEl, data.total_users, '', '', 0);
+      animateCount(userEl, data.total_users, v => v.toLocaleString('en-IN'));
     }
   } catch (e) {
-    // silently fail — hardcoded fallback values stay visible
+    // silently fail — fallback values stay visible
   }
 })();
 
