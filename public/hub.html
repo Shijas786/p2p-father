@@ -227,14 +227,27 @@
     </div>
 
     <script type="module">
-        import { createAppKit } from 'https://esm.sh/@reown/appkit'
-        import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
+        import { createAppKit } from 'https://esm.sh/@reown/appkit@1.8.18?bundle'
+        import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.8.18?bundle'
+        import { bsc, base } from 'https://esm.sh/@reown/appkit@1.8.18/networks?bundle'
 
-        const projectId = 'fe34153f6b31c344d6cbcc7008c37144';
+        const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+
+        const wagmiAdapter = new WagmiAdapter({
+            projectId,
+            networks: [bsc, base]
+        });
+
         createAppKit({
+            adapters: [wagmiAdapter],
             networks: [bsc, base],
             projectId,
-            metadata: { name: 'P2PFather', description: 'Trading Hub', url: 'https://p2pfather.com' },
+            metadata: { name: 'P2PFather', description: 'Trading Hub', url: window.location.origin },
+            features: {
+                analytics: false,
+                email: true,
+                socials: ['google', 'x', 'github', 'discord', 'apple'],
+            },
             themeMode: 'light',
             themeVariables: { 
                 '--w3m-accent': '#4f46e5',

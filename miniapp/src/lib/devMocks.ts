@@ -205,8 +205,73 @@ export const DEMO_PROFILES: Record<string, any> = {
         bio: 'Casual trader. Small amounts only. Fast verification! ✨',
         instagram_handle: null,
         x_handle: 'sarah_crypto_in'
+    },
+    'trader-4': {
+        id: 'trader-4',
+        username: 'RohanFi',
+        first_name: 'Rohan',
+        photo_url: null,
+        completed_trades: 201,
+        buy_count: 110,
+        sell_count: 91,
+        total_volume: 25400.00,
+        completion_rate: 98,
+        level: 4,
+        member_since: '2023-05-12T14:30:00Z',
+        bio: 'Active trader on both networks. ⚡ Quick response guaranteed.',
+        instagram_handle: 'rohan_fi',
+        x_handle: 'rohan_trades'
+    },
+    'trader-5': {
+        id: 'trader-5',
+        username: 'KeralaHODL',
+        first_name: 'Priya',
+        photo_url: null,
+        completed_trades: 143,
+        buy_count: 65,
+        sell_count: 78,
+        total_volume: 18200.00,
+        completion_rate: 96,
+        level: 3,
+        member_since: '2023-08-01T11:00:00Z',
+        bio: 'Kerala based. UPI only. Quick release and secure transactions. 🤝',
+        instagram_handle: 'kerala_hodl',
+        x_handle: null
+    },
+    'trader-6': {
+        id: 'trader-6',
+        username: 'AmalDEFI',
+        first_name: 'Amal',
+        photo_url: null,
+        completed_trades: 427,
+        buy_count: 210,
+        sell_count: 217,
+        total_volume: 68500.00,
+        completion_rate: 99,
+        level: 5,
+        member_since: '2022-12-10T08:00:00Z',
+        bio: 'Defi expert, bulk trades welcome. 24x7 active. 🚀',
+        instagram_handle: null,
+        x_handle: 'amal_defi'
+    },
+    'trader-7': {
+        id: 'trader-7',
+        username: 'NeethuBTC',
+        first_name: 'Neethu',
+        photo_url: null,
+        completed_trades: 67,
+        buy_count: 32,
+        sell_count: 35,
+        total_volume: 10100.00,
+        completion_rate: 90,
+        level: 2,
+        member_since: '2024-03-01T15:00:00Z',
+        bio: 'Bitcoin and stablecoin trader. Safe and quick. 🌟',
+        instagram_handle: 'neethu_btc',
+        x_handle: null
     }
 };
+
 
 // ─── Orders page: trade history ───────────────────────────────────────────────
 export const DEMO_TRADES = [

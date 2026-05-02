@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic, isTelegramEnvironment } from '../lib/telegram';
 import { IconChainBase, IconChainBsc, IconTokenUSDC, IconTokenUSDT, IconTokenBNB } from '../components/Icons';
-import { BagsStats } from '../components/BagsStats';
 import { TraderProfile } from '../components/TraderProfile';
 import { DEMO_ORDERS } from '../lib/devMocks';
 import './Home.css';
@@ -158,7 +157,6 @@ export function Home({ user }: Props) {
 
                 {/* Trader List */}
                 <div className="p2p-list">
-                    <BagsStats />
                     {loading ? (
                         <div className="p2p-skeletons">
                             {[1, 2, 3, 4].map(i => (

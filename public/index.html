@@ -874,6 +874,7 @@ footer{
     <li><a href="/#story">Story</a></li>
     <li><a href="/#how">How it works</a></li>
     <li><a href="/reward-hub.html">Reward Hub</a></li>
+    <li><a href="/guide.html">User Guide</a></li>
     <li><a href="/#miniapp">Mini App</a></li>
   </ul>
   <div class="nav-right-wrap" style="display:flex; gap:1rem; align-items:center;">
@@ -892,7 +893,7 @@ footer{
   <h1>Buy &amp; sell crypto<br>with <em>real people</em>—<br>safely.</h1>
 
   <p class="hero-sub">
-    No more getting blocked after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
+    No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
   </p>
 
   <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
@@ -946,7 +947,7 @@ footer{
 
       .hero-pulse-container {
         overflow: hidden;
-        height: 195px;
+        height: 255px;
         position: relative;
         mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent 100%);
         -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent 100%);
@@ -1114,7 +1115,7 @@ footer{
 <section class="section" id="story">
   <div class="eyebrow r on">How it started</div>
 
-  <h2 class="story-h r d1 on">I kept getting <em>blocked</em><br>after sending money.</h2>
+  <h2 class="story-h r d1 on">I kept getting <em style="color: #ef4444; font-style: normal;">blocked</em><br>after sending money.</h2>
 
   <div class="story-body">
     <p class="r d2 on">
@@ -1341,7 +1342,7 @@ footer{
 <!-- CTA -->
 <section class="cta-section">
   <div class="eyebrow r on" style="justify-content:center;">Ready to trade safely?</div>
-  <h2 class="cta-h r d1 on">No more getting<br>blocked.</h2>
+  <h2 class="cta-h r d1 on">No more getting<br><span style="color: #ef4444;">blocked</span>.</h2>
   <p class="cta-sub r d2 on">Open the bot, browse live offers, and make your first escrow-protected trade — right inside Telegram.</p>
   <a href="https://t.me/P2pFatherBot" class="btn btn-dark r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem;">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
@@ -1453,6 +1454,7 @@ footer{
     <a href="https://t.me/P2pFatherBot">Bot</a>
     <a href="https://t.me/P2pFatherGroup">Community</a>
     <a href="/reward-hub.html">Reward Hub</a>
+    <a href="/guide.html">User Guide</a>
     <a href="/#story">Story</a>
     <a href="/#how">How it works</a>
   </div>
@@ -3407,14 +3409,22 @@ setTimeout(() => playFlow('profile'), 500);
 </script>
 
 <script type="module">
-  import { createAppKit } from 'https://esm.sh/@reown/appkit'
-  import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
+  import { createAppKit } from 'https://esm.sh/@reown/appkit@1.8.18?bundle'
+  import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.8.18?bundle'
+  import { bsc, base } from 'https://esm.sh/@reown/appkit@1.8.18/networks?bundle'
 
-  const projectId = 'fe34153f6b31c344d6cbcc7008c37144';
+  const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+  
+  const wagmiAdapter = new WagmiAdapter({
+      projectId,
+      networks: [bsc, base]
+  });
+
   const modal = createAppKit({
+      adapters: [wagmiAdapter],
       networks: [bsc, base],
       projectId,
-      metadata: { name: 'P2PFather', description: 'Secure P2P Trading', url: 'https://p2pfather.com' },
+      metadata: { name: 'P2PFather', description: 'Secure P2P Trading', url: window.location.origin },
       features: {
           analytics: false,
           email: true,

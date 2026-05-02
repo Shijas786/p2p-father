@@ -192,21 +192,6 @@ export const api = {
             }),
     },
 
-    // ---- Bridge ----
-    bridge: {
-        getQuote: (data: {
-            fromChainId: number;
-            toChainId: number;
-            fromToken: string;
-            toToken: string;
-            amount: string;
-        }) =>
-            request<any>('/bridge/quote', {
-                method: 'POST',
-                body: JSON.stringify(data),
-            }),
-    },
-
     // ---- Stats ----
     stats: {
         get: () => request<{
@@ -216,15 +201,6 @@ export const api = {
             fee_percentage: number;
             fee_bps: number;
         }>('/stats'),
-    },
-
-    // ---- Bags.fm ----
-    bags: {
-        getStats: () => request<{
-            price: number;
-            mcap: number;
-            lifetime_fees: number;
-        }>('/bags/stats'),
     },
 
     getLeaderboard: (page = 1, timeframe = 'all') => 
