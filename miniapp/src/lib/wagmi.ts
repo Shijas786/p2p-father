@@ -34,8 +34,8 @@ export const appKit = createAppKit({
     ],
     features: {
         analytics: false,
-        email: false,
-        socials: false,
+        email: true,
+        socials: ['google', 'x', 'github', 'discord', 'apple'],
     },
     themeMode: 'dark',
     themeVariables: {

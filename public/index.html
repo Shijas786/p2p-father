@@ -3415,6 +3415,11 @@ setTimeout(() => playFlow('profile'), 500);
       networks: [bsc, base],
       projectId,
       metadata: { name: 'P2PFather', description: 'Secure P2P Trading', url: 'https://p2pfather.com' },
+      features: {
+          analytics: false,
+          email: true,
+          socials: ['google', 'x', 'github', 'discord', 'apple'],
+      },
       themeMode: 'dark',
       themeVariables: { 
           '--w3m-accent': '#374151',

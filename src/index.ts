@@ -112,7 +112,7 @@ async function main() {
             const dbInstance = (db as any).getClient();
             const { data: users, error } = await dbInstance.rpc("get_timeframe_leaderboard", {
                 p_days: days,
-                p_limit: 15,
+                p_limit: 100,
                 p_offset: 0
             });
             if (error) throw error;
