@@ -102,6 +102,27 @@ async function main() {
         }
     });
 
+    app.get("/api/leaderboard", async (req, res) => {
+        try {
+            const timeframe = (req.query.timeframe as string) || "all";
+            let days = 0;
+            if (timeframe === "7d") days = 7;
+            else if (timeframe === "30d") days = 30;
+
+            const dbInstance = (db as any).getClient();
+            const { data: users, error } = await dbInstance.rpc("get_timeframe_leaderboard", {
+                p_days: days,
+                p_limit: 15,
+                p_offset: 0
+            });
+            if (error) throw error;
+            res.json({ leaderboard: users || [] });
+        } catch (e: any) {
+            console.error("Leaderboard API Error:", e);
+            res.status(500).json({ error: "Failed to fetch leaderboard" });
+        }
+    });
+
     app.get("/api/live-pulse", async (req, res) => {
         try {
             const dbInstance = (db as any).getClient();
