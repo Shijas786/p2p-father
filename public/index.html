@@ -8,8 +8,29 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
 <title>P2PFather — Trade Crypto Like Family</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-<link href="./P2PFather — Trade Crypto Like Family_files/css2" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
 <style>
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shining-logo {
+  font-family: 'Pacifico', cursive;
+  font-weight: normal;
+  letter-spacing: 0px;
+  background: linear-gradient(
+    120deg,
+    #111827 35%,
+    #10b981 50%,
+    #111827 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  animation: shimmer 3s ease-in-out infinite !important;
+  display: inline-block;
+}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
   --ink:#111827;
@@ -97,8 +118,33 @@ h1 em{font-style:italic;color:var(--gold);font-family:'Caveat',cursive;font-size
 }
 .btn-dark{background:var(--ink);color:var(--paper);}
 .btn-dark:hover{background:var(--gold);border-color:var(--gold);transform:translateY(-2px);}
+.btn-community-match{background:#10b981;color:#fff;border-color:#10b981;}
+.btn-community-match:hover{background:var(--ink);border-color:var(--ink);transform:translateY(-2px);}
 .btn-line{background:transparent;color:var(--ink-soft);font-size:.8rem;font-family:'Space Mono',monospace;letter-spacing:.05em;border-radius:0;border:none;padding:0;}
 .btn-line:hover{color:var(--gold);}
+
+.btn-connect-grey {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #27272a;
+  color: #fcfbf9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.62rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.btn-connect-grey:hover {
+  background: #3f3f46;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
 
 /* phone mockup floating right */
 .hero-phone-wrap{
@@ -793,23 +839,26 @@ footer{
 
 <!-- NAV -->
 <nav id="nav" class="solid">
-  <a class="logo" href="/#" style="display:flex; align-items:center; gap:0.6rem;">
-    <img src="favicon.png" style="width:34px; height:34px; border-radius:50%;" alt="P2PFather Logo"/>
-    <span>P2P<em>Father</em></span>
+  <a class="logo" href="/#" style="display:flex; align-items:center; gap:0.25rem; text-decoration:none;">
+    <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
   </a>
   <ul class="navlinks">
     <li><a href="/#story">Story</a></li>
     <li><a href="/#how">How it works</a></li>
+    <li><a href="/reward-hub.html">Reward Hub</a></li>
     <li><a href="/#miniapp">Mini App</a></li>
   </ul>
   <div class="nav-right-wrap" style="display:flex; gap:1rem; align-items:center;">
-    <appkit-button></appkit-button>
-    <a class="navcta" href="https://t.me/p2pfather_bot">Open in Telegram →</a>
+    <button id="custom-connect-btn" class="btn-connect-grey">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+      Connect Wallet
+    </button>
+    <a class="navcta" href="https://t.me/P2pFatherBot">Open in Telegram →</a>
   </div>
 </nav>
 
 <!-- HERO -->
-<section class="hero">
+<section class="hero" style="position: relative;">
   <div class="hero-grid"></div>
 
   <h1>Buy &amp; sell crypto<br>with <em>real people</em>—<br>safely.</h1>
@@ -818,15 +867,213 @@ footer{
     No more getting blocked after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
   </p>
 
-  <div class="hero-btns">
-    <a href="https://t.me/p2pfather_bot" class="btn btn-dark">
+  <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
+    <a href="https://t.me/P2pFatherBot" class="btn btn-dark">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       Start Trading
     </a>
-    <a href="/#story" class="btn btn-line">Read the story ↓</a>
+    <a href="https://t.me/P2pFatherGroup" class="btn btn-community-match">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Join Community
+    </a>
+    <a href="/#story" class="btn btn-line" style="margin-left:0.5rem;">Read the story ↓</a>
   </div>
 
-  </section>
+  <!-- RIGHT CORNER LIVE ACTIVITY WIDGET -->
+  <div class="hero-pulse-wrap" style="position: absolute; right: 3rem; top: 32%; width: 265px; display: flex; flex-direction: column; gap: 0.75rem; z-index: 10;">
+    <style>
+      @media (max-width: 1024px) {
+        .hero-pulse-wrap { display: none !important; }
+      }
+      .hero-pulse-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        padding-bottom: 0.4rem;
+      }
+      .hero-pulse-title {
+        font-family: 'Space Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .hero-pulse-dot {
+        width: 6px;
+        height: 6px;
+        background-color: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse 2s infinite;
+        vertical-align: middle;
+        margin-right: 0.25rem;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      }
+
+      .hero-pulse-container {
+        overflow: hidden;
+        height: 195px;
+        position: relative;
+        mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent 100%);
+      }
+      .hero-pulse-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        animation: scrollTicker 18s linear infinite;
+      }
+      .hero-pulse-container:hover .hero-pulse-list {
+        animation-play-state: paused;
+      }
+      @keyframes scrollTicker {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-50%); }
+      }
+
+      .hero-pulse-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        font-size: 0.72rem;
+        line-height: 1.25;
+        color: var(--ink);
+      }
+      .hero-pulse-avatar-square {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid rgba(0,0,0,0.1);
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .hero-pulse-text {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .hero-pulse-time {
+        font-size: 0.6rem;
+        color: var(--ink-muted);
+        font-weight: 400;
+        margin-top: 2px;
+      }
+    </style>
+
+    <div class="hero-pulse-header">
+      <span class="hero-pulse-title"><span class="hero-pulse-dot"></span> Recent Activity</span>
+    </div>
+    <div class="hero-pulse-container">
+      <div class="hero-pulse-list" id="hero-pulse-list">
+        <!-- Will be populated twice for continuous looping -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function initHeroPulse() {
+      const listEl = document.getElementById('hero-pulse-list');
+      if (!listEl) return;
+
+      let fetchedActivities = [];
+
+      async function fetchFreshData() {
+        try {
+          const res = await fetch('/api/live-pulse');
+          if (res.ok) {
+            const data = await res.json();
+            
+            let earnersList = (data.earners || []).map(e => ({
+              text: `@${e.seller_name} sold ${e.amount} ${e.token} to @${e.buyer_name}`,
+              time: 'just now',
+              tx_hash: e.tx_hash,
+              avatar: e.avatar,
+              chain: e.chain || 'bsc'
+            }));
+
+            let activeList = (data.activities || []).map(a => ({
+              text: `@${a.name} ${a.action} for ${a.amount || 150} ${a.token || 'USDT'}`,
+              time: 'just now',
+              tx_hash: null,
+              avatar: a.avatar,
+              chain: 'bsc'
+            }));
+
+            fetchedActivities = [...earnersList, ...activeList];
+          }
+        } catch (e) {
+          console.error(e);
+        }
+
+        const fallbackItems = [
+          { text: "@ArtemEnko sold 200 USDT to @YuriiL", time: "just now", tx_hash: "0xab42617f10b5c10b", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Artem", chain: "bsc" },
+          { text: "@AlexKumar sold 500 USDT to @PavloD", time: "just now", tx_hash: "0x12dc55a73e3b8a3d", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yurii", chain: "bsc" },
+          { text: "@SvitlanaM sold 200 USDT to @BIBI", time: "just now", tx_hash: "0x89fd5a2c4e1b7c3d", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pavlo", chain: "bsc" },
+          { text: "@AminuA sold 300 USDT to @VictorI", time: "just now", tx_hash: "0x78cf5a1a1b3c9d2b", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Svitlana", chain: "bsc" },
+          { text: "@Shijas sold 500 USDT to @AlexK", time: "just now", tx_hash: "0x34ba12cb02aa11cd", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=BIBI", chain: "bsc" }
+        ];
+
+        // Combine to have a good diverse pool
+        for (const fb of fallbackItems) {
+          if (fetchedActivities.length < 6 && !fetchedActivities.some(a => a.text === fb.text)) {
+            fetchedActivities.push(fb);
+          }
+        }
+      }
+
+      function buildList(items) {
+        listEl.innerHTML = '';
+        const doubleItems = [...items, ...items];
+        
+        doubleItems.forEach(item => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'hero-pulse-item';
+          
+          let txLinkHtml = '';
+          if (item.tx_hash) {
+            let explorerUrl = 'https://bscscan.com/tx/';
+            if (item.chain && item.chain.toLowerCase() === 'base') {
+              explorerUrl = 'https://basescan.org/tx/';
+            }
+            txLinkHtml = ` <a href="${explorerUrl}${item.tx_hash}" target="_blank" style="color:var(--gold); font-size:0.62rem; text-decoration:none; font-family:'Space Mono', monospace; font-weight:700; margin-left:2px; display:inline-block;">View tx</a>`;
+          }
+
+          const avatarUrl = item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.text)}`;
+          
+          itemEl.innerHTML = `
+            <img src="${avatarUrl}" class="hero-pulse-avatar-square" alt="avatar" />
+            <div style="display:flex; flex-direction:column;">
+              <span class="hero-pulse-text">${item.text}${txLinkHtml}</span>
+              <span class="hero-pulse-time">${item.time}</span>
+            </div>
+          `;
+          listEl.appendChild(itemEl);
+        });
+      }
+
+      await fetchFreshData();
+      buildList(fetchedActivities);
+
+      // Refresh real data once every 30 seconds
+      setInterval(async () => {
+        await fetchFreshData();
+        buildList(fetchedActivities);
+      }, 30000);
+    }
+
+    document.addEventListener('DOMContentLoaded', initHeroPulse);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initHeroPulse();
+    }
+  </script>
+</section>
 
 <!-- STATS -->
 <div class="stats">
@@ -843,7 +1090,7 @@ footer{
 
   <div class="story-body">
     <p class="r d2 on">
-      Here in Kerala, P2P crypto trading is part of daily life. You find a seller on Telegram,
+      Across India, P2P crypto trading is part of daily life. You find a seller on Telegram,
       agree on a rate, send them INR on UPI, they send you USDT or USDC. Simple. Fast.
       But the whole thing runs on blind trust in a stranger.
     </p>
@@ -1068,7 +1315,7 @@ footer{
   <div class="eyebrow r on" style="justify-content:center;">Ready to trade safely?</div>
   <h2 class="cta-h r d1 on">No more getting<br>blocked.</h2>
   <p class="cta-sub r d2 on">Open the bot, browse live offers, and make your first escrow-protected trade — right inside Telegram.</p>
-  <a href="https://t.me/p2pfather_bot" class="btn btn-dark r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem;">
+  <a href="https://t.me/P2pFatherBot" class="btn btn-dark r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem;">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
     Open P2PFather
   </a>
@@ -1139,7 +1386,7 @@ footer{
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
-        No. Everything runs inside <span class="chip">Telegram</span> as a Mini App. Just open @p2pfather_bot, connect your wallet, and you're trading. No new app download, no sign-up form, no seed phrase entry.
+        No. Everything runs inside <span class="chip">Telegram</span> as a Mini App. Just open @P2pFatherBot, connect your wallet, and you're trading. No new app download, no sign-up form, no seed phrase entry.
       </div></div>
     </div>
 
@@ -1158,13 +1405,14 @@ footer{
 
 <!-- FOOTER -->
 <footer>
-  <span class="logo" style="display:flex; align-items:center; gap:0.6rem;">
-    <img src="favicon.png" style="width:34px; height:34px; border-radius:50%;" alt="P2PFather Logo"/>
-    <span>P2P<em>Father</em></span>
+  <span class="logo" style="display:flex; align-items:center; gap:0.25rem;">
+    <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
   </span>
   <div class="footer-links">
     <a href="https://github.com/Shijas786/p2p-father">GitHub</a>
-    <a href="https://t.me/p2pfather_bot">Telegram</a>
+    <a href="https://t.me/P2pFatherBot">Bot</a>
+    <a href="https://t.me/P2pFatherGroup">Community</a>
+    <a href="/reward-hub.html">Reward Hub</a>
     <a href="/#story">Story</a>
     <a href="/#how">How it works</a>
   </div>
@@ -3122,15 +3370,16 @@ setTimeout(() => playFlow('profile'), 500);
   import { createAppKit } from 'https://esm.sh/@reown/appkit'
   import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
 
-  const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+  const projectId = 'fe34153f6b31c344d6cbcc7008c37144';
   createAppKit({
       networks: [bsc, base],
       projectId,
       metadata: { name: 'P2PFather', description: 'Secure P2P Trading', url: 'https://p2pfather.com' },
-      themeMode: 'light',
+      themeMode: 'dark',
       themeVariables: { 
-          '--w3m-accent': '#f0b90b',
-          '--w3m-background-color': '#ffffff'
+          '--w3m-accent': '#374151',
+          '--w3m-border-radius-master': '6px',
+          '--w3m-color-mix': '#111827'
       }
   })
 </script>

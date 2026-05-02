@@ -9,7 +9,7 @@
     <!-- Modern Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -49,8 +49,28 @@
             justify-content: space-between;
             align-items: center;
         }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .shining-logo {
+          font-family: 'Pacifico', cursive;
+          font-weight: normal;
+          letter-spacing: 0px;
+          background: linear-gradient(
+            120deg,
+            var(--text-main) 35%,
+            #10b981 50%,
+            var(--text-main) 65%
+          );
+          background-size: 200% 100%;
+          -webkit-background-clip: text !important;
+          background-clip: text !important;
+          color: transparent !important;
+          animation: shimmer 3s ease-in-out infinite !important;
+          display: inline-block;
+        }
         .logo-group { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.25rem; letter-spacing: -0.025em; text-decoration: none; color: inherit; }
-        .logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; }
         
         .nav-links { display: flex; gap: 2.5rem; }
         .nav-link { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; transition: 0.2s; }
@@ -115,9 +135,8 @@
 <body>
     <!-- ═══ NAVIGATION ═══ -->
     <nav>
-        <a href="/" class="logo-group">
-            <div class="logo-icon"></div>
-            <span>P2PFATHER</span>
+        <a href="/" class="logo-group" style="display:flex; align-items:center; gap:0.25rem; text-decoration:none;">
+            <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
         </a>
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
@@ -211,7 +230,7 @@
         import { createAppKit } from 'https://esm.sh/@reown/appkit'
         import { bsc, base } from 'https://esm.sh/@reown/appkit/networks'
 
-        const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
+        const projectId = 'fe34153f6b31c344d6cbcc7008c37144';
         createAppKit({
             networks: [bsc, base],
             projectId,

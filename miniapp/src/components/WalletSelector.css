@@ -33,18 +33,22 @@
     align-items: center;
     gap: 14px;
     padding: 18px 16px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    background: rgba(44, 44, 46, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: var(--radius-lg);
     text-align: left;
     transition: all var(--transition-fast);
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .ws-option:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--green-border);
-    box-shadow: var(--shadow-glow);
+    background: rgba(58, 58, 60, 0.65);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
 }
 
 .ws-option:active {

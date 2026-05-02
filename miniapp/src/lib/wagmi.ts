@@ -39,8 +39,9 @@ export const appKit = createAppKit({
     },
     themeMode: 'dark',
     themeVariables: {
-        '--w3m-accent': '#84cc16',
-        '--w3m-border-radius-master': '2px',
+        '--w3m-accent': '#4b5563',
+        '--w3m-border-radius-master': '4px',
+        '--w3m-color-mix': '#1f2937',
     },
 });
 
