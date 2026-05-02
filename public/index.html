@@ -12,17 +12,17 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --ink:#1a1108;
-  --ink-soft:#4a3f2f;
-  --ink-muted:#9a8f80;
-  --gold:#c8922a;
-  --gold-pale:#fdf6e7;
-  --paper:#fffcf5;
-  --paper2:#faf7f0;
-  --rule:rgba(26,17,8,0.09);
-  --green:#16a34a;
-  --teal:#0e7c82;
-  --red:#dc2626;
+  --ink:#111827;
+  --ink-soft:#374151;
+  --ink-muted:#6b7280;
+  --gold:#10b981;
+  --gold-pale:#ecfdf5;
+  --paper:#ffffff;
+  --paper2:#fafafa;
+  --rule:rgba(17,24,39,0.1);
+  --green:#10b981;
+  --teal:#0d9488;
+  --red:#ef4444;
 }
 html{scroll-behavior:smooth;}
 body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
@@ -43,19 +43,19 @@ nav{
   transition:background .3s,border-color .3s,backdrop-filter .3s;
   border-bottom:1px solid transparent;
 }
-nav.solid{background:rgba(255,252,245,.93);backdrop-filter:blur(18px);border-bottom-color:var(--rule);}
+nav.solid{background:rgba(255,255,255,.93);backdrop-filter:blur(18px);border-bottom-color:var(--rule);}
 .logo{font-family:'Caveat',cursive;font-size:1.65rem;font-weight:700;color:var(--ink);text-decoration:none;}
 .logo em{color:var(--gold);font-style:normal;}
 .navlinks{display:flex;gap:2.5rem;list-style:none;}
 .navlinks a{font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.08em;color:var(--ink-muted);text-decoration:none;transition:color .2s;}
-.navlinks a:hover{color:var(--ink);}
+.navlinks a:hover{color:var(--gold);}
 .navcta{
   font-family:'Caveat',cursive;font-size:1.05rem;font-weight:700;
   background:var(--ink);color:var(--paper);
-  padding:.5rem 1.35rem;border-radius:100px;text-decoration:none;
+  padding:.5rem 1.35rem;border-radius:6px 14px 4px 12px;border:2px solid var(--ink);text-decoration:none;
   transition:all .2s;
 }
-.navcta:hover{background:var(--gold);transform:translateY(-1px);}
+.navcta:hover{background:var(--gold);border-color:var(--gold);transform:translateY(-1px);}
 
 /* ── HERO ── */
 .hero{
@@ -91,14 +91,14 @@ h1 em{font-style:italic;color:var(--gold);font-family:'Caveat',cursive;font-size
   opacity:0;animation:fadeup .8s .85s forwards;
 }
 .btn{
-  font-family:'Caveat',cursive;font-size:1.1rem;font-weight:700;
+  font-family:'Caveat',cursive;font-size:1.15rem;font-weight:700;
   display:inline-flex;align-items:center;gap:.5rem;text-decoration:none;
-  padding:.75rem 2rem;border-radius:100px;transition:all .22s;
+  padding:.75rem 2rem;border-radius:6px 14px 4px 12px;border:2px solid var(--ink);transition:all .22s;
 }
 .btn-dark{background:var(--ink);color:var(--paper);}
-.btn-dark:hover{background:var(--gold);transform:translateY(-2px);}
-.btn-line{background:transparent;color:var(--ink-soft);font-size:.8rem;font-family:'Space Mono',monospace;letter-spacing:.05em;border-radius:0;padding:0;}
-.btn-line:hover{color:var(--ink);}
+.btn-dark:hover{background:var(--gold);border-color:var(--gold);transform:translateY(-2px);}
+.btn-line{background:transparent;color:var(--ink-soft);font-size:.8rem;font-family:'Space Mono',monospace;letter-spacing:.05em;border-radius:0;border:none;padding:0;}
+.btn-line:hover{color:var(--gold);}
 
 /* phone mockup floating right */
 .hero-phone-wrap{
