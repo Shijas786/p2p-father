@@ -255,16 +255,4 @@ export const api = {
             member_since: string;
         }>(`/users/${userId}/profile`),
     },
-
-    bags: {
-        getStats: () => request<{ price: number; mcap: number; lifetime_fees: number; mint?: string }>('/bags/stats'),
-    },
-
-    bridge: {
-        getQuote: (data: { fromChainId: number; toChainId: number; fromToken: string; toToken: string; amount: string }) =>
-            request<any>('/bridge/quote', {
-                method: 'POST',
-                body: JSON.stringify(data),
-            }),
-    },
 };
