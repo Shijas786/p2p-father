@@ -20,6 +20,19 @@ const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY)
 
 const router = Router();
 
+function escapeHTML(str: string): string {
+    return str ? str.replace(/[&<>"']/g, (m) => {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+            default: return m;
+        }
+    }) : "";
+}
+
 // Helper for trade notifications
 async function notifyTradeUpdate(userId: string, message: string) {
     try {
@@ -55,19 +68,6 @@ declare global {
 function validateInitData(req: Request, res: Response, next: NextFunction) {
     const initData = req.headers["x-telegram-init-data"] as string;
 
-    // Dev mode bypass — ONLY when explicitly in development AND no init data provided
-    if (!initData && env.NODE_ENV === "development") {
-        console.warn("[AUTH] ⚠️ DEV MODE BYPASS: Using test user. NEVER deploy with NODE_ENV=development!");
-        req.telegramUser = {
-            id: 123456789,
-            first_name: "Cryptowolf07",
-            username: "Cryptowolf07",
-            // Added for dev mode mock user
-            is_admin: true,
-        } as TelegramUser;
-        return next();
-    }
-
     if (!initData) {
         console.warn(`[AUTH] ❌ Missing initData | IP: ${req.ip} | UA: ${req.headers['user-agent']?.slice(0, 80)}`);
         return res.status(401).json({ error: "Please open this app through the Telegram bot" });
@@ -94,13 +94,6 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
             .digest("hex");
 
         if (calculatedHash !== hash) {
-            if (env.NODE_ENV === "development") {
-                const userStr = params.get("user");
-                if (userStr) {
-                    req.telegramUser = JSON.parse(userStr);
-                    return next();
-                }
-            }
             return res.status(401).json({ error: "Invalid init data hash" });
         }
 
@@ -440,8 +433,15 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
 
 router.get("/orders/:id", async (req: Request, res: Response) => {
     try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
         const order = await db.getOrderById(req.params.id as string);
         if (!order) return res.status(404).json({ error: "Order not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (order.user_id !== user.id && !isAdmin) return res.status(403).json({ error: "Access denied" });
+
         res.json({ order });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -675,8 +675,15 @@ router.get("/trades/mine", async (req: Request, res: Response) => {
 
 router.get("/trades/:id", async (req: Request, res: Response) => {
     try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
         const trade = await db.getTradeById(req.params.id as string);
         if (!trade) return res.status(404).json({ error: "Trade not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id && !isAdmin) return res.status(403).json({ error: "Access denied" });
+
         res.json({ trade });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -835,12 +842,12 @@ router.post("/trades", async (req: Request, res: Response) => {
 
             // 1. Notify Seller
             await notifyTradeUpdate(seller.id,
-                `🤝 <b>Trade Matched!</b>\n\nBuyer <b>${buyer.first_name || 'User'}</b> is ready to buy <b>${amountStr} ${coin}</b> for <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b>.\n\nFunds are locked in Escrow. Please wait for payment UTR.`
+                `🤝 <b>Trade Matched!</b>\n\nBuyer <b>${escapeHTML(buyer.first_name || 'User')}</b> is ready to buy <b>${amountStr} ${coin}</b> for <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b>.\n\nFunds are locked in Escrow. Please wait for payment UTR.`
             );
 
             // 2. Notify Buyer
             await notifyTradeUpdate(buyer.id,
-                `💸 <b>Funds in Escrow!</b>\n\nYou are buying <b>${amountStr} ${coin}</b> from <b>${seller.first_name || 'User'}</b>.\n\nPlease transfer <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b> to the seller's UPI and submit the UTR.`
+                `💸 <b>Funds in Escrow!</b>\n\nYou are buying <b>${amountStr} ${coin}</b> from <b>${escapeHTML(seller.first_name || 'User')}</b>.\n\nPlease transfer <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b> to the seller's UPI and submit the UTR.`
             );
         } catch (tradeErr) {
             // Revert the fill if trade creation fails
@@ -887,7 +894,7 @@ router.post("/trades/:id/lock", async (req: Request, res: Response) => {
         // NOTIFY BUYER
         if (updated) {
             await notifyTradeUpdate(updated.buyer_id,
-                `🔒 <b>Seller Locked Funds!</b>\n\nSeller <b>${user.first_name || 'User'}</b> has locked the crypto in Escrow.\n\nYou can now safely transfer <b>₹${updated.fiat_amount}</b> and submit the UTR.`
+                `🔒 <b>Seller Locked Funds!</b>\n\nSeller <b>${escapeHTML(user.first_name || 'User')}</b> has locked the crypto in Escrow.\n\nYou can now safely transfer <b>₹${updated.fiat_amount}</b> and submit the UTR.`
             );
         }
     } catch (err: any) {
@@ -941,7 +948,7 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
 
         // NOTIFY SELLER
         await notifyTradeUpdate(trade.seller_id,
-            `💰 <b>Payment Reported!</b>\n\nBuyer <b>${user.first_name || 'User'}</b> has reported paying <b>₹${trade.fiat_amount}</b>.\n\nUTR: <code>${utr || 'Not provided'}</code>\n\n<b>Action Required:</b> Verify the payment in your bank app and release the crypto.`
+            `💰 <b>Payment Reported!</b>\n\nBuyer <b>${escapeHTML(user.first_name || 'User')}</b> has reported paying <b>₹${trade.fiat_amount}</b>.\n\nUTR: <code>${escapeHTML(utr || 'Not provided')}</code>\n\n<b>Action Required:</b> Verify the payment in your bank app and release the crypto.`
         );
     } catch (err: any) {
         console.error("[MINIAPP] Confirm payment error:", err);
@@ -999,7 +1006,7 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
 
         // NOTIFY BUYER
         await notifyTradeUpdate(trade.buyer_id,
-            `🎉 <b>Trade Completed!</b>\n\nSeller <b>${user.first_name || 'User'}</b> has released <b>${trade.amount} ${trade.token}</b> to your Vault.\n\nThank you for trading with P2PFather! 🚀`
+            `🎉 <b>Trade Completed!</b>\n\nSeller <b>${escapeHTML(user.first_name || 'User')}</b> has released <b>${trade.amount} ${trade.token}</b> to your Vault.\n\nThank you for trading with P2PFather! 🚀`
         );
 
         // NOTIFY GROUP (FOMO)
@@ -1109,16 +1116,16 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             `Trade: <code>${trade.id}</code>\n` +
             `Amount: <b>${trade.amount} ${trade.token}</b> (₹${totalFiat})\n\n` +
             `📍 Stage: ${stageLabel}\n` +
-            `👤 Raised by: ${role} @${user.username || user.first_name}\n` +
-            `👥 Seller: @${(trade as any).seller_username || 'Unknown'} | Buyer: @${(trade as any).buyer_username || 'Unknown'}\n` +
-            `📝 Reason: ${reason || "No reason provided"}\n\n` +
+            `👤 Raised by: ${role} @${escapeHTML(user.username || user.first_name || "")}\n` +
+            `👥 Seller: @${escapeHTML((trade as any).seller_username || 'Unknown')} | Buyer: @${escapeHTML((trade as any).buyer_username || 'Unknown')}\n` +
+            `📝 Reason: ${escapeHTML(reason || "No reason provided")}\n\n` +
             `<a href="https://t.me/${botUsername}/app?startapp=trade_${trade.id}">View Trade</a>`
         );
 
         // NOTIFY the other party about dispute
         const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
         await notifyTradeUpdate(otherPartyId,
-            `⚠️ <b>Dispute Raised!</b>\n\nYour trade partner has raised a dispute on trade <code>${trade.id.slice(0, 8)}</code>.\n\nReason: ${reason || "No reason provided"}\n\nPlease provide evidence in the trade chat. Admin will join shortly.`
+            `⚠️ <b>Dispute Raised!</b>\n\nYour trade partner has raised a dispute on trade <code>${trade.id.slice(0, 8)}</code>.\n\nReason: ${escapeHTML(reason || "No reason provided")}\n\nPlease provide evidence in the trade chat. Admin will join shortly.`
         );
 
         res.json({ success: true });
@@ -1294,10 +1301,10 @@ router.post("/admin/trades/:id/message", async (req: Request, res: Response) => 
         // Notify both parties
         const adminName = user.username || user.first_name || 'Admin';
         await notifyTradeUpdate(trade.buyer_id,
-            `🛡️ <b>Admin ${adminName}</b> sent a message in trade chat.\n\n"${message}"`
+            `🛡️ <b>Admin ${escapeHTML(adminName)}</b> sent a message in trade chat.\n\n"${escapeHTML(message)}"`
         );
         await notifyTradeUpdate(trade.seller_id,
-            `🛡️ <b>Admin ${adminName}</b> sent a message in trade chat.\n\n"${message}"`
+            `🛡️ <b>Admin ${escapeHTML(adminName)}</b> sent a message in trade chat.\n\n"${escapeHTML(message)}"`
         );
     } catch (err: any) {
         console.error("[ADMIN] Send message error:", err);
@@ -1373,8 +1380,9 @@ router.post("/trades/:id/messages", async (req: Request, res: Response) => {
 
         // Notify other party
         const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+        const senderName = user.username || user.first_name || 'Partner';
         await notifyTradeUpdate(otherPartyId,
-            `💬 <b>New message from ${user.username || user.first_name || 'Partner'}</b>\n\n"${message}"`
+            `💬 <b>New message from ${escapeHTML(senderName)}</b>\n\n"${escapeHTML(message)}"`
         );
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -1436,8 +1444,9 @@ router.post("/trades/:id/messages/upload", upload.single("image"), async (req: R
 
         // Notify other party
         const otherPartyId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+        const senderName = user.username || user.first_name || 'Partner';
         await notifyTradeUpdate(otherPartyId,
-            `📸 <b>${user.username || user.first_name || 'Partner'} sent a payment proof</b>\n\nCheck trade chat for the screenshot.`
+            `📸 <b>${escapeHTML(senderName)} sent a payment proof</b>\n\nCheck trade chat for the screenshot.`
         );
     } catch (err: any) {
         console.error("[Upload] Error:", err);

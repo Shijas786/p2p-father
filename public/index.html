@@ -566,6 +566,37 @@ footer{
 .pf-rw-form { padding: 0.7rem 1rem; display: none; border-bottom: 1px solid var(--ma-border); }
 .pf-rw-input { width: 100%; background: transparent; border: 1px solid #f0b90b; border-radius: 8px; padding: 0.5rem 0.7rem; color: #fff; font-size: 0.72rem; margin-bottom: 0.6rem; box-sizing: border-box; }
 .pf-rw-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.marker-yellow, .marker-green {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+  font-style: normal;
+  z-index: 1;
+}
+.marker-yellow::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: 2px;
+  height: 42%;
+  background-color: rgba(250, 204, 21, 0.45);
+  z-index: -1;
+  transform: rotate(-1.5deg);
+  clip-path: polygon(1% 15%, 21% 5%, 45% 10%, 65% 3%, 85% 12%, 99% 1%, 95% 75%, 75% 85%, 55% 78%, 35% 88%, 15% 75%, 2% 95%);
+}
+.marker-green::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: 2px;
+  height: 42%;
+  background-color: rgba(34, 197, 94, 0.45);
+  z-index: -1;
+  transform: rotate(1deg);
+  clip-path: polygon(2% 8%, 18% 12%, 38% 3%, 58% 10%, 78% 2%, 98% 14%, 96% 82%, 76% 75%, 56% 88%, 36% 76%, 16% 92%, 1% 72%);
+}
 
 </style>
 
@@ -890,10 +921,10 @@ footer{
 <section class="hero" style="position: relative;">
   <div class="hero-grid"></div>
 
-  <h1>Buy &amp; sell crypto<br>with <em>real people</em>—<br>safely.</h1>
+  <h1>Buy &amp; sell crypto<br>with <span class="marker-yellow"><em>real people</em></span>—<br><span class="marker-green">safely.</span></h1>
 
   <p class="hero-sub">
-    No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
+    No more getting <span class="marker-green" style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
   </p>
 
   <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
@@ -1115,7 +1146,7 @@ footer{
 <section class="section" id="story">
   <div class="eyebrow r on">How it started</div>
 
-  <h2 class="story-h r d1 on">I kept getting <em style="color: #ef4444; font-style: normal;">blocked</em><br>after sending money.</h2>
+  <h2 class="story-h r d1 on">I kept getting <span class="marker-green" style="color: #ef4444; font-style: normal;">blocked</span><br>after sending money.</h2>
 
   <div class="story-body">
     <p class="r d2 on">
