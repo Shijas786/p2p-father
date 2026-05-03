@@ -3213,13 +3213,13 @@ function playFlow(flow) {
       <div class="ma-content">
         <div class="aw-hero">
           <div class="aw-label">Total Asset Value (Est.)</div>
-          <div class="aw-amount" id="total-val">$439.76</div>
-          <div class="aw-inr" id="total-inr">≈ ₹38,259</div>
+          <div class="aw-amount" id="total-val">$438.76</div>
+          <div class="aw-inr" id="total-inr">≈ ₹38,172</div>
           <div class="aw-actions"><div class="aw-dep">Deposit</div><div class="aw-send">Send</div></div>
         </div>
         <div class="ma-vault-card">
           <div class="ma-bal-lbl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> P2P Escrow Vault</div>
-          <div class="ma-bal-val" id="vault-val">1.00 USDC</div>
+          <div class="ma-bal-val" id="vault-val">0.00 USDC</div>
           <div class="ma-row" style="padding:0; margin-top:1rem; gap:1rem; justify-content:flex-start;">
             <div class="ma-bal-btn" id="btn-topup">+ Top Up</div>
             <div class="ma-btn-outline">Withdraw</div>
@@ -3336,6 +3336,8 @@ function playFlow(flow) {
       toast.classList.add('show');
       vaultVal.innerText = "1.00 USDC";
       vaultVal.style.color = "#0ecb81";
+      document.getElementById('total-val').innerText = "$439.76";
+      document.getElementById('total-inr').innerText = "≈ ₹38,259";
     }, 8500));
 
     demoTimeouts.push(setTimeout(() => { 
