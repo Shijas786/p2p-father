@@ -433,14 +433,24 @@ router.get("/orders/mine", async (req: Request, res: Response) => {
 
 router.get("/orders/:id", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user) return res.status(401).json({ error: "User not found" });
-
         const order = await db.getOrderById(req.params.id as string);
         if (!order) return res.status(404).json({ error: "Order not found" });
 
-        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
-        if (order.user_id !== user.id && !isAdmin) return res.status(403).json({ error: "Access denied" });
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        
+        // If user doesn't exist yet, they are definitely not owner/admin
+        // But they can still view if the order is active
+        if (!user) {
+            if (order.status !== 'active') {
+                return res.status(403).json({ error: "Access denied" });
+            }
+        } else {
+            const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+            // Allow if owner, admin, or if the order is active (so others can trade with it)
+            if (order.user_id !== user.id && !isAdmin && order.status !== 'active') {
+                return res.status(403).json({ error: "Access denied" });
+            }
+        }
 
         res.json({ order });
     } catch (err: any) {
