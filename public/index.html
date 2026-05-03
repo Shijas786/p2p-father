@@ -506,9 +506,10 @@ footer{
 @media(max-width:900px){
   nav{padding:1rem 1.2rem; gap:0.5rem;}
   .navlinks{display:none;}
-  .hero{padding:5rem 1.2rem 3rem;}
+  .hero{padding:6rem 1.2rem 3rem;}
   .hero-phone-wrap{display:none;}
-  h1{font-size:clamp(2.4rem,8vw,4.5rem);}
+  h1{font-size:clamp(2.4rem,8vw,4.5rem); margin-bottom: 1.5rem;}
+  .hero-sub { font-size: 0.95rem; line-height: 1.6; }
   .section,.section-wide{padding:3.5rem 1.2rem;}
   .stats{grid-template-columns:1fr; gap:0;}
   .stat{border-bottom:1px solid var(--rule); border-right:none; padding:1.8rem 1.5rem;}
@@ -522,6 +523,9 @@ footer{
   .navcta{font-size:0.8rem; padding:0.4rem 0.8rem;}
   .hero-btns { flex-direction: column; width: 100%; gap: 1rem; }
   .btn { width: 100%; justify-content: center; }
+  .nav-right-wrap { gap: 0.5rem !important; }
+  #custom-connect-btn { padding: 0.5rem 0.8rem !important; font-size: 0.8rem !important; }
+  .hero-pulse-container { height: 200px; }
 }
 
 /* Profile UI */
@@ -765,7 +769,14 @@ footer{
 @keyframes slidePopup { to { transform: translateY(0); } }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes popMsg { to { opacity: 1; transform: scale(1); } }
-@media(max-width:900px){ .demo-container { flex-direction: column; } .demo-phone { margin: 0 auto; } }
+@media(max-width:900px){ 
+  .demo-container { flex-direction: column; gap: 3rem; } 
+  .demo-phone { margin: 0 auto; } 
+}
+@media(max-width:400px){
+  .phone-shell { transform: scale(0.85); transform-origin: top center; margin-bottom: -50px; }
+}
+
 
 </style>
 
@@ -924,7 +935,7 @@ footer{
   <h1>Buy &amp; sell crypto<br>with <span class="marker-yellow"><em>real people</em></span>—<br><span class="marker-green">safely.</span></h1>
 
   <p class="hero-sub">
-    No more getting <span class="marker-green" style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
+    No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
   </p>
 
   <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
@@ -943,7 +954,21 @@ footer{
   <div class="hero-pulse-wrap" style="position: absolute; right: 3rem; top: 32%; width: 265px; display: flex; flex-direction: column; gap: 0.75rem; z-index: 10;">
     <style>
       @media (max-width: 1024px) {
-        .hero-pulse-wrap { display: none !important; }
+        .hero-pulse-wrap { 
+          position: relative !important;
+          right: auto !important;
+          top: auto !important;
+          width: 100% !important;
+          max-width: 420px !important;
+          margin-top: 4rem !important;
+          margin-bottom: 2rem !important;
+        }
+      }
+      @media (max-width: 600px) {
+        .hero-pulse-wrap {
+          max-width: 100% !important;
+          margin-top: 3rem !important;
+        }
       }
       .hero-pulse-header {
         display: flex;
@@ -1025,6 +1050,10 @@ footer{
         font-weight: 400;
         margin-top: 2px;
       }
+      @media (max-width: 600px) {
+        .hero-pulse-item { font-size: 0.65rem; }
+        .hero-pulse-avatar-square { width: 24px; height: 24px; }
+      }
     </style>
 
     <div class="hero-pulse-header">
@@ -1105,10 +1134,10 @@ footer{
             txLinkHtml = ` <a href="${explorerUrl}${item.tx_hash}" target="_blank" style="color:var(--gold); font-size:0.62rem; text-decoration:none; font-family:'Space Mono', monospace; font-weight:700; margin-left:2px; display:inline-block;">View tx</a>`;
           }
 
-          const avatarUrl = item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.text)}`;
+          const avatarUrl = item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.text.replace('@',''))}`;
           
           itemEl.innerHTML = `
-            <img src="${avatarUrl}" class="hero-pulse-avatar-square" alt="avatar" />
+            <img src="${avatarUrl}" class="hero-pulse-avatar-square" alt="avatar" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=P2P'" />
             <div style="display:flex; flex-direction:column;">
               <span class="hero-pulse-text">${item.text}${txLinkHtml}</span>
               <span class="hero-pulse-time">${item.time}</span>
@@ -1146,7 +1175,7 @@ footer{
 <section class="section" id="story">
   <div class="eyebrow r on">How it started</div>
 
-  <h2 class="story-h r d1 on">I kept getting <span class="marker-green" style="color: #ef4444; font-style: normal;">blocked</span><br>after sending money.</h2>
+  <h2 class="story-h r d1 on">I kept getting <span style="color: #ef4444; font-style: normal;">blocked</span><br>after sending money.</h2>
 
   <div class="story-body">
     <p class="r d2 on">
@@ -1381,6 +1410,46 @@ footer{
   </a>
 </section>
 
+<!-- TESTIMONIALS -->
+<section class="section" id="testimonials" style="padding: 4rem 1.5rem;">
+  <div class="eyebrow r on" style="margin-bottom: 0.75rem;">Community</div>
+  <h2 class="steps-h r d1 on" style="margin-bottom: 2.5rem;">What our users say</h2>
+
+  <div class="r d2 on" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem; max-width: 900px;">
+
+    <!-- User 1: Muhammed Fayiz K -->
+    <div style="position: relative;">
+      <div style="position: absolute; top: -5px; left: -5px; width: 46px; height: 46px; background: var(--gold); opacity: 0.08; border-radius: 50%; filter: blur(12px); z-index: -1;"></div>
+      <div style="width: 36px; height: 36px; margin-bottom: 1.25rem;">
+        <img src="https://ui-avatars.com/api/?name=Muhammed+Fayiz&background=e19036&color=fff&size=80&bold=true" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+      </div>
+      <p style="font-size: 1rem; font-weight: 800; color: var(--ink); line-height: 1.5; margin-bottom: 1rem; letter-spacing: -0.01em;">
+        &ldquo;A Great way to deal with strangers is P2pFather Bot, I'm really enjoying it guys. Taking small Profits from the XAUUSD and selling it here, so fast and makes more convenient for me.&rdquo;
+      </p>
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <span style="font-size: 0.75rem; font-weight: 800; color: var(--ink); text-transform: uppercase; letter-spacing: 0.05em;">Muhammed Fayiz K</span>
+        <div style="width: 10px; height: 1.2px; background: var(--gold); border-radius: 2px;"></div>
+      </div>
+    </div>
+
+    <!-- User 2: faarixx -->
+    <div style="position: relative;">
+      <div style="position: absolute; top: -5px; left: -5px; width: 46px; height: 46px; background: var(--gold); opacity: 0.08; border-radius: 50%; filter: blur(12px); z-index: -1;"></div>
+      <div style="width: 36px; height: 36px; margin-bottom: 1.25rem;">
+        <img src="https://demo-project.supabase.co/storage/v1/object/public/avatars/avatars/06ae9580-c02a-402e-87da-57034b8a07db/1775419720045.jpeg" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" onerror="this.src='https://ui-avatars.com/api/?name=F&background=10b981&color=fff&size=80&bold=true'">
+      </div>
+      <p style="font-size: 1rem; font-weight: 800; color: var(--ink); line-height: 1.5; margin-bottom: 1rem; letter-spacing: -0.01em;">
+        &ldquo;Bro transaction was dn nd smooth, Clean build aanu, luv it 🔥&rdquo;
+      </p>
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <span style="font-size: 0.75rem; font-weight: 800; color: var(--ink); text-transform: uppercase; letter-spacing: 0.05em;">faarixx</span>
+        <div style="width: 10px; height: 1.2px; background: var(--gold); border-radius: 2px;"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <hr class="rule">
 
 <!-- FAQ -->
@@ -1481,7 +1550,7 @@ footer{
     <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
   </span>
   <div class="footer-links">
-    <a href="https://github.com/Shijas786/p2p-father">GitHub</a>
+
     <a href="https://t.me/P2pFatherBot">Bot</a>
     <a href="https://t.me/P2pFatherGroup">Community</a>
     <a href="/reward-hub.html">Reward Hub</a>
@@ -1489,7 +1558,7 @@ footer{
     <a href="/#story">Story</a>
     <a href="/#how">How it works</a>
   </div>
-  <div class="footer-copy">© 2025 P2PFather · Built in Kerala</div>
+
 </footer>
 
 <script>
