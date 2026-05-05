@@ -177,33 +177,28 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await getBotInfo();
-        const usernameRaw = user.username;
-        const firstName = user.first_name || "Someone";
-        const username = usernameRaw ? `@${escapeMarkdown(usernameRaw)}` : escapeMarkdown(firstName);
-        const typeEmoji = order.type === 'sell' ? '🔴' : '🟢';
-        const typeLabel = order.type === 'sell' ? 'SELL' : 'BUY';
-        const totalFiat = (order.amount * order.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
-        const chain = order.chain?.toUpperCase() || 'BSC';
+        const header = [
+            "╭─────────────────────────────╮",
+            "│  🏦 P2P FATHER · LIVE ORDERS │",
+            "╰─────────────────────────────╯",
+        ].join("\n");
 
-        // Trader note (stored in payment_details.note)
+        const orderDetails = formatOrder(order);
         const traderNote = order.payment_details?.note;
+        const footer = "⚡ Trade safely on @P2PFatherBot";
 
         const lines = [
-            `📢 *New ${typeLabel} Ad\\!*`,
+            header,
             "",
-            `${typeEmoji} ${username} wants to ${typeLabel.toLowerCase()} *${escapeMarkdown(formatTokenAmount(order.amount, order.token))}*`,
-            `💰 Rate: ₹${escapeMarkdown(order.rate.toLocaleString())}/${escapeMarkdown(order.token)}`,
-            `🧾 Total: ₹${escapeMarkdown(totalFiat)}`,
-            `🔗 Chain: ${escapeMarkdown(chain)}`,
-            `💳 Payment: ${escapeMarkdown(order.payment_methods?.join(", ") || "UPI")}`,
+            orderDetails,
         ];
 
         if (traderNote) {
-            lines.push("", `📝 *Note:* ${escapeMarkdown(traderNote)}`);
+            lines.push(`└ 📝 *Note*     ${escapeMarkdown(traderNote)}`);
         }
 
-        // NOTE: web_app buttons are NOT allowed in supergroups (Telegram returns BUTTON_TYPE_INVALID).
-        // We deep-link into the bot DM via /start, where the private-chat handler opens the mini app.
+        lines.push("", footer);
+
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
         const keyboard = new InlineKeyboard()
@@ -943,9 +938,11 @@ bot.command("buy", async (ctx) => {
         if (orders.length === 0) {
             await ctx.reply(
                 [
-                    "📊 *No sell orders available right now*",
+                    "🌟 *Market is Quiet* 🌟",
                     "",
-                    "Be the first\\! 🚀 Launch the Mini App to create a sell order\\!",
+                    "There are no active sell orders right now\\.",
+                    "",
+                    "✨ Be the first to list an ad and set your own price\\! 🚀",
                 ].join("\n"),
                 {
                     parse_mode: "MarkdownV2",
@@ -955,7 +952,13 @@ bot.command("buy", async (ctx) => {
             return;
         }
 
-        const orderList = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
+        const header = [
+            "╭─────────────────────────────╮",
+            "│  🏦 P2P FATHER · LIVE ORDERS │",
+            "╰─────────────────────────────╯",
+        ].join("\n");
+
+        const orderList = orders.map((o) => formatOrder(o)).join("\n\n");
 
         const keyboard = new InlineKeyboard();
         orders.slice(0, 5).forEach((o) => {
@@ -964,12 +967,11 @@ bot.command("buy", async (ctx) => {
 
         await ctx.reply(
             [
-                "📊 *Available Sell Orders*",
+                header,
                 "",
                 orderList,
                 "",
-                "━━━━━━━━━━━━━━━━━━━",
-                "Tap a button below or type the order ID to buy\\.",
+                "⚡ Trade safely on @P2PFatherBot",
             ].join("\n"),
             { parse_mode: "MarkdownV2", reply_markup: keyboard }
         );
@@ -990,41 +992,34 @@ bot.command("orders", async (ctx) => {
             db.getActiveOrders("buy", undefined, 5),
         ]);
 
-        const sections: string[] = ["📊 *Order Book*", ""];
+        const header = [
+            "╭─────────────────────────────╮",
+            "│  🏦 P2P FATHER · LIVE ORDERS │",
+            "╰─────────────────────────────╯",
+        ].join("\n");
+
+        const sections: string[] = [header, ""];
         const keyboard = new InlineKeyboard();
 
         if (sellOrders.length > 0) {
-            sections.push("🔴 *SELL ORDERS* \\(Buy these\\)");
-            sections.push("");
-            sellOrders.forEach((o, i) => {
-                sections.push(formatOrder(o, i));
+            sellOrders.forEach((o) => {
+                sections.push(formatOrder(o));
+                sections.push("");
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🟢 Buy ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
-        } else {
-            sections.push("🔴 *SELL ORDERS* — None available");
         }
 
-        sections.push("");
-
         if (buyOrders.length > 0) {
-            sections.push("🟢 *BUY ORDERS* \\(Sell to these\\)");
-            sections.push("");
-            buyOrders.forEach((o, i) => {
-                sections.push(formatOrder(o, i));
+            buyOrders.forEach((o) => {
+                sections.push(formatOrder(o));
+                sections.push("");
                 const available = o.amount - (o.filled_amount || 0);
                 keyboard.text(`🔴 Sell ${formatTokenAmount(available, o.token)} @ ${formatINR(o.rate)}`, `trade_ad:${o.id}`).row();
             });
-        } else {
-            sections.push("🟢 *BUY ORDERS* — None available");
         }
 
-        sections.push(
-            "",
-            "━━━━━━━━━━━━━━━━━━━",
-            "Select an order above to start a trade\\.",
-            "Or use /newad to list your own\\."
-        );
+        sections.push("⚡ Trade safely on @P2PFatherBot");
 
         await ctx.reply(sections.join("\n"), { parse_mode: "MarkdownV2", reply_markup: keyboard });
     } catch (error) {
@@ -1561,11 +1556,11 @@ bot.on("callback_query:data", async (ctx) => {
                 if (allOrders.length === 0) {
                     await safeEditMessage(ctx, 
                         [
-                            `📢 *${escapeMarkdown(label)} Ads*`,
+                            `🌟 *Market is Quiet* 🌟`,
                             "",
-                            "No ads available right now\\! 😔",
+                            `There are no active ${escapeMarkdown(label).toLowerCase()} ads right now\\.`,
                             "",
-                            "Be the first\\! 🚀 Launch the Mini App and create an ad\\!",
+                            "✨ Be the first to list an ad and set your own price\\! 🚀",
                         ].join("\n"),
                         {
                             parse_mode: "MarkdownV2",
@@ -1580,25 +1575,16 @@ bot.on("callback_query:data", async (ctx) => {
                 const startIdx = page * PAGE_SIZE;
                 const orders = allOrders.slice(startIdx, startIdx + PAGE_SIZE);
 
-                const adList = orders.map((o, i) => {
-                    const emoji = o.type === "sell" ? "🔴 SELL" : "🟢 BUY";
-                    const totalAvailable = o.amount - (o.filled_amount || 0);
-                    const sellable = totalAvailable * 0.995;
-                    const stars = (o.trust_score ?? 0) >= 90 ? "💎" :
-                        (o.trust_score ?? 0) >= 70 ? "⭐" : "🟢";
+                const header = [
+                    "╭─────────────────────────────╮",
+                    "│  🏦 P2P FATHER · LIVE ORDERS │",
+                    "╰─────────────────────────────╯",
+                ].join("\n");
 
-                    return [
-                        `${startIdx + i + 1}\\. ${emoji} *${escapeMarkdown(formatTokenAmount(sellable, o.token))}*`,
-                        `   💰 Rate: ${escapeMarkdown(formatINR(o.rate))}/${escapeMarkdown(o.token)}`,
-                        `   💵 Total: ${escapeMarkdown(formatINR(sellable * o.rate))}`,
-                        `   💳 ${escapeMarkdown(o.payment_methods?.join(", ") || "UPI")}`,
-                        `   👤 @${escapeMarkdown(o.username || "anon")} ${escapeMarkdown(stars)}`,
-                        `   🆔 \`${escapeMarkdown(o.id.slice(0, 8))}\``,
-                    ].join("\n");
-                }).join("\n\n");
+                const adList = orders.map((o) => formatOrder(o)).join("\n\n");
 
-                // Create inline buttons for ads on this page
                 const keyboard = new InlineKeyboard();
+                // Create inline buttons for ads on this page
                 orders.forEach((o) => {
                     const totalAvailable = o.amount - (o.filled_amount || 0);
                     const sellable = totalAvailable * 0.995;
@@ -2677,12 +2663,16 @@ bot.on("message:text", async (ctx) => {
     }
     console.log(`[BOT] Clean text: "${cleanText}"`);
 
+    let forceViewOrders = false;
+
     // In groups, ONLY reply if mentioned OR using whitelisted keywords
     if (ctx.chat.type !== "private") {
         const isMentioned = botName ? new RegExp(`@${botName}`, "i").test(text) : false;
 
         // Whitelist certain keywords to work without mentions in groups
-        const whitelistedKeywords = [/\blive\s*ads?\b/i, /\bads?\b/i, /\bmarket\b/i];
+        // Using ^ and $ ensures the bot only triggers if the entire message is exactly the keyword
+        // [!?.]* allows optional punctuation at the end (like "live ads?")
+        const whitelistedKeywords = [/^\s*(live\s*)?ads?[!?.]*\s*$/i, /^\s*market[!?.]*\s*$/i];
         const isWhitelisted = whitelistedKeywords.some(regex => regex.test(text));
 
         console.log(`[BOT] Group logic - Mentioned: ${isMentioned}, Whitelisted: ${isWhitelisted}`);
@@ -2690,6 +2680,16 @@ bot.on("message:text", async (ctx) => {
         if (!isMentioned && !isWhitelisted) {
             console.log("[BOT] Ignoring non-mention in group");
             return; // Ignore random group chatter
+        }
+
+        // Bypass AI in groups if it's just a whitelisted keyword
+        if (isWhitelisted && !isMentioned) {
+            forceViewOrders = true;
+        }
+    } else {
+        // Fast-path in DMs for ad/ads/market
+        if (/^\s*(live\s*)?ads?[!?.]*\s*$/i.test(text) || /^\s*market[!?.]*\s*$/i.test(text)) {
+            forceViewOrders = true;
         }
     }
 
@@ -2835,7 +2835,9 @@ bot.on("message:text", async (ctx) => {
 
         // If OpenAI is configured, use AI parsing
         let intent;
-        if (env.OPENAI_API_KEY) {
+        if (forceViewOrders) {
+            intent = { intent: "VIEW_ORDERS", params: {} };
+        } else if (env.OPENAI_API_KEY) {
             intent = await ai.parseIntent(cleanText, ctx.session.conversation_history);
         } else {
             // Fallback to keyword matching
@@ -2898,21 +2900,27 @@ bot.on("message:text", async (ctx) => {
                     const orders = await db.getActiveOrders(orderType, intent.params.token, 10);
                     if (orders.length === 0) {
                         await ctx.reply(
-                            "No orders available right now. Be the first! 🚀 Launch the Mini App and create an ad!",
+                            "🌟 *Market is Quiet* 🌟\n\nThere are no active orders right now\\.\n\n✨ Be the first to list an ad and set your own price\\! 🚀",
                             {
                                 parse_mode: "MarkdownV2",
                                 reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                             }
                         );
                     } else {
-                        const list = orders.map((o, i) => formatOrder(o, i)).join("\n\n");
+                        const header = [
+                            "╭─────────────────────────────╮",
+                            "│  🏦 P2P FATHER · LIVE ORDERS │",
+                            "╰─────────────────────────────╯",
+                        ].join("\n");
+                        const list = orders.map((o) => formatOrder(o)).join("\n\n");
+                        const footer = "\n⚡ Trade safely on @P2PFatherBot";
+                        const fullMsg = `${header}\n\n${list}\n\n${footer}`;
+                        
                         try {
-                            await ctx.reply(list, { parse_mode: "MarkdownV2" });
+                            await ctx.reply(fullMsg, { parse_mode: "MarkdownV2" });
                         } catch (err: any) {
                             console.error("VIEW_ORDERS Markdown Error:", err);
-                            console.log("Failed Payload:", list);
-                            // Fallback to plain text
-                            await ctx.reply(list);
+                            await ctx.reply(fullMsg);
                         }
                     }
                 } catch (err) {
