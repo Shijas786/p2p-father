@@ -1564,7 +1564,9 @@ bot.on("callback_query:data", async (ctx) => {
                         ].join("\n"),
                         {
                             parse_mode: "MarkdownV2",
-                            reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
+                            reply_markup: ctx.chat?.type === "private" 
+                                ? new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
+                                : new InlineKeyboard().url("✨ Create Ad", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat?.id || ''}`)
                         }
                     );
                     await ctx.answerCallbackQuery();
@@ -2870,8 +2872,9 @@ bot.on("message:text", async (ctx) => {
             case "CREATE_SELL_ORDER":
             case "CREATE_BUY_ORDER": {
                 const miniAppUrl = "https://p2pfather.com/miniapp/create";
-                const keyboard = new InlineKeyboard()
-                    .webApp("📱 Create Ad in Mini App", miniAppUrl);
+                const keyboard = ctx.chat.type === "private"
+                    ? new InlineKeyboard().webApp("📱 Create Ad in Mini App", miniAppUrl)
+                    : new InlineKeyboard().url("📱 Create Ad in Mini App", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat.id}`);
                     
                 await ctx.reply(
                     [
@@ -2899,11 +2902,15 @@ bot.on("message:text", async (ctx) => {
 
                     const orders = await db.getActiveOrders(orderType, intent.params.token, 10);
                     if (orders.length === 0) {
+                        const keyboard = ctx.chat.type === "private" 
+                            ? new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
+                            : new InlineKeyboard().url("✨ Create Ad", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat.id}`);
+                            
                         await ctx.reply(
                             "🌟 *Market is Quiet* 🌟\n\nThere are no active orders right now\\.\n\n✨ Be the first to list an ad and set your own price\\! 🚀",
                             {
                                 parse_mode: "MarkdownV2",
-                                reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
+                                reply_markup: keyboard
                             }
                         );
                     } else {
@@ -2923,9 +2930,9 @@ bot.on("message:text", async (ctx) => {
                             await ctx.reply(fullMsg);
                         }
                     }
-                } catch (err) {
+                } catch (err: any) {
                     console.error("VIEW_ORDERS Database Error:", err);
-                    await ctx.reply("❌ Could not load orders.");
+                    await ctx.reply(`❌ Could not load orders. Error: ${err.message || 'Unknown'}`);
                 }
                 break;
 
