@@ -17,6 +17,7 @@ import {
     truncateAddress,
     formatShortDate,
     escapeMarkdown,
+    escapeHTML,
 } from "../utils/formatters";
 import type { SessionData, User } from "../types";
 
@@ -78,7 +79,7 @@ async function getBotInfo() {
     return cachedBotInfo;
 }
 
-async function broadcast(message: string, keyboard?: InlineKeyboard): Promise<{ chatId: number; messageId: number }[]> {
+async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
     const groups = await groupManager.getGroups();
     // Include ENV broadcast channel if set
     if (env.BROADCAST_CHANNEL_ID) {
@@ -98,7 +99,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard): Promise<{ 
         
         while (attempts < maxAttempts) {
             try {
-                const msg = await bot.api.sendMessage(chatId, message, { parse_mode: "MarkdownV2", reply_markup: keyboard });
+                const msg = await bot.api.sendMessage(chatId, message, { parse_mode: parseMode, reply_markup: keyboard });
                 return { chatId, messageId: msg.message_id }; // Success
             } catch (error: any) {
                 attempts++;
@@ -194,7 +195,7 @@ export async function broadcastAd(order: any, user: any) {
         ];
 
         if (traderNote) {
-            lines.push(`└ 📝 *Note*     ${escapeMarkdown(traderNote)}`);
+            lines.push(`└ 📝 <b>Note</b>     ${escapeHTML(traderNote)}`);
         }
 
         lines.push("", footer);
@@ -204,7 +205,7 @@ export async function broadcastAd(order: any, user: any) {
         const keyboard = new InlineKeyboard()
             .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
 
-        const sentMessages = await broadcast(lines.join("\n"), keyboard);
+        const sentMessages = await broadcast(lines.join("\n"), keyboard, "HTML");
         if (sentMessages && sentMessages.length > 0) {
             await db.saveAdBroadcasts(sentMessages.map(m => ({
                 order_id: order.id,
@@ -292,7 +293,7 @@ bot.use(async (ctx, next) => {
                     "📦 *Tap below to Open Bot*, then launch the *P2PFather App* to finish\\! 🏁",
                 ].join("\n"),
                 {
-                    parse_mode: "MarkdownV2",
+                    parse_mode: "Markdown",
                     reply_markup: keyboard
                 }
             );
@@ -322,7 +323,7 @@ bot.on("my_chat_member", async (ctx) => {
             await groupManager.addGroup(chat.id);
             await ctx.reply(
                 "🚀 *P2PFather Bot Activated\\!*\n\nI will post live buy/sell ads here\\.",
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
         }
     } else if (status === "left" || status === "kicked") {
@@ -345,7 +346,7 @@ bot.command("broadcast", async (ctx) => {
 
     for (const userId of userIds) {
         try {
-            await ctx.api.sendMessage(userId, `📢 *Announcement*\\n\\n${escapeMarkdown(message)}`, { parse_mode: "MarkdownV2" });
+            await ctx.api.sendMessage(userId, `📢 *Announcement*\\n\\n${escapeMarkdown(message)}`, { parse_mode: "Markdown" });
             sent++;
             await new Promise(r => setTimeout(r, 50)); // Rate limit safety
         } catch (e) { /* ignore blocked users */ }
@@ -382,7 +383,7 @@ bot.command(["start", "open"], async (ctx) => {
                     "",
                     "Tap below to open the ad creation page:",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             return;
         }
@@ -402,7 +403,7 @@ bot.command(["start", "open"], async (ctx) => {
                 "",
                 "Tap below to open the ad creation page:",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
         return;
     }
@@ -415,7 +416,7 @@ bot.command(["start", "open"], async (ctx) => {
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
-            await ctx.reply(`🔍 *Viewing Ad \\#${escapeMarkdown(orderId.slice(0, 8))}*`, { parse_mode: "MarkdownV2", reply_markup: keyboard });
+            await ctx.reply(`🔍 *Viewing Ad \\#${escapeMarkdown(orderId.slice(0, 8))}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
         } else {
             await ctx.reply("❌ Ad not found or no longer active.");
@@ -488,7 +489,7 @@ bot.command(["start", "open"], async (ctx) => {
         });
     } catch (err) {
         console.error("Failed to update user specific menu button:", err);
-        await ctx.reply(`*🛠 System Debug Error*\\nFailed to update menu button: ${escapeMarkdown(String(err))}`, { parse_mode: "MarkdownV2" });
+        await ctx.reply(`*🛠 System Debug Error*\\nFailed to update menu button: ${escapeMarkdown(String(err))}`, { parse_mode: "Markdown" });
     }
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
@@ -502,7 +503,7 @@ bot.command(["start", "open"], async (ctx) => {
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
         caption: welcome,
-        parse_mode: "MarkdownV2",
+        parse_mode: "Markdown",
         reply_markup: startKeyboard
     });
 
@@ -527,7 +528,7 @@ bot.command(["start", "open"], async (ctx) => {
                     "",
                     "Tap below or just type your UPI ID:",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             ctx.session.awaiting_input = "upi_id";
         }, 1500); // Small delay so user reads welcome first
@@ -544,7 +545,7 @@ bot.command(["start", "open"], async (ctx) => {
 
 async function notifyTrader(telegramId: number, message: string) {
     try {
-        await bot.api.sendMessage(telegramId, escapeMarkdown(message), { parse_mode: "MarkdownV2" });
+        await bot.api.sendMessage(telegramId, escapeMarkdown(message), { parse_mode: "Markdown" });
     } catch (err) {
         console.error(`Failed to notify user ${telegramId}:`, err);
     }
@@ -582,7 +583,7 @@ bot.command("payment", async (ctx) => {
         .row()
         .text("🏦 Set Bank", "setup_bank");
 
-    await ctx.reply(status, { parse_mode: "MarkdownV2", reply_markup: keyboard });
+    await ctx.reply(status, { parse_mode: "Markdown", reply_markup: keyboard });
 });
 
 // /upi alias (kept for backward compat)
@@ -600,7 +601,7 @@ bot.command("upi", async (ctx) => {
                 "",
                 "You're all set to trade! Try /newad",
             ].join("\n"),
-            { parse_mode: "MarkdownV2" }
+            { parse_mode: "Markdown" }
         );
         return;
     }
@@ -618,7 +619,7 @@ bot.command("upi", async (ctx) => {
                 "",
                 "Want to change it?",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
     } else {
         ctx.session.awaiting_input = "upi_id";
@@ -634,7 +635,7 @@ bot.command("upi", async (ctx) => {
                 "• `yourname@okaxis`",
                 "• `yourname@okicici`",
             ].join("\n"),
-            { parse_mode: "MarkdownV2" }
+            { parse_mode: "Markdown" }
         );
     }
 });
@@ -647,7 +648,7 @@ bot.command("phone", async (ctx) => {
 
     if (cleaned.length >= 10) {
         await db.updateUser(user.id, { phone_number: cleaned });
-        await ctx.reply(`✅ Phone number updated: \`${escapeMarkdown(cleaned)}\``, { parse_mode: "MarkdownV2" });
+        await ctx.reply(`✅ Phone number updated: \`${escapeMarkdown(cleaned)}\``, { parse_mode: "Markdown" });
         return;
     }
 
@@ -660,7 +661,7 @@ bot.command("phone", async (ctx) => {
             "",
             "Send your 10\\-digit mobile number:",
         ].join("\n"),
-        { parse_mode: "MarkdownV2" }
+        { parse_mode: "Markdown" }
     );
 });
 
@@ -686,7 +687,7 @@ bot.command("bank", async (ctx) => {
                     `IFSC: \`${escapeMarkdown(parts[1].toUpperCase())}\``,
                     parts[2] ? `Bank: ${escapeMarkdown(parts.slice(2).join(' '))}` : "",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             return;
         }
@@ -704,7 +705,7 @@ bot.command("bank", async (ctx) => {
             "Send: \`ACCOUNT_NUMBER IFSC_CODE BANK_NAME\`",
             "Example: \`1234567890 SBIN0001234 SBI\`",
         ].join("\n"),
-        { parse_mode: "MarkdownV2" }
+        { parse_mode: "Markdown" }
     );
 });
 
@@ -722,7 +723,7 @@ bot.command("newad", async (ctx) => {
             "",
             "Tap below to open the ad creation page:",
         ].join("\n"),
-        { parse_mode: "MarkdownV2", reply_markup: keyboard }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
 });
 
@@ -751,7 +752,7 @@ bot.command("send", async (ctx) => {
             "",
             "Select the token to send:",
         ].join("\n"),
-        { parse_mode: "MarkdownV2", reply_markup: keyboard }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
 });
 
@@ -771,7 +772,7 @@ bot.command("sell", async (ctx) => {
             "",
             "Tap below to open the ad creation page:",
         ].join("\n"),
-        { parse_mode: "MarkdownV2", reply_markup: keyboard }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
 });
 
@@ -803,7 +804,7 @@ bot.command(["ads", "liveads"], async (ctx) => {
             "",
             "Select a category below:",
         ].join("\n"),
-        { parse_mode: "MarkdownV2", reply_markup: keyboard }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
 });
 
@@ -830,7 +831,7 @@ bot.command("myads", async (ctx) => {
                     "You don't have any ads yet\\!",
                     "Create your first ad to start trading\\.",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             return;
         }
@@ -872,7 +873,7 @@ bot.command("myads", async (ctx) => {
             "Actions: Tap ad ID to edit, or use buttons below\\."
         );
 
-        await ctx.reply(sections.join("\n"), { parse_mode: "MarkdownV2", reply_markup: keyboard });
+        await ctx.reply(sections.join("\n"), { parse_mode: "Markdown", reply_markup: keyboard });
     } catch (error) {
         await ctx.reply("❌ Failed to load your ads\\.");
     }
@@ -914,7 +915,7 @@ bot.command("mytrades", async (ctx) => {
         });
 
         await ctx.reply("📋 *Your Trades*\\nSelect a trade to view actions:", {
-            parse_mode: "MarkdownV2",
+            parse_mode: "Markdown",
             reply_markup: keyboard
         });
     } catch (e) {
@@ -945,7 +946,7 @@ bot.command("buy", async (ctx) => {
                     "✨ Be the first to list an ad and set your own price\\! 🚀",
                 ].join("\n"),
                 {
-                    parse_mode: "MarkdownV2",
+                    parse_mode: "Markdown",
                     reply_markup: new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                 }
             );
@@ -973,7 +974,7 @@ bot.command("buy", async (ctx) => {
                 "",
                 "⚡ Trade safely on @P2PFatherBot",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
     } catch (error) {
         await ctx.reply("❌ Failed to load orders\\. Database may not be configured yet\\.\\n\\nRun /help for setup instructions\\.");
@@ -1021,7 +1022,7 @@ bot.command("orders", async (ctx) => {
 
         sections.push("⚡ Trade safely on @P2PFatherBot");
 
-        await ctx.reply(sections.join("\n"), { parse_mode: "MarkdownV2", reply_markup: keyboard });
+        await ctx.reply(sections.join("\n"), { parse_mode: "HTML", reply_markup: keyboard });
     } catch (error) {
         await ctx.reply("❌ Failed to load orders\\. Database may not be configured yet\\.");
     }
@@ -1043,7 +1044,7 @@ bot.command(["balance", "portfolio"], async (ctx) => {
                 "",
                 "Use /wallet to set up your wallet address\\.",
             ].join("\n"),
-            { parse_mode: "MarkdownV2" }
+            { parse_mode: "Markdown" }
         );
         return;
     }
@@ -1071,7 +1072,7 @@ bot.command(["balance", "portfolio"], async (ctx) => {
                 "━━━━━━━━━━━━━━━━━━━",
                 "Select a token to withdraw or create a trade:",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
     } catch (error) {
         await ctx.reply(
@@ -1081,7 +1082,7 @@ bot.command(["balance", "portfolio"], async (ctx) => {
                 `Address: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``,
                 "⚠️ Could not fetch balance\\. RPC may be unavailable\\.",
             ].join("\n"),
-            { parse_mode: "MarkdownV2" }
+            { parse_mode: "Markdown" }
         );
     }
 });
@@ -1111,7 +1112,7 @@ bot.command("wallet", async (ctx) => {
                 "Your wallet was created automatically\\.",
                 "You OWN this wallet — export your key anytime\\!",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
     } else {
         await ctx.reply(
@@ -1124,7 +1125,7 @@ bot.command("wallet", async (ctx) => {
                 "",
                 "This is where you'll receive USDC from trades\\.",
             ].join("\n"),
-            { parse_mode: "MarkdownV2" }
+            { parse_mode: "Markdown" }
         );
         ctx.session.awaiting_input = "wallet_address";
     }
@@ -1165,7 +1166,7 @@ bot.command("export", async (ctx) => {
             "",
             "Are you sure you want to see your private key?",
         ].join("\n"),
-        { parse_mode: "MarkdownV2", reply_markup: keyboard }
+        { parse_mode: "Markdown", reply_markup: keyboard }
     );
 });
 
@@ -1199,7 +1200,7 @@ bot.command("profile", async (ctx) => {
             `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
         ].join("\n"),
-        { parse_mode: "MarkdownV2" }
+        { parse_mode: "Markdown" }
     );
 });
 
@@ -1245,7 +1246,7 @@ bot.command("admin", async (ctx) => {
                 "━━━━━━━━━━━━━━━━",
                 "Fees are sent to your wallet automatically upon release."
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
 
     } catch (e) {
@@ -1490,7 +1491,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Send the amount (e.g., \`100\` or \`50.5\`):",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             await ctx.answerCallbackQuery();
             handled = true;
@@ -1516,7 +1517,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "_Example: 0x123..._",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1533,7 +1534,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Use our Mini App for the best experience\\! 🚀",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1563,7 +1564,7 @@ bot.on("callback_query:data", async (ctx) => {
                             "✨ Be the first to list an ad and set your own price\\! 🚀",
                         ].join("\n"),
                         {
-                            parse_mode: "MarkdownV2",
+                            parse_mode: "Markdown",
                             reply_markup: ctx.chat?.type === "private" 
                                 ? new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                                 : new InlineKeyboard().url("✨ Create Ad", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat?.id || ''}`)
@@ -1621,7 +1622,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "━━━━━━━━━━━━━━━━━━━",
                         "Tap an ad below to start a trade:",
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                    { parse_mode: "Markdown", reply_markup: keyboard }
                 );
             } catch (error) {
                 await safeEditMessage(ctx, "❌ Failed to load ads. Database may not be configured.");
@@ -1643,7 +1644,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Select a category:",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1694,7 +1695,7 @@ bot.on("callback_query:data", async (ctx) => {
                         ? "⚠️ Seller deposits USDC to escrow → You send fiat → Crypto released to you"
                         : "⚠️ You deposit USDC to escrow → Buyer sends fiat → You confirm → Crypto released",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -1740,7 +1741,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "",
                         `🔗 [View on BaseScan](${getExplorerUrl(txHash)})`,
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2" }
+                    { parse_mode: "Markdown" }
                 );
             } catch (error) {
                 console.error("Send error:", error);
@@ -1782,7 +1783,7 @@ bot.on("callback_query:data", async (ctx) => {
                             "",
                             `🔗 [View Refund Tx](${getExplorerUrl(refundTx)})`,
                         ].join("\n"),
-                        { parse_mode: "MarkdownV2" }
+                        { parse_mode: "Markdown" }
                     );
                 } catch (error) {
                     console.error("Refund failed:", error);
@@ -1867,7 +1868,7 @@ bot.on("callback_query:data", async (ctx) => {
                             await db.revertFillOrder(order.id, order.amount);
                             await ctx.editMessageText(
                                 "❌ *Trade Failed*\n\nSeller \\(External Wallet\\) has insufficient Vault balance\\.\nFunds must be deposited to Vault manually via Mini App\\.",
-                                { parse_mode: "MarkdownV2" }
+                                { parse_mode: "Markdown" }
                             );
                             return;
                         }
@@ -1945,7 +1946,7 @@ bot.on("callback_query:data", async (ctx) => {
                             await ctx.api.sendMessage(
                                 seller.telegram_id,
                                 `🔔 *New Trade Started\\!*\\n\\nBuyer matches your ad for ${escapeMarkdown(formatTokenAmount(order.amount, order.token))}\\.\\nThey will send payment soon\\.\\n\\nCheck /mytrades to monitor status\\.`,
-                                { parse_mode: "MarkdownV2" }
+                                { parse_mode: "Markdown" }
                             );
                         }
                     } catch (blockchainError: any) {
@@ -1968,7 +1969,7 @@ bot.on("callback_query:data", async (ctx) => {
                     if (parseFloat(balance) < totalRequired) {
                         await ctx.editMessageText(
                             `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${escapeMarkdown(formatTokenAmount(totalRequired, tokenSymbol))}* but have *${escapeMarkdown(formatTokenAmount(parseFloat(balance), tokenSymbol))}*.\n\nDeposit funds to your wallet: \`${escapeMarkdown(seller.wallet_address!)}\``,
-                            { parse_mode: "MarkdownV2" }
+                            { parse_mode: "Markdown" }
                         );
                         return;
                     }
@@ -2027,7 +2028,7 @@ bot.on("callback_query:data", async (ctx) => {
                             await ctx.api.sendMessage(
                                 buyerUser.telegram_id,
                                 `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${escapeMarkdown(formatTokenAmount(order.amount, tokenSymbol))}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
-                                { parse_mode: "MarkdownV2" }
+                                { parse_mode: "Markdown" }
                             );
                         }
                     } catch (blockchainError: any) {
@@ -2084,7 +2085,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "⚠️ After confirming, seller will deposit USDC to escrow.",
                     "You'll then send fiat via the specified payment method.",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
 
             await ctx.answerCallbackQuery();
@@ -2177,7 +2178,7 @@ bot.on("callback_query:data", async (ctx) => {
             // Actually I'll use text list for now as handler isn't registered for text command but I can use same logic.
 
             await ctx.editMessageText(details.join("\n"), {
-                parse_mode: "MarkdownV2",
+                parse_mode: "Markdown",
                 reply_markup: keyboard
             });
             await ctx.answerCallbackQuery();
@@ -2242,7 +2243,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "Trade completed successfully.",
                         `🔗 [View Transaction](${getExplorerUrl(txHash)})`,
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2" }
+                    { parse_mode: "Markdown" }
                 );
 
                 // Unified Success Broadcast
@@ -2271,7 +2272,7 @@ bot.on("callback_query:data", async (ctx) => {
                     await ctx.api.sendMessage(
                         buyer.telegram_id,
                         `✅ *Trade Completed\\!*\n\nSeller has released ${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}\\.\nThe funds are now in your wallet \\(smart contract release\\)\\.\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
-                        { parse_mode: "MarkdownV2" }
+                        { parse_mode: "Markdown" }
                     );
                 }
 
@@ -2314,7 +2315,7 @@ bot.on("callback_query:data", async (ctx) => {
                     .text("🤖 AI Analysis", `ai_analyze_dispute:${tradeId}`);
 
                 await ctx.api.sendMessage(adminId, `🚨 *New Dispute Raised\\!*\nTrade: \`${escapeMarkdown(tradeId)}\`\nPlease review carefully\\.`, {
-                    parse_mode: "MarkdownV2",
+                    parse_mode: "Markdown",
                     reply_markup: kb
                 });
             }
@@ -2356,7 +2357,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     `Reasoning: _${escapeMarkdown(analysis.reasoning)}_`,
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
         }
 
@@ -2377,7 +2378,7 @@ bot.on("callback_query:data", async (ctx) => {
             keyboard.text("🔙 Back to Dashboard", "admin_stats_refresh");
 
             await ctx.editMessageText("⚖️ *Active Disputes*\nSelect a trade to investigate:", {
-                parse_mode: "MarkdownV2",
+                parse_mode: "Markdown",
                 reply_markup: keyboard
             });
             await ctx.answerCallbackQuery();
@@ -2419,7 +2420,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "━━━━━━━━━━━━━━━━",
                         "Fees are sent to your wallet automatically upon release\\.",
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                    { parse_mode: "Markdown", reply_markup: keyboard }
                 );
             } catch (e) {
                 await ctx.answerCallbackQuery({ text: "❌ Refresh failed." });
@@ -2459,7 +2460,7 @@ bot.on("callback_query:data", async (ctx) => {
                 });
 
                 await ctx.editMessageText("📋 *Your Trades*\nSelect a trade to view actions:", {
-                    parse_mode: "MarkdownV2",
+                    parse_mode: "Markdown",
                     reply_markup: keyboard
                 });
             } catch (e) {
@@ -2529,7 +2530,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Examples: \`yourname@upi\`, \`9876543210@paytm\`",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             await ctx.answerCallbackQuery();
         }
@@ -2559,7 +2560,7 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     "Are you sure?",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
         }
@@ -2594,7 +2595,7 @@ bot.on("callback_query:data", async (ctx) => {
                         "• Rabby",
                         "• Any EVM wallet",
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2" }
+                    { parse_mode: "Markdown" }
                 );
 
                 // Delete the confirmation message
@@ -2704,7 +2705,7 @@ bot.on("message:text", async (ctx) => {
             await db.updateUser(user.id, { wallet_address: text.trim() });
             ctx.session.awaiting_input = undefined;
             ctx.session.wallet_address = text.trim();
-            await ctx.reply(`✅ Wallet set to \`${escapeMarkdown(truncateAddress(text.trim()))}\`\\n\\nYou're ready to trade\\! Try /sell or /buy`, { parse_mode: "MarkdownV2" });
+            await ctx.reply(`✅ Wallet set to \`${escapeMarkdown(truncateAddress(text.trim()))}\`\\n\\nYou're ready to trade\\! Try /sell or /buy`, { parse_mode: "Markdown" });
             return;
         } else {
             await ctx.reply("❌ Invalid address. Please send a valid Base wallet address (0x...)");
@@ -2732,7 +2733,7 @@ bot.on("message:text", async (ctx) => {
                     "",
                     "Send the amount (e.g., \`100\`):",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             return;
         } else {
@@ -2784,7 +2785,7 @@ bot.on("message:text", async (ctx) => {
                 "⚠️ *Confirm this transaction?*",
                 "This action cannot be undone\\.",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
         return;
     }
@@ -2802,7 +2803,7 @@ bot.on("message:text", async (ctx) => {
                     "",
                     "Try again or send /upi to skip\\.",
                 ].join("\n"),
-                { parse_mode: "MarkdownV2" }
+                { parse_mode: "Markdown" }
             );
             return;
         }
@@ -2822,7 +2823,7 @@ bot.on("message:text", async (ctx) => {
                 "",
                 "You're all set\\! What would you like to do?",
             ].join("\n"),
-            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+            { parse_mode: "Markdown", reply_markup: keyboard }
         );
         return;
     }
@@ -2884,7 +2885,7 @@ bot.on("message:text", async (ctx) => {
                         "",
                         "Tap below to get started:",
                     ].join("\n"),
-                    { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                    { parse_mode: "Markdown", reply_markup: keyboard }
                 );
                 break;
             }
@@ -2909,7 +2910,7 @@ bot.on("message:text", async (ctx) => {
                         await ctx.reply(
                             "🌟 *Market is Quiet* 🌟\n\nThere are no active orders right now\\.\n\n✨ Be the first to list an ad and set your own price\\! 🚀",
                             {
-                                parse_mode: "MarkdownV2",
+                                parse_mode: "Markdown",
                                 reply_markup: keyboard
                             }
                         );
@@ -2924,7 +2925,7 @@ bot.on("message:text", async (ctx) => {
                         const fullMsg = `${header}\n\n${list}\n\n${footer}`;
                         
                         try {
-                            await ctx.reply(fullMsg, { parse_mode: "MarkdownV2" });
+                            await ctx.reply(fullMsg, { parse_mode: "HTML" });
                         } catch (err: any) {
                             console.error("VIEW_ORDERS Markdown Error:", err);
                             await ctx.reply(fullMsg);
@@ -2941,7 +2942,7 @@ bot.on("message:text", async (ctx) => {
                     try {
                         const balance = await wallet.getTokenBalance(user.wallet_address, env.USDC_ADDRESS, 'base');
                         const ethBalance = await wallet.getBalances(user.wallet_address).then(b => b.eth);
-                        await ctx.reply(`💰 Balance: *${escapeMarkdown(balance)} USDC*\n⛽ Gas: *${escapeMarkdown(ethBalance)} ETH*\n\nAddress: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``, { parse_mode: "MarkdownV2" });
+                        await ctx.reply(`💰 Balance: *${escapeMarkdown(balance)} USDC*\n⛽ Gas: *${escapeMarkdown(ethBalance)} ETH*\n\nAddress: \`${escapeMarkdown(truncateAddress(user.wallet_address))}\``, { parse_mode: "Markdown" });
                     } catch {
                         await ctx.reply("⚠️ Could not fetch balance right now.");
                     }
@@ -2992,7 +2993,7 @@ bot.on("message:text", async (ctx) => {
                                 "⚠️ *Confirm this transaction?*",
                                 "This action cannot be undone\\.",
                             ].join("\n"),
-                            { parse_mode: "MarkdownV2", reply_markup: keyboard }
+                            { parse_mode: "Markdown", reply_markup: keyboard }
                         );
                     } else {
                         // Not enough details, start the flow

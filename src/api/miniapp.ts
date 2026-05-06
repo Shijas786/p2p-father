@@ -10,7 +10,7 @@ import { env } from "../config/env";
 import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
-import { bot, broadcastTradeSuccess, broadcastAd, deleteAdBroadcasts } from "../bot";
+import { bot } from "../bot";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -616,7 +616,14 @@ router.post("/orders", async (req: Request, res: Response) => {
         res.json({ order });
 
         // Broadcast new ad to all groups
-        broadcastAd(order, user).catch(console.error);
+        const orderWithUserData = {
+            ...order,
+            username: user.username || user.first_name || "anon",
+            trust_score: user.trust_score ?? 100
+        };
+        import("../bot").then(({ broadcastAd }) => {
+            broadcastAd(orderWithUserData, user).catch(console.error);
+        }).catch(console.error);
     } catch (err: any) {
         console.error("[MINIAPP] Create order error:", err);
         res.status(500).json({ error: err.message });
@@ -636,9 +643,11 @@ router.post("/orders/:id/cancel", async (req: Request, res: Response) => {
         await db.cancelOrder(req.params.id as string);
         
         // Trigger broadcast cleanup immediately
-        deleteAdBroadcasts(req.params.id as string).catch(err => {
-            console.error("[MINIAPP] Failed to cleanup broadcasts on cancel:", err);
-        });
+        import("../bot").then(({ deleteAdBroadcasts }) => {
+            deleteAdBroadcasts(req.params.id as string).catch(err => {
+                console.error("[MINIAPP] Failed to cleanup broadcasts on cancel:", err);
+            });
+        }).catch(console.error);
 
         res.json({ success: true });
     } catch (err: any) {
@@ -1031,6 +1040,7 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
                 buyer_first_name: buyerUser?.first_name,
                 release_tx_hash: releaseTxHash || trade.release_tx_hash,
             };
+            const { broadcastTradeSuccess } = await import("../bot");
             await broadcastTradeSuccess(tradeWithUsername, originalOrder || trade);
         } catch (e) {
             console.error("FOMO Broadcast error:", e);

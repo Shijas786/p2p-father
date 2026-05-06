@@ -12,21 +12,26 @@ export function formatTokenAmount(amount: number, token: string = "USDC"): strin
     return `${amount.toFixed(decimals)} ${token}`;
 }
 
-/**
- * Format an order for Telegram display
- */
+export function escapeHTML(text: string): string {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export function formatOrder(order: Order, index?: number): string {
-    const prefix = index !== undefined ? `${index + 1}\\.` : "•";
-    const emoji = order.type === "sell" ? "🔴" : "🟢";
+    const emoji = order.type === "sell" ? "🔴 SELL " : "🟢 BUY  ";
     const available = order.amount - (order.filled_amount || 0);
+    const token = order.token || "USDC";
+    const totalFiat = (available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    
+    // Rating star logic
+    const trustScore = order.trust_score ?? 100;
+    const starEmoji = trustScore >= 90 ? "⭐" : "✨";
 
     return [
-        `${prefix} ${emoji} *${order.type.toUpperCase()}* ${escapeMarkdown(formatTokenAmount(available, order.token))}`,
-        `   Rate: ${escapeMarkdown(formatINR(order.rate))}/${escapeMarkdown(order.token || "USDC")}`,
-        `   Total: ${escapeMarkdown(formatINR(available * order.rate))}`,
-        `   Payment: ${escapeMarkdown(order.payment_methods?.join(", ") || "UPI")}`,
-        `   Trader: @${escapeMarkdown(order.username || "anon")} (⭐ ${escapeMarkdown(order.trust_score?.toFixed(0) || "?")}%)`,
-        `   ID: \`${order.id.slice(0, 8)}\``,
+        `<b>${emoji} ${escapeHTML(formatTokenAmount(available, token))}</b>`,
+        `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${escapeHTML(token)}`,
+        `├ 💵 <b>Total</b>   ₹${escapeHTML(totalFiat)}`,
+        `├ 📲 <b>Pay</b>     ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`,
+        `├ 👤 <b>Trader</b>  @${escapeHTML(order.username || "anon")} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%`,
     ].join("\n");
 }
 
@@ -87,7 +92,7 @@ export function formatShortDate(date: string | Date): string {
  * Escape markdown special characters for Telegram
  */
 export function escapeMarkdown(text: string): string {
-    return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
+    return text.replace(/([*\[\]`])/g, "\\$1");
 }
 
 /**
