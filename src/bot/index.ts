@@ -178,31 +178,36 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await getBotInfo();
-        const innerLine = order.type === "sell"
-            ? "│       📢 New SELL Ad!       │"
-            : "│       📢 New BUY Ad!        │";
+        const available = order.amount - (order.filled_amount || 0);
+        const token = order.token || "USDC";
 
-        const header = [
-            "╭─────────────────────────────╮",
-            innerLine,
-            "╰─────────────────────────────╯",
-        ].join("\n");
-
-        const orderDetails = formatOrder(order);
-        const traderNote = order.payment_details?.note;
-        const footer = "⚡ Trade safely on @P2PFatherBot";
+        const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
+        
+        const emoji = order.type === "sell" ? "🔴" : "🟢";
+        const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
+        const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
+        const amountStr = `<b>${escapeHTML(formatTokenAmount(available, token))}</b>`;
+        
+        const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
+        const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
+        const totalLine = `🧾 Total: ₹${escapeHTML((available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
+        const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
+        const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
 
         const lines = [
             header,
             "",
-            orderDetails,
+            orderLine,
+            rateLine,
+            totalLine,
+            chainLine,
+            paymentLine,
         ];
 
+        const traderNote = order.payment_details?.note;
         if (traderNote) {
-            lines.push(`└ 📝 <b>Note</b>     ${escapeHTML(traderNote)}`);
+            lines.push(`📝 Note: ${escapeHTML(traderNote)}`);
         }
-
-        lines.push("", footer);
 
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
