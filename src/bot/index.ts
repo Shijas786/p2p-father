@@ -178,9 +178,13 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await getBotInfo();
+        const innerLine = order.type === "sell"
+            ? "│       📢 New SELL Ad!       │"
+            : "│       📢 New BUY Ad!        │";
+
         const header = [
             "╭─────────────────────────────╮",
-            "│  🏦 P2P FATHER · LIVE ORDERS │",
+            innerLine,
             "╰─────────────────────────────╯",
         ].join("\n");
 
