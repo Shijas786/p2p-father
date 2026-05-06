@@ -152,14 +152,14 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         const chain = trade.chain || order?.chain || 'bsc';
 
         // Build tx link
-        let txLine = "✅ Escrowed \\& settled on\\-chain";
+        let txLine = "✅ Escrowed & settled on-chain";
         if (trade.release_tx_hash && !trade.release_tx_hash.startsWith('relayed')) {
             const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
             txLine = `✅ [View Transaction](${escapeMarkdown(explorer)}${escapeMarkdown(trade.release_tx_hash)})`;
         }
 
         const msg = [
-            "🎉 *Trade Completed\\!*",
+            "🎉 *Trade Completed!*",
             "",
             `${seller} sold *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}* to ${buyer}`,
             `💰 Deal: ₹${escapeMarkdown(totalFiat)}`,
@@ -2280,7 +2280,7 @@ bot.on("callback_query:data", async (ctx) => {
                 if (buyer && buyer.telegram_id) {
                     await ctx.api.sendMessage(
                         buyer.telegram_id,
-                        `✅ *Trade Completed\\!*\n\nSeller has released ${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}\\.\nThe funds are now in your wallet \\(smart contract release\\)\\.\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
+                        `✅ *Trade Completed!*\n\nSeller has released ${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}.\nThe funds are now in your wallet (smart contract release).\n\nTransaction: [View on BaseScan](${getExplorerUrl(txHash)})`,
                         { parse_mode: "Markdown" }
                     );
                 }
