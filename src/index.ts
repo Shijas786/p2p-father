@@ -122,6 +122,48 @@ async function main() {
             res.status(500).json({ error: "Failed to fetch leaderboard" });
         }
     });
+ 
+    app.get("/api/referral-leaderboard", async (req, res) => {
+        try {
+            const dbInstance = (db as any).getClient();
+            const { data: referrals, error } = await dbInstance
+                .from("referrals")
+                .select("referrer_telegram_id, status")
+                .eq("status", "completed");
+
+            if (error) throw error;
+
+            const counts: Record<number, number> = {};
+            for (const ref of referrals || []) {
+                const id = ref.referrer_telegram_id;
+                counts[id] = (counts[id] || 0) + 1;
+            }
+
+            const referrerIds = Object.keys(counts).map(Number);
+            if (referrerIds.length === 0) {
+                return res.json({ leaderboard: [] });
+            }
+
+            const { data: users, error: userError } = await dbInstance
+                .from("users")
+                .select("telegram_id, username, first_name, photo_url")
+                .in("telegram_id", referrerIds);
+
+            if (userError) throw userError;
+
+            const leaderboard = users.map((u: any) => ({
+                id: String(u.telegram_id),
+                name: u.username ? `@${u.username}` : (u.first_name || "Anonymous"),
+                photo_url: u.photo_url,
+                count: counts[u.telegram_id] || 0
+            })).sort((a: any, b: any) => b.count - a.count);
+
+            res.json({ leaderboard });
+        } catch (e: any) {
+            console.error("Referral Leaderboard API Error:", e);
+            res.status(500).json({ error: "Failed to fetch referral leaderboard" });
+        }
+    });
 
     app.get("/api/live-pulse", async (req, res) => {
         try {

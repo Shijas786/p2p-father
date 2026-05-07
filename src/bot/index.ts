@@ -1339,7 +1339,8 @@ bot.command("invite", async (ctx) => {
     const keyboard = new InlineKeyboard()
         .url("🔗 Share Invite Link", shareUrl).row()
         .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
-        .text("🔄 Refresh Stats", "refresh_referrals");
+        .text("🔄 Refresh Stats", "refresh_referrals")
+        .text("🏆 Invite Leaderboard", "show_referral_leaderboard");
 
     await ctx.reply(message, { parse_mode: "Markdown", reply_markup: keyboard });
 });
@@ -1564,7 +1565,8 @@ bot.on("callback_query:data", async (ctx) => {
             const keyboard = new InlineKeyboard()
                 .url("🔗 Share Invite Link", shareUrl).row()
                 .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
-                .text("🔄 Refresh Stats", "refresh_referrals");
+                .text("🔄 Refresh Stats", "refresh_referrals")
+                .text("🏆 Invite Leaderboard", "show_referral_leaderboard");
 
             try {
                 await ctx.editMessageText(message, { parse_mode: "Markdown", reply_markup: keyboard });
@@ -1572,6 +1574,56 @@ bot.on("callback_query:data", async (ctx) => {
                 // Ignore if content didn't change
             }
             await ctx.answerCallbackQuery({ text: "Stats updated! ✅" });
+            return;
+        }
+
+        // Handle "show_referral_leaderboard"
+        if (data === "show_referral_leaderboard") {
+            const dbInstance = (db as any).getClient();
+            const { data: referrals, error } = await dbInstance
+                .from("referrals")
+                .select("referrer_telegram_id, status")
+                .eq("status", "completed");
+
+            let leaderboardText = "🏆 *P2PFather Invite Champions*\n\n";
+
+            if (!error && referrals && referrals.length > 0) {
+                const counts: Record<number, number> = {};
+                for (const ref of referrals) {
+                    const id = ref.referrer_telegram_id;
+                    counts[id] = (counts[id] || 0) + 1;
+                }
+
+                const referrerIds = Object.keys(counts).map(Number);
+                const { data: users } = await dbInstance
+                    .from("users")
+                    .select("telegram_id, username, first_name")
+                    .in("telegram_id", referrerIds);
+
+                const list = (users || []).map((u: any) => ({
+                    name: u.username ? `@${u.username}` : (u.first_name || "Anonymous"),
+                    count: counts[u.telegram_id] || 0
+                })).sort((a: any, b: any) => b.count - a.count).slice(0, 10);
+
+                if (list.length > 0) {
+                    let rank = 1;
+                    for (const item of list) {
+                        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
+                        leaderboardText += `${rankEmoji} *${escapeMarkdown(item.name)}* — \`${item.count}\` qualified invites\n`;
+                        rank++;
+                    }
+                } else {
+                    leaderboardText += "No qualified referrals yet\\. Share your link to top the board\\!";
+                }
+            } else {
+                leaderboardText += "No qualified referrals yet\\. Share your link to top the board\\!";
+            }
+
+            const backKeyboard = new InlineKeyboard()
+                .text("🔙 Back to Stats", "refresh_referrals");
+
+            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => {});
+            await ctx.answerCallbackQuery();
             return;
         }
 
