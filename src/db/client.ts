@@ -652,6 +652,71 @@ class Database {
     }
 
     // ═══════════════════════════════════════
+    //              REFERRALS
+    // ═══════════════════════════════════════
+
+    async recordReferral(referrerTelegramId: number, referredTelegramId: number): Promise<void> {
+        const db = this.getClient();
+        
+        // Ensure we don't overwrite an existing referral for the same invitee
+        const { data: existing } = await db
+            .from("referrals")
+            .select("id")
+            .eq("referred_telegram_id", referredTelegramId)
+            .maybeSingle();
+
+        if (existing) return;
+
+        await db.from("referrals").insert({
+            referrer_telegram_id: referrerTelegramId,
+            referred_telegram_id: referredTelegramId,
+            status: "pending"
+        });
+    }
+
+    async getReferralsByReferrer(referrerTelegramId: number): Promise<{ total: number; qualified: number; pending: number; list: any[] }> {
+        const db = this.getClient();
+        const { data, error } = await db
+            .from("referrals")
+            .select("*")
+            .eq("referrer_telegram_id", referrerTelegramId)
+            .order("created_at", { ascending: false });
+
+        if (error || !data) {
+            return { total: 0, qualified: 0, pending: 0, list: [] };
+        }
+
+        const total = data.length;
+        const qualified = data.filter((r: any) => r.status === "completed").length;
+        const pending = total - qualified;
+
+        return {
+            total,
+            qualified,
+            pending,
+            list: data
+        };
+    }
+
+    async updateReferralStatus(referredTelegramId: number, status: "pending" | "completed"): Promise<void> {
+        const db = this.getClient();
+        await db
+            .from("referrals")
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq("referred_telegram_id", referredTelegramId);
+    }
+
+    async getReferralByReferred(referredTelegramId: number): Promise<any | null> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("referrals")
+            .select("*")
+            .eq("referred_telegram_id", referredTelegramId)
+            .maybeSingle();
+        return data || null;
+    }
+
+    // ═══════════════════════════════════════
     //              STATS
     // ═══════════════════════════════════════
 

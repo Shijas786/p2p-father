@@ -55,6 +55,8 @@ const envSchema = z.object({
     ESCROW_TIMEOUT_SECONDS: z.string().default("3600"),
     AUTO_RELEASE_SECONDS: z.string().default("2700"),
     NODE_ENV: z.string().default("development"),
+    COMMUNITY_CHAT_ID: z.string().default(""),
+    COMMUNITY_INVITE_LINK: z.string().default("https://t.me/P2pFatherGroup"),
 });
 
 const parsed = envSchema.safeParse(process.env);

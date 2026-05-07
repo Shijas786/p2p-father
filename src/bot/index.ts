@@ -433,6 +433,60 @@ bot.command(["start", "open"], async (ctx) => {
         }
     }
 
+    // 3. Referral deep link
+    if (payload && payload.startsWith("ref_") && ctx.from) {
+        const referrerTelegramId = parseInt(payload.replace("ref_", ""));
+        if (!isNaN(referrerTelegramId) && referrerTelegramId !== ctx.from.id) {
+            // Check if this referred user is new to our bot database
+            const existingUser = await db.getUserByTelegramId(ctx.from.id);
+            if (!existingUser) {
+                // Record the referral in DB with 'pending' status
+                await db.recordReferral(referrerTelegramId, ctx.from.id);
+
+                // Check if they are ALREADY a member of our community group right now
+                let isAlreadyMember = false;
+                if (env.COMMUNITY_CHAT_ID) {
+                    try {
+                        const member = await ctx.api.getChatMember(Number(env.COMMUNITY_CHAT_ID), ctx.from.id);
+                        isAlreadyMember = ["member", "administrator", "creator", "restricted"].includes(member.status);
+                        if (isAlreadyMember) {
+                            // Mark completed immediately
+                            await db.updateReferralStatus(ctx.from.id, "completed");
+                            
+                            // Notify referrer immediately!
+                            await ctx.api.sendMessage(
+                                referrerTelegramId,
+                                `🎉 *New Qualified Referral!*\n\n@${escapeMarkdown(ctx.from.username || ctx.from.first_name || "Someone")} joined the bot and is already a member of the community group! Your referral is qualified! 🚀`,
+                                { parse_mode: "Markdown" }
+                            ).catch(() => {});
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                if (!isAlreadyMember) {
+                    // Send a special welcome message prompting them to join the group to complete verification
+                    const verifyKeyboard = new InlineKeyboard()
+                        .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
+                        .text("✅ Verify Membership & Start", `verify_referral:${referrerTelegramId}`);
+
+                    await ctx.reply(
+                        [
+                            "👋 *Welcome to P2PFather Kerala\\!*",
+                            "",
+                            `You were invited by a community member\\!`,
+                            "",
+                            "To complete your registration and help your referrer earn their referral point, please join our official community group and click **Verify** below\\! 🚀",
+                        ].join("\n"),
+                        { parse_mode: "Markdown", reply_markup: verifyKeyboard }
+                    );
+                    return;
+                }
+            }
+        }
+    }
+
     const user = await ensureUser(ctx);
 
     // Auto-create wallet if user doesn't have one
@@ -1214,6 +1268,83 @@ bot.command("profile", async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//                     /invite COMMAND
+// ═══════════════════════════════════════════════════════════════
+
+bot.command("invite", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    if (!ctx.from) return;
+    await ensureUser(ctx);
+
+    const botInfo = await getBotInfo();
+    const inviteLink = `https://t.me/${botInfo.username}?start=ref_${ctx.from.id}`;
+    
+    // Fetch stats
+    const stats = await db.getReferralsByReferrer(ctx.from.id);
+    
+    // Check if there are pending referrals that are now in the group (dynamic updating!)
+    if (stats.pending > 0 && env.COMMUNITY_CHAT_ID) {
+        let updatedSome = false;
+        for (const referral of stats.list) {
+            if (referral.status === "pending") {
+                try {
+                    const member = await ctx.api.getChatMember(Number(env.COMMUNITY_CHAT_ID), referral.referred_telegram_id);
+                    const isMember = ["member", "administrator", "creator", "restricted"].includes(member.status);
+                    if (isMember) {
+                        await db.updateReferralStatus(referral.referred_telegram_id, "completed");
+                        referral.status = "completed";
+                        updatedSome = true;
+                        
+                        // Notify referrer
+                        await ctx.api.sendMessage(
+                            referral.referrer_telegram_id,
+                            `🎉 *New Qualified Referral!*\n\nA user you invited has successfully joined the community group! Your referral is now qualified! 🚀`,
+                            { parse_mode: "Markdown" }
+                        ).catch(() => {});
+                    }
+                } catch (err) {
+                    // Ignore (e.g. user blocked bot or bot not in group)
+                }
+            }
+        }
+        if (updatedSome) {
+            // Re-fetch updated stats
+            const updatedStats = await db.getReferralsByReferrer(ctx.from.id);
+            stats.total = updatedStats.total;
+            stats.qualified = updatedStats.qualified;
+            stats.pending = updatedStats.pending;
+        }
+    }
+
+    const shareText = `Hey! Join P2PFather, the most secure P2P Crypto Exchange Bot in Kerala. Trade USDC/USDT instantly using UPI and Bank Transfer! 🚀`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+
+    const message = [
+        "👥 *P2PFather Referral Program*",
+        "",
+        "Invite friends to trade on *P2PFather* and grow our community together\\!",
+        "",
+        "📢 *Rules:*",
+        "• The referral counts only when your friend joins our community group\\.",
+        "",
+        "🔗 *Your Personal Invitation Link:*",
+        `\`${escapeMarkdown(inviteLink)}\``,
+        "",
+        "📊 *Your Referral Stats:*",
+        `• 👥 *Total Invited:* \`${stats.total}\``,
+        `• ✅ *Qualified (Joined Group):* \`${stats.qualified}\``,
+        `• ⏳ *Pending (Not Joined):* \`${stats.pending}\``,
+    ].join("\n");
+
+    const keyboard = new InlineKeyboard()
+        .url("🔗 Share Invite Link", shareUrl).row()
+        .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
+        .text("🔄 Refresh Stats", "refresh_referrals");
+
+    await ctx.reply(message, { parse_mode: "Markdown", reply_markup: keyboard });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //                     /admin COMMAND
 // ═══════════════════════════════════════════════════════════════
 
@@ -1359,6 +1490,7 @@ bot.command("disputes", async (ctx) => {
 
 bot.on("callback_query:data", async (ctx) => {
     const data = ctx.callbackQuery.data;
+    if (!ctx.from) return;
     console.log(`[CALLBACK] Received: ${data} from user ${ctx.from.id} (@${ctx.from.username || "anon"})`);
 
     // Ensure all callbacks are answered eventually (default fallback if not handled)
@@ -1369,6 +1501,143 @@ bot.on("callback_query:data", async (ctx) => {
 
     // Wrap the entire handler in a try/catch to prevent global crashes
     try {
+
+        // Handle "refresh_referrals"
+        if (data === "refresh_referrals") {
+            const stats = await db.getReferralsByReferrer(ctx.from.id);
+            
+            // Check if there are pending referrals that are now in the group
+            if (stats.pending > 0 && env.COMMUNITY_CHAT_ID) {
+                let updatedSome = false;
+                for (const referral of stats.list) {
+                    if (referral.status === "pending") {
+                        try {
+                            const member = await ctx.api.getChatMember(Number(env.COMMUNITY_CHAT_ID), referral.referred_telegram_id);
+                            const isMember = ["member", "administrator", "creator", "restricted"].includes(member.status);
+                            if (isMember) {
+                                await db.updateReferralStatus(referral.referred_telegram_id, "completed");
+                                referral.status = "completed";
+                                updatedSome = true;
+                                
+                                // Notify referrer
+                                await ctx.api.sendMessage(
+                                    referral.referrer_telegram_id,
+                                    `🎉 *New Qualified Referral!*\n\nA user you invited has successfully joined the community group! Your referral is now qualified! 🚀`,
+                                    { parse_mode: "Markdown" }
+                                ).catch(() => {});
+                            }
+                        } catch (err) {
+                            // Ignore
+                        }
+                    }
+                }
+                if (updatedSome) {
+                    const updatedStats = await db.getReferralsByReferrer(ctx.from.id);
+                    stats.total = updatedStats.total;
+                    stats.qualified = updatedStats.qualified;
+                    stats.pending = updatedStats.pending;
+                }
+            }
+
+            const botInfo = await getBotInfo();
+            const inviteLink = `https://t.me/${botInfo.username}?start=ref_${ctx.from.id}`;
+            const shareText = `Hey! Join P2PFather, the most secure P2P Crypto Exchange Bot in Kerala. Trade USDC/USDT instantly using UPI and Bank Transfer! 🚀`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+
+            const message = [
+                "👥 *P2PFather Referral Program*",
+                "",
+                "Invite friends to trade on *P2PFather* and grow our community together\\!",
+                "",
+                "📢 *Rules:*",
+                "• The referral counts only when your friend joins our community group\\.",
+                "",
+                "🔗 *Your Personal Invitation Link:*",
+                `\`${escapeMarkdown(inviteLink)}\``,
+                "",
+                "📊 *Your Referral Stats:*",
+                `• 👥 *Total Invited:* \`${stats.total}\``,
+                `• ✅ *Qualified (Joined Group):* \`${stats.qualified}\``,
+                `• ⏳ *Pending (Not Joined):* \`${stats.pending}\``,
+            ].join("\n");
+
+            const keyboard = new InlineKeyboard()
+                .url("🔗 Share Invite Link", shareUrl).row()
+                .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
+                .text("🔄 Refresh Stats", "refresh_referrals");
+
+            try {
+                await ctx.editMessageText(message, { parse_mode: "Markdown", reply_markup: keyboard });
+            } catch (err) {
+                // Ignore if content didn't change
+            }
+            await ctx.answerCallbackQuery({ text: "Stats updated! ✅" });
+            return;
+        }
+
+        // Handle "verify_referral"
+        if (data && data.startsWith("verify_referral:")) {
+            const referrerId = parseInt(data.replace("verify_referral:", ""));
+            if (env.COMMUNITY_CHAT_ID) {
+                try {
+                    const member = await ctx.api.getChatMember(Number(env.COMMUNITY_CHAT_ID), ctx.from.id);
+                    const isMember = ["member", "administrator", "creator", "restricted"].includes(member.status);
+                    if (isMember) {
+                        await db.updateReferralStatus(ctx.from.id, "completed");
+                        
+                        // Notify referrer
+                        await ctx.api.sendMessage(
+                            referrerId,
+                            `🎉 *New Qualified Referral!*\n\n@${escapeMarkdown(ctx.from.username || ctx.from.first_name || "Someone")} has successfully joined the community group! Your referral is now qualified! 🚀`,
+                            { parse_mode: "Markdown" }
+                        ).catch(() => {});
+
+                        await ctx.answerCallbackQuery({ text: "Verification successful! Welcome! ✅" });
+                        
+                        // Delete the verify prompt and trigger the start welcome message
+                        await ctx.deleteMessage().catch(() => {});
+                        
+                        // Trigger start flow
+                        const user = await ensureUser(ctx);
+                        const cacheBuster = `?v=${Date.now()}`;
+                        const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
+                        const welcome = [
+                            `👋 *Welcome to the P2PFather Platform*`,
+                            "",
+                            "Secure, decentralized settlement at your fingertips\\.",
+                            "",
+                            "🔐 *Your Wallet Address:*",
+                            `\`${escapeMarkdown(user.wallet_address || '')}\``,
+                            "",
+                            "🚀 *Ready to Trade?*",
+                            "Open our Mini App to browse ads, manage your portfolio, and list your own offers in a few taps\\!",
+                        ].join("\n");
+
+                        const startKeyboard = new InlineKeyboard()
+                            .webApp("📱 Open P2PFather App", miniAppUrl).row()
+                            .text("🔍 Browse Ads", "ads:all")
+                            .text("👤 My Profile", "view_profile").row()
+                            .text("🔑 My Wallet", "view_wallet")
+                            .url("📖 User Guide", "https://p2pfather.com/guide");
+
+                        const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
+                        await ctx.replyWithPhoto(new InputFile(bannerPath), {
+                            caption: welcome,
+                            parse_mode: "Markdown",
+                            reply_markup: startKeyboard
+                        });
+                        return;
+                    } else {
+                        await ctx.answerCallbackQuery({ text: "⚠️ You haven't joined the group yet!", show_alert: true });
+                    }
+                } catch (e) {
+                    await ctx.answerCallbackQuery({ text: "⚠️ Verification error. Make sure bot is in the group.", show_alert: true });
+                }
+            } else {
+                await ctx.answerCallbackQuery({ text: "⚠️ Community group is not configured by admin.", show_alert: true });
+            }
+            return;
+        }
 
         // Handle "I want to SELL/BUY" from /newad
         // Handle "I want to SELL/BUY" from /newad
@@ -3143,6 +3412,7 @@ const privateCommands = [
     { command: "profile", description: "Your stats & profile" },
     { command: "help", description: "How to use this bot" },
     { command: "send", description: "Withdraw crypto" },
+    { command: "invite", description: "Refer friends & earn points" },
 ];
 
 const groupCommands = [
