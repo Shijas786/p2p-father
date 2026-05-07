@@ -572,18 +572,12 @@
 
     <!-- LEADERBOARD COMPACT SIDEBAR ON RIGHT -->
     <div class="leaderboard-sidebar">
-        <div class="leaderboard-title" style="margin-bottom: 0.5rem;">
-            <h3 id="sidebar-title">Top Traders</h3>
-            <p id="sidebar-desc">Leaderboard by total volume and trades.</p>
+        <div class="leaderboard-title">
+            <h3>Top Traders</h3>
+            <p>Leaderboard by total volume and trades.</p>
         </div>
 
-        <!-- Leaderboard Type Toggle -->
-        <div class="timeframe-tabs" style="margin-bottom: 0.75rem;">
-            <button class="tab-btn active" id="btn-traders" onclick="setLeaderboardType('traders')">🛡️ Traders</button>
-            <button class="tab-btn" id="btn-referrals" onclick="setLeaderboardType('referrals')">👥 Invites</button>
-        </div>
-
-        <div class="leaderboard-controls" id="timeframe-controls">
+        <div class="leaderboard-controls">
             <div class="timeframe-tabs">
                 <button class="tab-btn active" onclick="changeTimeframe('all', this)">All Time</button>
                 <button class="tab-btn" onclick="changeTimeframe('30d', this)">30D</button>
@@ -616,7 +610,6 @@
 
 <script>
 let currentTimeframe = 'all';
-let currentLeaderboardType = 'traders';
 
 function formatIndianTime() {
     const d = new Date();
@@ -634,68 +627,7 @@ function formatIndianTime() {
     }) + ' IST';
 }
 
-async function fetchReferralLeaderboard() {
-    const container = document.getElementById('leaderboard-container');
-    const refreshText = document.getElementById('refresh-time-text');
-    
-    try {
-        const res = await fetch('/api/referral-leaderboard');
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        
-        let items = data.leaderboard || [];
-        
-        if (items.length === 0) {
-            // Premium styled fallback items
-            items = [
-                { name: '@Cryptowolf', count: 18, photo_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Cryptowolf' },
-                { name: '@BaseKing', count: 14, photo_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=BaseKing' },
-                { name: '@INR_P2P_God', count: 9, photo_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=INRP2PGod' },
-                { name: '@0xArjun', count: 5, photo_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=0xArjun' },
-                { name: '@Nikhil_Tradez', count: 3, photo_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=NikhilTradez' }
-            ];
-        }
-
-        let rank = 1;
-        container.innerHTML = items.map(u => {
-            const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-            const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name || 'Felix'}`;
-            const userAvatar = u.photo_url || fallbackAvatar;
-            const itemHtml = `
-            <div class="leaderboard-item">
-                <div class="trader-info">
-                    <span class="trader-rank-badge ${rankClass}">${rank}</span>
-                    <img class="trader-avatar" src="${userAvatar}" alt="avatar" onerror="this.src='${fallbackAvatar}'" />
-                    <div class="trader-name-wrap">
-                        <span class="trader-name">${u.name || 'Anonymous'}</span>
-                        <span class="trader-address">Community Inviter</span>
-                    </div>
-                </div>
-                <div class="trader-stats-wrap">
-                    <span class="trader-score">${u.count} invites</span>
-                    <span class="trader-trades">qualified</span>
-                </div>
-            </div>
-            `;
-            rank++;
-            return itemHtml;
-        }).join('');
-        
-        if (refreshText) {
-            refreshText.innerText = `Updated: ${formatIndianTime()}`;
-        }
-    } catch (err) {
-        container.innerHTML = `
-            <div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:1.5rem;">Failed to load data. Please refresh.</div>
-        `;
-    }
-}
-
 async function fetchLeaderboard(timeframe = 'all') {
-    if (currentLeaderboardType === 'referrals') {
-        return fetchReferralLeaderboard();
-    }
-
     const container = document.getElementById('leaderboard-container');
     const refreshText = document.getElementById('refresh-time-text');
     
@@ -766,7 +698,7 @@ function changeTimeframe(timeframe, btn) {
     currentTimeframe = timeframe;
     
     // Toggle active class on tabs
-    document.querySelectorAll('#timeframe-controls .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.timeframe-tabs .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     
     // Set loading
@@ -775,35 +707,6 @@ function changeTimeframe(timeframe, btn) {
     `;
     
     fetchLeaderboard(timeframe);
-}
-
-function setLeaderboardType(type) {
-    if (currentLeaderboardType === type) return;
-    currentLeaderboardType = type;
-    
-    document.getElementById('btn-traders').classList.toggle('active', type === 'traders');
-    document.getElementById('btn-referrals').classList.toggle('active', type === 'referrals');
-    
-    const title = document.getElementById('sidebar-title');
-    const desc = document.getElementById('sidebar-desc');
-    const timeframeControls = document.getElementById('timeframe-controls');
-    
-    // Set loading
-    document.getElementById('leaderboard-container').innerHTML = `
-        <div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:1.5rem;">Refreshing data...</div>
-    `;
-    
-    if (type === 'traders') {
-        title.innerText = 'Top Traders';
-        desc.innerText = 'Leaderboard by total volume and trades.';
-        timeframeControls.style.display = 'flex';
-        fetchLeaderboard(currentTimeframe);
-    } else {
-        title.innerText = 'Invite Champions';
-        desc.innerText = 'Leaderboard by qualified referrals.';
-        timeframeControls.style.display = 'none';
-        fetchReferralLeaderboard();
-    }
 }
 
 // Initial fetch
