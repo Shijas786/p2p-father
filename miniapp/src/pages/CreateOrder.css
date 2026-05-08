@@ -204,8 +204,8 @@
 }
 
 .co-vault-box {
-    padding: 12px 20px;
-    border-radius: var(--radius-lg);
+    padding: 8px 12px;
+    border-radius: 8px;
     border: 1px solid transparent;
 }
 
@@ -215,8 +215,8 @@
 }
 
 .co-vault-box.border-green {
-    border-color: rgba(132, 204, 22, 0.4);
-    background: rgba(132, 204, 22, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 /* Steps & Actions */

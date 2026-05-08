@@ -534,9 +534,37 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        let resolvedDealerIds: string[] = [];
+        let excludedUsernames: string[] = [];
+
+        if (typeof excluded_dealers === 'string' && excluded_dealers.trim()) {
+            excludedUsernames = excluded_dealers.split(',')
+                .map(u => u.trim().replace('@', ''))
+                .filter(u => u.length > 0);
+        } else if (Array.isArray(excluded_dealers)) {
+            excludedUsernames = excluded_dealers
+                .map(u => String(u).trim().replace('@', ''))
+                .filter(u => u.length > 0);
+        }
+
+        if (excludedUsernames.length > 0) {
+            const dbInstance = (db as any).getClient();
+            const { data: matchedUsers } = await dbInstance
+                .from("users")
+                .select("id, telegram_id")
+                .or(excludedUsernames.map(uname => `username.ilike.${uname}`).join(','));
+
+            if (matchedUsers) {
+                for (const u of matchedUsers) {
+                    resolvedDealerIds.push(String(u.telegram_id));
+                    resolvedDealerIds.push(String(u.id));
+                }
+            }
         }
 
         const orderChain = chain || 'base';
@@ -610,6 +638,8 @@ router.post("/orders", async (req: Request, res: Response) => {
                 upi: user.upi_id || "",
                 group_id: group_id ? parseInt(group_id.toString()) : undefined,
                 note: note ? note.toString().slice(0, 200) : undefined,
+                excluded_dealers: resolvedDealerIds,
+                excluded_usernames: excludedUsernames
             },
         });
 
@@ -724,6 +754,19 @@ router.post("/trades", async (req: Request, res: Response) => {
         // Prevent self-trade
         if (order.user_id === user.id) {
             return res.status(400).json({ error: "Cannot trade with your own order" });
+        }
+
+        // Check if the matching user is in the excluded dealers list
+        const excludedDealers = order.payment_details?.excluded_dealers || [];
+        if (excludedDealers.length > 0) {
+            const isExcluded = excludedDealers.some((id: any) => 
+                String(id) === String(user.telegram_id) || String(id) === String(user.id)
+            );
+            if (isExcluded) {
+                return res.status(400).json({ 
+                    error: "This order is not available to you. The creator has restricted access for your account." 
+                });
+            }
         }
 
         const tradeAmount = amount || order.amount;
@@ -1726,6 +1769,21 @@ router.get("/bags/stats", async (req: Request, res: Response) => {
     } catch (e) {
         console.error("Bags API Error:", e);
         res.status(500).json({ error: "Failed to fetch Bags.fm stats" });
+    }
+});
+
+router.get("/users", async (req: Request, res: Response) => {
+    try {
+        const { data, error } = await (db as any).getClient()
+            .from("users")
+            .select("id, username, first_name, photo_url, completed_trades")
+            .not("username", "is", null)
+            .order("completed_trades", { ascending: false });
+
+        if (error) throw error;
+        res.json({ users: data || [] });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
     }
 });
 

@@ -116,6 +116,7 @@ export const api = {
             rate: number;
             payment_methods: string[];
             note?: string;
+            excluded_dealers?: string;
             expires_in?: number;
         }) =>
             request<{ order: any }>('/orders', {
@@ -226,6 +227,7 @@ export const api = {
 
     // ---- Users ----
     users: {
+        list: () => request<{ users: any[] }>('/users'),
         uploadAvatar: async (file: File) => {
             const initData = getInitData();
             const formData = new FormData();

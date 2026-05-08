@@ -29,7 +29,32 @@ export function CreateOrder() {
     const [rate, setRate] = useState('');
     const [methods, setMethods] = useState<string[]>(['UPI']);
     const [note, setNote] = useState('');
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [excludedDealerUsernames, setExcludedDealerUsernames] = useState<string[]>([]);
     const [expiryMinutes, setExpiryMinutes] = useState(60); // 1 hour default
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    useEffect(() => {
+        api.users.list().then(data => {
+            let list = (data?.users || []).filter((u: any) => u.username && u.id !== user?.id);
+            if (list.length === 0) {
+                list = [
+                    { id: 'demo1', username: 'Kerala_P2P_King', completed_trades: 1240, photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
+                    { id: 'demo2', username: 'Traders_Union', completed_trades: 850, photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80' },
+                    { id: 'demo3', username: 'Crypto_Sultan', completed_trades: 610, photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80' },
+                    { id: 'demo4', username: 'Super_Dealer_IN', completed_trades: 450, photo_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' }
+                ];
+            }
+            setAllUsers(list);
+        }).catch(() => {
+            setAllUsers([
+                { id: 'demo1', username: 'Kerala_P2P_King', completed_trades: 1240, photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
+                { id: 'demo2', username: 'Traders_Union', completed_trades: 850, photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80' },
+                { id: 'demo3', username: 'Crypto_Sultan', completed_trades: 610, photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80' },
+                { id: 'demo4', username: 'Super_Dealer_IN', completed_trades: 450, photo_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' }
+            ]);
+        });
+    }, [user]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [txStep, setTxStep] = useState<'idle' | 'approving' | 'depositing' | 'creating'>('idle');
@@ -329,6 +354,7 @@ export function CreateOrder() {
                 rate: effectiveRate,
                 payment_methods: methods,
                 note: note.trim() || undefined,
+                excluded_dealers: excludedDealerUsernames.join(',') || undefined,
                 expires_in: expiryMinutes,
             });
 
@@ -483,7 +509,118 @@ export function CreateOrder() {
                                 </div>
                             )}
 
-                            <div className="co-section-title" style={{ marginTop: '16px' }}>8. Ad Duration</div>
+                             {/* Exclude Specific Dealers */}
+                             <div className="co-section-title" style={{ marginTop: '16px' }}>8. Exclude Specific Dealers <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '11px' }}>(optional)</span></div>
+                             <div style={{ position: 'relative', marginBottom: '12px' }}>
+                                 <div
+                                     onClick={() => {
+                                         haptic('selection');
+                                         setIsDropdownOpen(!isDropdownOpen);
+                                     }}
+                                     className="co-input-flat"
+                                      style={{
+                                          width: '100%',
+                                          display: 'flex', 
+                                         alignItems: 'center', 
+                                         justifyContent: 'space-between',
+                                         padding: '8px 12px', 
+                                         fontSize: '12px', 
+                                         borderRadius: '8px', 
+                                         background: 'rgba(255,255,255,0.03)', 
+                                         border: '1px solid rgba(255,255,255,0.08)',
+                                         cursor: 'pointer',
+                                         userSelect: 'none'
+                                     }}
+                                 >
+                                     <span style={{ color: 'var(--text-muted)' }}>Select dealer...</span>
+                                     <span style={{ fontSize: '10px', opacity: 0.6 }}>{isDropdownOpen ? '▲' : '▼'}</span>
+                                 </div>
+
+                                 {isDropdownOpen && (
+                                     <div style={{ 
+                                         position: 'absolute', 
+                                         top: '100%', 
+                                         left: 0, 
+                                         right: 0, 
+                                         marginTop: '4px',
+                                         background: '#16161a', 
+                                         border: '1px solid rgba(255,255,255,0.08)', 
+                                         borderRadius: '8px', 
+                                         maxHeight: '130px', 
+                                         overflowY: 'auto', 
+                                         zIndex: 100,
+                                         boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+                                     }}>
+                                         {allUsers.map(u => {
+                                             const isSelected = excludedDealerUsernames.includes(u.username);
+                                             return (
+                                                 <div
+                                                     key={u.id}
+                                                     onClick={() => {
+                                                         haptic('selection');
+                                                         setExcludedDealerUsernames(prev =>
+                                                             prev.includes(u.username) ? prev.filter(x => x !== u.username) : [...prev, u.username]
+                                                         );
+                                                         setIsDropdownOpen(false);
+                                                     }}
+                                                     style={{ 
+                                                         display: 'flex', 
+                                                         alignItems: 'center', 
+                                                         justifyContent: 'space-between',
+                                                         padding: '8px 12px', 
+                                                         cursor: 'pointer',
+                                                         background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                                                         borderBottom: '1px solid rgba(255,255,255,0.02)',
+                                                         userSelect: 'none'
+                                                     }}
+                                                 >
+                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                         {u.photo_url ? (
+                                                             <img src={u.photo_url} style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                                                         ) : (
+                                                             <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff4d4d, #f43f5e)', color: '#fff', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                 {u.username.substring(0, 1).toUpperCase()}
+                                                             </div>
+                                                         )}
+                                                         <span style={{ fontSize: '12px', color: isSelected ? '#ff4d4d' : '#fff', fontWeight: isSelected ? 'bold' : 'normal' }}>@{u.username}</span>
+                                                     </div>
+                                                     <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{u.completed_trades || 0} trades</span>
+                                                 </div>
+                                             );
+                                         })}
+                                     </div>
+                                 )}
+                                 {excludedDealerUsernames.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
+                                      {excludedDealerUsernames.map(username => (
+                                          <button
+                                              key={username}
+                                              type="button"
+                                              onClick={() => {
+                                                  haptic('selection');
+                                                  setExcludedDealerUsernames(prev => prev.filter(x => x !== username));
+                                              }}
+                                              style={{ 
+                                                  fontSize: '12px', 
+                                                  fontWeight: 'bold',
+                                                  padding: '4px 8px', 
+                                                  background: 'transparent',
+                                                  color: '#ff4d4d',
+                                                  border: 'none',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  cursor: 'pointer'
+                                              }}
+                                          >
+                                              @{username} ✖
+                                          </button>
+                                      ))}
+                                  </div>
+                              )}
+                             </div>
+
+                              <div className="co-section-title" style={{ marginTop: '16px' }}>9. Ad Duration</div>
                             <div className="co-presets-row mb-2">
                                 {[
                                     { label: '30m', val: 30 },
@@ -538,12 +675,21 @@ export function CreateOrder() {
                         )}
 
                         {type === 'sell' && (
-                            <div className={`co-vault-box card-glass mb-3 ${availableBalance < parseFloat(amount || '0') ? 'border-orange' : 'border-green'}`}>
+                            <div 
+                                className="co-vault-box mb-3"
+                                style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    boxShadow: 'none'
+                                }}
+                            >
                                 <div className="flex justify-between items-center text-[10px]">
                                     <span className="text-muted uppercase">
                                         {isExternalUser ? 'External Wallet Balance' : 'Vault Balance'}
                                     </span>
-                                    <span className={availableBalance < parseFloat(amount || '0') ? 'text-orange' : 'text-green'}>
+                                    <span className={availableBalance < parseFloat(amount || '0') ? 'text-orange' : 'text-secondary'} style={{ color: availableBalance < parseFloat(amount || '0') ? 'var(--orange)' : 'var(--text-secondary)', fontWeight: 'bold' }}>
                                         {isExternalUser
                                             ? formatBal(getExtBalance(token, chain), token === 'BNB' ? 4 : 2)
                                             : (vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')

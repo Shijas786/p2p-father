@@ -85,6 +85,7 @@ export interface Order {
     // Joined data
     username?: string;
     trust_score?: number;
+    excluded_dealers?: number[];
 }
 
 export interface Trade {
