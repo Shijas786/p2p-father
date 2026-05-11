@@ -92,7 +92,7 @@ export function formatShortDate(date: string | Date): string {
  * Escape markdown special characters for Telegram
  */
 export function escapeMarkdown(text: string): string {
-    return text.replace(/([*\[\]`])/g, "\\$1");
+    return text.replace(/([*\[\]`_])/g, "\\$1");
 }
 
 /**

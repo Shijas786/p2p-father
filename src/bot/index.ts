@@ -143,11 +143,11 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         
         const buyerUsername = trade.buyer_username;
         const buyerFirstName = trade.buyer_first_name || "Buyer";
-        const buyer = buyerUsername ? `@${escapeMarkdown(buyerUsername)}` : escapeMarkdown(buyerFirstName);
+        const buyer = buyerUsername ? `@${escapeHTML(buyerUsername)}` : escapeHTML(buyerFirstName);
 
         const sellerUsername = trade.seller_username;
         const sellerFirstName = trade.seller_first_name || "Seller";
-        const seller = sellerUsername ? `@${escapeMarkdown(sellerUsername)}` : escapeMarkdown(sellerFirstName);
+        const seller = sellerUsername ? `@${escapeHTML(sellerUsername)}` : escapeHTML(sellerFirstName);
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
         const chain = trade.chain || order?.chain || 'bsc';
 
@@ -155,21 +155,21 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         let txLine = "✅ Escrowed & settled on-chain";
         if (trade.release_tx_hash && !trade.release_tx_hash.startsWith('relayed')) {
             const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
-            txLine = `✅ [View Transaction](${escapeMarkdown(explorer)}${escapeMarkdown(trade.release_tx_hash)})`;
+            txLine = `✅ <a href="${escapeHTML(explorer)}${escapeHTML(trade.release_tx_hash)}">View Transaction</a>`;
         }
 
         const msg = [
-            "🎉 *Trade Completed!*",
+            "🎉 <b>Trade Completed!</b>",
             "",
-            `${seller} sold *${escapeMarkdown(formatTokenAmount(trade.amount, trade.token))}* to ${buyer}`,
-            `💰 Deal: ₹${escapeMarkdown(totalFiat)}`,
-            `🔗 Chain: ${escapeMarkdown(chain.toUpperCase())}`,
+            `${seller} sold <b>${escapeHTML(formatTokenAmount(trade.amount, trade.token))}</b> to ${buyer}`,
+            `💰 Deal: ₹${escapeHTML(totalFiat)}`,
+            `🔗 Chain: ${escapeHTML(chain.toUpperCase())}`,
             "",
             txLine,
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        await broadcast(msg);
+        await broadcast(msg, undefined, "HTML");
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
