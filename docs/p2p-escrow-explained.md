@@ -55,13 +55,13 @@
   └──────────────┘                    │  Locked: 100 USDC    │
                                       │  Buyer:  0xBuyer     │
                                       │  Fee:    0.5 USDC    │
-                                      │  Deadline: 1 hour    │
+                                      │  Deadline: 30 minutes│
                                       └──────────────────────┘
 
   Smart Contract Call:
   ┌──────────────────────────────────────────────────────────┐
   │ 1. USDC.approve(escrowContract, 100e6)                   │
-  │ 2. escrow.createTrade(buyerAddr, usdcAddr, 100e6, 3600) │
+  │ 2. escrow.createTrade(buyerAddr, usdcAddr, 100e6, 1800) │
   │    → emits TradeCreated event                            │
   │    → returns tradeId = 1                                 │
   └──────────────────────────────────────────────────────────┘
@@ -135,7 +135,7 @@
  ALTERNATE: TIMEOUT REFUND (if buyer doesn't pay)
 ═══════════════════════════════════════════════════════════════════════
 
-  ⏰ 1 hour passes, buyer never sent fiat...
+  ⏰ 30 minutes passes, buyer never sent fiat...
 
   ┌──────────────────────────────────────────────────────────┐
   │ escrow.refund(tradeId)                                   │

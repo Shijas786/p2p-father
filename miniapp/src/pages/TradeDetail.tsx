@@ -136,8 +136,8 @@ export function TradeDetail({ user }: Props) {
     useEffect(() => {
         if (trade) {
             const calculateTime = () => {
-                // If fiat sent, wait 1 hour from fiat_sent_at
-                // If only escrow locked, wait 1 hour from escrow_locked_at
+                // If fiat sent, wait 30 minutes from fiat_sent_at
+                // If only escrow locked, wait 30 minutes from escrow_locked_at
                 const baseTimeStr = trade.fiat_sent_at || trade.escrow_locked_at || trade.created_at;
                 if (!baseTimeStr) {
                     setDisputeTimer(0);
@@ -147,10 +147,10 @@ export function TradeDetail({ user }: Props) {
                 const startTime = new Date(baseTimeStr).getTime();
                 const now = Date.now();
                 const diff = now - startTime;
-                const oneHour = 60 * 60 * 1000;
+                const thirtyMins = 30 * 60 * 1000;
 
-                if (diff < oneHour) {
-                    setDisputeTimer(oneHour - diff);
+                if (diff < thirtyMins) {
+                    setDisputeTimer(thirtyMins - diff);
                 } else {
                     setDisputeTimer(0);
                 }
@@ -451,8 +451,8 @@ export function TradeDetail({ user }: Props) {
         setActionLoading(true);
         setError('');
         try {
-            // Duration: 1 hour (3600 seconds)
-            const duration = BigInt(3600);
+            // Duration: 30 minutes (1800 seconds)
+            const duration = BigInt(1800);
 
             const isBsc = tradeChain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;

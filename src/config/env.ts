@@ -52,7 +52,7 @@ const envSchema = z.object({
     FEE_BPS: z.string().default("50"),
     DEFAULT_CHAIN: z.string().default("base"),
     DEFAULT_TOKEN: z.string().default("USDC"),
-    ESCROW_TIMEOUT_SECONDS: z.string().default("3600"),
+    ESCROW_TIMEOUT_SECONDS: z.string().default("1800"),
     AUTO_RELEASE_SECONDS: z.string().default("2700"),
     NODE_ENV: z.string().default("development"),
     COMMUNITY_CHAT_ID: z.string().default(""),

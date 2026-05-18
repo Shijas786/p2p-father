@@ -44,8 +44,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Maximum escrow duration (24 hours)
     uint256 public constant MAX_ESCROW_DURATION = 24 hours;
 
-    /// @notice Default escrow duration (1 hour)
-    uint256 public constant DEFAULT_ESCROW_DURATION = 1 hours;
+    /// @notice Default escrow duration (30 minutes)
+    uint256 public constant DEFAULT_ESCROW_DURATION = 30 minutes;
 
     /// @notice Time seller has to confirm fiat receipt before auto-release to buyer (45 min)
     /// After buyer marks fiat as sent, seller has this long to confirm or dispute.
@@ -294,7 +294,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
      * @param _buyer Address of the buyer who will receive USDC
      * @param _token Token to escrow (must be approved, e.g., USDC)
      * @param _amount Amount of tokens to escrow
-     * @param _duration Escrow duration in seconds (default: 1 hour)
+     * @param _duration Escrow duration in seconds (default: 30 minutes)
      * @return tradeId The ID of the created trade
      *
      * FLOW: Seller approves this contract → calls createTrade() → USDC moves to contract
@@ -312,7 +312,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         require(_amount >= MIN_TRADE_AMOUNT, "Amount too small (min 1 USDC)");
         require(activeTradeCount[msg.sender] < maxActiveTradesPerUser, "Too many active trades");
 
-        // Set duration (default 1 hour, max 24 hours)
+        // Set duration (default 30 minutes, max 24 hours)
         if (_duration == 0) _duration = DEFAULT_ESCROW_DURATION;
         require(_duration <= MAX_ESCROW_DURATION, "Duration too long (max 24h)");
 

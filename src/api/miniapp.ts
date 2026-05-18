@@ -860,7 +860,7 @@ router.post("/trades", async (req: Request, res: Response) => {
                     receiveAddress,
                     tokenAddress,
                     tradeAmount.toString(),
-                    3600, // 1 hour
+                    1800, // 30 mins
                     order.chain as any
                 );
                 onChainTradeId = tradeIdStr as any;
@@ -1119,16 +1119,16 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Cannot dispute in current state" });
         }
 
-        // 🛡️ ENFORCE 1-HOUR DISPUTE DELAY
+        // 🛡️ ENFORCE 30-MINUTE DISPUTE DELAY
         const baseTimeStr = trade.fiat_sent_at || trade.escrow_locked_at || trade.created_at;
         if (baseTimeStr) {
             const startTime = new Date(baseTimeStr).getTime();
             const now = Date.now();
             const diff = now - startTime;
-            const oneHour = 60 * 60 * 1000;
+            const thirtyMins = 30 * 60 * 1000;
 
-            if (diff < oneHour) {
-                const remaining = Math.ceil((oneHour - diff) / 60000);
+            if (diff < thirtyMins) {
+                const remaining = Math.ceil((thirtyMins - diff) / 60000);
                 return res.status(400).json({ 
                     error: `Dispute button is meditating. Please wait ${remaining} more minutes.` 
                 });

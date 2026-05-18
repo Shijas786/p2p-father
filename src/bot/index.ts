@@ -2404,7 +2404,7 @@ bot.on("callback_query:data", async (ctx) => {
                             user.wallet_address!,
                             tokenAddress,
                             order.amount.toString(),
-                            3600
+                            1800
                         );
                         // Old relayerCreateTrade returned { txHash, tradeId }, new one returns tradeId string
                         const txHash = "pending"; // We don't get hash easily from createRelayedTrade wrapper unless modified, but it logs it. 
@@ -2488,7 +2488,7 @@ bot.on("callback_query:data", async (ctx) => {
                                 buyerUser!.wallet_address!, // Buyer
                                 tokenAddress,
                                 order.amount.toString(),
-                                3600
+                                1800
                             )
                         };
 

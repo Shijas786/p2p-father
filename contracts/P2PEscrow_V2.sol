@@ -27,8 +27,8 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Maximum escrow duration (24 hours)
     uint256 public constant MAX_ESCROW_DURATION = 24 hours;
 
-    /// @notice Default escrow duration (1 hour)
-    uint256 public constant DEFAULT_ESCROW_DURATION = 1 hours;
+    /// @notice Default escrow duration (30 minutes)
+    uint256 public constant DEFAULT_ESCROW_DURATION = 30 minutes;
 
     // ═══════════════════════════════════════════════════════════════
     //                          TYPES
