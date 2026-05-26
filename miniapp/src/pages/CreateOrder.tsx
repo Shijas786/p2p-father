@@ -136,7 +136,7 @@ export function CreateOrder() {
     const { switchChainAsync } = useSwitchChain();
     const { showToast } = useToast();
 
-    const TOKENS: Record<string, string[]> = {
+    const TOKENS_BY_CHAIN: Record<string, string[]> = {
         base: ['USDT', 'USDC'],
         bsc: ['USDT', 'USDC', 'BNB']
     };
