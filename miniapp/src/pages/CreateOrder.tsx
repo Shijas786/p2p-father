@@ -256,7 +256,7 @@ export function CreateOrder() {
             if (!switched) return;
 
             // Unlimited approval using maxUint256
-            const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
+            const currentEscrow = chain === 'bsc' ? "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a" : escrowAddress;
             const isBsc = chain === 'bsc';
             const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
 
@@ -313,7 +313,7 @@ export function CreateOrder() {
                 }
 
                 const amountUnits = parseUnits(amount, decimals);
-                const currentEscrow = chain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : escrowAddress;
+                const currentEscrow = chain === 'bsc' ? "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a" : escrowAddress;
 
                 const switched = await smartSwitch(targetChainId);
                 if (!switched) return;

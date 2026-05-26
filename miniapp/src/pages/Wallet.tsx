@@ -140,7 +140,7 @@ export function Wallet({ user }: Props) {
     // ═══ VAULT: Allowance check for external wallets ═══
     const vaultContracts = (CONTRACTS as any)[vaultChain];
     const vaultTokenAddress = vaultContracts?.tokens?.[vaultToken] as `0x${string}` | undefined;
-    const vaultEscrowAddress = (vaultChain === 'bsc' ? "0x74edAcd5FefFe2fb59b7b0942Ed99e49A3AB853a" : vaultContracts?.escrow) as `0x${string}` | undefined;
+    const vaultEscrowAddress = (vaultChain === 'bsc' ? "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a" : vaultContracts?.escrow) as `0x${string}` | undefined;
     const vaultDecimals = (vaultChain === 'bsc') ? 18 : 6;
     const isNativeVault = vaultToken === 'BNB';
 
