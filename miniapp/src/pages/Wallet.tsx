@@ -27,7 +27,7 @@ export function Wallet({ user }: Props) {
     // Send State
     const [sendTo, setSendTo] = useState('');
     const [sendAmount, setSendAmount] = useState('');
-    const [sendToken, setSendToken] = useState('USDC');
+    const [sendToken, setSendToken] = useState('USDT');
     const [sending, setSending] = useState(false);
     const [sendResult, setSendResult] = useState('');
     const [sendChain, setSendChain] = useState<'base' | 'bsc'>('base');
@@ -50,7 +50,7 @@ export function Wallet({ user }: Props) {
     const [showVaultAction, setShowVaultAction] = useState<'deposit' | 'withdraw' | null>(null);
     const [vaultAmount, setVaultAmount] = useState('');
     const [vaultChain, setVaultChain] = useState<'base' | 'bsc'>('base');
-    const [vaultToken, setVaultToken] = useState<'USDC' | 'USDT' | 'BNB'>('USDC');
+    const [vaultToken, setVaultToken] = useState<'USDC' | 'USDT' | 'BNB'>('USDT');
     const [vaultLoading, setVaultLoading] = useState(false);
     const [vaultError, setVaultError] = useState('');
     const [vaultSuccess, setVaultSuccess] = useState('');
@@ -583,7 +583,7 @@ export function Wallet({ user }: Props) {
 
                         {/* Token Select */}
                         <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                            {['USDC', 'USDT', 'ETH', 'BNB'].map(t => (
+                            {['USDT', 'USDC', 'ETH', 'BNB'].map(t => (
                                 <button
                                     key={t}
                                     className={`btn btn-sm ${sendToken === t ? 'btn-primary' : 'btn-secondary'}`}
@@ -647,7 +647,7 @@ export function Wallet({ user }: Props) {
                             <div className="segmented-control">
                                 <button
                                     className={`segmented-btn chain-base ${vaultChain === 'base' ? 'active' : ''}`}
-                                    onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDC'); }}
+                                    onClick={() => { setVaultChain('base'); if (vaultToken === 'BNB') setVaultToken('USDT'); }}
                                 >
                                     <IconTokenETH size={14} /> Base
                                 </button>
@@ -664,7 +664,7 @@ export function Wallet({ user }: Props) {
                         <div className="selection-group">
                             <label className="selection-label">Select Token</label>
                             <div className="token-grid">
-                                {['USDC', 'USDT', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
+                                {['USDT', 'USDC', ...(vaultChain === 'bsc' ? ['BNB'] : [])].map(t => (
                                     <button
                                         key={t}
                                         className={`token-btn ${vaultToken === t ? 'active' : ''}`}

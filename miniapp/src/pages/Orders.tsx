@@ -143,7 +143,7 @@ export function Orders({ user }: Props) {
                             <div
                                 key={trade.id}
                                 className="orders-card"
-                                onClick={() => { haptic('light'); navigate(`/trade/${trade.id}`); }}
+                                onClick={() => { haptic('light'); navigate(`/trade/${trade.id}`, { viewTransition: true }); }}
                             >
                                 <div className="orders-card-top">
                                     <div className="orders-card-left">

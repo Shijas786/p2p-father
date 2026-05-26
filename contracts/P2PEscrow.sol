@@ -5,40 +5,49 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title P2PEscrow
- * @notice Trustless P2P escrow contract for USDC trades on Base
- * @dev Handles the crypto side of fiat-to-crypto P2P trades
- * 
+ * @notice Trustless P2P escrow contract for fiat-to-crypto trades
+ * @dev Handles the crypto side of P2P trades. Supports ERC20 tokens AND native BNB/ETH.
+ *
  * FLOW:
- * 1. Seller creates a trade → deposits USDC into this contract
- * 2. Buyer sends fiat off-chain (UPI/bank) → marks as paid in Telegram
- * 3. Seller confirms fiat received → bot calls release()
- * 4. Contract sends USDC to buyer (minus 0.5% fee to admin)
- * 
+ * 1. Seller deposits USDC/USDT/BNB into this contract vault
+ * 2. Relayer (bot) creates a trade — locks funds from seller's vault into escrow
+ * 3. Buyer sends fiat off-chain (UPI/bank) → marks as paid in Telegram
+ * 4. Seller confirms fiat received → bot calls release()
+ * 5. Contract sends crypto to buyer (minus 0.5% fee to admin)
+ *
+ * NATIVE TOKEN:
+ * - address(0) is used as the sentinel for native BNB/ETH
+ * - deposit() is payable — send msg.value for BNB deposits
+ * - createTrade() is payable — seller can directly escrow BNB
+ *
  * SAFETY:
- * - Two-phase timeout:
- *     Before fiat sent → timeout refunds to SELLER (fair cancel)
- *     After fiat sent  → timeout auto-releases to BUYER (anti-scam)
- * - Dispute system: either party can dispute, admin resolves
+ * - Two-phase timeout: before fiat → refund to seller; after fiat → must dispute
+ * - Dispute system: either party disputes, admin resolves
  * - Only approved relayers (bot) can trigger release/refund
  * - ReentrancyGuard on all fund-moving functions
+ * - Pausable for emergency stop
  */
-contract P2PEscrow is Ownable, ReentrancyGuard {
+contract P2PEscrow is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // ═══════════════════════════════════════════════════════════════
     //                          CONSTANTS
     // ═══════════════════════════════════════════════════════════════
 
-    /// @notice Fee in basis points (100 = 1%)
-    uint256 public feeBps = 100;
+    /// @notice Sentinel address for native BNB/ETH (matches bot's address(0) convention)
+    address public constant NATIVE_TOKEN = address(0);
+
+    /// @notice Fee in basis points (50 = 0.5%)
+    uint256 public feeBps = 50;
 
     /// @notice Maximum fee cap (5% = 500 bps) — safety limit
     uint256 public constant MAX_FEE_BPS = 500;
 
-    /// @notice Minimum trade amount (1 USDC = 1e6)
+    /// @notice Minimum trade amount (sanity check — bot validates proper amounts)
     uint256 public constant MIN_TRADE_AMOUNT = 1e6;
 
     /// @notice Maximum escrow duration (24 hours)
@@ -47,43 +56,45 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Default escrow duration (30 minutes)
     uint256 public constant DEFAULT_ESCROW_DURATION = 30 minutes;
 
-
-
     // ═══════════════════════════════════════════════════════════════
     //                          TYPES
     // ═══════════════════════════════════════════════════════════════
 
     enum TradeStatus {
-        None,           // 0 - Trade doesn't exist
-        Active,         // 1 - USDC deposited, waiting for fiat
-        FiatSent,       // 2 - Buyer claims fiat sent
-        Disputed,       // 3 - One party raised a dispute
-        Completed,      // 4 - USDC released to buyer ✅
-        Refunded,       // 5 - USDC returned to seller
-        Cancelled       // 6 - Trade cancelled before fiat sent
+        None,       // 0 - Trade doesn't exist
+        Active,     // 1 - Funds deposited, waiting for fiat
+        FiatSent,   // 2 - Buyer claims fiat sent
+        Disputed,   // 3 - One party raised a dispute
+        Completed,  // 4 - Crypto released to buyer ✅
+        Refunded,   // 5 - Crypto returned to seller
+        Cancelled   // 6 - Trade cancelled before fiat sent
     }
 
     struct Trade {
-        // Parties
-        address seller;          // Deposits USDC
-        address buyer;           // Receives USDC (minus fee)
-        
-        // Token & Amount
-        address token;           // USDC address
-        uint256 amount;          // Total USDC deposited by seller
-        uint256 feeAmount;       // Calculated fee (0.5%)
-        uint256 buyerReceives;   // amount - feeAmount
-        
-        // State
-        TradeStatus status;
-        uint256 createdAt;
-        uint256 deadline;             // Auto-refund after this (if fiat NOT sent)
-        uint256 fiatSentAt;           // Timestamp when buyer marked fiat as sent
+        // Slot 0 (29 bytes used)
+        address seller;           // 20 bytes
+        TradeStatus status;       // 1 byte (enum)
+        uint32 createdAt;         // 4 bytes
+        uint32 deadline;          // 4 bytes
 
-        
-        // Dispute
-        address disputeInitiator;
-        string disputeReason;
+        // Slot 1 (24 bytes used)
+        address buyer;            // 20 bytes
+        uint32 fiatSentAt;        // 4 bytes
+
+        // Slot 2
+        address token;            // 20 bytes
+
+        // Slot 3
+        address disputeInitiator; // 20 bytes
+
+        // Slot 4
+        uint256 amount;           // 32 bytes (full trade amount)
+
+        // Slot 5
+        uint256 feeAmount;        // 32 bytes (computed once at creation)
+
+        // Slot 6
+        uint256 buyerReceives;    // 32 bytes (computed once at creation)
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -96,10 +107,10 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice All trades: tradeId => Trade
     mapping(uint256 => Trade) public trades;
 
-    /// @notice Vault balances: User => Token => Amount
+    /// @notice Vault balances: User => Token => Amount (address(0) = native BNB)
     mapping(address => mapping(address => uint256)) public balances;
 
-    /// @notice Approved tokens (e.g., USDC)
+    /// @notice Approved tokens (e.g., USDC, USDT, address(0) for native BNB)
     mapping(address => bool) public approvedTokens;
 
     /// @notice Approved relayers (bot addresses that can trigger release/refund)
@@ -108,11 +119,17 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     /// @notice Fee collection wallet
     address public feeCollector;
 
-    /// @notice Total fees collected (per token)
+    /// @notice Total fees collected (per token, address(0) for native)
     mapping(address => uint256) public totalFeesCollected;
 
     /// @notice Active trades per user (to prevent spam)
     mapping(address => uint256) public activeTradeCount;
+
+    /// @notice Total vault balances per token
+    mapping(address => uint256) public totalVaultBalances;
+
+    /// @notice Total escrowed balances per token
+    mapping(address => uint256) public totalEscrowedBalances;
 
     /// @notice Max active trades per user
     uint256 public maxActiveTradesPerUser = 10;
@@ -135,8 +152,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     );
 
     event FiatMarkedSent(uint256 indexed tradeId, address indexed buyer);
-
-
 
     event TradeReleased(
         uint256 indexed tradeId,
@@ -190,17 +205,42 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
 
     /**
      * @param _feeCollector Address to receive trading fees
-     * @param _usdc USDC token address on Base
+     * @param _initialTokens Array of initial approved token addresses (use address(0) for native BNB/ETH)
      */
-    constructor(address _feeCollector, address _usdc) Ownable(msg.sender) {
+    constructor(address _feeCollector, address[] memory _initialTokens) Ownable(msg.sender) {
         require(_feeCollector != address(0), "Invalid fee collector");
-        require(_usdc != address(0), "Invalid USDC address");
 
         feeCollector = _feeCollector;
-        approvedTokens[_usdc] = true;
-
-        emit TokenApproved(_usdc, true);
         emit FeeCollectorUpdated(address(0), _feeCollector);
+
+        for (uint256 i = 0; i < _initialTokens.length; i++) {
+            approvedTokens[_initialTokens[i]] = true;
+            emit TokenApproved(_initialTokens[i], true);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //                    NATIVE BNB RECEIVER
+    // ═══════════════════════════════════════════════════════════════
+
+    /// @notice Accept native BNB sent directly (e.g., from deposit calls)
+    receive() external payable {}
+
+    // ═══════════════════════════════════════════════════════════════
+    //                    INTERNAL HELPERS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * @dev Transfer tokens out of the contract — handles native BNB and ERC20 uniformly.
+     * Always called after state updates (checks-effects-interactions pattern).
+     */
+    function _transferOut(address _token, address _to, uint256 _amount) internal {
+        if (_token == NATIVE_TOKEN) {
+            (bool success, ) = _to.call{value: _amount}("");
+            require(success, "Native transfer failed");
+        } else {
+            IERC20(_token).safeTransfer(_to, _amount);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -209,27 +249,44 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
 
     /**
      * @notice Deposit funds into the vault
+     * @dev For native BNB: pass token=address(0), amount=X, and send msg.value=X
+     *      For ERC20: pass token=tokenAddress, amount=X, msg.value must be 0
      */
-    function deposit(address _token, uint256 _amount) external nonReentrant {
+    function deposit(address _token, uint256 _amount) external payable nonReentrant whenNotPaused {
         require(approvedTokens[_token], "Token not approved");
         require(_amount > 0, "Amount must be > 0");
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+
+        if (_token == NATIVE_TOKEN) {
+            // Native BNB deposit
+            require(msg.value == _amount, "BNB amount mismatch");
+        } else {
+            // ERC20 deposit
+            require(msg.value == 0, "Do not send BNB with ERC20 deposit");
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        }
+
         balances[msg.sender][_token] += _amount;
+        totalVaultBalances[_token] += _amount;
         emit Deposit(msg.sender, _token, _amount);
     }
 
     /**
-     * @notice Withdraw unused funds
+     * @notice Withdraw unused funds from vault
      */
     function withdraw(address _token, uint256 _amount) external nonReentrant {
         require(balances[msg.sender][_token] >= _amount, "Insufficient vault balance");
+
+        // Effects first
         balances[msg.sender][_token] -= _amount;
-        IERC20(_token).safeTransfer(msg.sender, _amount);
+        totalVaultBalances[_token] -= _amount;
+
+        // Interaction last
+        _transferOut(_token, msg.sender, _amount);
         emit Withdraw(msg.sender, _token, _amount);
     }
 
     /**
-     * @notice Relayer creates a trade using Seller's Vault funds (Match)
+     * @notice Relayer creates a trade using Seller's Vault funds
      */
     function createTradeByRelayer(
         address _seller,
@@ -237,19 +294,24 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         address _token,
         uint256 _amount,
         uint256 _duration
-    ) external nonReentrant returns (uint256 tradeId) {
-        // Only Fee Collector (Relayer), Approved Relayer, or Owner can match trades
+    ) external nonReentrant whenNotPaused returns (uint256 tradeId) {
         require(approvedRelayers[msg.sender] || msg.sender == owner(), "Caller not Relayer");
         require(_buyer != address(0), "Invalid buyer");
         require(_seller != _buyer, "Self trade");
+        require(approvedTokens[_token], "Token not approved");
         require(_amount >= MIN_TRADE_AMOUNT, "Too small");
         require(balances[_seller][_token] >= _amount, "Insufficient seller vault balance");
-        require(activeTradeCount[_seller] < maxActiveTradesPerUser, "Too many trades");
+        require(activeTradeCount[_seller] < maxActiveTradesPerUser, "Seller too many active trades");
+        require(activeTradeCount[_buyer] < maxActiveTradesPerUser, "Buyer too many active trades");
 
+        // Move from vault to escrow (pure accounting — no external transfer)
         balances[_seller][_token] -= _amount;
+        totalVaultBalances[_token] -= _amount;
+        totalEscrowedBalances[_token] += _amount;
 
         if (_duration == 0) _duration = DEFAULT_ESCROW_DURATION;
-        require(_duration <= MAX_ESCROW_DURATION, "Too long");
+        require(_duration <= MAX_ESCROW_DURATION, "Duration too long");
+        require(block.timestamp + _duration <= type(uint32).max, "Timestamp overflow");
 
         uint256 feeAmount = (_amount * feeBps) / 10000;
         uint256 buyerReceives = _amount - feeAmount;
@@ -265,14 +327,15 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             feeAmount: feeAmount,
             buyerReceives: buyerReceives,
             status: TradeStatus.Active,
-            createdAt: block.timestamp,
-            deadline: block.timestamp + _duration,
+            createdAt: uint32(block.timestamp),
+            deadline: uint32(block.timestamp + _duration),
             fiatSentAt: 0,
-            disputeInitiator: address(0),
-            disputeReason: ""
+            disputeInitiator: address(0)
         });
 
         activeTradeCount[_seller]++;
+        activeTradeCount[_buyer]++;
+
         emit TradeCreated(tradeId, _seller, _buyer, _token, _amount, feeAmount, block.timestamp + _duration);
     }
 
@@ -281,39 +344,41 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * @notice Seller creates a trade and deposits USDC into escrow
-     * @param _buyer Address of the buyer who will receive USDC
-     * @param _token Token to escrow (must be approved, e.g., USDC)
-     * @param _amount Amount of tokens to escrow
-     * @param _duration Escrow duration in seconds (default: 30 minutes)
-     * @return tradeId The ID of the created trade
-     *
-     * FLOW: Seller approves this contract → calls createTrade() → USDC moves to contract
+     * @notice Seller creates a trade and directly deposits crypto into escrow
+     * @dev For native BNB: pass token=address(0), amount=X, send msg.value=X
+     *      For ERC20: pass token=tokenAddr, amount=X, msg.value must be 0
      */
     function createTrade(
         address _buyer,
         address _token,
         uint256 _amount,
         uint256 _duration
-    ) external nonReentrant returns (uint256 tradeId) {
-        // Validations
+    ) external payable nonReentrant whenNotPaused returns (uint256 tradeId) {
         require(_buyer != address(0), "Invalid buyer address");
         require(_buyer != msg.sender, "Cannot trade with yourself");
         require(approvedTokens[_token], "Token not approved");
-        require(_amount >= MIN_TRADE_AMOUNT, "Amount too small (min 1 USDC)");
+        require(_amount >= MIN_TRADE_AMOUNT, "Amount too small");
         require(activeTradeCount[msg.sender] < maxActiveTradesPerUser, "Too many active trades");
+        require(activeTradeCount[_buyer] < maxActiveTradesPerUser, "Buyer too many active trades");
 
-        // Set duration (default 30 minutes, max 24 hours)
         if (_duration == 0) _duration = DEFAULT_ESCROW_DURATION;
         require(_duration <= MAX_ESCROW_DURATION, "Duration too long (max 24h)");
+        require(block.timestamp + _duration <= type(uint32).max, "Timestamp overflow");
 
-        // Calculate fee
+        // Collect funds
+        if (_token == NATIVE_TOKEN) {
+            require(msg.value == _amount, "BNB amount mismatch");
+        } else {
+            require(msg.value == 0, "Do not send BNB with ERC20 trade");
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        }
+
         uint256 feeAmount = (_amount * feeBps) / 10000;
         uint256 buyerReceives = _amount - feeAmount;
 
-        // Create trade
         tradeCounter++;
         tradeId = tradeCounter;
+        totalEscrowedBalances[_token] += _amount;
 
         trades[tradeId] = Trade({
             seller: msg.sender,
@@ -323,39 +388,25 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             feeAmount: feeAmount,
             buyerReceives: buyerReceives,
             status: TradeStatus.Active,
-            createdAt: block.timestamp,
-            deadline: block.timestamp + _duration,
+            createdAt: uint32(block.timestamp),
+            deadline: uint32(block.timestamp + _duration),
             fiatSentAt: 0,
-            disputeInitiator: address(0),
-            disputeReason: ""
+            disputeInitiator: address(0)
         });
 
-        // Track active trades
         activeTradeCount[msg.sender]++;
+        activeTradeCount[_buyer]++;
 
-        // Transfer USDC from seller to this contract
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-
-        emit TradeCreated(
-            tradeId,
-            msg.sender,
-            _buyer,
-            _token,
-            _amount,
-            feeAmount,
-            block.timestamp + _duration
-        );
+        emit TradeCreated(tradeId, msg.sender, _buyer, _token, _amount, feeAmount, block.timestamp + _duration);
     }
 
     /**
      * @notice Buyer marks that they've sent fiat payment
      * @param _tradeId ID of the trade
-     *
-     * This is just a status update — the actual fiat is sent off-chain (UPI/bank)
      */
-    function markFiatSent(uint256 _tradeId) 
-        external 
-        tradeExists(_tradeId) 
+    function markFiatSent(uint256 _tradeId)
+        external
+        tradeExists(_tradeId)
     {
         Trade storage trade = trades[_tradeId];
         require(msg.sender == trade.buyer, "Only buyer can mark fiat sent");
@@ -363,23 +414,18 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         require(block.timestamp <= trade.deadline, "Trade expired");
 
         trade.status = TradeStatus.FiatSent;
-        trade.fiatSentAt = block.timestamp;
-        // No auto-release deadline (Legacy)
+        trade.fiatSentAt = uint32(block.timestamp);
 
         emit FiatMarkedSent(_tradeId, msg.sender);
     }
 
     /**
-     * @notice Release USDC to buyer after seller confirms fiat receipt
+     * @notice Release crypto to buyer after seller confirms fiat receipt
      * @param _tradeId ID of the trade
      *
      * Can be called by:
-     * - The seller themselves (confirming fiat received)
-     * - An approved relayer (the Telegram bot backend)
-     *
-     * SPLITS:
-     * - buyerReceives (99.5%) → buyer address
-     * - feeAmount (0.5%) → feeCollector (admin wallet)
+     * - The seller themselves
+     * - An approved relayer (Telegram bot)
      */
     function release(uint256 _tradeId)
         external
@@ -388,7 +434,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
     {
         Trade storage trade = trades[_tradeId];
 
-        // Only seller or relayer can release
         require(
             msg.sender == trade.seller || approvedRelayers[msg.sender] || msg.sender == owner(),
             "Not authorized to release"
@@ -398,30 +443,31 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             "Trade not in releasable state"
         );
 
-        // Update status
+        // Effects first
         trade.status = TradeStatus.Completed;
         activeTradeCount[trade.seller]--;
+        activeTradeCount[trade.buyer]--;
+        totalEscrowedBalances[trade.token] -= trade.amount;
 
-        // Transfer to buyer (amount - fee)
-        IERC20(trade.token).safeTransfer(trade.buyer, trade.buyerReceives);
+        // Cache before interactions
+        address token = trade.token;
+        address buyer = trade.buyer;
+        uint256 buyerReceives = trade.buyerReceives;
+        uint256 feeAmount = trade.feeAmount;
 
-        // Transfer fee to admin
-        if (trade.feeAmount > 0) {
-            IERC20(trade.token).safeTransfer(feeCollector, trade.feeAmount);
-            totalFeesCollected[trade.token] += trade.feeAmount;
+        // Interactions last
+        _transferOut(token, buyer, buyerReceives);
+        if (feeAmount > 0) {
+            _transferOut(token, feeCollector, feeAmount);
+            totalFeesCollected[token] += feeAmount;
         }
 
-        emit TradeReleased(_tradeId, trade.buyer, trade.buyerReceives, trade.feeAmount);
+        emit TradeReleased(_tradeId, buyer, buyerReceives, feeAmount);
     }
 
     /**
-     * @notice Refund USDC back to seller
+     * @notice Refund crypto back to seller
      * @param _tradeId ID of the trade
-     *
-     * Can be triggered by:
-     * - Seller (if fiat not yet sent — cancel)
-     * - Anyone (if deadline passed — timeout refund)
-     * - Admin/Relayer (dispute resolution)
      */
     function refund(uint256 _tradeId)
         external
@@ -435,19 +481,19 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         bool isRelayer = approvedRelayers[msg.sender] || msg.sender == owner();
 
         if (isTimeout) {
-            // Timeout refund ONLY allowed if buyer hasn't sent fiat yet
+            // Timeout: only if fiat NOT yet sent
             require(
                 trade.status == TradeStatus.Active,
-                "Fiat already sent - use autoRelease for buyer protection"
+                "Fiat already sent - raise a dispute"
             );
         } else if (isSeller) {
-            // Seller can cancel only before fiat is sent
+            // Seller cancel: only before fiat sent
             require(
                 trade.status == TradeStatus.Active,
                 "Cannot cancel after fiat sent"
             );
         } else if (isRelayer) {
-            // Relayer/admin can refund in more states (dispute resolution)
+            // Relayer/admin can refund in dispute resolution
             require(
                 trade.status == TradeStatus.Active ||
                 trade.status == TradeStatus.FiatSent ||
@@ -458,19 +504,24 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             revert("Not authorized to refund");
         }
 
-        // Update status
+        // Effects first
         trade.status = isTimeout || (isSeller && trade.status == TradeStatus.Active)
             ? TradeStatus.Cancelled
             : TradeStatus.Refunded;
         activeTradeCount[trade.seller]--;
+        activeTradeCount[trade.buyer]--;
+        totalEscrowedBalances[trade.token] -= trade.amount;
 
-        // Return full amount to seller (no fee on refunds)
-        IERC20(trade.token).safeTransfer(trade.seller, trade.amount);
+        // Cache before interaction
+        address token = trade.token;
+        address seller = trade.seller;
+        uint256 amount = trade.amount;
 
-        emit TradeRefunded(_tradeId, trade.seller, trade.amount);
+        // Interaction last — return full amount, no fee on refunds
+        _transferOut(token, seller, amount);
+
+        emit TradeRefunded(_tradeId, seller, amount);
     }
-
-
 
     // ═══════════════════════════════════════════════════════════════
     //                      DISPUTE FUNCTIONS
@@ -480,8 +531,6 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
      * @notice Either party can raise a dispute
      * @param _tradeId ID of the trade
      * @param _reason Description of the dispute
-     *
-     * Freezes the trade — only admin can resolve
      */
     function raiseDispute(uint256 _tradeId, string calldata _reason)
         external
@@ -497,13 +546,14 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
             trade.status == TradeStatus.Active || trade.status == TradeStatus.FiatSent,
             "Trade not in disputable state"
         );
+        require(trade.disputeInitiator == address(0), "Dispute already initiated");
+        require(block.timestamp + 72 hours <= type(uint32).max, "Timestamp overflow");
 
         trade.status = TradeStatus.Disputed;
         trade.disputeInitiator = msg.sender;
-        trade.disputeReason = _reason;
 
-        // Extend deadline during dispute (give admin time to resolve)
-        trade.deadline = block.timestamp + 72 hours;
+        // Extend deadline — give admin 72h to resolve
+        trade.deadline = uint32(block.timestamp + 72 hours);
 
         emit TradeDisputed(_tradeId, msg.sender, _reason);
     }
@@ -526,22 +576,31 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         Trade storage trade = trades[_tradeId];
         require(trade.status == TradeStatus.Disputed, "Trade not disputed");
 
+        // Effects first
         activeTradeCount[trade.seller]--;
+        activeTradeCount[trade.buyer]--;
+        totalEscrowedBalances[trade.token] -= trade.amount;
+
+        // Cache before interactions
+        address token = trade.token;
+        address buyer = trade.buyer;
+        address seller = trade.seller;
+        uint256 buyerReceives = trade.buyerReceives;
+        uint256 feeAmount = trade.feeAmount;
+        uint256 amount = trade.amount;
 
         if (_releaseToBuyer) {
-            // Release to buyer (with fee)
             trade.status = TradeStatus.Completed;
-            IERC20(trade.token).safeTransfer(trade.buyer, trade.buyerReceives);
-            if (trade.feeAmount > 0) {
-                IERC20(trade.token).safeTransfer(feeCollector, trade.feeAmount);
-                totalFeesCollected[trade.token] += trade.feeAmount;
+            _transferOut(token, buyer, buyerReceives);
+            if (feeAmount > 0) {
+                _transferOut(token, feeCollector, feeAmount);
+                totalFeesCollected[token] += feeAmount;
             }
-            emit TradeReleased(_tradeId, trade.buyer, trade.buyerReceives, trade.feeAmount);
+            emit TradeReleased(_tradeId, buyer, buyerReceives, feeAmount);
         } else {
-            // Refund to seller (no fee)
             trade.status = TradeStatus.Refunded;
-            IERC20(trade.token).safeTransfer(trade.seller, trade.amount);
-            emit TradeRefunded(_tradeId, trade.seller, trade.amount);
+            _transferOut(token, seller, amount);
+            emit TradeRefunded(_tradeId, seller, amount);
         }
 
         emit DisputeResolved(_tradeId, msg.sender, _releaseToBuyer);
@@ -556,7 +615,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         return trades[_tradeId];
     }
 
-    /// @notice Check if a trade can be refunded (deadline passed)
+    /// @notice Check if a trade's deadline has passed
     function isExpired(uint256 _tradeId) external view tradeExists(_tradeId) returns (bool) {
         return block.timestamp > trades[_tradeId].deadline;
     }
@@ -567,8 +626,9 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         netAmount = _amount - fee;
     }
 
-    /// @notice Get contract's token balance
+    /// @notice Get contract's token balance (address(0) = native BNB)
     function getContractBalance(address _token) external view returns (uint256) {
+        if (_token == NATIVE_TOKEN) return address(this).balance;
         return IERC20(_token).balanceOf(address(this));
     }
 
@@ -584,7 +644,7 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         emit FeeUpdated(oldFee, _newFeeBps);
     }
 
-    /// @notice Approve or remove a token
+    /// @notice Approve or remove a token (use address(0) for native BNB)
     function setApprovedToken(address _token, bool _approved) external onlyOwner {
         approvedTokens[_token] = _approved;
         emit TokenApproved(_token, _approved);
@@ -610,18 +670,36 @@ contract P2PEscrow is Ownable, ReentrancyGuard {
         maxActiveTradesPerUser = _max;
     }
 
+    /// @notice Pause the contract (prevents deposits and new trades)
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Unpause the contract
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //                    EMERGENCY FUNCTIONS
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * @notice Emergency: recover tokens accidentally sent to contract
-     * @dev Only for tokens NOT currently in active escrow
-     * Cannot withdraw tokens that belong to active trades
+     * @notice Emergency: recover excess tokens/BNB accidentally sent to contract
+     * @dev Cannot withdraw funds that belong to active trades or vault
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
-        // Safety check: ensure we're not withdrawing escrowed funds
-        // This is a basic check — in production, track escrowed amounts precisely
-        IERC20(_token).safeTransfer(owner(), _amount);
+        uint256 lockedFunds = totalVaultBalances[_token] + totalEscrowedBalances[_token];
+
+        if (_token == NATIVE_TOKEN) {
+            require(address(this).balance >= lockedFunds + _amount, "Cannot withdraw locked BNB");
+        } else {
+            require(
+                IERC20(_token).balanceOf(address(this)) >= lockedFunds + _amount,
+                "Cannot withdraw escrowed/vault funds"
+            );
+        }
+
+        _transferOut(_token, owner(), _amount);
     }
 }

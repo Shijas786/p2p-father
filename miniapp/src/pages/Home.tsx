@@ -20,7 +20,7 @@ export function Home({ user }: Props) {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [paymentFilter, setPaymentFilter] = useState('All');
-    const [tokenFilter, setTokenFilter] = useState('USDC');
+    const [tokenFilter, setTokenFilter] = useState('USDT');
     const [amountFilter] = useState(0);
 
     const [showProfileId, setShowProfileId] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export function Home({ user }: Props) {
         if (!confirmOrder) return;
         haptic('medium');
         setConfirmOrder(null);
-        navigate(`/trade/new/${confirmOrder.id}`);
+        navigate(`/trade/new/${confirmOrder.id}`, { viewTransition: true });
     }
 
     // Filter orders
@@ -139,7 +139,7 @@ export function Home({ user }: Props) {
                     {/* Persistent Asset Tabs (Under Payment Methods) */}
                     <div className="p2p-asset-tabs-wrap">
                         <div className="p2p-asset-tabs">
-                            {['USDC', 'USDT', 'BNB'].map(t => (
+                            {['USDT', 'USDC', 'BNB'].map(t => (
                                 <button
                                     key={t}
                                     className={`p2p-asset-tab ${tokenFilter === t ? 'active' : ''}`}
@@ -265,7 +265,7 @@ export function Home({ user }: Props) {
                             <div className="p2p-empty-icon">📋</div>
                             <h3>No {tab === 'buy' ? 'sellers' : 'buyers'} found</h3>
                             <p>{paymentFilter !== 'All' ? `No ${paymentFilter} orders available` : 'Be the first to create an ad!'}</p>
-                            <button className="p2p-create-btn" onClick={() => navigate('/ads')}>
+                            <button className="p2p-create-btn" onClick={() => navigate('/ads', { viewTransition: true })}>
                                 + Post Ad
                             </button>
                         </div>

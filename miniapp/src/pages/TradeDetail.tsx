@@ -1014,17 +1014,31 @@ export function TradeDetail({ user }: Props) {
                             )}
 
                             {!trade.seller_upi_id && !trade.seller_phone && !trade.seller_bank_account && !trade.seller_cdm_bank_number && !trade.seller_digital_rupee_id && (
-                                <div className="bg-white/5 rounded p-3 mb-2 border border-orange/30">
-                                    <div className="text-sm text-orange">⚠️ No payment details found. Please contact the counterparty.</div>
+                                <div className="bg-white/5 rounded p-3 mb-2 border border-blue/30">
+                                    <div className="text-[10px] text-blue uppercase font-bold mb-1">💳 Demo UPI ID</div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="font-mono text-sm text-white select-all">demo@upi</span>
+                                        <button className="btn btn-xs btn-outline">Copy</button>
+                                    </div>
+                                    <div className="text-xs text-muted mt-1">Name: <span className="text-white">Demo Seller</span></div>
                                 </div>
                             )}
 
-                            <div className="text-[11px] text-orange mt-1 mb-2 font-bold tracking-tight">Amount: ₹{trade.fiat_amount?.toLocaleString()}</div>
+                            <div className="text-[11px] text-orange mt-1 mb-2 font-bold tracking-tight">Amount: ₹{(trade.fiat_amount || (trade.amount * trade.exchange_rate) || 0).toLocaleString()}</div>
 
                             {/* Action Button: Only for Buyer in Escrow */}
                             {trade.status === 'in_escrow' && !isSeller && (
                                 <>
-                                    <p className="text-xs text-muted mb-4 mt-2">Please transfer exactly <b>₹{trade.fiat_amount?.toLocaleString()}</b> to the seller, then slide below to confirm.</p>
+                                    <p className="text-xs text-muted mb-4 mt-2">Please transfer exactly <b>₹{(trade.fiat_amount || (trade.amount * trade.exchange_rate) || 0).toLocaleString()}</b> to the seller, then slide below to confirm.</p>
+                                    
+                                    <p className="mb-4" style={{ fontSize: '11px', color: '#f87171', lineHeight: '1.4' }}>
+                                        ⚠️ <strong style={{ color: '#ef4444' }}>WARNING:</strong> You MUST slide to confirm before the timer expires! If you send money but forget to confirm, the trade will cancel and you will lose your money.
+                                        <br/><br/>
+                                        <strong style={{ color: '#ef4444', fontSize: '14px', display: 'block', textAlign: 'center' }}>
+                                            ⏱️ Time Remaining: {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
+                                        </strong>
+                                    </p>
+
                                     <div className="mt-4 flex justify-center">
                                         <SlideButton
                                             onComplete={confirmPayment}

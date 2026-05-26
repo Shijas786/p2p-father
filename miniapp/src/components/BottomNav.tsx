@@ -52,6 +52,7 @@ export function BottomNav({ user }: Props) {
                 <NavLink
                     key={tab.path}
                     to={tab.path}
+                    viewTransition
                     className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
                     onClick={() => haptic('selection')}
                     end={tab.path === '/'}

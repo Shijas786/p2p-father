@@ -23,7 +23,7 @@ export function CreateOrder() {
     const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [type, setType] = useState<'sell' | 'buy'>('sell');
-    const [token, setToken] = useState('USDC');
+    const [token, setToken] = useState('USDT');
     const [chain, setChain] = useState('base'); // base | bsc
     const [amount, setAmount] = useState('');
     const [rate, setRate] = useState('');
@@ -136,9 +136,9 @@ export function CreateOrder() {
     const { switchChainAsync } = useSwitchChain();
     const { showToast } = useToast();
 
-    const TOKENS_BY_CHAIN: Record<string, string[]> = {
-        base: ['USDC', 'USDT'],
-        bsc: ['USDC', 'USDT', 'BNB']
+    const TOKENS: Record<string, string[]> = {
+        base: ['USDT', 'USDC'],
+        bsc: ['USDT', 'USDC', 'BNB']
     };
 
     const [reserved, setReserved] = useState(0);
@@ -407,7 +407,7 @@ export function CreateOrder() {
                             <div className="flex gap-2 mb-4">
                                 <button
                                     className={`btn-toggle-net flex-1 ${chain === 'base' ? 'active' : ''}`}
-                                    onClick={() => { setChain('base'); setToken('USDC'); }}
+                                    onClick={() => { setChain('base'); setToken('USDT'); }}
                                 >
                                     Base
                                 </button>

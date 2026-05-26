@@ -2659,7 +2659,7 @@ bot.on("callback_query:data", async (ctx) => {
 
             // Buyer Actions
             if (isBuyer && trade.status === "in_escrow") {
-                details.push("👇 *Action Required:* Send fiat to seller, then click 'I Have Paid'.");
+                details.push("👇 *Action Required:* Send fiat to seller, then click 'I Have Paid'.\n\n⚠️ *WARNING:* You MUST click 'I Have Paid' before the 30-minute timer expires! If you send money but forget to click the button, the trade will cancel and you will lose your money.");
                 keyboard.text("✅ I Have Paid", `trade_pay:${trade.id}`).row();
                 keyboard.text("❌ Cancel Trade", `trade_cancel:${trade.id}`).row();
             }
