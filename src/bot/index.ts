@@ -297,8 +297,7 @@ bot.use(async (ctx, next) => {
             const startPayload = (cmd === "/newad" || cmd === "/sell") ? `${cmd.replace("/", "")}_${chatId}` : "dm";
 
             const keyboard = new InlineKeyboard()
-                .url("🚀 Go to DM", `https://t.me/${username}?start=${startPayload}`)
-                .primary();
+                .url("🚀 Go to DM", `https://t.me/${username}?start=${startPayload}`);
 
             await ctx.reply(
                 [
@@ -389,8 +388,7 @@ bot.command(["start", "open"], async (ctx) => {
         if (groupId) {
             const miniAppUrl = "https://p2pfather.com/miniapp/create";
             const keyboard = new InlineKeyboard()
-                .webApp("📱 Create Ad in Mini App", miniAppUrl)
-                .primary();
+                .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
             await ctx.reply(
                 [
@@ -410,8 +408,7 @@ bot.command(["start", "open"], async (ctx) => {
     if (payload && (payload.startsWith("setup_sell_") || payload.startsWith("setup_buy_"))) {
         const miniAppUrl = "https://p2pfather.com/miniapp/create";
         const keyboard = new InlineKeyboard()
-            .webApp("📱 Create Ad in Mini App", miniAppUrl)
-            .primary();
+            .webApp("📱 Create Ad in Mini App", miniAppUrl);
 
         await ctx.reply(
             [
@@ -433,7 +430,7 @@ bot.command(["start", "open"], async (ctx) => {
         if (order && order.status === "active") {
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
-            const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl).primary();
+            const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
             await ctx.reply(`🔍 *Viewing Ad \\#${escapeMarkdown(orderId.slice(0, 8))}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
         } else {
