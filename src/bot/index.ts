@@ -474,13 +474,6 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
         const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
 
-        const botInfo = await getBotInfo();
-        const cacheBuster = `?v=${Date.now()}`;
-        const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
-        const keyboard = new InlineKeyboard()
-            .url("📱 Open P2PFather App", `https://t.me/${botInfo.username}/app`).row()
-            .url("🤖 Start Bot", `https://t.me/${botInfo.username}?start=dm`);
-
         const welcomeGifPath = path.join(process.cwd(), "assets/welcome.gif");
 
         if (fs.existsSync(welcomeGifPath)) {
@@ -488,23 +481,20 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
                 console.log(`[Welcome] Found GIF at ${welcomeGifPath}, trying to send animation...`);
                 await ctx.api.sendAnimation(ctx.chat.id, new InputFile(welcomeGifPath), {
                     caption: welcomeMsg,
-                    parse_mode: "HTML",
-                    reply_markup: keyboard
+                    parse_mode: "HTML"
                 });
                 console.log(`[Welcome] GIF animation sent successfully to ${ctx.chat.id}`);
             } catch (gifErr: any) {
                 console.error(`[Welcome] Failed to send welcome GIF, falling back to text:`, gifErr.message);
                 await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
-                    parse_mode: "HTML",
-                    reply_markup: keyboard
+                    parse_mode: "HTML"
                 });
                 console.log(`[Welcome] Text fallback sent successfully to ${ctx.chat.id}`);
             }
         } else {
             console.log(`[Welcome] GIF not found at ${welcomeGifPath}, sending text only...`);
             await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
-                parse_mode: "HTML",
-                reply_markup: keyboard
+                parse_mode: "HTML"
             });
             console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id}`);
         }
