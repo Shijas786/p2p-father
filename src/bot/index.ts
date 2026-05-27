@@ -451,24 +451,25 @@ bot.on("my_chat_member", async (ctx) => {
     }
 });
 
-// 👋 Welcome New Members in Groups
-bot.on("message:new_chat_members", async (ctx) => {
+// Deduplication cache to prevent duplicate welcome messages if both event types trigger
+const recentlyWelcomed = new Set<string>();
+function shouldWelcome(userId: number, chatId: number): boolean {
+    const key = `${userId}:${chatId}`;
+    if (recentlyWelcomed.has(key)) return false;
+    recentlyWelcomed.add(key);
+    setTimeout(() => recentlyWelcomed.delete(key), 15000); // 15 seconds cooldown
+    return true;
+}
+
+async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: string; username?: string; is_bot: boolean }) {
     try {
-        const newMembers = ctx.message.new_chat_members;
-        if (!newMembers || newMembers.length === 0) return;
+        if (user.is_bot) return;
+        if (!shouldWelcome(user.id, ctx.chat.id)) return;
 
-        // Skip if the bot itself is added (my_chat_member handles bot activation greeting)
-        const botInfo = await getBotInfo();
-        const filteredMembers = newMembers.filter(m => m.id !== botInfo.id);
-        if (filteredMembers.length === 0) return;
-
-        // Format names/usernames of new members
-        const welcomeNames = filteredMembers.map(m => {
-            return m.username ? `@${escapeHTML(m.username)}` : `<b>${escapeHTML(m.first_name)}</b>`;
-        }).join(", ");
-
+        const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
         const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
 
+        const botInfo = await getBotInfo();
         const cacheBuster = `?v=${Date.now()}`;
         const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
         const keyboard = new InlineKeyboard()
@@ -490,7 +491,45 @@ bot.on("message:new_chat_members", async (ctx) => {
             });
         }
     } catch (e) {
+        console.error("Welcome new member function error:", e);
+    }
+}
+
+// 👋 Welcome New Members in Groups (traditional service message fallback)
+bot.on("message:new_chat_members", async (ctx) => {
+    try {
+        const newMembers = ctx.message.new_chat_members;
+        if (!newMembers || newMembers.length === 0) return;
+
+        // Skip if the bot itself is added (my_chat_member handles bot activation greeting)
+        const botInfo = await getBotInfo();
+        const filteredMembers = newMembers.filter(m => m.id !== botInfo.id);
+        if (filteredMembers.length === 0) return;
+
+        for (const member of filteredMembers) {
+            await sendWelcomeMessage(ctx, member);
+        }
+    } catch (e) {
         console.error("Welcome new member error:", e);
+    }
+});
+
+// 👋 Welcome New Members in Groups via chat_member updates (robust for large supergroups where service messages are disabled)
+bot.on("chat_member", async (ctx) => {
+    try {
+        const update = ctx.chatMember;
+        const oldStatus = update.old_chat_member.status;
+        const newStatus = update.new_chat_member.status;
+
+        // A user joins when they go from left/kicked to member/restricted
+        const isJoin = (oldStatus === "left" || oldStatus === "kicked") && 
+                       (newStatus === "member" || newStatus === "restricted");
+
+        if (!isJoin) return;
+
+        await sendWelcomeMessage(ctx, update.new_chat_member.user);
+    } catch (e) {
+        console.error("Welcome new member (chat_member) error:", e);
     }
 });
 

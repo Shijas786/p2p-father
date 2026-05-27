@@ -282,6 +282,7 @@ async function main() {
         await new Promise(r => setTimeout(r, 3000));
 
         bot.start({
+            allowed_updates: ["message", "callback_query", "chat_member", "my_chat_member"],
             onStart: async (botInfo) => {
                 console.log(`  ✅ Bot started! @${botInfo.username}`);
                 console.log(`  💬 Send /start to @${botInfo.username} to begin`);
