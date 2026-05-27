@@ -353,7 +353,7 @@ class Database {
             attempts++;
             const { data: order } = await db
                 .from("orders")
-                .select("filled_amount, amount")
+                .select("filled_amount, amount, status")
                 .eq("id", orderId)
                 .single();
 
@@ -362,11 +362,17 @@ class Database {
             const oldFilled = parseFloat(order.filled_amount.toString());
             const newFilled = Math.max(0, oldFilled - amount);
 
+            // If the order was already manually cancelled or expired, preserve that status.
+            // Otherwise, since it is no longer fully matched, set it back to active.
+            const newStatus = (order.status === "cancelled" || order.status === "expired")
+                ? order.status
+                : "active";
+
             const { data } = await db
                 .from("orders")
                 .update({
                     filled_amount: newFilled,
-                    status: "active", // Always set back to active if we are reverting a fill
+                    status: newStatus,
                     updated_at: new Date().toISOString()
                 })
                 .eq("id", orderId)

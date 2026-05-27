@@ -1031,14 +1031,6 @@ export function TradeDetail({ user }: Props) {
                                 <>
                                     <p className="text-xs text-muted mb-4 mt-2">Please transfer exactly <b>₹{(trade.fiat_amount || (trade.amount * trade.exchange_rate) || 0).toLocaleString()}</b> to the seller, then slide below to confirm.</p>
                                     
-                                    <p className="mb-4" style={{ fontSize: '11px', color: '#f87171', lineHeight: '1.4' }}>
-                                        ⚠️ <strong style={{ color: '#ef4444' }}>WARNING:</strong> You MUST slide to confirm before the timer expires! If you send money but forget to confirm, the trade will cancel and you will lose your money.
-                                        <br/><br/>
-                                        <strong style={{ color: '#ef4444', fontSize: '14px', display: 'block', textAlign: 'center' }}>
-                                            ⏱️ Time Remaining: {Math.floor(disputeTimer / 60000)}:{(Math.floor(disputeTimer / 1000) % 60).toString().padStart(2, '0')}
-                                        </strong>
-                                    </p>
-
                                     <div className="mt-4 flex justify-center">
                                         <SlideButton
                                             onComplete={confirmPayment}

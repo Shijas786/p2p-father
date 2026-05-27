@@ -897,6 +897,17 @@ router.post("/trades", async (req: Request, res: Response) => {
 
             res.json({ trade });
 
+            // If the order was fully filled, clean up the broadcast message immediately
+            db.getOrderById(order_id).then(o => {
+                if (o && o.status === "filled") {
+                    import("../bot").then(({ deleteAdBroadcasts }) => {
+                        deleteAdBroadcasts(order_id).catch(err => {
+                            console.error("[MINIAPP] Failed to delete broadcast for filled order:", err);
+                        });
+                    }).catch(console.error);
+                }
+            }).catch(console.error);
+
             // BACKGROUND NOTIFICATIONS
             const coin = trade.token;
             const amountStr = trade.amount;
@@ -1231,6 +1242,9 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
             release_tx_hash: refundTxHash as any,
         });
 
+        // Revert the fill on the parent order/ad
+        await db.revertFillOrder(trade.order_id, trade.amount);
+
         res.json({ success: true, refund_tx_hash: refundTxHash });
 
         // NOTIFY PARTIES
@@ -1312,6 +1326,9 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 txHash = await escrow.refund(trade.on_chain_trade_id, trade.chain as any);
             }
             await db.updateTrade(trade.id, { status: "refunded" } as any);
+            // Revert the fill on the parent order/ad
+            await db.revertFillOrder(trade.order_id, trade.amount);
+
             await notifyTradeUpdate(trade.seller_id,
                 `🔙 <b>Dispute Resolved!</b>\n\nAdmin has refunded <b>${trade.amount} ${trade.token}</b> to your vault.`
             );
