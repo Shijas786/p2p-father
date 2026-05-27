@@ -474,30 +474,10 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
         const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
 
-        const welcomeGifPath = path.join(process.cwd(), "assets/welcome.gif");
-
-        if (fs.existsSync(welcomeGifPath)) {
-            try {
-                console.log(`[Welcome] Found GIF at ${welcomeGifPath}, trying to send animation...`);
-                await ctx.api.sendAnimation(ctx.chat.id, new InputFile(welcomeGifPath), {
-                    caption: welcomeMsg,
-                    parse_mode: "HTML"
-                });
-                console.log(`[Welcome] GIF animation sent successfully to ${ctx.chat.id}`);
-            } catch (gifErr: any) {
-                console.error(`[Welcome] Failed to send welcome GIF, falling back to text:`, gifErr.message);
-                await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
-                    parse_mode: "HTML"
-                });
-                console.log(`[Welcome] Text fallback sent successfully to ${ctx.chat.id}`);
-            }
-        } else {
-            console.log(`[Welcome] GIF not found at ${welcomeGifPath}, sending text only...`);
-            await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
-                parse_mode: "HTML"
-            });
-            console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id}`);
-        }
+        await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
+            parse_mode: "HTML"
+        });
+        console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id}`);
     } catch (e: any) {
         console.error("Welcome new member function error:", e);
         logger.error("Welcome new member error", e);
