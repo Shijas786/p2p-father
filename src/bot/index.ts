@@ -261,7 +261,7 @@ export async function updateAdBroadcasts(order: any, user: any) {
 
         const msgText = buildAdMessageText(order, user);
 
-        await Promise.allSettled(broadcasts.map(async (b) => {
+        for (const b of broadcasts) {
             await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
                 parse_mode: "HTML",
                 reply_markup: keyboard
@@ -271,7 +271,9 @@ export async function updateAdBroadcasts(order: any, user: any) {
                     console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, err.message);
                 }
             });
-        }));
+            // ⏳ Small 50ms delay to respect Telegram's rate limits
+            await new Promise(r => setTimeout(r, 50));
+        }
     } catch (e) {
         console.error("updateAdBroadcasts error:", e);
     }
