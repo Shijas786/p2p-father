@@ -153,7 +153,7 @@ class EscrowService {
 
         const txOptions: any = {};
         if (chain === 'bsc') {
-            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
+            txOptions.gasPrice = ethers.parseUnits("0.05", "gwei");
             txOptions.gasLimit = 500000;
         }
 
