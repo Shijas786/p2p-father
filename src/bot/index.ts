@@ -1,5 +1,6 @@
 import { Bot, Context, session, InlineKeyboard, InputFile } from "grammy";
 import path from "path";
+import fs from "fs";
 import { env } from "../config/env";
 import { db } from "../db/client";
 import { ai } from "../services/ai";
@@ -134,7 +135,59 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
         .map(r => r.value);
 }
 
+async function broadcastAnimation(animation: string | InputFile, caption: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
+    const groups = await groupManager.getGroups();
+    if (env.BROADCAST_CHANNEL_ID) {
+        const adminChannel = Number(env.BROADCAST_CHANNEL_ID);
+        if (!isNaN(adminChannel) && !groups.includes(adminChannel)) {
+            groups.push(adminChannel);
+        }
+    }
 
+    if (groups.length === 0) return [];
+
+    console.log(`📡 Broadcasting animation to ${groups.length} groups...`);
+
+    const results = await Promise.allSettled(groups.map(async (chatId) => {
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                const msg = await bot.api.sendAnimation(chatId, animation, { caption, parse_mode: parseMode, reply_markup: keyboard });
+                return { chatId, messageId: msg.message_id }; // Success
+            } catch (error: any) {
+                attempts++;
+                const isPermanent = error.description?.includes("kicked") || 
+                                  error.description?.includes("blocked") || 
+                                  error.description?.includes("not a member") ||
+                                  error.description?.includes("chat not found");
+
+                if (isPermanent) {
+                    console.log(`❌ Removing invalid group ${chatId}`);
+                    groupManager.removeGroup(chatId).catch(console.error);
+                    return null;
+                }
+
+                if (attempts >= maxAttempts) {
+                    console.error(`⚠️ Broadcast animation FAILED to ${chatId} after ${maxAttempts} attempts:`, error.message);
+                    return null;
+                }
+
+                const delay = 1000 * attempts;
+                console.log(`🔄 Retrying broadcast animation to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+        return null;
+    }));
+
+    return results
+        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> => 
+            r.status === 'fulfilled' && r.value !== null
+        )
+        .map(r => r.value);
+}
 
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
@@ -169,7 +222,13 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        await broadcast(msg, undefined, "HTML");
+        const animationPath = path.join(process.cwd(), "assets/deal_completed.gif");
+        
+        if (fs.existsSync(animationPath)) {
+            await broadcastAnimation(new InputFile(animationPath), msg, undefined, "HTML");
+        } else {
+            await broadcast(msg, undefined, "HTML");
+        }
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
