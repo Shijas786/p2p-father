@@ -451,6 +451,49 @@ bot.on("my_chat_member", async (ctx) => {
     }
 });
 
+// 👋 Welcome New Members in Groups
+bot.on("message:new_chat_members", async (ctx) => {
+    try {
+        const newMembers = ctx.message.new_chat_members;
+        if (!newMembers || newMembers.length === 0) return;
+
+        // Skip if the bot itself is added (my_chat_member handles bot activation greeting)
+        const botInfo = await getBotInfo();
+        const filteredMembers = newMembers.filter(m => m.id !== botInfo.id);
+        if (filteredMembers.length === 0) return;
+
+        // Format names/usernames of new members
+        const welcomeNames = filteredMembers.map(m => {
+            return m.username ? `@${escapeHTML(m.username)}` : `<b>${escapeHTML(m.first_name)}</b>`;
+        }).join(", ");
+
+        const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
+
+        const cacheBuster = `?v=${Date.now()}`;
+        const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
+        const keyboard = new InlineKeyboard()
+            .webApp("📱 Open P2PFather App", miniAppUrl).row()
+            .url("🤖 Start Bot", `https://t.me/${botInfo.username}?start=dm`);
+
+        const welcomeGifPath = path.join(process.cwd(), "assets/welcome.gif");
+
+        if (fs.existsSync(welcomeGifPath)) {
+            await ctx.replyWithAnimation(new InputFile(welcomeGifPath), {
+                caption: welcomeMsg,
+                parse_mode: "HTML",
+                reply_markup: keyboard
+            });
+        } else {
+            await ctx.reply(welcomeMsg, {
+                parse_mode: "HTML",
+                reply_markup: keyboard
+            });
+        }
+    } catch (e) {
+        console.error("Welcome new member error:", e);
+    }
+});
+
 // 📢 Broadcast command (Admin Only)
 bot.command("broadcast", async (ctx) => {
     if (!env.ADMIN_IDS.includes(ctx.from?.id || 0)) {
