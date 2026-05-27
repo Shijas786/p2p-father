@@ -222,13 +222,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        const animationPath = path.join(process.cwd(), "assets/deal_completed.gif");
-        
-        if (fs.existsSync(animationPath)) {
-            await broadcastAnimation(new InputFile(animationPath), msg, undefined, "HTML");
-        } else {
-            await broadcast(msg, undefined, "HTML");
-        }
+        await broadcast(msg, undefined, "HTML");
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
