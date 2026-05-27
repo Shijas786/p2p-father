@@ -478,7 +478,7 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         const cacheBuster = `?v=${Date.now()}`;
         const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
         const keyboard = new InlineKeyboard()
-            .webApp("📱 Open P2PFather App", miniAppUrl).row()
+            .url("📱 Open P2PFather App", `https://t.me/${botInfo.username}/app`).row()
             .url("🤖 Start Bot", `https://t.me/${botInfo.username}?start=dm`);
 
         const welcomeGifPath = path.join(process.cwd(), "assets/welcome.gif");
