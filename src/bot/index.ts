@@ -464,7 +464,12 @@ function shouldWelcome(userId: number, chatId: number): boolean {
 async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: string; username?: string; is_bot: boolean }) {
     try {
         if (user.is_bot) return;
-        if (!shouldWelcome(user.id, ctx.chat.id)) return;
+        if (!shouldWelcome(user.id, ctx.chat.id)) {
+            console.log(`[Welcome] Deduplicated welcome for user ${user.id} in chat ${ctx.chat.id}`);
+            return;
+        }
+
+        console.log(`[Welcome] Sending welcome message to user ${user.id} (${user.username || user.first_name}) in chat ${ctx.chat.id}`);
 
         const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
         const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
@@ -479,25 +484,40 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         const welcomeGifPath = path.join(process.cwd(), "assets/welcome.gif");
 
         if (fs.existsSync(welcomeGifPath)) {
-            await ctx.replyWithAnimation(new InputFile(welcomeGifPath), {
-                caption: welcomeMsg,
-                parse_mode: "HTML",
-                reply_markup: keyboard
-            });
+            try {
+                console.log(`[Welcome] Found GIF at ${welcomeGifPath}, trying to send animation...`);
+                await ctx.api.sendAnimation(ctx.chat.id, new InputFile(welcomeGifPath), {
+                    caption: welcomeMsg,
+                    parse_mode: "HTML",
+                    reply_markup: keyboard
+                });
+                console.log(`[Welcome] GIF animation sent successfully to ${ctx.chat.id}`);
+            } catch (gifErr: any) {
+                console.error(`[Welcome] Failed to send welcome GIF, falling back to text:`, gifErr.message);
+                await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
+                    parse_mode: "HTML",
+                    reply_markup: keyboard
+                });
+                console.log(`[Welcome] Text fallback sent successfully to ${ctx.chat.id}`);
+            }
         } else {
-            await ctx.reply(welcomeMsg, {
+            console.log(`[Welcome] GIF not found at ${welcomeGifPath}, sending text only...`);
+            await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
                 parse_mode: "HTML",
                 reply_markup: keyboard
             });
+            console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id}`);
         }
-    } catch (e) {
+    } catch (e: any) {
         console.error("Welcome new member function error:", e);
+        logger.error("Welcome new member error", e);
     }
 }
 
 // 👋 Welcome New Members in Groups (traditional service message fallback)
 bot.on("message:new_chat_members", async (ctx) => {
     try {
+        console.log(`[Welcome] message:new_chat_members update received in chat ${ctx.chat.id}`);
         const newMembers = ctx.message.new_chat_members;
         if (!newMembers || newMembers.length === 0) return;
 
@@ -509,8 +529,9 @@ bot.on("message:new_chat_members", async (ctx) => {
         for (const member of filteredMembers) {
             await sendWelcomeMessage(ctx, member);
         }
-    } catch (e) {
-        console.error("Welcome new member error:", e);
+    } catch (e: any) {
+        console.error("Welcome new member message event error:", e);
+        logger.error("Welcome new member message event error", e);
     }
 });
 
@@ -521,6 +542,8 @@ bot.on("chat_member", async (ctx) => {
         const oldStatus = update.old_chat_member.status;
         const newStatus = update.new_chat_member.status;
 
+        console.log(`[Welcome] chat_member status update in chat ${ctx.chat.id} from user ${update.new_chat_member.user.id}: status changed from '${oldStatus}' to '${newStatus}'`);
+
         // A user joins when they go from left/kicked to member/restricted
         const isJoin = (oldStatus === "left" || oldStatus === "kicked") && 
                        (newStatus === "member" || newStatus === "restricted");
@@ -528,8 +551,9 @@ bot.on("chat_member", async (ctx) => {
         if (!isJoin) return;
 
         await sendWelcomeMessage(ctx, update.new_chat_member.user);
-    } catch (e) {
-        console.error("Welcome new member (chat_member) error:", e);
+    } catch (e: any) {
+        console.error("Welcome new member chat_member event error:", e);
+        logger.error("Welcome new member chat_member event error", e);
     }
 });
 
