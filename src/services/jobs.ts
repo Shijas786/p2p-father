@@ -65,6 +65,23 @@ export function startExpiryJob() {
                     }
                 }
             }
+
+            // ⏰ Update live countdown timer for active ads
+            const { data: activeAds, error: activeError } = await client
+                .from("orders")
+                .select("*, users(username, first_name)")
+                .eq("status", "active")
+                .not("expires_at", "is", null);
+
+            if (!activeError && activeAds && activeAds.length > 0) {
+                const { updateAdBroadcasts } = await import("../bot");
+                for (const order of activeAds) {
+                    const user = order.users;
+                    if (user) {
+                        updateAdBroadcasts(order, user).catch(() => {});
+                    }
+                }
+            }
         } catch (err) {
             console.error("[JOB] Expiry job error:", err);
         }

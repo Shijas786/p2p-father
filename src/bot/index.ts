@@ -175,40 +175,48 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
     }
 }
 
+export function buildAdMessageText(order: any, user: any): string {
+    const available = order.amount - (order.filled_amount || 0);
+    const token = order.token || "USDC";
+
+    const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
+    const emoji = order.type === "sell" ? "🔴" : "🟢";
+    const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
+    const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
+    const amountStr = `<b>${escapeHTML(formatTokenAmount(available, token))}</b>`;
+    
+    const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
+    const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
+    const totalLine = `🧾 Total: ₹${escapeHTML((available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
+    const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
+    const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
+
+    const lines = [
+        header,
+        "",
+        orderLine,
+        rateLine,
+        totalLine,
+        chainLine,
+        paymentLine,
+    ];
+
+    const traderNote = order.payment_details?.note;
+    if (traderNote) {
+        lines.push(`📝 Note: ${escapeHTML(traderNote)}`);
+    }
+
+    if (order.expires_at) {
+        const timeRemaining = formatTimeRemaining(order.expires_at);
+        lines.push(`⏱️ Expires in: <b>${timeRemaining}</b>`);
+    }
+
+    return lines.join("\n");
+}
+
 export async function broadcastAd(order: any, user: any) {
     try {
         const botUser = await getBotInfo();
-        const available = order.amount - (order.filled_amount || 0);
-        const token = order.token || "USDC";
-
-        const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
-        
-        const emoji = order.type === "sell" ? "🔴" : "🟢";
-        const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
-        const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
-        const amountStr = `<b>${escapeHTML(formatTokenAmount(available, token))}</b>`;
-        
-        const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
-        const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
-        const totalLine = `🧾 Total: ₹${escapeHTML((available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
-        const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
-        const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
-
-        const lines = [
-            header,
-            "",
-            orderLine,
-            rateLine,
-            totalLine,
-            chainLine,
-            paymentLine,
-        ];
-
-        const traderNote = order.payment_details?.note;
-        if (traderNote) {
-            lines.push(`📝 Note: ${escapeHTML(traderNote)}`);
-        }
-
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
         const keyboard = new InlineKeyboard()
@@ -220,7 +228,8 @@ export async function broadcastAd(order: any, user: any) {
             keyboard.danger();
         }
 
-        const sentMessages = await broadcast(lines.join("\n"), keyboard, "HTML");
+        const msgText = buildAdMessageText(order, user);
+        const sentMessages = await broadcast(msgText, keyboard, "HTML");
         if (sentMessages && sentMessages.length > 0) {
             await db.saveAdBroadcasts(sentMessages.map(m => ({
                 order_id: order.id,
@@ -230,6 +239,41 @@ export async function broadcastAd(order: any, user: any) {
         }
     } catch (e) {
         console.error("BroadcastAd error:", e);
+    }
+}
+
+export async function updateAdBroadcasts(order: any, user: any) {
+    try {
+        const botUser = await getBotInfo();
+        const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
+        const botUsername = botUser.username;
+        const keyboard = new InlineKeyboard()
+            .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
+        
+        if (order.type === 'sell') {
+            keyboard.success();
+        } else {
+            keyboard.danger();
+        }
+
+        const broadcasts = await db.getAdBroadcasts(order.id);
+        if (broadcasts.length === 0) return;
+
+        const msgText = buildAdMessageText(order, user);
+
+        await Promise.allSettled(broadcasts.map(async (b) => {
+            await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
+                parse_mode: "HTML",
+                reply_markup: keyboard
+            }).catch((err: any) => {
+                if (!err.description?.includes("message is not modified") && 
+                    !err.description?.includes("message to edit not found")) {
+                    console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, err.message);
+                }
+            });
+        }));
+    } catch (e) {
+        console.error("updateAdBroadcasts error:", e);
     }
 }
 
