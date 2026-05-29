@@ -291,10 +291,20 @@ export function CreateOrder() {
     async function submit() {
         if (isDataLoading) return;
 
+        // Payment Method Setup Guard
+        if (!user?.upi_id && !user?.phone_number) {
+            const upiWarning = "Please set up your UPI ID or Phone Number in your Profile before creating an ad.";
+            setError(upiWarning);
+            showToast(upiWarning, "warning");
+            haptic('error');
+            return;
+        }
+
         // Connection Guard
         if (isExternalUser && (!isConnected || !address)) {
             showToast("Wallet disconnected. Please reconnect.", "warning");
             appKit.open();
+            setSubmitting(false);
             return;
         }
 
