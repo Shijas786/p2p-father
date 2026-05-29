@@ -222,7 +222,26 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        await broadcast(msg, undefined, "HTML");
+        // Dynamically pick a random celebration GIF from the trade completions asset folder
+        const gifDir = path.join(process.cwd(), "assets", "trade complte gif collection");
+        let randomGifPath = "";
+        try {
+            if (fs.existsSync(gifDir)) {
+                const files = fs.readdirSync(gifDir).filter(file => file.endsWith(".gif"));
+                if (files.length > 0) {
+                    const randomFile = files[Math.floor(Math.random() * files.length)];
+                    randomGifPath = path.join(gifDir, randomFile);
+                }
+            }
+        } catch (dirErr) {
+            console.error("[Bot] Failed to read trade completions gif directory:", dirErr);
+        }
+
+        if (randomGifPath) {
+            await broadcastAnimation(new InputFile(randomGifPath), msg, undefined, "HTML");
+        } else {
+            await broadcast(msg, undefined, "HTML");
+        }
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
