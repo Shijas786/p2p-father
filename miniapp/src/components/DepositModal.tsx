@@ -10,7 +10,7 @@ interface DepositModalProps {
     balances: any;
     loadBalances: () => void;
     copyAddress: () => void;
-    haptic: (type: string) => void;
+    haptic: (type: "light" | "medium" | "heavy" | "error" | "success" | "warning" | "selection") => void;
 }
 
 export function DepositModal({ onClose, balances, loadBalances, copyAddress, haptic }: DepositModalProps) {

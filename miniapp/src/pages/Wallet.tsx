@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
-import { IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconLock, IconCopy, IconQr, IconInfo } from '../components/Icons';
+import { IconArrowUp, IconArrowDown, IconSwap, IconCopy, IconCheck, IconWarning, IconInfo, IconLock, IconReceive, IconX, IconChainEth, IconChainBase, IconChainPolygon, IconChainArbitrum, IconChainOptimism, IconTokenETH, IconTokenUSDC, IconTokenUSDT, IconTokenBNB, IconChainBsc, IconSend, IconRefresh, IconQr } from '../components/Icons';
 import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain, useChainId, useBalance } from 'wagmi';
 import { parseUnits, formatUnits, maxUint256 } from 'viem';
 import { appKit } from '../lib/wagmi';
