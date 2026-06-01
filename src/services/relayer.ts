@@ -31,7 +31,7 @@ class PolymarketRelayerService {
     private isDemoMode = false;
 
     constructor() {
-        const hasCredentials = env.POLYMARKET_PRIVATE_KEY && 
+        const hasCredentials = (env as any).POLYMARKET_PRIVATE_KEY && 
                                (env as any).POLYMARKET_BUILDER_API_KEY && 
                                (env as any).POLYMARKET_BUILDER_SECRET && 
                                (env as any).POLYMARKET_BUILDER_PASSPHRASE;

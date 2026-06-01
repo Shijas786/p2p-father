@@ -1907,7 +1907,7 @@ router.get("/predictions/debug-history", async (req: Request, res: Response) => 
     try {
         const fetchRes = await fetch("https://gamma-api.polymarket.com/events?limit=100&active=false&closed=true");
         const json = await fetchRes.json();
-        res.json(json.slice(0, 5));
+        res.json((json as any[]).slice(0, 5));
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
@@ -2130,7 +2130,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
             const tradesRes = await client.getTrades({
                 maker: derived.address,
-            });
+            } as any);
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
@@ -2142,7 +2142,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             // Aggregate open positions from recent trades
             const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number }> = {};
 
-            for (const trade of (tradesRes?.data ?? [])) {
+            for (const trade of (tradesRes || [])) {
                 const isUp = trade.asset_id === market.yesTokenId;
                 const isDown = trade.asset_id === market.noTokenId;
                 if (!isUp && !isDown) continue;
@@ -2211,9 +2211,9 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
         try {
             const client = await polymarketService.getUserClobClient(user.wallet_index);
             const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
-            const tradesRes = await client.getTrades({ maker: derived.address });
+            const tradesRes = await client.getTrades({ maker: derived.address } as any);
             const market = await polymarketService.getActiveBtcMarket();
-            const trades = (tradesRes?.data ?? []).slice(0, 20).map((t: any) => ({
+            const trades = (tradesRes || []).slice(0, 20).map((t: any) => ({
                 id: t.id ?? t.trade_id,
                 side: t.side,
                 outcome: t.asset_id === market.yesTokenId ? "UP" : "DOWN",
