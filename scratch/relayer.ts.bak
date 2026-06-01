@@ -1,0 +1,9 @@
+// src/services/relayer.ts
+export const RelayerService = {
+    async gaslessDeposit(userId: string, amount: number) {
+        return { success: true, txHash: '0x' + Math.random().toString(16).slice(2) };
+    },
+    async gaslessWithdraw(userId: string, amount: number) {
+        return { success: true, txHash: '0x' + Math.random().toString(16).slice(2) };
+    }
+};

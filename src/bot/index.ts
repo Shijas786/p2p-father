@@ -97,17 +97,17 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
     const results = await Promise.allSettled(groups.map(async (chatId) => {
         let attempts = 0;
         const maxAttempts = 3;
-        
+
         while (attempts < maxAttempts) {
             try {
                 const msg = await bot.api.sendMessage(chatId, message, { parse_mode: parseMode, reply_markup: keyboard });
                 return { chatId, messageId: msg.message_id }; // Success
             } catch (error: any) {
                 attempts++;
-                const isPermanent = error.description?.includes("kicked") || 
-                                  error.description?.includes("blocked") || 
-                                  error.description?.includes("not a member") ||
-                                  error.description?.includes("chat not found");
+                const isPermanent = error.description?.includes("kicked") ||
+                    error.description?.includes("blocked") ||
+                    error.description?.includes("not a member") ||
+                    error.description?.includes("chat not found");
 
                 if (isPermanent) {
                     console.log(`❌ Removing invalid group ${chatId}`);
@@ -129,7 +129,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
     }));
 
     return results
-        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> => 
+        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> =>
             r.status === 'fulfilled' && r.value !== null
         )
         .map(r => r.value);
@@ -151,17 +151,17 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
     const results = await Promise.allSettled(groups.map(async (chatId) => {
         let attempts = 0;
         const maxAttempts = 3;
-        
+
         while (attempts < maxAttempts) {
             try {
                 const msg = await bot.api.sendAnimation(chatId, animation, { caption, parse_mode: parseMode, reply_markup: keyboard });
                 return { chatId, messageId: msg.message_id }; // Success
             } catch (error: any) {
                 attempts++;
-                const isPermanent = error.description?.includes("kicked") || 
-                                  error.description?.includes("blocked") || 
-                                  error.description?.includes("not a member") ||
-                                  error.description?.includes("chat not found");
+                const isPermanent = error.description?.includes("kicked") ||
+                    error.description?.includes("blocked") ||
+                    error.description?.includes("not a member") ||
+                    error.description?.includes("chat not found");
 
                 if (isPermanent) {
                     console.log(`❌ Removing invalid group ${chatId}`);
@@ -183,7 +183,7 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
     }));
 
     return results
-        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> => 
+        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> =>
             r.status === 'fulfilled' && r.value !== null
         )
         .map(r => r.value);
@@ -193,7 +193,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
         // ✨ Liveness Feedback - A small delay gives a "live processing" feel for completions
         await new Promise(r => setTimeout(r, 1200));
-        
+
         const buyerUsername = trade.buyer_username;
         const buyerFirstName = trade.buyer_first_name || "Buyer";
         const buyer = buyerUsername ? `@${escapeHTML(buyerUsername)}` : escapeHTML(buyerFirstName);
@@ -222,26 +222,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        // Dynamically pick a random celebration GIF from the trade completions asset folder
-        const gifDir = path.join(process.cwd(), "assets", "trade complte gif collection");
-        let randomGifPath = "";
-        try {
-            if (fs.existsSync(gifDir)) {
-                const files = fs.readdirSync(gifDir).filter(file => file.endsWith(".gif"));
-                if (files.length > 0) {
-                    const randomFile = files[Math.floor(Math.random() * files.length)];
-                    randomGifPath = path.join(gifDir, randomFile);
-                }
-            }
-        } catch (dirErr) {
-            console.error("[Bot] Failed to read trade completions gif directory:", dirErr);
-        }
-
-        if (randomGifPath) {
-            await broadcastAnimation(new InputFile(randomGifPath), msg, undefined, "HTML");
-        } else {
-            await broadcast(msg, undefined, "HTML");
-        }
+        await broadcast(msg, undefined, "HTML");
     } catch (e) {
         console.error("BroadcastSuccess error:", e);
     }
@@ -256,7 +237,7 @@ export function buildAdMessageText(order: any, user: any): string {
     const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
     const amountStr = `<b>${escapeHTML(formatTokenAmount(available, token))}</b>`;
-    
+
     const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
     const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
     const totalLine = `🧾 Total: ₹${escapeHTML((available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
@@ -293,7 +274,7 @@ export async function broadcastAd(order: any, user: any) {
         const botUsername = botUser.username;
         const keyboard = new InlineKeyboard()
             .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
-        
+
         if (order.type === 'sell') {
             keyboard.success();
         } else {
@@ -321,7 +302,7 @@ export async function updateAdBroadcasts(order: any, user: any) {
         const botUsername = botUser.username;
         const keyboard = new InlineKeyboard()
             .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
-        
+
         if (order.type === 'sell') {
             keyboard.success();
         } else {
@@ -338,7 +319,7 @@ export async function updateAdBroadcasts(order: any, user: any) {
                 parse_mode: "HTML",
                 reply_markup: keyboard
             }).catch((err: any) => {
-                if (!err.description?.includes("message is not modified") && 
+                if (!err.description?.includes("message is not modified") &&
                     !err.description?.includes("message to edit not found")) {
                     console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, err.message);
                 }
@@ -357,10 +338,10 @@ export async function deleteAdBroadcasts(orderId: string) {
         if (broadcasts.length === 0) return;
 
         console.log(`🧹 Cleaning up ${broadcasts.length} broadcast messages for order ${orderId}...`);
-        
+
         await Promise.allSettled(broadcasts.map(async (b) => {
             // Use bot.api directly as we might not have a ctx
-            await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => {});
+            await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => { });
         }));
 
         await db.deleteAdBroadcasts(orderId);
@@ -528,8 +509,8 @@ bot.on("chat_member", async (ctx) => {
         console.log(`[Welcome] chat_member status update in chat ${ctx.chat.id} from user ${update.new_chat_member.user.id}: status changed from '${oldStatus}' to '${newStatus}'`);
 
         // A user joins when they go from left/kicked to member/restricted
-        const isJoin = (oldStatus === "left" || oldStatus === "kicked") && 
-                       (newStatus === "member" || newStatus === "restricted");
+        const isJoin = (oldStatus === "left" || oldStatus === "kicked") &&
+            (newStatus === "member" || newStatus === "restricted");
 
         if (!isJoin) return;
 
@@ -652,13 +633,13 @@ bot.command(["start", "open"], async (ctx) => {
                         if (isAlreadyMember) {
                             // Mark completed immediately
                             await db.updateReferralStatus(ctx.from.id, "completed");
-                            
+
                             // Notify referrer immediately!
                             await ctx.api.sendMessage(
                                 referrerTelegramId,
                                 `🎉 *New Qualified Referral!*\n\n@${escapeMarkdown(ctx.from.username || ctx.from.first_name || "Someone")} joined the bot and is already a member of the community group! Your referral is qualified! 🚀`,
                                 { parse_mode: "Markdown" }
-                            ).catch(() => {});
+                            ).catch(() => { });
                         }
                     } catch (e) {
                         // ignore
@@ -1021,7 +1002,7 @@ bot.command("send", async (ctx) => {
 
 // Also keep /sell as alias
 bot.command("sell", async (ctx) => {
-    await ctx.replyWithChatAction("typing").catch(() => {});
+    await ctx.replyWithChatAction("typing").catch(() => { });
     const cacheBuster = `?v=${Date.now()}`;
     const miniAppUrl = `https://p2pfather.com/miniapp/create${cacheBuster}`;
     const keyboard = new InlineKeyboard()
@@ -1044,7 +1025,7 @@ bot.command("sell", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command(["ads", "liveads"], async (ctx) => {
-    await ctx.replyWithChatAction("typing").catch(() => {});
+    await ctx.replyWithChatAction("typing").catch(() => { });
     await ensureUser(ctx);
 
     const keyboard = new InlineKeyboard()
@@ -1192,7 +1173,7 @@ bot.command("mytrades", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("buy", async (ctx) => {
-    await ctx.replyWithChatAction("typing").catch(() => {});
+    await ctx.replyWithChatAction("typing").catch(() => { });
     await ensureUser(ctx);
 
     // Show available sell orders
@@ -1249,7 +1230,7 @@ bot.command("buy", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.command("orders", async (ctx) => {
-    await ctx.replyWithChatAction("typing").catch(() => {});
+    await ctx.replyWithChatAction("typing").catch(() => { });
     try {
         const [sellOrders, buyOrders] = await Promise.all([
             db.getActiveOrders("sell", undefined, 5),
@@ -1478,10 +1459,10 @@ bot.command("invite", async (ctx) => {
 
     const botInfo = await getBotInfo();
     const inviteLink = `https://t.me/${botInfo.username}?start=ref_${ctx.from.id}`;
-    
+
     // Fetch stats
     const stats = await db.getReferralsByReferrer(ctx.from.id);
-    
+
     // Check if there are pending referrals that are now in the group (dynamic updating!)
     if (stats.pending > 0 && env.COMMUNITY_CHAT_ID) {
         let updatedSome = false;
@@ -1494,13 +1475,13 @@ bot.command("invite", async (ctx) => {
                         await db.updateReferralStatus(referral.referred_telegram_id, "completed");
                         referral.status = "completed";
                         updatedSome = true;
-                        
+
                         // Notify referrer
                         await ctx.api.sendMessage(
                             referral.referrer_telegram_id,
                             `🎉 *New Qualified Referral!*\n\nA user you invited has successfully joined the community group! Your referral is now qualified! 🚀`,
                             { parse_mode: "Markdown" }
-                        ).catch(() => {});
+                        ).catch(() => { });
                     }
                 } catch (err) {
                     // Ignore (e.g. user blocked bot or bot not in group)
@@ -1791,7 +1772,7 @@ bot.on("callback_query:data", async (ctx) => {
         // Handle "refresh_referrals"
         if (data === "refresh_referrals") {
             const stats = await db.getReferralsByReferrer(ctx.from.id);
-            
+
             // Check if there are pending referrals that are now in the group
             if (stats.pending > 0 && env.COMMUNITY_CHAT_ID) {
                 let updatedSome = false;
@@ -1804,13 +1785,13 @@ bot.on("callback_query:data", async (ctx) => {
                                 await db.updateReferralStatus(referral.referred_telegram_id, "completed");
                                 referral.status = "completed";
                                 updatedSome = true;
-                                
+
                                 // Notify referrer
                                 await ctx.api.sendMessage(
                                     referral.referrer_telegram_id,
                                     `🎉 *New Qualified Referral!*\n\nA user you invited has successfully joined the community group! Your referral is now qualified! 🚀`,
                                     { parse_mode: "Markdown" }
-                                ).catch(() => {});
+                                ).catch(() => { });
                             }
                         } catch (err) {
                             // Ignore
@@ -1907,7 +1888,7 @@ bot.on("callback_query:data", async (ctx) => {
             const backKeyboard = new InlineKeyboard()
                 .text("🔙 Back to Stats", "refresh_referrals");
 
-            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => {});
+            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
@@ -1957,7 +1938,7 @@ bot.on("callback_query:data", async (ctx) => {
             const backKeyboard = new InlineKeyboard()
                 .text("🔙 Back to Traders", "show_traders_leaderboard_from_cmd");
 
-            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => {});
+            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
@@ -1990,7 +1971,7 @@ bot.on("callback_query:data", async (ctx) => {
             const keyboard = new InlineKeyboard()
                 .text("👥 Show Invite Leaderboard", "show_referral_leaderboard_from_cmd");
 
-            await ctx.editMessageText(tradingText, { parse_mode: "Markdown", reply_markup: keyboard }).catch(() => {});
+            await ctx.editMessageText(tradingText, { parse_mode: "Markdown", reply_markup: keyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
@@ -2004,19 +1985,19 @@ bot.on("callback_query:data", async (ctx) => {
                     const isMember = ["member", "administrator", "creator", "restricted"].includes(member.status);
                     if (isMember) {
                         await db.updateReferralStatus(ctx.from.id, "completed");
-                        
+
                         // Notify referrer
                         await ctx.api.sendMessage(
                             referrerId,
                             `🎉 *New Qualified Referral!*\n\n@${escapeMarkdown(ctx.from.username || ctx.from.first_name || "Someone")} has successfully joined the community group! Your referral is now qualified! 🚀`,
                             { parse_mode: "Markdown" }
-                        ).catch(() => {});
+                        ).catch(() => { });
 
                         await ctx.answerCallbackQuery({ text: "Verification successful! Welcome! ✅" });
-                        
+
                         // Delete the verify prompt and trigger the start welcome message
-                        await ctx.deleteMessage().catch(() => {});
-                        
+                        await ctx.deleteMessage().catch(() => { });
+
                         // Trigger start flow
                         const user = await ensureUser(ctx);
                         const cacheBuster = `?v=${Date.now()}`;
@@ -2253,7 +2234,7 @@ bot.on("callback_query:data", async (ctx) => {
                 const allOrders = await db.getActiveOrders(filterType, undefined, 100);
 
                 if (allOrders.length === 0) {
-                    await safeEditMessage(ctx, 
+                    await safeEditMessage(ctx,
                         [
                             `🌟 *Market is Quiet* 🌟`,
                             "",
@@ -2263,7 +2244,7 @@ bot.on("callback_query:data", async (ctx) => {
                         ].join("\n"),
                         {
                             parse_mode: "Markdown",
-                            reply_markup: ctx.chat?.type === "private" 
+                            reply_markup: ctx.chat?.type === "private"
                                 ? new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                                 : new InlineKeyboard().url("✨ Create Ad", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat?.id || ''}`)
                         }
@@ -2310,7 +2291,7 @@ bot.on("callback_query:data", async (ctx) => {
                 }
                 keyboard.text("🔄 Refresh", `ads:${filterKey}:${page}`).text("⬅️ Back", "ads_back");
 
-                await safeEditMessage(ctx, 
+                await safeEditMessage(ctx,
                     [
                         `📢 *Live ${escapeMarkdown(label)} Ads*`,
                         `   _${escapeMarkdown(String(allOrders.length))} ads  •  Page ${escapeMarkdown(String(page + 1))}/${escapeMarkdown(String(totalPages))}_`,
@@ -3341,7 +3322,7 @@ bot.on("callback_query:data", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 bot.on("message:text", async (ctx) => {
-    await ctx.replyWithChatAction("typing").catch(() => {});
+    await ctx.replyWithChatAction("typing").catch(() => { });
     const text = ctx.message.text;
     console.log(`[BOT] Received text: "${text}" from ${ctx.from.id} in ${ctx.chat.type} (${ctx.chat.id})`);
 
@@ -3574,7 +3555,7 @@ bot.on("message:text", async (ctx) => {
                 const keyboard = ctx.chat.type === "private"
                     ? new InlineKeyboard().webApp("📱 Create Ad in Mini App", miniAppUrl)
                     : new InlineKeyboard().url("📱 Create Ad in Mini App", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat.id}`);
-                    
+
                 await ctx.reply(
                     [
                         "📢 *Create a New Ad*",
@@ -3601,10 +3582,10 @@ bot.on("message:text", async (ctx) => {
 
                     const orders = await db.getActiveOrders(orderType, intent.params.token, 10);
                     if (orders.length === 0) {
-                        const keyboard = ctx.chat.type === "private" 
+                        const keyboard = ctx.chat.type === "private"
                             ? new InlineKeyboard().webApp("✨ Create Ad", "https://p2pfather.com/miniapp/create")
                             : new InlineKeyboard().url("✨ Create Ad", `https://t.me/${ctx.me.username}?start=newad_${ctx.chat.id}`);
-                            
+
                         await ctx.reply(
                             "🌟 *Market is Quiet* 🌟\n\nThere are no active orders right now\\.\n\n✨ Be the first to list an ad and set your own price\\! 🚀",
                             {
@@ -3621,7 +3602,7 @@ bot.on("message:text", async (ctx) => {
                         const list = orders.map((o) => formatOrder(o)).join("\n\n");
                         const footer = "\n⚡ Trade safely on @P2PFatherBot";
                         const fullMsg = `${header}\n\n${list}\n\n${footer}`;
-                        
+
                         try {
                             await ctx.reply(fullMsg, { parse_mode: "HTML" });
                         } catch (err: any) {

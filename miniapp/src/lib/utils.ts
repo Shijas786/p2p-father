@@ -55,7 +55,7 @@ export function formatError(err: any): string {
     if (msg.includes('insufficient funds for gas') || msg.includes('intrinsic gas too low')) {
         return "Insufficient balance for network fees (Gas).";
     }
-    
+
     if (msg.includes('insufficient funds') || msg.includes('insufficient balance') || msg.includes('amount exceeds balance')) {
         return "Insufficient balance for this transaction.";
     }
@@ -76,7 +76,7 @@ export function formatError(err: any): string {
     }
 
     // Fallback: Try to extract a clean message if it's already semi-clinical
-    if (msg.length < 150 && !msg.includes(':') && !msg.includes('0x')) {
+    if (msg.length < 60 && !msg.includes(':') && !msg.includes('0x')) {
         return err.message;
     }
 

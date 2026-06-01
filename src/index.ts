@@ -1,8 +1,14 @@
+// Force hot reload
 import { bot } from "./bot";
 import { env } from "./config/env";
 import { db } from "./db/client"; // Import DB for stats
 import express from "express";
 import path from "path";
+import dns from "node:dns";
+
+// Force Node.js to use Cloudflare DNS to bypass ISP blocking of Polymarket API
+dns.setServers(['1.1.1.1', '1.0.0.1']);
+
 import { miniappRouter } from "./api/miniapp";
 
 async function main() {
@@ -75,7 +81,7 @@ async function main() {
     app.get("/api/stats", async (req, res) => {
         try {
             const stats = await db.getStats();
-            
+
             // Bags.fm Stats
             const { bags } = await import("./services/bags");
             const bagsStats = await bags.getConsolidatedStats(env.BAGS_TOKEN_MINT);
@@ -88,12 +94,12 @@ async function main() {
                 active_orders: stats.active_orders,
                 fee_percentage: env.FEE_PERCENTAGE,
                 fee_bps: parseInt(env.FEE_BPS),
-                bags: bagsStats 
+                bags: bagsStats
                     ? {
                         price: bagsStats.price,
                         mcap: bagsStats.mcap,
                         liquidity: (bagsStats as any).liquidity || 0
-                    } 
+                    }
                     : null
             });
         } catch (e) {
@@ -122,7 +128,7 @@ async function main() {
             res.status(500).json({ error: "Failed to fetch leaderboard" });
         }
     });
- 
+
     app.get("/api/referral-leaderboard", async (req, res) => {
         try {
             const dbInstance = (db as any).getClient();
@@ -168,7 +174,7 @@ async function main() {
     app.get("/api/live-pulse", async (req, res) => {
         try {
             const dbInstance = (db as any).getClient();
-            
+
             // Fetch recent completed trades for earners
             const { data: recentTrades } = await dbInstance
                 .from("trades")

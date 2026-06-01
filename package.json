@@ -23,6 +23,8 @@
     "@google/generative-ai": "^0.24.1",
     "@grammyjs/conversations": "^2.0.3",
     "@openzeppelin/contracts": "^5.4.0",
+    "@polymarket/builder-relayer-client": "^0.0.10",
+    "@polymarket/clob-client-v2": "^1.0.3",
     "@supabase/supabase-js": "^2.49.4",
     "@types/multer": "^2.0.0",
     "axios": "^1.8.1",
@@ -35,6 +37,7 @@
     "multer": "^2.0.2",
     "openai": "^4.85.4",
     "tsx": "^4.19.3",
+    "viem": "^2.51.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {

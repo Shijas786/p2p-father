@@ -1,0 +1,23 @@
+Created At: 2026-05-30T20:52:47Z
+Completed At: 2026-05-30T20:52:47Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 273
+Total Bytes: 11323
+Showing lines 11 to 25
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+11: export interface ActiveMarketInfo {
+12:     conditionId: string;
+13:     yesTokenId: string;
+14:     noTokenId: string;
+15:     question: string;
+16:     slug: string;
+17:     endsAt: string;
+18: }
+19: 
+20: class PolymarketService {
+21:     /**
+22:      * Helper to create a fully-authenticated ClobClient for a specific user
+23:      */
+24:     async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
+25:         // Derive EOA credentials from master seed
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

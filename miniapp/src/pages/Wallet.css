@@ -517,3 +517,327 @@
     transform: none;
     box-shadow: none;
 }
+
+/* ════ Manage Funds Mobile Page Modal ════ */
+.manage-funds-mobile-page {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: calc(100vh - 65px);
+    background: #12141a;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.2s ease-out;
+    overflow: hidden;
+}
+
+.mf-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: #000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mf-back-btn {
+    background: transparent;
+    border: none;
+    color: #848e9c;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    width: 60px; /* matched spacer */
+}
+
+.mf-mobile-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.mf-mobile-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #12141a;
+}
+
+.mf-mobile-intro p {
+    color: #848e9c;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    text-align: center;
+}
+    border-radius: 12px;
+    padding: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.mf-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.mf-close-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.mf-layout {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 768px) {
+    .mf-layout {
+        flex-direction: row;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        background: #181a20;
+        overflow: hidden;
+    }
+    .mf-left-pane {
+        width: 35%;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        background: #12141a;
+    }
+    .mf-right-pane {
+        width: 65%;
+    }
+}
+
+.mf-left-pane {
+    padding: 32px 24px;
+    background: #12141a;
+}
+
+.mf-left-pane h2 {
+    font-family: 'Space Grotesk', serif;
+    font-size: 28px;
+    color: #fff;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.mf-left-pane p {
+    color: #848e9c;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.mf-right-pane {
+    padding: 24px;
+    background: #181a20;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mf-card {
+    background: #1e2026;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.mf-balance-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mf-balance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mf-balance-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.mf-btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #848e9c;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.mf-btn-secondary:hover {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+}
+
+.mf-btn-icon {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #848e9c;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mf-btn-icon:hover {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+}
+
+.mf-balance-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #3b4252;
+}
+.mf-balance-value .mf-dollar {
+    font-size: 16px;
+    margin-right: 2px;
+}
+
+.mf-card h3 {
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 6px;
+}
+
+.mf-sub {
+    font-size: 13px;
+    color: #848e9c;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.mf-sub strong {
+    color: #fff;
+}
+
+.mf-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #848e9c;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.mf-pills {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mf-pills-wrap {
+    flex-wrap: wrap;
+}
+
+.mf-pill {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #848e9c;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.mf-pill:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.mf-pill-active {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.mf-address-box {
+    display: flex;
+    align-items: center;
+    background: #12141a;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.mf-address-icon {
+    padding: 8px;
+}
+
+.mf-address-text {
+    flex: 1;
+    font-family: monospace;
+    font-size: 14px;
+    color: #848e9c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mf-btn-copy {
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+}
+
+.mf-btn-copy:hover {
+    background: #f0f0f0;
+}
+
+.mf-btn-limits {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.mf-btn-limits:hover {
+    background: rgba(255, 255, 255, 0.05);
+}

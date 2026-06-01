@@ -1,0 +1,59 @@
+Created At: 2026-05-30T08:46:41Z
+Completed At: 2026-05-30T08:46:42Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 267
+Total Bytes: 10967
+Showing lines 50 to 100
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+50:     }
+51: 
+52:     /**
+53:      * Discover the currently active BTC 5-minute prediction market
+54:      */
+55:     async getActiveBtcMarket(): Promise<ActiveMarketInfo> {
+56:         try {
+57:             const now = Math.floor(Date.now() / 1000);
+58:             // Round down to the nearest 5-minute epoch (300 seconds)
+59:             const activeEpoch = now - (now % 300);
+60:             const slug = `btc-updown-5m-${activeEpoch}`;
+61: 
+62:             const res = await axios.get(`${GAMMA_API}/events`, {
+63:                 params: { slug },
+64:                 timeout: 8000,
+65:             });
+66: 
+67:             const event = res.data?.[0];
+68:             if (!event || !event.markets || event.markets.length === 0) {
+69:                 throw new Error(`Market not active or indexed for slug: ${slug}`);
+70:             }
+71: 
+72:             const market = event.markets[0];
+73:             return {
+74:                 conditionId: market.conditionId,
+75:                 yesTokenId: market.clobTokenIds[0], // YES (Up) outcome token ID
+76:                 noTokenId: market.clobTokenIds[1],  // NO (Down) outcome token ID
+77:                 question: market.question,
+78:                 slug: market.slug,
+79:                 endsAt: market.endsAt,
+80:             };
+81:         } catch (err: any) {
+82:             console.error("[Polymarket] Gamma active market fetch error:", err.message);
+83:             // Fallback to Demo Simulation Mode for local/dev testing
+84:             const now = Math.floor(Date.now() / 1000);
+85:             const activeEpoch = now - (now % 300);
+86:             const endsAt = new Date((activeEpoch + 300) * 1000).toISOString();
+87:             console.log("[Polymarket] Falling back to Demo BTC 5-minute prediction market info");
+88:             return {
+89:                 conditionId: "0x_demo_condition_id",
+90:                 yesTokenId: "0x_demo_yes_token_id",
+91:                 noTokenId: "0x_demo_no_token_id",
+92:                 question: "Will BTC-USD price be higher at the end of this 5-minute epoch?",
+93:                 slug: `btc-updown-5m-${activeEpoch}`,
+94:                 endsAt,
+95:             };
+96:         }
+97:     }
+98: 
+99:     /**
+100:      * Get the current price / best order book bids and asks for a token outcome
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

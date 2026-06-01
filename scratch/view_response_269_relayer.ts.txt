@@ -1,0 +1,95 @@
+Created At: 2026-05-29T19:18:17Z
+Completed At: 2026-05-29T19:18:17Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/relayer.ts`
+Total Lines: 187
+Total Bytes: 7410
+Showing lines 1 to 187
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
+2: import { createWalletClient, http, encodeFunctionData } from "viem";
+3: import { privateKeyToAccount } from "viem/accounts";
+4: import { wallet as walletService } from "./wallet";
+5: import { env } from "../config/env";
+6: 
+7: const ERC20_ABI = [
+8:   {
+9:     name: "approve",
+10:     type: "function",
+11:     stateMutability: "nonpayable",
+12:     inputs: [
+13:       { name: "spender", type: "address" },
+14:       { name: "amount", type: "uint256" }
+15:     ],
+16:     outputs: [{ name: "", type: "bool" }]
+17:   }
+18: ] as const;
+19: 
+20: class PolymarketRelayerService {
+21:     private relayerClient: RelayClient | null = null;
+22:     private isDemoMode = false;
+23: 
+24:     constructor() {
+25:         const hasCredentials = env.POLYMARKET_PRIVATE_KEY && 
+26:                                (env as any).POLYMARKET_BUILDER_API_KEY && 
+27:                                (env as any).POLYMARKET_BUILDER_SECRET && 
+28:                                (env as any).POLYMARKET_BUILDER_PASSPHRASE;
+29: 
+30:         if (!hasCredentials) {
+31:             console.warn("⚠️ Polymarket Builder credentials missing. Relayer operating in DEMO mode.");
+32:             this.isDemoMode = true;
+33:             return;
+34:         }
+35: 
+36:         try {
+37:             const account = privateKeyToAccount(env.POLYMARKET_PRIVATE_KEY as `0x${string}`);
+38:             const wallet = createWalletClient({
+39:                 account,
+40:                 transport: http("https://polygon-rpc.com")
+41:             });
+42: 
+<truncated 4663 bytes>
+:     }
+145: 
+146:     /**
+147:      * Gaslessly withdraw USDC from user's Polymarket Deposit Wallet to another EVM address
+148:      */
+149:     async withdrawGasless(userWalletIndex: number, recipientAddress: string, amount: bigint): Promise<string> {
+150:         const derived = walletService.deriveWallet(userWalletIndex);
+151: 
+152:         if (this.isDemoMode || !this.relayerClient) {
+153:             console.log(`[Relayer-Demo] Simulating gasless withdrawal of ${amount} units to ${recipientAddress}`);
+154:             await new Promise(r => setTimeout(r, 1500));
+155:             return "0x_simulated_withdrawal_tx_hash";
+156:         }
+157: 
+158:         const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+159:         const usdcAddress = (env as any).POLYMARKET_USDCE_ADDRESS || "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+160: 
+161:         const callData = encodeFunctionData({
+162:             abi: ERC20_ABI,
+163:             functionName: "approve", // Utilizing approve/transfer selectors similarly
+164:             args: [recipientAddress as `0x${string}`, amount]
+165:         });
+166: 
+167:         // Safe/Proxy transfer payload
+168:         const txParams = {
+169:             to: usdcAddress as `0x${string}`,
+170:             value: "0",
+171:             data: callData,
+172:             txType: RelayerTxType.SAFE
+173:         };
+174: 
+175:         try {
+176:             console.log(`[Relayer] Submitting gasless withdrawal for proxy: ${depositWallet} to: ${recipientAddress}`);
+177:             const txHash = await this.relayerClient.execute(depositWallet, txParams);
+178:             return txHash;
+179:         } catch (err: any) {
+180:             console.error("[Relayer] Withdrawal failed:", err.message);
+181:             throw new Error(`Gasless withdrawal failed: ${err.message}`);
+182:         }
+183:     }
+184: }
+185: 
+186: export const polymarketRelayerService = new PolymarketRelayerService();
+187: 
+The above content shows the entire, complete file contents of the requested file.

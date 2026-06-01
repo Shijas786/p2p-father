@@ -1,0 +1,39 @@
+Created At: 2026-05-30T14:22:16Z
+Completed At: 2026-05-30T14:22:16Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 273
+Total Bytes: 11322
+Showing lines 110 to 140
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+110:                     headers: { "User-Agent": "Mozilla/5.0" },
+111:                     timeout: 3000
+112:                 });
+113:                 const d = res.data?.[0];
+114:                 if (d && tickerRes.data?.price) {
+115:                     const open = parseFloat(d[3]);
+116:                     const close = parseFloat(tickerRes.data.price);
+117:                     const diff = close - open;
+118:                     
+119:                     const now = Date.now();
+120:                     const windowMs = 300000;
+121:                     const remainingSecs = Math.max(10, (windowMs - (now % windowMs)) / 1000);
+122:                     
+123:                     // Model probability using normal CDF
+124:                     const volatility = Math.max(2.0, 15.0 * Math.sqrt(remainingSecs / 300));
+125:                     const z = diff / volatility;
+126:                     
+127:                     const cdf = (val: number) => 1 / (1 + Math.exp(-1.702 * val));
+128:                     const prob = cdf(z);
+129:                     
+130:                     let buyPrice = Math.max(0.05, Math.min(0.95, prob));
+131:                     if (isNo) {
+132:                         buyPrice = 1.0 - buyPrice;
+133:                     }
+134:                     
+135:                     buyPrice = parseFloat(buyPrice.toFixed(2));
+136:                     const sellPrice = parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2));
+137:                     return { buyPrice, sellPrice };
+138:                 }
+139:             } catch (e: any) {
+140:                 console.warn("[Polymarket-Service] Dynamic fallback failed, trying Binance:", e.message);
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

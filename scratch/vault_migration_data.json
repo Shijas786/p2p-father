@@ -1,0 +1,199 @@
+[
+  {
+    "id": "40a512d1-3d3d-43bd-8df1-568148c52f22",
+    "telegram_id": 5960337676,
+    "username": "ttttttnine",
+    "first_name": "ｓｉｎ",
+    "wallet_address": "0xfe6a22bf334e89a45798fa960349cc56f2c1d05a",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "BNB",
+        "amount": "0.0001"
+      }
+    ]
+  },
+  {
+    "id": "313167b7-839f-4515-8194-19a4fa261e65",
+    "telegram_id": 7858840555,
+    "username": "None",
+    "first_name": "Me 😊",
+    "wallet_address": "0x40b1cffe3c06f6ece711b3ccb25dc4d25c277a66",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.02"
+      }
+    ]
+  },
+  {
+    "id": "ab8eb226-7a5e-41bb-8dcf-1ef553ccac2d",
+    "telegram_id": 430155018,
+    "username": "SiBiN_Sibi",
+    "first_name": "S¡B¡N S¡b¡",
+    "wallet_address": "0xe38d0948c0dF1140bd659270BefdE02B88583980",
+    "balances": [
+      {
+        "chain": "Base",
+        "token": "USDC",
+        "amount": "0.000323"
+      },
+      {
+        "chain": "BSC",
+        "token": "USDC",
+        "amount": "0.008597"
+      },
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "3.72"
+      }
+    ]
+  },
+  {
+    "id": "06ae9580-c02a-402e-87da-57034b8a07db",
+    "telegram_id": 5036584001,
+    "username": "faarix",
+    "first_name": "faarixx",
+    "wallet_address": "0x36A233EB39c306A5040A9233C03109ecDfc67154",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "5.0"
+      }
+    ]
+  },
+  {
+    "id": "627186fd-57c0-4c21-82f3-60dcdb072ed7",
+    "telegram_id": 5110686008,
+    "username": "None",
+    "first_name": "Tintu",
+    "wallet_address": "0x5E3b3E7B666F215c6B6FfF9b4022157FCfd5cC72",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "13.67"
+      }
+    ]
+  },
+  {
+    "id": "28122fe2-45bd-4e9a-8a2a-1fc3ea0b03a1",
+    "telegram_id": 928121651,
+    "username": "ashmithpraman",
+    "first_name": "ASHMITH 69",
+    "wallet_address": "0x2517289b15ac4A3a769D8A344d605c0C4559CA70",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.16"
+      }
+    ]
+  },
+  {
+    "id": "673bef18-363f-4e59-a1c4-cc08e08c35bb",
+    "telegram_id": 7147124986,
+    "username": "cnfvck",
+    "first_name": "cinann",
+    "wallet_address": "0x6527161Cc06508a4CB9276fcf52A232A242Aa3Bb",
+    "balances": [
+      {
+        "chain": "Base",
+        "token": "USDT",
+        "amount": "6.0"
+      },
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "7.25"
+      }
+    ]
+  },
+  {
+    "id": "4a507997-1a9a-4248-91f6-7a7d1210e2d4",
+    "telegram_id": 7777625652,
+    "username": "None",
+    "first_name": "Vipin",
+    "wallet_address": "0x039Ec002378b57f88fb51Fc58357337Cf9969AC8",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "1.0"
+      }
+    ]
+  },
+  {
+    "id": "09cf23e0-08b2-4220-b4ca-e8af2b8f9796",
+    "telegram_id": 969137417,
+    "username": "Krishnapriyaahh",
+    "first_name": "ᴋʀɪꜱʜɴᴀ ᴠɪꜱᴀᴋʜ",
+    "wallet_address": "0xff12Fd763019F0b2B5143AA455A3df362E4cfeF6",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.009"
+      }
+    ]
+  },
+  {
+    "id": "d2781ffb-9bad-4354-84d7-4a99067138bf",
+    "telegram_id": 7778157883,
+    "username": "trix_0077",
+    "first_name": "𝗧𝗿𝗶𝘅",
+    "wallet_address": "0x1Ce8f52B75D32d5c4785F027B76E994ED1334f3a",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.6"
+      }
+    ]
+  },
+  {
+    "id": "60a53439-fd5c-44b3-bc41-53da7270ff6d",
+    "telegram_id": 1382491136,
+    "username": "shazilasf",
+    "first_name": "Shazil.asf",
+    "wallet_address": "0xa0be468fd909b0d9e12150755c9d8dabe978def4",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.1"
+      }
+    ]
+  },
+  {
+    "id": "45eb8f3d-2199-4ead-a3a6-1a9cec5ffd1f",
+    "telegram_id": 5419172738,
+    "username": "Medphysicist",
+    "first_name": "A",
+    "wallet_address": "0xbBFf51FEf421052A0bc84583EcE739902DF024B3",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "1.353"
+      }
+    ]
+  },
+  {
+    "id": "f00b0404-b4f8-44ec-9053-aa8da3ca6e9a",
+    "telegram_id": 819438613,
+    "username": "Oxccb5",
+    "first_name": "echtpersonen",
+    "wallet_address": "0xAd7e163D9A88Fd8F9f4b9741C2Fe9951E401CD10",
+    "balances": [
+      {
+        "chain": "BSC",
+        "token": "USDT",
+        "amount": "0.005"
+      }
+    ]
+  }
+]

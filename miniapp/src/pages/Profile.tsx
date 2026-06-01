@@ -432,12 +432,12 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     </div>
                 )}
 
-                {/* 3. Receiving Wallet */}
+                {/* 3. Hot Wallet Address */}
                 <div className="prof-payment-item">
                     <div className="prof-payment-top">
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                             <img src="/icons for trade/profile icons/receiving-wallet.svg?v=3" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                            <span className="prof-payment-name">Receiving Wallet</span>
+                            <span className="prof-payment-name">Hot Wallet Address</span>
                         </div>
                         <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
                             {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
@@ -469,10 +469,15 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     )}
                 </div>
 
-                {/* 4. History & Ads */}
+                {/* 4. Positions, Orders & Ads */}
+                <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/predict'); }}>
+                    <span style={{ fontSize: '24px', marginRight: '16px', display: 'flex', width: '28px', justifyContent: 'center' }}>📊</span>
+                    <span className="prof-nav-text">Positions</span>
+                    <span className="prof-nav-chevron">›</span>
+                </div>
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/orders'); }}>
                     <img src="/icons for trade/profile icons/order-history.svg?v=3" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                    <span className="prof-nav-text">Order History</span>
+                    <span className="prof-nav-text">Orders</span>
                     <span className="prof-nav-chevron">›</span>
                 </div>
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/ads'); }}>

@@ -1,0 +1,49 @@
+Created At: 2026-05-30T14:21:42Z
+Completed At: 2026-05-30T14:21:42Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 273
+Total Bytes: 11321
+Showing lines 170 to 210
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+170:                         const sellPrice = parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2));
+171:                         return { buyPrice, sellPrice };
+172:                     }
+173:                 } catch (binErr: any) {
+174:                     console.warn("[Polymarket-Service] Binance dynamic fallback failed:", binErr.message);
+175:                 }
+176:             }
+177:             
+178:             // final fallback: fluctuate around 0.50
+179:             const randomOffset = (Math.sin(Date.now() / 10000) * 0.15);
+180:             const mid = 0.50 + randomOffset;
+181:             const buyPrice = Math.max(0.05, Math.min(0.95, isNo ? 1.0 - mid : mid));
+182:             return {
+183:                 buyPrice: parseFloat(buyPrice.toFixed(2)),
+184:                 sellPrice: parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2)),
+185:             };
+186:         };
+187: 
+188:         if (tokenId.startsWith("0x_demo_")) {
+189:             return getDynamicFallback();
+190:         }
+191:         try {
+192:             const res = await axios.get(`${CLOB_API}/book`, {
+193:                 params: { token_id: tokenId },
+194:                 timeout: 5000,
+195:             });
+196: 
+197:             const book = res.data;
+198:             const bestBid = book?.bids?.[0]?.price ? parseFloat(book.bids[0].price) : null;
+199:             const bestAsk = book?.asks?.[0]?.price ? parseFloat(book.asks[0].price) : null;
+200: 
+201:             if (bestBid === null || bestAsk === null) {
+202:                 throw new Error("Empty order book");
+203:             }
+204: 
+205:             return {
+206:                 buyPrice: bestAsk,
+207:                 sellPrice: bestBid,
+208:             };
+209:         } catch (err: any) {
+210:             console.error(`[Polymarket] CLOB book fetch error for ${tokenId}, using dynamic fallback:`, err.message);
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

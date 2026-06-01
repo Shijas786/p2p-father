@@ -1,0 +1,18 @@
+Created At: 2026-05-31T05:14:36Z
+Completed At: 2026-05-31T05:14:36Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/relayer.ts`
+Total Lines: 10
+Total Bytes: 366
+Showing lines 1 to 10
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: // src/services/relayer.ts
+2: export const RelayerService = {
+3:     async gaslessDeposit(userId: string, amount: number) {
+4:         return { success: true, txHash: '0x' + Math.random().toString(16).slice(2) };
+5:     },
+6:     async gaslessWithdraw(userId: string, amount: number) {
+7:         return { success: true, txHash: '0x' + Math.random().toString(16).slice(2) };
+8:     }
+9: };
+10: 
+The above content shows the entire, complete file contents of the requested file.

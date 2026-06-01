@@ -1,0 +1,779 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPublicClient, http } from 'viem';
+import { polygon } from 'viem/chains';
+import { api } from '../lib/api';
+import { haptic } from '../lib/telegram';
+import { useToast } from '../components/Toast';
+import { PredictChart } from '../components/PredictChart';
+import { TradePanel } from '../components/TradePanel';
+import { DepositModal } from '../components/DepositModal';
+import './Predict.css';
+
+interface Props { user: any; }
+
+interface Round {
+    time: string; open: number;
+    close: number | null; outcome: 'UP' | 'DOWN' | null; timestamp: number;
+}
+
+const chainlinkClient = createPublicClient({
+    chain: polygon,
+    transport: http('https://polygon.llamarpc.com')
+});
+const CHAINLINK_BTC_USD = '0xc907E116054Ad103354f2D350FD2514433D57F6f';
+const chainlinkAbi = [{"inputs":[],"name":"latestRoundData","outputs":[{"internalType":"uint80","name":"roundId","type":"uint80"},{"internalType":"int256","name":"answer","type":"int256"},{"internalType":"uint256","name":"startedAt","type":"uint256"},{"internalType":"uint256","name":"updatedAt","type":"uint256"},{"internalType":"uint80","name":"answeredInRound","type":"uint80"}],"stateMutability":"view","type":"function"}];
+
+interface Trade {
+    id: string; side: string; outcome: 'UP' | 'DOWN';
+    qty: number; price: number; cost: number; timestamp: number;
+}
+interface Position {
+    outcome: 'UP' | 'DOWN'; qty: number; avg: number;
+    currentPrice: number; value: number; cost: number;
+    returnAmt: number; returnPct: number;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function timeAgo(ts: number): string {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60)  return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    return `${Math.floor(s / 3600)}h ago`;
+}
+
+export function Predict({ user }: Props) {
+    const { showToast } = useToast();
+
+    // Price & timer
+    const [livePrice, setLivePrice]   = useState(0);
+    const [priceToBeat, setPriceToBeat] = useState(0);
+    const [priceFlash, setPriceFlash] = useState<'up'|'down'|null>(null);
+    const [timeLeft, setTimeLeft]     = useState({ mins: '04', secs: '59' });
+    const [roundLabel, setRoundLabel] = useState('');
+    const [liveEndMs, setLiveEndMs] = useState(0);
+
+    // Market data
+    const [history, setHistory]       = useState<Round[]>([]);
+    const [selectedRound, setSelectedRound] = useState(-1);
+    const [cashBalance, setCashBalance] = useState('0.00');
+    const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
+    const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
+    const [aiData, setAiData]         = useState<any>(null);
+    const [loading, setLoading]       = useState(false);
+
+    // Positions & trades
+    const [positions, setPositions]   = useState<Position[]>([]);
+    const [trades, setTrades]         = useState<Trade[]>([]);
+
+    // Trade form
+    const [tradeType, setTradeType]   = useState<'buy'|'sell'>('buy');
+    const [betType, setBetType]       = useState<'UP'|'DOWN'>('UP');
+    const [betAmount, setBetAmount]   = useState('');
+    const [sellPercentage, setSellPercentage] = useState<number>(0);
+    const [placingBet, setPlacingBet] = useState(false);
+    
+    // Notifications
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+    // Modals
+    const [showDepositModal, setShowDepositModal]     = useState(false);
+    const [showWithdrawModal, setShowWithdrawModal]   = useState(false);
+    const [depositAddress, setDepositAddress]         = useState('');
+    const [depositWalletLoading, setDepositWalletLoading] = useState(false);
+    const [gaslessDepositAmount, setGaslessDepositAmount] = useState('');
+    const [gaslessDepositLoading, setGaslessDepositLoading] = useState(false);
+    const [withdrawAmount, setWithdrawAmount]         = useState('');
+    const [withdrawRecipient, setWithdrawRecipient]   = useState('');
+    const [withdrawLoading, setWithdrawLoading]       = useState(false);
+
+    const chartRef = useRef<HTMLDivElement>(null);
+
+    // ── Load all data ───────────────────────────────────────────────────────
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [aiRes, histRes, balRes, posRes, tradeRes] =
+                await Promise.allSettled([
+                    api.predictions.getAIAnalysis(),
+                    api.predictions.getHistory(),
+                    api.predictions.getBalance(),
+                    api.predictions.getPositions(),
+                    api.predictions.getTrades(),
+                ]);
+
+            if (aiRes.status === 'fulfilled') setAiData(aiRes.value);
+            if (histRes.status === 'fulfilled' && histRes.value?.history) {
+                const parsed: Round[] = histRes.value.history.map((h: any) => ({
+                    time: h.time, open: h.open, close: h.close,
+                    outcome: h.outcome, timestamp: h.timestamp,
+                }));
+                setHistory(parsed);
+                if (parsed.length > 0) setPriceToBeat(parsed[0].close || parsed[0].open || 0);
+            }
+            if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
+            if (posRes.status === 'fulfilled')   setPositions(posRes.value.positions ?? []);
+            if (tradeRes.status === 'fulfilled') setTrades(tradeRes.value.trades ?? []);
+        } catch (e) { console.error('[Predict] loadData fatal error:', e); }
+        finally { setLoading(false); }
+    }, []);
+
+    // ── Live price from Binance WebSocket (Fastest, ~50ms lag) ──────
+    useEffect(() => {
+        let prev = 0;
+        let ws: WebSocket | null = null;
+        let timeoutId: any;
+
+        const connectWs = () => {
+            ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+            
+            ws.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    const p = parseFloat(data.p);
+                    if (p > 0) {
+                        if (prev > 0 && p !== prev) {
+                            setPriceFlash(p > prev ? 'up' : 'down');
+                            clearTimeout(timeoutId);
+                            timeoutId = setTimeout(() => setPriceFlash(null), 600);
+                        }
+                        prev = p;
+                        setLivePrice(p);
+                        // Guarantee PTB is never 0 so odds always fluctuate
+                        setPriceToBeat(ptb => ptb === 0 ? p : ptb); 
+                    }
+                } catch (err) {
+                    console.warn('Binance WS parse error', err);
+                }
+            };
+
+            ws.onerror = (e) => console.warn('Binance WS error', e);
+            ws.onclose = () => {
+                console.warn('Binance WS closed, reconnecting in 3s...');
+                setTimeout(connectWs, 3000);
+            };
+        };
+
+        connectWs();
+
+        return () => {
+            if (ws) {
+                ws.onclose = null; // prevent reconnect on unmount
+                ws.close();
+            }
+            clearTimeout(timeoutId);
+        };
+    }, []);
+
+    // ── Live odds from Polymarket CLOB (HTTP Polling) ──────
+    useEffect(() => {
+        let activeBtcMarket: any = null;
+        let intervalId: any;
+
+        const fetchPoly = async () => {
+            try {
+                const now = Date.now();
+                
+                const windowStartSeconds = Math.floor(now / 300000) * 300;
+                const slug = `btc-updown-5m-${windowStartSeconds}`;
+                
+                // Invalidate cache if the exact 5m slug has rolled over
+                if (activeBtcMarket && activeBtcMarket.slug !== slug) {
+                    activeBtcMarket = null;
+                }
+
+                if (!activeBtcMarket) {
+                    const r = await window.fetch(`https://gamma-api.polymarket.com/events?slug=${slug}`);
+                    const events = await r.json();
+                    
+                    if (events && events.length > 0) {
+                        const ev = events[0];
+                        if (ev.markets && ev.markets.length > 0) {
+                            const activeM = ev.markets[0];
+                            if (activeM.clobTokenIds) {
+                                try {
+                                    const tokenIds = JSON.parse(activeM.clobTokenIds);
+                                    if (tokenIds && tokenIds.length >= 2) {
+                                        const titleStr = (ev.title || "") + " " + (activeM.question || "") + " " + (activeM.description || "");
+                                        const strikeMatch = titleStr.match(/Bitcoin\s*>\s*\$?([\d,]+(\.\d+)?)/i) || titleStr.match(/\$?([\d,]+(\.\d{2}))/);
+                                        if (strikeMatch) {
+                                            const exactStrike = parseFloat(strikeMatch[1].replace(/,/g, ''));
+                                            setPriceToBeat(exactStrike);
+                                        }
+
+                                        activeBtcMarket = {
+                                            yesTokenId: tokenIds[0],
+                                            noTokenId: tokenIds[1],
+                                            endDate: new Date(activeM.endDate).getTime(),
+                                            slug: slug
+                                        };
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                }
+
+                // If we have an active market, poll the order book via HTTP
+                if (activeBtcMarket) {
+                    const [resY, resN] = await Promise.all([
+                        window.fetch(`https://clob.polymarket.com/book?token_id=${activeBtcMarket.yesTokenId}`),
+                        window.fetch(`https://clob.polymarket.com/book?token_id=${activeBtcMarket.noTokenId}`)
+                    ]);
+                    
+                    const bookY = await resY.json();
+                    const bookN = await resN.json();
+
+                    if (bookY && bookY.bids && bookY.asks) {
+                        const bestBidY = bookY.bids.length ? Math.max(...bookY.bids.map((b: any) => parseFloat(b.price))) : 0.50;
+                        const bestAskY = bookY.asks.length ? Math.min(...bookY.asks.map((a: any) => parseFloat(a.price))) : 0.50;
+                        setYesPrice({ buyPrice: bestAskY, sellPrice: bestBidY });
+                    }
+                    if (bookN && bookN.bids && bookN.asks) {
+                        const bestBidN = bookN.bids.length ? Math.max(...bookN.bids.map((b: any) => parseFloat(b.price))) : 0.50;
+                        const bestAskN = bookN.asks.length ? Math.min(...bookN.asks.map((a: any) => parseFloat(a.price))) : 0.50;
+                        setNoPrice({ buyPrice: bestAskN, sellPrice: bestBidN });
+                    }
+                }
+            } catch (e) {
+                console.warn('Frontend Polymarket fetch failed:', e);
+            }
+        };
+        fetchPoly();
+        // Poll every 1 second for highly responsive odds
+        intervalId = setInterval(fetchPoly, 1000);
+        
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
+
+    // ── Static Strike Price (Price to Beat) ──────────────
+    // Extracted strictly from Polymarket Gamma API above to ensure perfect parity.
+    useEffect(() => {
+        // Fallback only if Polymarket API hasn't loaded a valid strike
+        if (priceToBeat === 0 && history && history.length > 0) {
+            setPriceToBeat(history[history.length - 1].open);
+        }
+    }, [history, priceToBeat]);
+
+    // ── Countdown ───────────────────────────────────────────────────────────
+    useEffect(() => {
+        let lastNextTime = 0;
+        
+        const tick = () => {
+            const now = new Date();
+            const next = new Date(Math.ceil(now.getTime() / 300000) * 300000);
+            const nextTime = next.getTime();
+            const diff = nextTime - now.getTime();
+            
+            // If the 5-minute round has rolled over
+            if (lastNextTime !== 0 && nextTime > lastNextTime) {
+                setTimeout(async () => {
+                    await loadData(); // Wait 1s for backend to settle the round before fetching
+                    // Move the user to view the round that just ended, or shift their current view
+                    setSelectedRound(prev => prev === -1 ? 0 : (prev >= 0 ? prev + 1 : prev));
+                }, 1000); 
+            }
+            lastNextTime = nextTime;
+
+            setTimeLeft({
+                mins: Math.floor(diff / 60000).toString().padStart(2, '0'),
+                secs: Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'),
+            });
+            
+            const start = new Date(next.getTime() - 300000);
+            const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).replace(' ', '');
+            
+            const startTimeStr = formatTime(start);
+            const endTimeStr = formatTime(next);
+            
+            setRoundLabel(`${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })}, ${startTimeStr}-${endTimeStr} ET`);
+            setLiveEndMs(next.getTime());
+        };
+        tick();
+        const iv = setInterval(tick, 1000);
+        return () => clearInterval(iv);
+    }, [loadData]);
+
+    // ── Poll balance every 6s ────────────────────────────────────────
+    useEffect(() => {
+        const poll = async () => {
+            try {
+                const b = await api.predictions.getBalance();
+                if (b && b.balance) setCashBalance(b.balance);
+            } catch {}
+        };
+        const iv = setInterval(poll, 6000);
+        return () => clearInterval(iv);
+    }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    // TradingView has been removed in favor of native SVG PredictChart
+
+    // ── Computed ────────────────────────────────────────────────────────────
+    const displayPtb  = selectedRound === -1 ? priceToBeat : selectedRound === -99 ? 0 : (history[selectedRound]?.open || 0);
+    const priceDelta  = livePrice > 0 && displayPtb > 0 ? livePrice - displayPtb : 0;
+    const isUp        = priceDelta >= 0;
+    const deltaAbs    = Math.abs(priceDelta);
+
+    const computedYesBuy = yesPrice.buyPrice;
+    const computedNoBuy = noPrice.buyPrice;
+
+    const potentialPayout = betAmount && parseFloat(betAmount) > 0
+        ? (parseFloat(betAmount) / (betType === 'UP' ? computedYesBuy : computedNoBuy)).toFixed(2)
+        : '0.00';
+
+    // ── Handlers ────────────────────────────────────────────────────────────
+    const handleQuickAmount = (v: string) => {
+        haptic('light');
+        if (v === 'Max') { setBetAmount(parseFloat(cashBalance).toFixed(2)); return; }
+        setBetAmount(prev => (parseFloat(prev || '0') + parseFloat(v)).toFixed(2));
+    };
+
+    const handlePlacePrediction = async () => {
+        haptic('medium');
+        if (!betAmount || parseFloat(betAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
+        if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
+        setPlacingBet(true);
+        try {
+            const res = await api.predictions.placeBet(
+                parseFloat(betAmount), betType,
+                betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice,
+                tradeType.toUpperCase() as 'BUY'|'SELL'
+            );
+            if (res.success) { showToast('Prediction placed!', 'success'); setBetAmount(''); loadData(); }
+            else showToast('Failed to place prediction', 'error');
+        } catch (e: any) { showToast(e.message || 'Order failed', 'error'); }
+        finally { setPlacingBet(false); }
+    };
+
+    const handleOpenDeposit = async () => {
+        haptic('selection'); setShowDepositModal(true);
+        if (!depositAddress) {
+            setDepositWalletLoading(true);
+            try { const r = await api.predictions.getDepositWallet(); setDepositAddress(r.address); }
+            catch { showToast('Failed to get deposit address', 'error'); }
+            finally { setDepositWalletLoading(false); }
+        }
+    };
+
+    const handleGaslessDeposit = async () => {
+        haptic('medium');
+        if (!gaslessDepositAmount || parseFloat(gaslessDepositAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
+        setGaslessDepositLoading(true);
+        try {
+            const r = await api.predictions.depositGasless(parseFloat(gaslessDepositAmount));
+            showToast(`Deposit initiated! ${r.txHash.slice(0, 10)}...`, 'success');
+            setGaslessDepositAmount(''); setShowDepositModal(false); loadData();
+        } catch (e: any) { showToast(e.message || 'Deposit failed', 'error'); }
+        finally { setGaslessDepositLoading(false); }
+    };
+
+    const handleGaslessWithdraw = async () => {
+        haptic('medium');
+        if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) { showToast('Enter amount', 'warning'); return; }
+        if (parseFloat(withdrawAmount) > parseFloat(cashBalance)) { showToast('Insufficient balance', 'warning'); return; }
+        if (!withdrawRecipient) { showToast('Enter recipient address', 'warning'); return; }
+        setWithdrawLoading(true);
+        try {
+            const r = await api.predictions.withdrawGasless(parseFloat(withdrawAmount), withdrawRecipient);
+            showToast(`Withdrawn! ${r.txHash.slice(0, 10)}...`, 'success');
+            setWithdrawAmount(''); setShowWithdrawModal(false); loadData();
+        } catch (e: any) { showToast(e.message || 'Withdrawal failed', 'error'); }
+        finally { setWithdrawLoading(false); }
+    };
+
+    const displayedRounds = history.slice(0, 4);
+
+    return (
+        <div className="pm-page">
+
+            {/* ══ TOP BAR ══════════════════════════════════════════════════ */}
+            <header className="pm-topbar">
+                <div className="pm-topbar-metrics">
+                    <div className="pm-metric">
+                        <span className="pm-metric-label">PORTFOLIO</span>
+                        <span className="pm-metric-value pm-green">${parseFloat(user?.balance || '0').toFixed(2)}</span>
+                    </div>
+                    <div className="pm-metric">
+                        <span className="pm-metric-label">CASH</span>
+                        <span className="pm-metric-value pm-green">${parseFloat(cashBalance).toFixed(2)}</span>
+                    </div>
+                </div>
+                <div className="pm-topbar-actions">
+                    <button className="pm-btn-deposit" onClick={handleOpenDeposit} id="btn-deposit">Deposit</button>
+                    
+                    <div style={{ position: 'relative' }}>
+                        <button className="pm-icon-btn pm-bell-btn" onClick={() => { haptic('light'); setShowNotifications(!showNotifications); }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                            <span className="pm-bell-dot"/>
+                        </button>
+                        
+                        {showNotifications && (
+                            <div className="pm-notif-dropdown">
+                                <div className="pm-notif-header">Notifications</div>
+                                <div className="pm-notif-list">
+                                    {trades.length === 0 ? (
+                                        <div className="pm-notif-empty">No notifications</div>
+                                    ) : (
+                                        trades.map((t) => (
+                                            <div key={t.id} className="pm-notif-item">
+                                                <div className="pm-btc-icon-sq pm-notif-btc">₿</div>
+                                                <div className="pm-notif-content">
+                                                    <div className="pm-notif-top">
+                                                        <span className="pm-notif-title">{t.side === 'buy' ? `Buy ${t.outcome === 'UP' ? 'Up' : 'Down'}` : `Winning position redeemed`}</span>
+                                                        <div className="pm-notif-time">
+                                                            {timeAgo(t.timestamp)}
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: 6, opacity: 0.6}}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                                        </div>
+                                                    </div>
+                                                    <div className="pm-notif-market">Bitcoin Up or Down - {new Date(t.timestamp).toLocaleString('en-US', {month: 'short', day: 'numeric'})}, {new Date(t.timestamp).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})}-{new Date(t.timestamp + 5*60000).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})} ET</div>
+                                                    <div className="pm-notif-detail">{t.side === 'buy' ? `${t.qty} shares @ ${(t.price * 100).toFixed(1)}¢` : `You won $${(t.qty).toFixed(2)}`}</div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                        <div className="pm-profile-btn" onClick={() => { haptic('light'); setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}>
+                            <div className="pm-avatar-blue"/>
+                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#848e9c" strokeWidth="1.5"><path d="M1 1l4 4 4-4"/></svg>
+                        </div>
+
+                        {showProfileMenu && (
+                            <div className="pm-notif-dropdown pm-profile-dropdown" style={{ width: '240px', right: '0' }}>
+                                <div className="pm-notif-header" style={{ padding: '12px 16px', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ color: '#848e9c', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Hot Wallet Address</div>
+                                    <div style={{ fontFamily: 'SF Mono, monospace', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        {user?.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : '0x...'}
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#848e9c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </div>
+                                </div>
+                                <div className="pm-notif-list">
+                                    <div className="pm-notif-item" onClick={() => { navigate('/orders'); }} style={{ padding: '12px 16px' }}>
+                                        <span className="pm-notif-title">Positions & Orders</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </header>
+
+            {/* ══ MARKET CARD (chart + timeline + positions inside) ════════ */}
+            <div className="pm-market-card">
+
+                {/* Title row */}
+                <div className="pm-card-title-row">
+                    <div className="pm-card-title-left">
+                        {/* Rounded-square BTC icon */}
+                        <div className="pm-btc-icon-sq">₿</div>
+                        <div>
+                            <h2 className="pm-market-name">BTC Up or Down 5m</h2>
+                            <p className="pm-market-sub">{roundLabel}</p>
+                        </div>
+                    </div>
+                    <div className="pm-card-title-right">
+                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        </button>
+                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                            </svg>
+                        </button>
+                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Price metrics + timer */}
+                <div className="pm-price-row">
+                    <div className="pm-price-block">
+                        <span className="pm-price-label" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '12px'}}>Price to Beat</span>
+                        <span className="pm-price-val" style={{fontSize: '22px'}}>${displayPtb.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                    </div>
+                    <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '20px', marginLeft: '10px'}}>
+                        <span className="pm-price-label pm-price-label-current" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '12px'}}>Current Price</span>
+                        <div className="pm-price-current-row">
+                            <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '22px'}}>
+                                ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                            </span>
+                            {displayPtb > 0 && (
+                                <span className={`pm-delta ${isUp ? 'pm-delta-up' : 'pm-delta-down'}`} style={{padding: '2px 6px', fontSize: '10px', borderRadius: '4px'}}>
+                                    {isUp ? '↑' : '↓'} {((deltaAbs / displayPtb) * 100).toFixed(2)}%
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="pm-timer-block">
+                        {selectedRound === -1 ? (
+                            <div className="pm-timer" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px'}}>
+                                <div style={{fontSize: '12px', color: '#848e9c'}}>Time Left</div>
+                                <div style={{display: 'flex', alignItems: 'flex-start', gap: '4px'}}>
+                                    <div className="pm-timer-unit">
+                                        <span className="pm-timer-digit">{timeLeft.mins}</span>
+                                        <span className="pm-timer-label">MINS</span>
+                                    </div>
+                                    <span className="pm-timer-digit" style={{opacity: 0.5}}>:</span>
+                                    <div className="pm-timer-unit">
+                                        <span className="pm-timer-digit">
+                                            {timeLeft.secs[0]}<span style={{fontSize: '0.75em', verticalAlign: 'super'}}>{timeLeft.secs[1]}</span>
+                                        </span>
+                                        <span className="pm-timer-label">SECS</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <button className="pm-go-live-btn" onClick={() => { haptic('selection'); setSelectedRound(-1); }}>
+                                <span className="pm-live-dot"/> Go to live market &gt;
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Chart */}
+                <div className="pm-chart-wrap">
+
+                    <div className="pm-chart" style={{ flex: 1, position: 'relative' }}>
+                        <PredictChart 
+                            livePrice={livePrice} 
+                            priceToBeat={displayPtb} 
+                            startTimeMs={liveEndMs ? liveEndMs - 300000 : 0} 
+                            endTimeMs={liveEndMs || 0} 
+                        />
+                    </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="pm-timeline">
+                    <div className="pm-tl-scroll">
+                        <div className="pm-tl-past-group">
+                            <button className="pm-tl-meta-btn" onClick={() => haptic('light')}>
+                                Past <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
+                            </button>
+                            <div className="pm-tl-divider"></div>
+                            <div className="pm-tl-red-arrows">
+                                {[-5, -4, -3].map((offset) => {
+                                    if (!liveEndMs) return null;
+                                    const targetMs = liveEndMs + (offset * 300000);
+                                    const historyIndex = Math.abs(offset) - 1;
+                                    const h = history.find(r => r.timestamp === targetMs - 300000);
+                                    const outcome = h ? h.outcome : 'UP';
+                                    return (
+                                        <button key={`arrow-${offset}`} className={`pm-tl-circle-btn ${outcome === 'UP' ? 'pm-tl-circle-up' : 'pm-tl-circle-down'}`}
+                                            onClick={() => { haptic('selection'); setSelectedRound(historyIndex); }}>
+                                            {outcome === 'UP' ? (
+                                                <svg width="6" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 5l4-4 4 4"/></svg>
+                                            ) : (
+                                                <svg width="6" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 1l4 4 4-4"/></svg>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {[-2, -1].map((offset) => {
+                            if (!liveEndMs) return null;
+                            const targetMs = liveEndMs + (offset * 300000);
+                            const historyIndex = Math.abs(offset) - 1;
+                            return (
+                                <button key={`past-${offset}`} id={`round-${historyIndex}`}
+                                    className={`pm-tl-pill ${selectedRound === historyIndex ? 'pm-tl-pill-active' : ''}`}
+                                    onClick={() => { haptic('selection'); setSelectedRound(historyIndex); }}>
+                                    {new Date(targetMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })}
+                                </button>
+                            );
+                        })}
+                        
+                        <button className={`pm-tl-pill ${selectedRound === -1 ? 'pm-tl-pill-active' : ''}`}
+                            onClick={() => { haptic('selection'); setSelectedRound(-1); }} id="round-live">
+                            {selectedRound === -1 && <span className="pm-tl-live-dot" style={{marginRight: 6}}/>} 
+                            {liveEndMs ? new Date(liveEndMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'Live'}
+                        </button>
+                        
+                        {[1].map((offset) => (
+                            <button key={`fut-${offset}`} id="round-future"
+                                className={`pm-tl-pill ${selectedRound === -99 ? 'pm-tl-pill-active' : ''}`}
+                                style={{ opacity: selectedRound === -99 ? 1 : 0.6 }}
+                                onClick={() => { haptic('selection'); setSelectedRound(-99); }}>
+                                {liveEndMs ? new Date(liveEndMs + (offset * 300000)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '...'}
+                            </button>
+                        ))}
+
+                        <button className="pm-tl-meta-btn" onClick={() => haptic('light')}>
+                            More <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
+                        </button>
+                    </div>
+                    <div className="pm-tl-icons">
+                        <button className="pm-tl-icon-btn" onClick={() => haptic('light')}>
+                            <svg width="18" height="11" viewBox="0 0 18 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 9l4-5 4 4 8-7"/></svg>
+                        </button>
+                        <button className="pm-tl-icon-btn" onClick={() => haptic('light')}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/><path d="M9 4v20"/><path d="M14 4v20"/></svg>
+                        </button>
+                        <button className="pm-tl-icon-btn pm-tl-icon-active" onClick={() => haptic('light')}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="4" width="3" height="7" rx="1"/><rect x="6" y="1" width="3" height="10" rx="1"/><rect x="11" y="3" width="3" height="8" rx="1"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── LIVE POSITIONS (inside market card, under chart) */}
+                <div className="pm-inline-positions">
+                    <div className="pm-inline-pos-header">
+                        <span className="pm-inline-pos-title">Positions</span>
+                        <button className="pm-view-net-btn" onClick={() => haptic('light')} id="btn-view-net">View Net Positions</button>
+                    </div>
+                    {positions.length === 0 ? (
+                        <div className="pm-positions-empty">No current position</div>
+                    ) : (
+                        <>
+                            <div className="pm-pos-table-head">
+                                <span>OUTCOME</span><span>QTY</span><span>AVG</span><span>VALUE</span><span>RETURN</span><span></span>
+                            </div>
+                            {positions.map((pos, idx) => (
+                                <div key={idx} className="pm-pos-row" id={`pos-row-${pos.outcome.toLowerCase()}`}>
+                                    <div>
+                                        <span className={`pm-pos-outcome-badge ${pos.outcome === 'UP' ? 'pm-pos-badge-up' : 'pm-pos-badge-down'}`}>
+                                            {pos.outcome === 'UP' ? '▲ Up' : '▼ Down'}
+                                        </span>
+                                    </div>
+                                    <span className="pm-mono">{pos.qty}</span>
+                                    <span className="pm-mono">{(pos.avg * 100).toFixed(0)}¢</span>
+                                    <div className="pm-pos-col-value">
+                                        <span className="pm-pos-value-main pm-mono">${pos.value.toFixed(2)}</span>
+                                        <span className="pm-pos-cost-sub">Cost ${pos.cost.toFixed(2)}</span>
+                                    </div>
+                                    <div>
+                                        <span className={`pm-pos-return-val ${pos.returnAmt >= 0 ? 'pm-green' : 'pm-red'}`}>
+                                            {pos.returnAmt >= 0 ? '+' : ''}${pos.returnAmt.toFixed(2)}
+                                            <span className="pm-pos-return-pct"> ({pos.returnPct >= 0 ? '+' : ''}{pos.returnPct.toFixed(2)}%)</span>
+                                        </span>
+                                    </div>
+                                    <div className="pm-pos-col-action">
+                                        <button className="pm-pos-sell-btn" id={`btn-sell-${idx}`}
+                                            onClick={() => { haptic('medium'); setBetType(pos.outcome); setTradeType('sell'); }}>
+                                            Sell
+                                        </button>
+                                        <button className="pm-pos-share-btn" onClick={() => haptic('light')}>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                                <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
+                </div>
+
+                {/* ══ TRADE BOX (Moved inside Market Card for unified layout) ════ */}
+                <TradePanel
+                    isUp={isUp}
+                    yesPrice={yesPrice}
+                    noPrice={noPrice}
+                    cashBalance={cashBalance}
+                    positions={positions}
+                    selectedRound={selectedRound}
+                    history={history}
+                    loadData={loadData}
+                />
+
+            </div>
+
+            {/* ══ HISTORY CARD ════════════════════════════════════════════ */}
+            <div className="pm-history-card">
+                <div className="pm-history-header">
+                    <span className="pm-history-title">History</span>
+                </div>
+                {trades.length === 0 ? (
+                    <div className="pm-history-empty">No trades yet this round</div>
+                ) : (
+                    trades.map((t, idx) => (
+                        <div key={t.id ?? idx} className="pm-history-row" id={`trade-${idx}`}>
+                            <span className="pm-history-desc">
+                                {t.side === 'BUY' ? 'Bought' : 'Sold'}{' '}
+                                <span className="pm-mono">{t.qty.toFixed(2)}</span>{' '}
+                                <span className={t.outcome === 'UP' ? 'pm-green' : 'pm-red'}>
+                                    {t.outcome === 'UP' ? 'Up' : 'Down'}
+                                </span>{' '}
+                                at <span className="pm-mono">{(t.price * 100).toFixed(0)}¢</span>{' '}
+                                <span className="pm-history-cost">(${t.cost.toFixed(2)})</span>
+                            </span>
+                            <span className="pm-history-time">{timeAgo(t.timestamp)}</span>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* ══ DEPOSIT MODAL ═══════════════════════════════════════════ */}
+            {showDepositModal && (
+                <DepositModal 
+                    onClose={() => setShowDepositModal(false)}
+                    balances={{ usdt: cashBalance, address: depositAddress }}
+                    loadBalances={async () => {
+                        setDepositWalletLoading(true);
+                        try {
+                            const b = await api.predictions.getBalance();
+                            if (b && b.balance) setCashBalance(b.balance);
+                            const r = await api.predictions.getDepositWallet();
+                            if (r && r.address) setDepositAddress(r.address);
+                        } catch(e) {}
+                        setDepositWalletLoading(false);
+                    }}
+                    copyAddress={() => { 
+                        if (depositAddress) { 
+                            navigator.clipboard.writeText(depositAddress); 
+                            showToast('Copied!', 'success'); 
+                        } 
+                    }}
+                    haptic={haptic}
+                />
+            )}
+
+            {/* ══ WITHDRAW MODAL ══════════════════════════════════════════ */}
+            {showWithdrawModal && (
+                <div className="pm-overlay" onClick={() => setShowWithdrawModal(false)}>
+                    <div className="pm-modal" onClick={e => e.stopPropagation()}>
+                        <div className="pm-modal-header">
+                            <h3>Withdraw USDC</h3>
+                            <button className="pm-modal-close" onClick={() => setShowWithdrawModal(false)}>×</button>
+                        </div>
+                        <div className="pm-modal-body">
+                            <div className="pm-withdraw-form">
+                                <label className="pm-field-label">Amount (USDC)</label>
+                                <input type="number" placeholder="0.00" value={withdrawAmount}
+                                    onChange={e => setWithdrawAmount(e.target.value)} className="pm-modal-input pm-mono"/>
+                                <label className="pm-field-label">Recipient Address</label>
+                                <input type="text" placeholder="0x..." value={withdrawRecipient}
+                                    onChange={e => setWithdrawRecipient(e.target.value)} className="pm-modal-input pm-mono"/>
+                                <button className="pm-modal-btn pm-modal-btn-blue"
+                                    disabled={withdrawLoading || !withdrawAmount || !withdrawRecipient} onClick={handleGaslessWithdraw}>
+                                    {withdrawLoading ? 'Processing...' : 'Withdraw Gasless'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

@@ -15,6 +15,7 @@ import { Orders } from './pages/Orders';
 import { CreateOrder } from './pages/CreateOrder';
 import { TradeDetail } from './pages/TradeDetail';
 import { Wallet } from './pages/Wallet';
+import { Predict } from './pages/Predict';
 
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
@@ -175,7 +176,7 @@ function AppInner() {
         setTimeout(() => {
           const isCurrentlyExternal = user?.wallet_type === 'external';
           const nextMode = isCurrentlyExternal ? 'bot' : 'external';
-          const nextAddr = isCurrentlyExternal 
+          const nextAddr = isCurrentlyExternal
             ? '0x1234567890abcdef1234567890abcdef12345678'  // Bot Demo
             : '0xabcdef1234567890abcdef1234567890abcdef12'; // Ext Demo
 
@@ -316,6 +317,7 @@ function AppInner() {
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
           <Route path="trade/new/:orderId" element={<TradeDetail user={user} />} />
           <Route path="wallet" element={<Wallet user={user} />} />
+          <Route path="predict" element={<Predict user={user} />} />
 
           <Route path="ads" element={<MyAds />} />
           <Route path="admin" element={<Admin user={user} />} />

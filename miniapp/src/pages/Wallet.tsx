@@ -23,6 +23,10 @@ export function Wallet({ user }: Props) {
     // Actions
     const [showSend, setShowSend] = useState(false);
     const [showReceive, setShowReceive] = useState(false);
+    
+    // Manage Funds State
+    const [routingAsset, setRoutingAsset] = useState<'USDT' | 'USDC'>('USDT');
+    const [routingChain, setRoutingChain] = useState<'Ethereum' | 'Base' | 'Polygon' | 'Arbitrum' | 'Optimism'>('Ethereum');
 
     // Send State
     const [sendTo, setSendTo] = useState('');
@@ -549,28 +553,99 @@ export function Wallet({ user }: Props) {
 
             {/* ═══ MODALS ═══ */}
 
-            {/* Receive Modal */}
+            {/* Manage Funds / Deposit Modal */}
             {showReceive && (
-                <div className="modal-overlay" onClick={() => setShowReceive(false)}>
-                    <div className="modal-content qr-modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>Deposit Crypto</h3>
-                        <p className="text-sm text-muted mb-2">Scan or copy address to deposit funds</p>
-
-                        <div className="qr-code-box">
-                            <img
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address}`}
-                                alt="QR"
-                                width={150} height={150}
-                            />
-                        </div>
-
-                        <div className="p-2 bg-secondary rounded mb-4 break-all mono text-sm select-all">
-                            {balances?.address}
-                        </div>
-
-                        <button className="btn btn-primary btn-block" onClick={copyAddress}>
-                            Copy Address
+                <div className="modal-overlay manage-funds-overlay" onClick={() => setShowReceive(false)}>
+                    <div className="manage-funds-modal" onClick={e => e.stopPropagation()}>
+                        
+                        <button className="mf-close-btn" onClick={() => setShowReceive(false)}>
+                            <IconX size={20} color="#848e9c" />
                         </button>
+
+                        <div className="mf-layout">
+                            {/* Left Pane */}
+                            <div className="mf-left-pane">
+                                <h2>Manage Funds</h2>
+                                <p>Add funds to start making predictions!</p>
+                                <p>Your Predict account contains a unique wallet, so you'll need to top it up with USDT to get started.</p>
+                            </div>
+
+                            {/* Right Pane */}
+                            <div className="mf-right-pane">
+                                {/* Balance Box */}
+                                <div className="mf-card mf-balance-card">
+                                    <div className="mf-balance-header">
+                                        <span>Your USDT Balance</span>
+                                        <div className="mf-balance-actions">
+                                            <button className="mf-btn-secondary">Withdraw</button>
+                                            <button className="mf-btn-icon" onClick={loadBalances}><IconRefresh size={14}/></button>
+                                        </div>
+                                    </div>
+                                    <div className="mf-balance-value">
+                                        <span className="mf-dollar">$</span>{parseFloat(balances?.usdt || '0').toFixed(0)}
+                                    </div>
+                                </div>
+
+                                {/* Predict Smart Wallet */}
+                                <div className="mf-card">
+                                    <h3>Predict Smart Wallet</h3>
+                                    <p className="mf-sub">Only deposit <strong>USDT</strong> on <strong>BNB Chain</strong> to this address.</p>
+                                    
+                                    <div className="mf-label">SUPPORTED ASSETS</div>
+                                    <div className="mf-pills">
+                                        <div className="mf-pill mf-pill-active">
+                                            <IconTokenUSDT size={16}/> USDT
+                                        </div>
+                                    </div>
+
+                                    <div className="mf-address-box">
+                                        <div className="mf-address-icon"><IconChainBsc size={20}/></div>
+                                        <div className="mf-address-text">{balances?.address || 'Loading...'}</div>
+                                        <button className="mf-btn-icon" onClick={() => haptic('light')}><IconQr size={16}/></button>
+                                        <button className="mf-btn-copy" onClick={copyAddress}>
+                                            <IconCopy size={14} color="black"/> Copy
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Smart Routing Address */}
+                                <div className="mf-card">
+                                    <h3>Smart Routing Address</h3>
+                                    <p className="mf-sub">Easily deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT of which there is a small fee on the PCS pool with slippage set at 0.1%.</p>
+                                    
+                                    <div className="mf-label">SUPPORTED ASSETS</div>
+                                    <div className="mf-pills">
+                                        <div className={`mf-pill ${routingAsset === 'USDT' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingAsset('USDT');}}>
+                                            <IconTokenUSDT size={16}/> USDT
+                                        </div>
+                                        <div className={`mf-pill ${routingAsset === 'USDC' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingAsset('USDC');}}>
+                                            <IconTokenUSDC size={16}/> USDC
+                                        </div>
+                                    </div>
+
+                                    <div className="mf-label">SUPPORTED CHAINS</div>
+                                    <div className="mf-pills mf-pills-wrap">
+                                        <div className={`mf-pill ${routingChain === 'Ethereum' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingChain('Ethereum');}}><IconChainEth size={16}/> Ethereum</div>
+                                        <div className={`mf-pill ${routingChain === 'Base' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingChain('Base');}}><IconChainBase size={16}/> Base</div>
+                                        <div className={`mf-pill ${routingChain === 'Polygon' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingChain('Polygon');}}><IconChainPolygon size={16}/> Polygon</div>
+                                        <div className={`mf-pill ${routingChain === 'Arbitrum' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingChain('Arbitrum');}}><IconChainArbitrum size={16}/> Arbitrum</div>
+                                        <div className={`mf-pill ${routingChain === 'Optimism' ? 'mf-pill-active' : ''}`} onClick={() => {haptic('light'); setRoutingChain('Optimism');}}><IconChainOptimism size={16}/> Optimism</div>
+                                    </div>
+
+                                    <div className="mf-address-box">
+                                        <div className="mf-address-text" style={{paddingLeft: '12px'}}>{balances?.address || 'Loading...'}</div>
+                                        <button className="mf-btn-icon" onClick={() => haptic('light')}><IconQr size={16}/></button>
+                                        <button className="mf-btn-copy" onClick={copyAddress}>
+                                            <IconCopy size={14} color="black"/> Copy
+                                        </button>
+                                    </div>
+
+                                    <div style={{marginTop: '16px'}}>
+                                        <button className="mf-btn-limits">View Limits</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

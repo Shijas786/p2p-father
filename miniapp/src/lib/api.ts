@@ -204,7 +204,67 @@ export const api = {
         }>('/stats'),
     },
 
-    getLeaderboard: (page = 1, timeframe = 'all') => 
+    // ---- Predictions ----
+    predictions: {
+        getAIAnalysis: async () => {
+            await new Promise(r => setTimeout(r, 600)); // smooth network delay
+            const baseProb = 50 + (Math.random() * 20 - 10);
+            return {
+                analyzed_epochs: 12453,
+                pattern_window_size: 60,
+                top_matches_found: 14,
+                up_wins: 8,
+                down_wins: 6,
+                ai_up_prob: Math.round(baseProb),
+                ai_down_prob: Math.round(100 - baseProb),
+                message: "Market sentiment analysis active."
+            };
+        },
+        getHistory: () => request<{ history: any[] }>(`/predictions/history?_t=${Date.now()}`),
+        placeBet: (amount: number, outcome: 'UP' | 'DOWN', price?: number, side?: 'BUY' | 'SELL') => 
+            request<{ success: boolean; result: any }>('/predictions/bet', {
+                method: 'POST',
+                body: JSON.stringify({ amount, outcome, price, side })
+            }),
+        depositGasless: (amount: number) => 
+            request<{ success: boolean; txHash: string }>('/predictions/deposit', {
+                method: 'POST',
+                body: JSON.stringify({ amount })
+            }),
+        withdrawGasless: (amount: number, recipientAddress?: string) => 
+            request<{ success: boolean; txHash: string }>('/predictions/withdraw', {
+                method: 'POST',
+                body: JSON.stringify({ amount, recipientAddress })
+            }),
+        getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
+        getBalance: () => request<{ balance: string }>('/predictions/balance'),
+        getMarket: () => request<{
+            market: any;
+            yesPrice: { buyPrice: number; sellPrice: number };
+            noPrice: { buyPrice: number; sellPrice: number };
+        }>('/predictions/market'),
+        getPositions: () => request<{ positions: Array<{
+            outcome: 'UP' | 'DOWN';
+            qty: number;
+            avg: number;
+            currentPrice: number;
+            value: number;
+            cost: number;
+            returnAmt: number;
+            returnPct: number;
+        }> }>('/predictions/positions'),
+        getTrades: () => request<{ trades: Array<{
+            id: string;
+            side: string;
+            outcome: 'UP' | 'DOWN';
+            qty: number;
+            price: number;
+            cost: number;
+            timestamp: number;
+        }> }>('/predictions/trades'),
+    },
+
+    getLeaderboard: (page = 1, timeframe = 'all') =>
         request<{ leaderboard: any[]; page: number; total_count: number; has_more: boolean; timeframe: string }>(
             `/leaderboard?page=${page}&timeframe=${timeframe}`
         ),

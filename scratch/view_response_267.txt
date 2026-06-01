@@ -1,0 +1,100 @@
+Created At: 2026-05-29T19:18:11Z
+Completed At: 2026-05-29T19:18:11Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 157
+Total Bytes: 5683
+Showing lines 1 to 157
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { Chain, ClobClient, OrderType, Side } from "@polymarket/clob-client-v2";
+2: import { createWalletClient, http } from "viem";
+3: import { privateKeyToAccount } from "viem/accounts";
+4: import axios from "axios";
+5: import { wallet as walletService } from "./wallet";
+6: import { env } from "../config/env";
+7: 
+8: const GAMMA_API = "https://gamma-api.polymarket.com";
+9: const CLOB_API = "https://clob.polymarket.com";
+10: 
+11: export interface ActiveMarketInfo {
+12:     conditionId: string;
+13:     yesTokenId: string;
+14:     noTokenId: string;
+15:     question: string;
+16:     slug: string;
+17:     endsAt: string;
+18: }
+19: 
+20: class PolymarketService {
+21:     /**
+22:      * Helper to create a fully-authenticated ClobClient for a specific user
+23:      */
+24:     async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
+25:         // Derive EOA credentials from master seed
+26:         const derived = walletService.deriveWallet(userWalletIndex);
+27:         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
+28:         const signer = createWalletClient({
+29:             account,
+30:             transport: http("https://polygon-rpc.com"),
+31:         });
+32: 
+33:         // Step 1: Initialize temporary client for credential derivation
+34:         const tempClient = new ClobClient({
+35:             host: CLOB_API,
+36:             chain: Chain.POLYGON,
+37:             signer,
+38:         });
+39: 
+40:         // Step 2: Obtain Level 2 API credentials via EIP-712 wallet signature
+41:         const creds = await tempClient.createOrDeriveAp
+<truncated 2789 bytes>
+       console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
+109:             return { buyPrice: 0.50, sellPrice: 0.50 }; // Fallback midprice
+110:         }
+111:     }
+112: 
+113:     /**
+114:      * Place a prediction bet on YES (Up) or NO (Down)
+115:      * @param userWalletIndex The user's derived wallet index
+116:      * @param tokenId The outcome token ID (YES or NO)
+117:      * @param amountUsdc Amount of USDC.e to invest (e.g. 10.0)
+118:      * @param limitPrice Target price per share (e.g. 0.55)
+119:      */
+120:     async placeBet(
+121:         userWalletIndex: number,
+122:         tokenId: string,
+123:         amountUsdc: number,
+124:         limitPrice: number
+125:     ): Promise<any> {
+126:         const client = await this.getUserClobClient(userWalletIndex);
+127: 
+128:         // Size = Total spend / Limit price (shares are integer quantities)
+129:         const size = Math.floor(amountUsdc / limitPrice);
+130:         if (size <= 0) {
+131:             throw new Error("Invalid bet size. Increase amount or choose a better price.");
+132:         }
+133: 
+134:         const orderArgs = {
+135:             tokenID: tokenId,
+136:             price: limitPrice,
+137:             side: Side.BUY,
+138:             size,
+139:         };
+140: 
+141:         try {
+142:             console.log(`[Polymarket] Submitting GTC BUY order to CLOB. Size: ${size} shares at $${limitPrice}`);
+143:             const response = await client.createAndPostOrder(
+144:                 orderArgs,
+145:                 { tickSize: "0.01" },
+146:                 OrderType.GTC
+147:             );
+148:             return response;
+149:         } catch (err: any) {
+150:             console.error("[Polymarket] Order execution failed:", err.message);
+151:             throw new Error(`Failed to place prediction: ${err.message}`);
+152:         }
+153:     }
+154: }
+155: 
+156: export const polymarketService = new PolymarketService();
+157: 
+The above content shows the entire, complete file contents of the requested file.

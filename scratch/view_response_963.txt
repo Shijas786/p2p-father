@@ -1,0 +1,84 @@
+Created At: 2026-05-30T07:06:02Z
+Completed At: 2026-05-30T07:06:02Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 193
+Total Bytes: 7569
+Showing lines 101 to 193
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+101:      */
+102:     async getOutcomePrice(tokenId: string): Promise<{ buyPrice: number; sellPrice: number }> {
+103:         if (tokenId.startsWith("0x_demo_")) {
+104:             // Simulated prices - fluctuate slightly around 0.50
+105:             const randomOffset = (Math.sin(Date.now() / 10000) * 0.15); // oscillating offset
+106:             const mid = 0.50 + randomOffset;
+107:             const buyPrice = Math.max(0.05, Math.min(0.95, tokenId === "0x_demo_yes_token_id" ? mid : 1.0 - mid));
+108:             return {
+109:                 buyPrice: parseFloat(buyPrice.toFixed(2)),
+110:                 sellPrice: parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2)),
+111:             };
+112:         }
+113:         try {
+114:             const res = await axios.get(`${CLOB_API}/book`, {
+115:                 params: { token_id: tokenId },
+116:                 timeout: 5000,
+117:             });
+118: 
+119:             const book = res.data;
+120:             const bestBid = book?.bids?.[0]?.price ? parseFloat(book.bids[0].price) : 0.50;
+121:             const bestAsk = book?.asks?.[0]?.price ? parseFloat(book.asks[0].price) : 0.50;
+122: 
+123:             // buyPrice = current cost to buy YES/NO share (ask side of order book)
+124:             // sellPrice = current cost to sell YES/NO share (bid side of order book)
+125:             return {
+126:                 buyPrice: bestAsk,
+127:                 sellPrice: bestBid,
+128:             };
+129:         } catch (err: any) {
+130:             console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
+131:   
+<truncated 786 bytes>
+] Placed ${side} order of ${amountUsdc} USDC on token ${tokenId} at limit price ${limitPrice}`);
+151:             return {
+152:                 orderId: `sim_${Math.random().toString(36).substring(2, 11)}`,
+153:                 success: true
+154:             };
+155:         }
+156: 
+157:         try {
+158:             const client = await this.getUserClobClient(userWalletIndex);
+159: 
+160:             // Size = Total spend / Limit price (shares are integer quantities)
+161:             const size = Math.floor(amountUsdc / limitPrice);
+162:             if (size <= 0) {
+163:                 throw new Error("Invalid order size. Increase amount or choose a better price.");
+164:             }
+165: 
+166:             const orderArgs = {
+167:                 tokenID: tokenId,
+168:                 price: limitPrice,
+169:                 side: side === "SELL" ? Side.SELL : Side.BUY,
+170:                 size,
+171:             };
+172: 
+173:             console.log(`[Polymarket] Submitting GTC ${side} order to CLOB. Size: ${size} shares at $${limitPrice}`);
+174:             const response = await client.createAndPostOrder(
+175:                 orderArgs,
+176:                 { tickSize: "0.01" },
+177:                 OrderType.GTC
+178:             );
+179:             return response;
+180:         } catch (err: any) {
+181:             console.error("[Polymarket] Order execution failed:", err.message);
+182:             // Fallback for simulation/testing in local/dev env
+183:             console.log("[Polymarket] Simulation mode active. Simulating successful order placement.");
+184:             return {
+185:                 orderId: `sim_${Math.random().toString(36).substring(2, 11)}`,
+186:                 success: true,
+187:             };
+188:         }
+189:     }
+190: }
+191: 
+192: export const polymarketService = new PolymarketService();
+193: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

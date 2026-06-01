@@ -1,0 +1,59 @@
+Created At: 2026-05-30T10:24:36Z
+Completed At: 2026-05-30T10:24:36Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 273
+Total Bytes: 11321
+Showing lines 10 to 60
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+10: 
+11: export interface ActiveMarketInfo {
+12:     conditionId: string;
+13:     yesTokenId: string;
+14:     noTokenId: string;
+15:     question: string;
+16:     slug: string;
+17:     endsAt: string;
+18: }
+19: 
+20: class PolymarketService {
+21:     /**
+22:      * Helper to create a fully-authenticated ClobClient for a specific user
+23:      */
+24:     async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
+25:         // Derive EOA credentials from master seed
+26:         const derived = walletService.deriveWallet(userWalletIndex);
+27:         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
+28:         const signer = createWalletClient({
+29:             account,
+30:             transport: http("https://polygon-rpc.com"),
+31:         });
+32: 
+33:         // Step 1: Initialize temporary client for credential derivation
+34:         const tempClient = new ClobClient({
+35:             host: CLOB_API,
+36:             chain: Chain.POLYGON,
+37:             signer,
+38:         });
+39: 
+40:         // Step 2: Obtain Level 2 API credentials via EIP-712 wallet signature
+41:         const creds = await tempClient.createOrDeriveApiKey();
+42: 
+43:         // Step 3: Return authenticated client configured for trading
+44:         return new ClobClient({
+45:             host: CLOB_API,
+46:             chain: Chain.POLYGON,
+47:             signer,
+48:             creds,
+49:         });
+50:     }
+51: 
+52:     /**
+53:      * Discover the currently active BTC 5-minute prediction market
+54:      */
+55:     async getActiveBtcMarket(): Promise<ActiveMarketInfo> {
+56:         try {
+57:             const now = Math.floor(Date.now() / 1000);
+58:             const activeEpoch = now - (now % 300);
+59:             const targetEpoch = activeEpoch + 300;
+60:             const slug = `btc-updown-5m-${targetEpoch}`;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

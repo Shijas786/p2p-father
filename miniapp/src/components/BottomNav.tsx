@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
-import { IconProfile } from './Icons';
+import { IconProfile, IconMarket } from './Icons';
 import './BottomNav.css';
 
 
@@ -28,7 +28,12 @@ export function BottomNav({ user }: Props) {
     const isAdmin = user?.is_admin;
 
     const tabs: any[] = isAdmin
-        ? [...baseTabs, { path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }]
+        ? [
+            ...baseTabs.slice(0, 4),
+            { path: '/predict', icon: '', Icon: IconMarket, label: 'Predict' },
+            ...baseTabs.slice(4),
+            { path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }
+          ]
         : baseTabs;
 
     useEffect(() => {

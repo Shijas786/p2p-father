@@ -1,0 +1,69 @@
+Created At: 2026-05-30T14:21:58Z
+Completed At: 2026-05-30T14:21:58Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 273
+Total Bytes: 11321
+Showing lines 120 to 180
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+120:                     const windowMs = 300000;
+121:                     const remainingSecs = Math.max(10, (windowMs - (now % windowMs)) / 1000);
+122:                     
+123:                     // Model probability using normal CDF
+124:                     const volatility = Math.max(2.0, 15.0 * Math.sqrt(remainingSecs / 300));
+125:                     const z = diff / volatility;
+126:                     
+127:                     const cdf = (val: number) => 1 / (1 + Math.exp(-1.702 * val));
+128:                     const prob = cdf(z);
+129:                     
+130:                     let buyPrice = Math.max(0.05, Math.min(0.95, prob));
+131:                     if (isNo) {
+132:                         buyPrice = 1.0 - buyPrice;
+133:                     }
+134:                     
+135:                     buyPrice = parseFloat(buyPrice.toFixed(2));
+136:                     const sellPrice = parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2));
+137:                     return { buyPrice, sellPrice };
+138:                 }
+139:             } catch (e: any) {
+140:                 console.warn("[Polymarket-Service] Dynamic fallback failed, trying Binance:", e.message);
+141:                 try {
+142:                     const res = await axios.get("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=1", {
+143:                         timeout: 3000
+144:                     });
+145:                     const tickerRes = await axios.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", {
+146:                         timeout: 3000
+147:                     });
+148:                     const d = res.data?.[0];
+149:                     if (d && tickerRes.data?.price) {
+150:                         const open = parseFloat(d[1]);
+151:                         const close = parseFloat(tickerRes.data.price);
+152:                         const diff = close - open;
+153:                         
+154:                         const now = Date.now();
+155:                         const windowMs = 300000;
+156:                         const remainingSecs = Math.max(10, (windowMs - (now % windowMs)) / 1000);
+157:                         
+158:                         const volatility = Math.max(2.0, 15.0 * Math.sqrt(remainingSecs / 300));
+159:                         const z = diff / volatility;
+160:                         
+161:                         const cdf = (val: number) => 1 / (1 + Math.exp(-1.702 * val));
+162:                         const prob = cdf(z);
+163:                         
+164:                         let buyPrice = Math.max(0.05, Math.min(0.95, prob));
+165:                         if (isNo) {
+166:                             buyPrice = 1.0 - buyPrice;
+167:                         }
+168:                         
+169:                         buyPrice = parseFloat(buyPrice.toFixed(2));
+170:                         const sellPrice = parseFloat(Math.max(0.01, buyPrice - 0.02).toFixed(2));
+171:                         return { buyPrice, sellPrice };
+172:                     }
+173:                 } catch (binErr: any) {
+174:                     console.warn("[Polymarket-Service] Binance dynamic fallback failed:", binErr.message);
+175:                 }
+176:             }
+177:             
+178:             // final fallback: fluctuate around 0.50
+179:             const randomOffset = (Math.sin(Date.now() / 10000) * 0.15);
+180:             const mid = 0.50 + randomOffset;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,39 @@
+Created At: 2026-05-30T21:33:36Z
+Completed At: 2026-05-30T21:33:36Z
+File Path: `file:///Users/shijas/p2p%20father/src/services/polymarket.ts`
+Total Lines: 294
+Total Bytes: 11968
+Showing lines 60 to 90
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+60: 
+61:         // Step 2: Obtain Level 2 API credentials via EIP-712 wallet signature
+62:         const creds = await tempClient.createOrDeriveApiKey();
+63: 
+64:         // Step 3: Return authenticated client configured for trading
+65:         return new ClobClient({
+66:             host: CLOB_API,
+67:             chain: Chain.POLYGON,
+68:             signer,
+69:             creds,
+70:         });
+71:     }
+72: 
+73:     /**
+74:      * Discover the currently active BTC 5-minute prediction market
+75:      */
+76:     async getActiveBtcMarket(): Promise<ActiveMarketInfo> {
+77:         try {
+78:             const now = Math.floor(Date.now() / 1000);
+79:             const activeEpoch = now - (now % 300);
+80:             const targetEpoch = activeEpoch + 300;
+81:             const slug = `btc-updown-5m-${targetEpoch}`;
+82: 
+83:             const res = await polyAxios.get(`${GAMMA_API}/events`, {
+84:                 params: { slug },
+85:                 timeout: 8000,
+86:             });
+87: 
+88:             const event = res.data?.[0];
+89:             if (!event || !event.markets || event.markets.length === 0) {
+90:                 throw new Error(`Market not active or indexed for slug: ${slug}`);
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
