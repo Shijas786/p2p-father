@@ -11,6 +11,7 @@ import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
 import { polymarketService } from "../services/polymarket";
+import { predictWalletService } from "../services/predict-wallet";
 import { polymarketRelayerService } from "../services/relayer";
 import { bot } from "../bot";
 
@@ -1988,6 +1989,22 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
     }
 });
 
+router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
+    try {
+        res.json({ leaderboard: [] });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/copy-traders", async (req: Request, res: Response) => {
+    try {
+        res.json({ traders: [] });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/predictions/history", async (req: Request, res: Response) => {
     try {
         const binanceRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100");
@@ -2031,7 +2048,7 @@ router.get("/predictions/deposit-wallet", async (req: Request, res: Response) =>
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+        const address = await predictWalletService.getDepositAddress(user.wallet_index);
         res.json({ address });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions deposit wallet error:", err);

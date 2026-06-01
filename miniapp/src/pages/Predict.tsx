@@ -463,8 +463,14 @@ export function Predict({ user }: Props) {
                                     </div>
                                 </div>
                                 <div className="pm-notif-list">
-                                    <div className="pm-notif-item" onClick={() => { navigate('/orders'); }} style={{ padding: '12px 16px' }}>
+                                    <div className="pm-notif-item" onClick={() => { navigate('/predict-profile'); }} style={{ padding: '12px 16px' }}>
                                         <span className="pm-notif-title">Positions & Orders</span>
+                                    </div>
+                                    <div className="pm-notif-item" onClick={() => { navigate('/predict-leaderboard'); }} style={{ padding: '12px 16px' }}>
+                                        <span className="pm-notif-title">Leaderboard</span>
+                                    </div>
+                                    <div className="pm-notif-item" onClick={() => { navigate('/predict-copy-trading'); }} style={{ padding: '12px 16px' }}>
+                                        <span className="pm-notif-title">Copy Trading</span>
                                     </div>
                                 </div>
                             </div>
@@ -483,7 +489,9 @@ export function Predict({ user }: Props) {
                         <div className="pm-btc-icon-sq">₿</div>
                         <div>
                             <h2 className="pm-market-name">BTC Up or Down 5m</h2>
-                            <p className="pm-market-sub">{roundLabel}</p>
+                            <p className="pm-market-sub" style={{ color: betType === 'UP' ? '#0ecb81' : '#f6465d', fontWeight: 600 }}>
+                                {betType === 'UP' ? 'Up' : 'Down'}
+                            </p>
                         </div>
                     </div>
                     <div className="pm-card-title-right">
@@ -535,7 +543,12 @@ export function Predict({ user }: Props) {
                                     <span className="pm-timer-digit" style={{opacity: 0.5}}>:</span>
                                     <div className="pm-timer-unit">
                                         <span className="pm-timer-digit">
-                                            {timeLeft.secs[0]}<span style={{fontSize: '0.75em', verticalAlign: 'super'}}>{timeLeft.secs[1]}</span>
+                                            <span key={`s0-${timeLeft.secs[0]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
+                                                {timeLeft.secs[0]}
+                                            </span>
+                                            <span key={`s1-${timeLeft.secs[1]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
+                                                {timeLeft.secs[1]}
+                                            </span>
                                         </span>
                                         <span className="pm-timer-label">SECS</span>
                                     </div>
@@ -606,7 +619,7 @@ export function Predict({ user }: Props) {
                         
                         <button className={`pm-tl-pill ${selectedRound === -1 ? 'pm-tl-pill-active' : ''}`}
                             onClick={() => { haptic('selection'); setSelectedRound(-1); }} id="round-live">
-                            {selectedRound === -1 && <span className="pm-tl-live-dot" style={{marginRight: 6}}/>} 
+                            <span className="pm-tl-live-dot" style={{marginRight: 6}}/> 
                             {liveEndMs ? new Date(liveEndMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'Live'}
                         </button>
                         
@@ -621,19 +634,6 @@ export function Predict({ user }: Props) {
 
                         <button className="pm-tl-meta-btn" onClick={() => haptic('light')}>
                             More <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
-                        </button>
-                    </div>
-                    <div className="pm-tl-icons">
-                        <button className="pm-tl-icon-btn" onClick={() => haptic('light')}>
-                            <svg width="18" height="11" viewBox="0 0 18 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 9l4-5 4 4 8-7"/></svg>
-                        </button>
-                        <button className="pm-tl-icon-btn" onClick={() => haptic('light')}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/><path d="M9 4v20"/><path d="M14 4v20"/></svg>
-                        </button>
-                        <button className="pm-tl-icon-btn pm-tl-icon-active" onClick={() => haptic('light')}>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <rect x="1" y="4" width="3" height="7" rx="1"/><rect x="6" y="1" width="3" height="10" rx="1"/><rect x="11" y="3" width="3" height="8" rx="1"/>
-                            </svg>
                         </button>
                     </div>
                 </div>

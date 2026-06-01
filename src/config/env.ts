@@ -57,6 +57,12 @@ const envSchema = z.object({
     NODE_ENV: z.string().default("development"),
     COMMUNITY_CHAT_ID: z.string().default(""),
     COMMUNITY_INVITE_LINK: z.string().default("https://t.me/P2pFatherGroup"),
+
+    // Polymarket Builder
+    POLYMARKET_PRIVATE_KEY: z.string().optional(),
+    POLYMARKET_BUILDER_API_KEY: z.string().optional(),
+    POLYMARKET_BUILDER_SECRET: z.string().optional(),
+    POLYMARKET_BUILDER_PASSPHRASE: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

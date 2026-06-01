@@ -31,7 +31,7 @@ export function BottomNav({ user }: Props) {
         ? [
             ...baseTabs.slice(0, 4),
             { path: '/predict', icon: '', Icon: IconMarket, label: 'Predict' },
-            ...baseTabs.slice(4),
+            baseTabs[4],
             { path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }
           ]
         : baseTabs;

@@ -1,0 +1,227 @@
+.pm-prof-page {
+    background-color: #0b0e11;
+    min-height: 100vh;
+    padding: 16px;
+    color: #eaecef;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding-bottom: 80px; /* space for bottom nav */
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* Top bar */
+.pm-prof-topbar {
+    display: flex; align-items: center; margin-bottom: 20px;
+}
+.pm-prof-back {
+    background: none; border: none; color: #fff; cursor: pointer; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* Dashboard */
+.pm-prof-dashboard {
+    display: flex;
+    flex-direction: column;
+}
+.pm-prof-combined-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0 4px;
+}
+.pm-prof-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 24px 0;
+}
+.pm-prof-user-header {
+    display: flex; align-items: center; gap: 16px;
+}
+.pm-prof-avatar-gradient {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #0ecb81, #1e9cf4);
+}
+.pm-prof-user-info h2 {
+    margin: 0 0 4px; font-size: 20px; font-weight: 700; color: #fff;
+}
+.pm-prof-user-info p {
+    margin: 0; font-size: 13px; color: #848e9c;
+}
+
+/* Stats */
+.pm-prof-stats-row {
+    display: flex; gap: 32px; margin-top: 16px;
+}
+.pm-prof-stat h3 {
+    margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff;
+}
+.pm-prof-stat p {
+    margin: 0; font-size: 11px; color: #848e9c;
+}
+
+/* Chart Section */
+.pm-prof-chart-header {
+    display: flex; justify-content: space-between;
+}
+.pm-prof-chart-left {
+    display: flex; flex-direction: column; gap: 4px;
+}
+.pm-prof-pnl-label {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: #848e9c;
+}
+.pm-prof-pnl-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #0ecb81;
+}
+.pm-prof-pnl-amount {
+    display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 800; color: #fff;
+}
+.pm-prof-pnl-amount svg {
+    color: #848e9c; cursor: pointer;
+}
+.pm-prof-pnl-time {
+    font-size: 12px; color: #848e9c;
+}
+.pm-prof-chart-right {
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;
+}
+.pm-prof-timeframes {
+    display: flex; gap: 6px;
+}
+.pm-prof-tf-btn {
+    background: none; border: none; color: #848e9c; font-size: 12px; font-weight: 600; cursor: pointer;
+    padding: 4px 8px; border-radius: 4px;
+}
+.pm-prof-tf-btn.active {
+    background: rgba(30, 156, 244, 0.2); color: #1e9cf4;
+}
+.pm-prof-chart-area {
+    margin-top: 16px; flex: 1; display: flex; align-items: flex-end;
+}
+
+/* Tabs & Toolbar */
+.pm-prof-main-tabs {
+    display: flex; gap: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-top: 24px;
+}
+.pm-prof-mtab {
+    background: none; border: none; color: #848e9c; font-size: 16px; font-weight: 700; cursor: pointer;
+    padding-bottom: 12px; position: relative; transition: color 0.2s;
+}
+.pm-prof-mtab.active { color: #fff; }
+.pm-prof-mtab.active::after {
+    content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: #fff;
+}
+
+.pm-prof-toolbar {
+    display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+}
+.pm-prof-sub-tabs {
+    display: flex; background: #1a1e23; border-radius: 8px; padding: 4px;
+}
+.pm-prof-stab {
+    background: none; border: none; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 6px 16px; border-radius: 6px;
+}
+.pm-prof-stab.active {
+    background: #2b2f36; color: #fff;
+}
+.pm-prof-search {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: #1a1e23; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 12px; color: #848e9c;
+}
+.pm-prof-search input {
+    background: none; border: none; color: #fff; width: 100%; outline: none; font-size: 14px;
+}
+.pm-prof-sort-btn {
+    display: flex; align-items: center; gap: 8px; background: #1a1e23; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+    padding: 8px 16px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+
+/* List Table Header */
+.pm-prof-table-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px; margin-top: 24px;
+    font-size: 11px; font-weight: 600; color: #848e9c;
+}
+.pm-th-market { display: flex; align-items: center; gap: 4px; }
+.pm-th-right { display: flex; align-items: center; text-align: right; }
+.pm-th-right span { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+/* Widths */
+.pm-th-right span:nth-child(1) { width: 60px; }
+.pm-th-right span:nth-child(2) { width: 70px; margin-left: 24px;}
+.pm-th-right span:nth-child(3) { width: 100px; margin-left: 24px;}
+
+/* List Rows */
+.pm-prof-list {
+    display: flex; flex-direction: column;
+}
+.pm-prof-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.2s;
+}
+.pm-prof-row:hover { background: rgba(255,255,255,0.02); }
+
+.pm-prof-col-market {
+    display: flex; align-items: center; gap: 12px; flex: 1;
+}
+.pm-prof-btc-icon {
+    width: 24px; height: 24px; border-radius: 6px; background: #f0b90b; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
+}
+.pm-prof-market-info h4 {
+    margin: 0 0 6px; font-size: 13px; font-weight: 500; color: #fff; line-height: 1.4;
+}
+.pm-prof-market-bet {
+    display: flex; align-items: center; gap: 8px;
+}
+.pm-prof-bet-pill {
+    padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600;
+}
+.pm-prof-bet-pill.green { background: rgba(14,203,129,0.15); color: #0ecb81; }
+.pm-prof-bet-pill.red { background: rgba(246,70,93,0.15); color: #f6465d; }
+.pm-prof-bet-shares { font-size: 12px; color: #848e9c; }
+
+.pm-prof-col-right {
+    display: flex; align-items: center; text-align: right; font-size: 13px; font-weight: 500;
+}
+.pm-prof-cell-avg { width: 60px; color: #fff; }
+.pm-prof-cell-current { width: 70px; margin-left: 24px; color: #fff; }
+.pm-prof-cell-value { width: 100px; margin-left: 24px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;}
+.pm-prof-val-top { color: #fff; }
+.pm-prof-val-pnl { font-size: 12px; font-weight: 500; }
+.pm-prof-val-pnl.red { color: #f6465d; }
+.pm-prof-val-pnl.green { color: #0ecb81; }
+.pm-prof-share-icon {
+    background: none; border: none; color: #848e9c; cursor: pointer; padding: 4px; margin-left: 12px;
+}
+.pm-cent { font-size: 0.8em; vertical-align: super; margin-left: 1px; }
+
+/* Responsive text sizes */
+@media (max-width: 600px) {
+    .pm-prof-combined-card { padding: 0; }
+    .pm-prof-user-header { flex-wrap: wrap; }
+    .pm-prof-avatar-gradient { width: 44px; height: 44px; }
+    .pm-prof-user-info h2 { font-size: 15px; }
+    .pm-prof-stats-row { gap: 16px; justify-content: space-between; margin-top: 16px; }
+    .pm-prof-stat h3 { font-size: 15px; }
+    
+    .pm-prof-chart-header { flex-direction: column; gap: 12px; }
+    .pm-prof-chart-right { align-items: flex-start; }
+    
+    .pm-prof-row { padding: 12px 0; gap: 6px; }
+    .pm-prof-col-market { gap: 8px; }
+    .pm-prof-btc-icon { width: 18px; height: 18px; font-size: 11px; border-radius: 4px; }
+    
+    .pm-prof-market-info h4 { font-size: 10px; font-weight: 400; line-height: 1.4; margin: 0 0 6px; color: #eaecef; }
+    .pm-prof-bet-pill { font-size: 9px; padding: 2px 4px; font-weight: 500; }
+    .pm-prof-bet-shares { font-size: 9px; }
+    
+    .pm-prof-col-right { font-size: 11px; font-weight: 400; }
+    .pm-th-right span:nth-child(1), .pm-prof-cell-avg { display: none; }
+    
+    .pm-th-right span:nth-child(2), .pm-prof-cell-current { width: 36px; margin-left: 6px; text-align: right; }
+    .pm-th-right span:nth-child(3), .pm-prof-cell-value { width: 50px; margin-left: 8px; text-align: right; }
+    
+    .pm-prof-val-pnl { font-size: 9px; margin-top: 2px; }
+    .pm-prof-share-icon { padding: 0; margin-left: 6px; }
+    .pm-prof-share-icon svg { width: 12px; height: 12px; }
+}

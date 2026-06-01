@@ -531,8 +531,19 @@
     z-index: 9999;
     display: flex;
     flex-direction: column;
-    animation: fadeIn 0.2s ease-out;
+    animation: slideUpMobileModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
+}
+
+@keyframes slideUpMobileModal {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 40px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }
 
 .mf-mobile-header {

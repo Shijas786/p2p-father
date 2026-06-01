@@ -220,6 +220,8 @@ export const api = {
                 message: "Market sentiment analysis active."
             };
         },
+        getLeaderboard: () => request<{ leaderboard: any[] }>('/predictions/leaderboard'),
+        getCopyTraders: () => request<{ traders: any[] }>('/predictions/copy-traders'),
         getHistory: () => request<{ history: any[] }>(`/predictions/history?_t=${Date.now()}`),
         placeBet: (amount: number, outcome: 'UP' | 'DOWN', price?: number, side?: 'BUY' | 'SELL') => 
             request<{ success: boolean; result: any }>('/predictions/bet', {

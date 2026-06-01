@@ -4,15 +4,15 @@
 
 :root {
     --pm-bg:         #000000;
-    --pm-card:       #0e1014;
-    --pm-card-sub:   #1a1e23;
-    --pm-border:     rgba(255,255,255,0.08);
+    --pm-card:       #0d1117;
+    --pm-card-sub:   #161b22;
+    --pm-border:     rgba(255,255,255,0.06);
     --pm-muted:      #848e9c;
-    --pm-green:      #00C2FF; /* Polymarket Blue/Cyan for Yes */
-    --pm-red:        #FF4D4D; /* Polymarket Red for No */
+    --pm-green:      #0ecb81; /* P2P Green for Yes */
+    --pm-red:        #f6465d; /* P2P Red for No */
     --pm-yellow:     #f0b90b;
-    --pm-blue:       #00C2FF;
-    --pm-blue-hover: #0099cc;
+    --pm-blue:       #0ecb81; /* Replace Polymarket Blue with P2P Green */
+    --pm-blue-hover: #0bb674;
     --pm-white:      #ffffff;
     --pm-radius:     12px;
     --pm-radius-sm:  6px;
@@ -361,10 +361,16 @@
 }
 .pm-tl-pill-active { background: var(--pm-white); color: #000; }
 
+@keyframes pm-live-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
 .pm-tl-live-dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--pm-red);
     display: inline-block;
+    animation: pm-live-pulse 2s ease-in-out infinite;
 }
 
 .pm-tl-icons {
@@ -400,17 +406,19 @@
 /* ═══════════════════════════════════════════════════════════ */
 .pm-trade-card {
     display: flex; flex-direction: column; gap: 14px;
-    border-top: 1px solid var(--pm-border);
+    background: var(--pm-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
     margin-top: 8px;
-    padding-top: 24px;
+    padding: 16px;
 }
 
 /* Card inner header — BTC icon + market name + direction */
 .pm-trade-header     { display: flex; align-items: center; justify-content: space-between; }
 .pm-trade-header-left { display: flex; align-items: center; gap: 12px; }
-.pm-trade-market-name { font-size: 15px; font-weight: 800; margin: 0; }
-.pm-trade-direction   { font-size: 14px; font-weight: 700; margin: 2px 0 0; }
-.pm-trade-divider     { border: none; border-top: 1px solid var(--pm-border); margin: 0; }
+.pm-trade-market-name { font-size: 15px; font-weight: 800; margin: 0; color: var(--pm-muted); }
+.pm-trade-direction   { font-size: 15px; font-weight: 800; margin: 2px 0 0; }
+.pm-trade-divider     { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0; }
 
 /* Buy/Sell tabs */
 .pm-trade-tabs-row {
@@ -420,9 +428,9 @@
 .pm-trade-tabs { display: flex; gap: 20px; }
 .pm-trade-tab {
     background: none; border: none;
-    font-size: 14px; font-weight: 700;
+    font-size: 15px; font-weight: 800;
     color: var(--pm-muted); cursor: pointer;
-    padding-bottom: 10px; position: relative;
+    padding-bottom: 12px; position: relative;
     transition: color var(--pm-t);
 }
 /* Active tab — white underline exactly like screenshot */
@@ -431,7 +439,7 @@
 }
 .pm-tab-active::after {
     content: ''; position: absolute;
-    bottom: -11px; left: 0; right: 0;
+    bottom: -1px; left: 0; right: 0;
     height: 2px; background: var(--pm-white);
 }
 .pm-tab-sell.pm-tab-active { color: var(--pm-white); }
@@ -449,55 +457,60 @@
 .pm-outcome-selector { display: flex; gap: 10px; }
 .pm-outcome-pill {
     flex: 1;
-    padding: 14px 8px;
-    border-radius: 10px;
+    padding: 16px 8px;
+    border-radius: 8px;
     border: none;
-    font-size: 15px; font-weight: 800;
+    font-size: 16px; font-weight: 700;
     cursor: pointer;
     transition: all var(--pm-t);
     text-align: center;
 }
+.pm-cent-sign {
+    font-size: 0.75em;
+    vertical-align: super;
+    margin-left: 1px;
+}
 .pm-outcome-pill:active { transform: scale(0.97); }
 
-/* Active Up = solid cyan/blue */
+/* Active Up = solid */
 .pm-outcome-pill-up-active {
-    background: var(--pm-green); /* Cyan */
-    color: #000;
-    box-shadow: 0 0 14px rgba(0, 194, 255, 0.28);
+    background: var(--pm-green);
+    color: #fff;
 }
-/* Active Down = solid red */
+/* Active Down = solid */
 .pm-outcome-pill-down-active {
     background: var(--pm-red);
     color: #fff;
-    box-shadow: 0 0 14px rgba(255, 77, 77, 0.28);
 }
-/* Inactive = dark */
+/* Inactive = flat dark */
 .pm-outcome-pill-inactive {
-    background: var(--pm-card-sub);
+    background: #2b2f36;
     color: var(--pm-muted);
-    border: 1.5px solid var(--pm-border);
+    border: none;
 }
 
 /* Amount block */
 .pm-amount-block {
-    background: var(--pm-card-sub);
-    border: 1.5px solid var(--pm-border);
-    border-radius: var(--pm-radius-sm); padding: 12px;
+    background: transparent;
+    border-bottom: 1.5px solid rgba(255,255,255,0.06);
+    padding: 16px 0;
     transition: border-color var(--pm-t);
 }
 .pm-amount-block:focus-within { border-color: rgba(255,255,255,0.18); }
-.pm-amount-row { display: flex; align-items: center; justify-content: space-between; }
+.pm-amount-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .pm-amount-left { display: flex; flex-direction: column; gap: 2px; }
 .pm-amount-title { font-size: 12px; font-weight: 700; color: var(--pm-muted); }
 .pm-amount-sub   { font-size: 10px; color: var(--pm-muted); }
 .pm-amount-right { display: flex; align-items: center; gap: 2px; }
-.pm-dollar-sign  { font-size: 22px; font-weight: 900; }
+.pm-dollar-sign  { font-size: 40px; font-weight: 400; color: rgba(255,255,255,0.25); }
 .pm-amount-input {
     background: none !important; border: none !important;
     color: var(--pm-white) !important;
-    font-size: 26px !important; font-weight: 900 !important;
+    font-size: 40px !important; font-weight: 600 !important;
     text-align: right !important; padding: 0 !important;
-    width: 110px !important; outline: none !important; box-shadow: none !important;
+    min-width: 28px; width: auto; max-width: 140px !important;
+    field-sizing: content;
+    outline: none !important; box-shadow: none !important;
 }
 .pm-amount-input::-webkit-outer-spin-button,
 .pm-amount-input::-webkit-inner-spin-button { -webkit-appearance: none; }
@@ -510,18 +523,18 @@
 .pm-quick-pct { flex: 0 0 auto; padding: 6px 10px; border-radius: 14px; background: rgba(255,255,255,0.06); border: none; }
 
 /* Quick amounts */
-.pm-quick-btns { display: flex; gap: 6px; }
+.pm-quick-btns { display: flex; gap: 8px; justify-content: flex-end; }
 .pm-quick-btn {
-    flex: 1; background: var(--pm-card-sub);
-    border: 1px solid var(--pm-border);
+    background: #2b2f36;
+    border: none;
     color: var(--pm-muted);
-    font-size: 10px; font-weight: 700;
-    padding: 7px 4px; border-radius: 7px;
+    font-size: 12px; font-weight: 600;
+    padding: 8px 14px; border-radius: 16px;
     cursor: pointer; text-align: center;
     transition: all var(--pm-t);
 }
-.pm-quick-btn:active { border-color: var(--pm-blue); color: var(--pm-white); }
-.pm-quick-max { color: var(--pm-blue); border-color: rgba(22,119,255,0.3); }
+.pm-quick-btn:active { background: #3a3f48; color: var(--pm-white); }
+.pm-quick-max { color: var(--pm-muted); }
 
 /* Payout */
 .pm-payout-info {
@@ -1056,4 +1069,9 @@
 @keyframes pulseDot {
     0% { transform: scale(1); opacity: 0.2; }
     100% { transform: scale(1.6); opacity: 0.6; }
+}
+
+@keyframes pmTimerTick {
+    0% { transform: translateY(-4px); opacity: 0.5; }
+    100% { transform: translateY(0); opacity: 1; }
 }
