@@ -469,9 +469,17 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     )}
                 </div>
 
-                {/* 4. Ads */}
+                {/* 4. Order History */}
+                <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/orders'); }}>
+                    <img src="/icons for trade/profile icons/order-history.svg?v=3" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                    <span className="prof-nav-text">Order History</span>
+                    <span className="prof-nav-chevron">›</span>
+                </div>
+
+                {/* 5. Ads */}
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/ads'); }}>
-                    <span className="prof-nav-text" style={{ marginLeft: '8px' }}>My Ads</span>
+                    <img src="/icons for trade/profile icons/my-ads.svg?v=4" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                    <span className="prof-nav-text">My Ads</span>
                     <span className="prof-nav-chevron">›</span>
                 </div>
 
