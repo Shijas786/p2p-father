@@ -49,10 +49,14 @@ export function Predict({ user }: Props) {
     // Price & timer
     const [livePrice, setLivePrice]   = useState(0);
     const [priceToBeat, setPriceToBeat] = useState(0);
+    const [timeLeft, setTimeLeft]     = useState({ mins: '04', secs: '59' });
+    const [roundLabel, setRoundLabel] = useState('');
+    const [liveEndMs, setLiveEndMs] = useState(0);
     const [priceFlash, setPriceFlash] = useState<'up'|'down'|null>(null);
 
     // Market data
     const [history, setHistory]       = useState<Round[]>([]);
+    const [selectedRound, setSelectedRound] = useState(-1);
     const [cashBalance, setCashBalance] = useState('0.00');
     const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
