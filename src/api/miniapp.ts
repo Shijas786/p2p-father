@@ -2092,6 +2092,10 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         const { amount } = req.body;
         if (!amount) return res.status(400).json({ error: "Missing amount" });
 
+        if (parseFloat(amount) < 3) {
+            return res.status(400).json({ error: "Minimum deposit is 3 USDT" });
+        }
+
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
         const txHash = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt);
 

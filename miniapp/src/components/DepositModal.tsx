@@ -54,7 +54,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         <IconChainBsc size={20} />
                         <h3 style={{margin: 0, fontSize: '15px'}}>Predict Smart Wallet</h3>
                     </div>
-                    <p className="mf-sub">Deposit <strong>USDT</strong> on <strong>BNB Chain</strong> directly to your proxy wallet.</p>
+                    <p className="mf-sub">Deposit <strong>USDT</strong> on <strong>BNB Chain</strong> directly to your proxy wallet. <strong>Minimum deposit: 3 USDT.</strong></p>
                     
                     <div className="mf-label">SUPPORTED ASSETS</div>
                     <div className="mf-pills">
@@ -75,7 +75,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 {/* Smart Routing Address */}
                 <div className="mf-card" style={{marginBottom: 40}}>
                     <h3 style={{fontSize: '15px', marginBottom: '8px'}}>Smart Routing Address</h3>
-                    <p className="mf-sub">Deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT.</p>
+                    <p className="mf-sub">Deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT. <strong>Minimum deposit: 3 USDT (or equivalent).</strong></p>
                     
                     <div className="mf-label">SUPPORTED ASSETS</div>
                     <div className="mf-pills" style={{marginBottom: 12}}>

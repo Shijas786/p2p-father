@@ -589,7 +589,7 @@ export function Wallet({ user }: Props) {
                                 {/* Predict Smart Wallet */}
                                 <div className="mf-card">
                                     <h3>Predict Smart Wallet</h3>
-                                    <p className="mf-sub">Only deposit <strong>USDT</strong> on <strong>BNB Chain</strong> to this address.</p>
+                                    <p className="mf-sub">Only deposit <strong>USDT</strong> on <strong>BNB Chain</strong> to this address. <strong>Minimum deposit is 3 USDT.</strong></p>
                                     
                                     <div className="mf-label">SUPPORTED ASSETS</div>
                                     <div className="mf-pills">
@@ -611,7 +611,7 @@ export function Wallet({ user }: Props) {
                                 {/* Smart Routing Address */}
                                 <div className="mf-card">
                                     <h3>Smart Routing Address</h3>
-                                    <p className="mf-sub">Easily deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT of which there is a small fee on the PCS pool with slippage set at 0.1%.</p>
+                                    <p className="mf-sub">Easily deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT of which there is a small fee on the PCS pool with slippage set at 0.1%. <strong>Minimum deposit is 3 USDT (or equivalent).</strong></p>
                                     
                                     <div className="mf-label">SUPPORTED ASSETS</div>
                                     <div className="mf-pills">
@@ -641,7 +641,7 @@ export function Wallet({ user }: Props) {
                                     </div>
 
                                     <div style={{marginTop: '16px'}}>
-                                        <button className="mf-btn-limits">View Limits</button>
+                                        <button className="mf-btn-limits" onClick={() => showToast("Minimum deposit is 3 USDT/USDC. Deposits below 3 USDT/USDC will not be credited.", "warning")}>View Limits</button>
                                     </div>
                                 </div>
                             </div>
