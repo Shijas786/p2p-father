@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
+import { api } from '../lib/api';
 import './PredictCopyTrading.css';
 
 export function PredictCopyTrading() {
@@ -11,9 +12,9 @@ export function PredictCopyTrading() {
     const [copyTraders, setCopyTraders] = useState<any[]>([]);
 
     React.useEffect(() => {
-        api.predictions.getCopyTraders().then(res => {
+        api.predictions.getCopyTraders().then((res: any) => {
             if (res && res.traders) setCopyTraders(res.traders);
-        }).catch(e => console.error(e));
+        }).catch((e: any) => console.error(e));
     }, []);
 
     return (

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
+import { api } from '../lib/api';
 import './PredictProfile.css';
 
 interface Props {
@@ -15,9 +16,9 @@ export function PredictProfile({ user }: Props) {
     const [positions, setPositions] = useState<any[]>([]);
     
     useEffect(() => {
-        api.predictions.getPositions().then(res => {
+        api.predictions.getPositions().then((res: any) => {
             if (res && res.positions) setPositions(res.positions);
-        }).catch(e => console.error(e));
+        }).catch((e: any) => console.error(e));
     }, []);
 
     return (
