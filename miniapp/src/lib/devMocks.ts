@@ -29,7 +29,7 @@ export const DEV_USER = {
     points: 1240.5,
     tier: 'gold',
     is_verified: true,
-    is_admin: false,
+    is_admin: true,
     created_at: '2024-06-15T10:30:00Z',
 };
 

@@ -2092,8 +2092,8 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         const { amount } = req.body;
         if (!amount) return res.status(400).json({ error: "Missing amount" });
 
-        if (parseFloat(amount) < 3) {
-            return res.status(400).json({ error: "Minimum deposit is 3 USDT" });
+        if (parseFloat(amount) < 1) {
+            return res.status(400).json({ error: "Minimum deposit is 1 USDC (receives pUSD 1:1)" });
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
@@ -2132,8 +2132,8 @@ router.get("/predictions/balance", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const balance = await polymarketService.getUsdcBalance(user.wallet_index);
-        res.json({ balance });
+        const balance = await polymarketService.getPusdBalance(user.wallet_index);
+        res.json({ balance, token: "pUSD" });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions balance error:", err);
         res.status(500).json({ error: err.message });

@@ -20,25 +20,28 @@ export interface ActiveMarketInfo {
 
 class PolymarketService {
     /**
-     * Get the user's USDC balance on Polygon
+     * Get the user's pUSD balance in their Polymarket deposit wallet.
+     * pUSD is Polymarket's native collateral token (launched April 2026, CLOB V2).
+     * Contract: 0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB (Polygon)
      */
-    async getUsdcBalance(userWalletIndex: number): Promise<string> {
+    async getPusdBalance(userWalletIndex: number): Promise<string> {
         try {
             const derived = walletService.deriveWallet(userWalletIndex);
             const address = derived.address;
-            const usdcAddress = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-            
+            // pUSD — Polymarket's native ERC-20 collateral (replaces USDC.e as of April 2026)
+            const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+
             const provider = new ethers.JsonRpcProvider("https://polygon-rpc.com");
-            const contract = new ethers.Contract(usdcAddress, [
+            const contract = new ethers.Contract(pusdAddress, [
                 "function balanceOf(address) view returns (uint256)",
                 "function decimals() view returns (uint8)"
             ], provider);
-            
+
             const balance = await contract.balanceOf(address);
             const decimals = await contract.decimals();
             return ethers.formatUnits(balance, decimals);
         } catch (e: any) {
-            console.warn("Failed to get Polymarket USDC balance:", e.message);
+            console.warn("Failed to get Polymarket pUSD balance:", e.message);
             // Fallback for local/demo testing
             return "0.00";
         }

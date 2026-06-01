@@ -31,13 +31,12 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
 
             <div className="mf-mobile-content">
                 <div className="mf-mobile-intro">
-                    <p>Add funds to your Predict account to start making predictions. Your account requires USDT to get started.</p>
+                    <p>Add funds to your Predict account to start making predictions. Deposit <strong>USDC</strong> from any chain — it will be automatically converted to <strong>pUSD</strong> (Polymarket's native token) 1:1.</p>
                 </div>
 
-                {/* Balance Box */}
-                <div className="mf-card mf-balance-card" style={{marginBottom: 16}}>
+                <div className="mf-card mf-balance-card" style={{marginBottom: 12}}>
                     <div className="mf-balance-header">
-                        <span>Your USDT Balance</span>
+                        <span>Your pUSD Balance</span>
                         <div className="mf-balance-actions">
                             <button className="mf-btn-secondary">Withdraw</button>
                             <button className="mf-btn-icon" onClick={loadBalances}><IconRefresh size={14}/></button>
@@ -48,13 +47,70 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     </div>
                 </div>
 
+                {/* USDC → pUSD Conversion Banner */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    marginBottom: '16px',
+                    fontSize: '13px',
+                }}>
+                    {/* You send */}
+                    <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                        <div style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            background: 'rgba(39,117,255,0.15)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <IconTokenUSDC size={16} />
+                        </div>
+                        <div>
+                            <div style={{color: 'rgba(255,255,255,0.5)', fontSize: '11px'}}>You send</div>
+                            <div style={{fontWeight: 600}}>USDC</div>
+                        </div>
+                    </div>
+                    {/* Arrow */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                    {/* You receive */}
+                    <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                        <div style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            background: 'rgba(101,72,254,0.18)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '14px', fontWeight: 700, color: '#a78bfa'
+                        }}>
+                            p
+                        </div>
+                        <div>
+                            <div style={{color: 'rgba(255,255,255,0.5)', fontSize: '11px'}}>You receive</div>
+                            <div style={{fontWeight: 600}}>pUSD</div>
+                        </div>
+                    </div>
+                    {/* 1:1 badge */}
+                    <div style={{
+                        marginLeft: 'auto',
+                        background: 'rgba(74,222,128,0.12)',
+                        color: '#4ade80',
+                        borderRadius: '6px',
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                    }}>1:1</div>
+                </div>
+
                 {/* Predict Smart Wallet */}
                 <div className="mf-card" style={{marginBottom: 16}}>
                     <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px'}}>
                         <IconChainBsc size={20} />
                         <h3 style={{margin: 0, fontSize: '15px'}}>Predict Smart Wallet</h3>
                     </div>
-                    <p className="mf-sub">Deposit <strong>USDT</strong> on <strong>BNB Chain</strong> directly to your proxy wallet. <strong>Minimum deposit: 3 USDT.</strong></p>
+                    <p className="mf-sub">Deposit <strong>USDC</strong> on <strong>BNB Chain</strong> directly to your proxy wallet — it wraps to <strong>pUSD</strong> (1:1) automatically. <strong>Minimum deposit: 1 USDC.</strong></p>
                     
                     <div className="mf-label">SUPPORTED ASSETS</div>
                     <div className="mf-pills">
@@ -75,7 +131,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 {/* Smart Routing Address */}
                 <div className="mf-card" style={{marginBottom: 40}}>
                     <h3 style={{fontSize: '15px', marginBottom: '8px'}}>Smart Routing Address</h3>
-                    <p className="mf-sub">Deposit funds cross-chain from your favorite exchanges on <strong>any of our supported networks</strong>. If you deposit USDC, it will be swapped to USDT. <strong>Minimum deposit: 3 USDT (or equivalent).</strong></p>
+                    <p className="mf-sub">Deposit funds cross-chain from any exchange on <strong>any supported network</strong>. Your USDC is bridged to Polygon and wrapped to <strong>pUSD</strong> (1:1) automatically. <strong>Minimum deposit: 3 USDC equivalent.</strong></p>
                     
                     <div className="mf-label">SUPPORTED ASSETS</div>
                     <div className="mf-pills" style={{marginBottom: 12}}>

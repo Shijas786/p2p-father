@@ -589,7 +589,7 @@ export function Wallet({ user }: Props) {
                                 {/* Predict Smart Wallet */}
                                 <div className="mf-card">
                                     <h3>Predict Smart Wallet</h3>
-                                    <p className="mf-sub">Only deposit <strong>USDT</strong> on <strong>BNB Chain</strong> to this address. <strong>Minimum deposit is 3 USDT.</strong></p>
+                                    <p className="mf-sub">Only deposit <strong>USDT</strong> on <strong>BNB Chain</strong> to this address. <strong>Minimum deposit is 1 USDT.</strong></p>
                                     
                                     <div className="mf-label">SUPPORTED ASSETS</div>
                                     <div className="mf-pills">
@@ -641,7 +641,7 @@ export function Wallet({ user }: Props) {
                                     </div>
 
                                     <div style={{marginTop: '16px'}}>
-                                        <button className="mf-btn-limits" onClick={() => showToast("Minimum deposit is 3 USDT/USDC. Deposits below 3 USDT/USDC will not be credited.", "warning")}>View Limits</button>
+                                        <button className="mf-btn-limits" onClick={() => showToast("Smart Wallet Min: 1 USDT. Smart Routing Min: 3 USDT.", "info")}>View Limits</button>
                                     </div>
                                 </div>
                             </div>

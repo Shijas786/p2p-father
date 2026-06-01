@@ -34,9 +34,12 @@ async function main() {
     if (env.NODE_ENV !== 'test') {
         const { startExpiryJob, startLiquiditySyncJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
+        const { startDepositMonitor } = await import("./services/deposit-monitor");
         startExpiryJob();
         startLiquiditySyncJob(escrow);
+        startDepositMonitor(); // Auto-wrap USDC.e → pUSD when funds land in user wallets
     }
+
 
     console.log("");
 
