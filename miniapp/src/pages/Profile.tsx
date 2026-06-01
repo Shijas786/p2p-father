@@ -469,11 +469,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     )}
                 </div>
 
-                {/* 4. Positions, Orders & Ads */}
-                <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/orders'); }}>
-                    <span className="prof-nav-text" style={{ marginLeft: '8px' }}>Positions & Orders</span>
-                    <span className="prof-nav-chevron">›</span>
-                </div>
+                {/* 4. Ads */}
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/ads'); }}>
                     <span className="prof-nav-text" style={{ marginLeft: '8px' }}>My Ads</span>
                     <span className="prof-nav-chevron">›</span>
