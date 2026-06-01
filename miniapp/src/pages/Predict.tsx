@@ -95,13 +95,14 @@ export function Predict({ user }: Props) {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [aiRes, histRes, balRes, posRes, tradeRes] =
+            const [aiRes, histRes, balRes, posRes, tradeRes, depRes] =
                 await Promise.allSettled([
                     api.predictions.getAIAnalysis(),
                     api.predictions.getHistory(),
                     api.predictions.getBalance(),
                     api.predictions.getPositions(),
                     api.predictions.getTrades(),
+                    api.predictions.getDepositWallet(),
                 ]);
 
             if (aiRes.status === 'fulfilled') setAiData(aiRes.value);
@@ -116,6 +117,7 @@ export function Predict({ user }: Props) {
             if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
             if (posRes.status === 'fulfilled')   setPositions(posRes.value.positions ?? []);
             if (tradeRes.status === 'fulfilled') setTrades(tradeRes.value.trades ?? []);
+            if (depRes.status === 'fulfilled') setDepositAddress(depRes.value.address ?? '');
         } catch (e) { console.error('[Predict] loadData fatal error:', e); }
         finally { setLoading(false); }
     }, []);
@@ -456,7 +458,7 @@ export function Predict({ user }: Props) {
                                 <div className="pm-notif-header" style={{ padding: '12px 16px', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                     <div style={{ color: '#848e9c', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Hot Wallet Address</div>
                                     <div style={{ fontFamily: 'SF Mono, monospace', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        {user?.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : '0x...'}
+                                        {depositAddress ? `${depositAddress.slice(0, 6)}...${depositAddress.slice(-4)}` : '0x...'}
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#848e9c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     </div>
                                 </div>

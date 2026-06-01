@@ -470,19 +470,12 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
 
                 {/* 4. Positions, Orders & Ads */}
-                <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/predict'); }}>
-                    <span style={{ fontSize: '24px', marginRight: '16px', display: 'flex', width: '28px', justifyContent: 'center' }}>📊</span>
-                    <span className="prof-nav-text">Positions</span>
-                    <span className="prof-nav-chevron">›</span>
-                </div>
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/orders'); }}>
-                    <img src="/icons for trade/profile icons/order-history.svg?v=3" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                    <span className="prof-nav-text">Orders</span>
+                    <span className="prof-nav-text" style={{ marginLeft: '8px' }}>Positions & Orders</span>
                     <span className="prof-nav-chevron">›</span>
                 </div>
                 <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/ads'); }}>
-                    <img src="/icons for trade/profile icons/my-ads.svg?v=4" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                    <span className="prof-nav-text">My Ads</span>
+                    <span className="prof-nav-text" style={{ marginLeft: '8px' }}>My Ads</span>
                     <span className="prof-nav-chevron">›</span>
                 </div>
 
