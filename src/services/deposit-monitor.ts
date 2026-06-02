@@ -46,7 +46,10 @@ const ERC20_ABI = [
  *   - Works in demo mode: relayer returns a simulated hash
  */
 class DepositMonitor {
-    private intervalHandle: ReturnType<typeof setInterval> | null = null;
+    private isRunning = false;
+    private shouldStop = false;
+    /** Single shared provider to prevent multiple eth_chainId requests */
+    private provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
 
     /** Wallet addresses currently mid-wrap — skip on next tick */
     private inProgress = new Set<string>();
@@ -57,25 +60,33 @@ class DepositMonitor {
     // ─── Public API ──────────────────────────────────────────────
 
     start(intervalMs = DEFAULT_INTERVAL_MS): void {
-        if (this.intervalHandle) {
+        if (this.isRunning) {
             console.warn("[DepositMonitor] Already running — skipping duplicate start()");
             return;
         }
 
-        console.log(`[DepositMonitor] 🟢 Started. Scanning wallets every ${intervalMs / 1000}s for USDC.e → pUSD auto-wrap.`);
+        console.log(`[DepositMonitor] 🟢 Started. Scanning wallets for USDC.e → pUSD auto-wrap.`);
+        this.isRunning = true;
+        this.shouldStop = false;
 
-        // Run immediately on start, then on every interval
-        this.scanAll().catch(err => console.error("[DepositMonitor] Initial scan error:", err));
-        this.intervalHandle = setInterval(() => {
-            this.scanAll().catch(err => console.error("[DepositMonitor] Scan error:", err));
-        }, intervalMs);
+        this.monitorLoop(intervalMs).catch(err => console.error("[DepositMonitor] Loop error:", err));
     }
 
     stop(): void {
-        if (this.intervalHandle) {
-            clearInterval(this.intervalHandle);
-            this.intervalHandle = null;
-            console.log(`[DepositMonitor] 🔴 Stopped. Total wraps triggered: ${this.wrapCount}`);
+        this.shouldStop = true;
+        this.isRunning = false;
+        console.log(`[DepositMonitor] 🔴 Stopped. Total wraps triggered: ${this.wrapCount}`);
+    }
+
+    private async monitorLoop(intervalMs: number): Promise<void> {
+        while (!this.shouldStop) {
+            try {
+                await this.scanAll();
+            } catch (err) {
+                console.error("[DepositMonitor] Scan error:", err);
+            }
+            if (this.shouldStop) break;
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
         }
     }
 
@@ -102,15 +113,16 @@ class DepositMonitor {
 
         if (users.length === 0) return;
 
-        // Process in small batches to avoid RPC rate limits (e.g., Infura 429 Too Many Requests)
-        const BATCH_SIZE = 5;
+        // Process in very small batches to strictly respect Infura free tier (30 RPS but tight burst limits)
+        const BATCH_SIZE = 3;
         for (let i = 0; i < users.length; i += BATCH_SIZE) {
+            if (this.shouldStop) break;
             const batch = users.slice(i, i + BATCH_SIZE);
             await Promise.allSettled(
                 batch.map(u => this.checkAndWrap(u.wallet_index, u.wallet_address))
             );
-            // Wait 500ms between batches to stay well under typical free tier RPS limits
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Wait 1000ms between batches for maximum stability
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
 
@@ -127,8 +139,7 @@ class DepositMonitor {
         if (this.inProgress.has(address)) return;
 
         try {
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
-            const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI, provider);
+            const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI, this.provider);
 
             // 1. Check incoming USDC.e balance
             const usdceBalance: bigint = await usdce.balanceOf(address);
@@ -152,7 +163,7 @@ class DepositMonitor {
 
             // 4. Sanity check: confirm pUSD balance increased
             try {
-                const pusd = new ethers.Contract(PUSD_ADDRESS, ERC20_ABI, provider);
+                const pusd = new ethers.Contract(PUSD_ADDRESS, ERC20_ABI, this.provider);
                 const pusdBalance: bigint = await pusd.balanceOf(address);
                 console.log(`[DepositMonitor] 📊 pUSD balance after wrap: ${ethers.formatUnits(pusdBalance, 6)} pUSD`);
             } catch {
