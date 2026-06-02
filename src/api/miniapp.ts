@@ -13,6 +13,7 @@ import { escrow } from "../services/escrow";
 import { polymarketService } from "../services/polymarket";
 import { predictWalletService } from "../services/predict-wallet";
 import { polymarketRelayerService } from "../services/relayer";
+import { depositMonitor } from "../services/deposit-monitor";
 import { bot } from "../bot";
 
 // Multer for in-memory file uploads (max 5MB)
@@ -2099,6 +2100,23 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         res.json({ success: true, result });
     } catch (err: any) {
         console.error("[MINIAPP] Place bet error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/deposit/check", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user || user.wallet_index === null) {
+            return res.status(401).json({ error: "Unauthorized or no wallet" });
+        }
+        
+        // Force check the user's derived wallet for USDC.e and wrap it if found
+        const wrapped = await depositMonitor.forceCheckUser(user.wallet_index, null);
+        
+        res.json({ success: true, wrapped });
+    } catch (err: any) {
+        console.error("[MINIAPP] Deposit check error:", err);
         res.status(500).json({ error: err.message });
     }
 });

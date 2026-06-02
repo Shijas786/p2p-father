@@ -243,6 +243,10 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount })
             }),
+        checkDeposit: () =>
+            request<{ success: boolean; wrapped: boolean }>('/predictions/deposit/check', {
+                method: 'POST'
+            }),
         withdrawGasless: (amount: number, recipientAddress?: string) => 
             request<{ success: boolean; txHash: string }>('/predictions/withdraw', {
                 method: 'POST',

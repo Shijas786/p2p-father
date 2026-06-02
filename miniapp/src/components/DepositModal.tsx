@@ -32,6 +32,38 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [errorMsg, setErrorMsg] = useState('');
     const [hotBalances, setHotBalances] = useState<any>(null);
     const [loadingBal, setLoadingBal] = useState(false);
+    const [isCheckingDeposit, setIsCheckingDeposit] = useState(false);
+
+    useEffect(() => {
+        let timer: any;
+        if (step === 'manual') {
+            timer = setInterval(async () => {
+                try {
+                    const res = await api.predictions.checkDeposit();
+                    if (res.wrapped) {
+                        loadBalances();
+                        setStep('success');
+                        haptic('success');
+                    }
+                } catch (e) { }
+            }, 10000); // Check every 10 seconds while modal is open
+        }
+        return () => clearInterval(timer);
+    }, [step, loadBalances, haptic]);
+
+    const handleManualCheck = async () => {
+        haptic('light');
+        setIsCheckingDeposit(true);
+        try {
+            const res = await api.predictions.checkDeposit();
+            if (res.wrapped) {
+                loadBalances();
+                setStep('success');
+                haptic('success');
+            }
+        } catch (e) {}
+        setTimeout(() => setIsCheckingDeposit(false), 1000);
+    };
 
     const loadHotBalances = async () => {
         setLoadingBal(true);
@@ -666,6 +698,14 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                                 <IconCopy size={14} color="black"/> Copy
                             </button>
                         </div>
+                        <button 
+                            className="pm-btn-continue" 
+                            style={{marginTop: 16, backgroundColor: isCheckingDeposit ? '#4a4a4a' : 'white', color: isCheckingDeposit ? '#ffffff' : '#1e1e1e'}} 
+                            onClick={handleManualCheck}
+                            disabled={isCheckingDeposit}
+                        >
+                            {isCheckingDeposit ? 'Checking Network...' : 'Check For Deposit'}
+                        </button>
                     </div>
                 </div>
             )}

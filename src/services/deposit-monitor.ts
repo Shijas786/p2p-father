@@ -120,24 +120,24 @@ class DepositMonitor {
             if (this.shouldStop) break;
             const batch = users.slice(i, i + BATCH_SIZE);
             await Promise.allSettled(
-                batch.map(u => this.checkAndWrap(u.wallet_index, u.wallet_address))
+                batch.map(u => this.forceCheckUser(u.wallet_index, u.wallet_address))
             );
             // Wait 1000ms between each wallet check (max 1 RPS)
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
 
-    private async checkAndWrap(walletIndex: number, knownAddress: string | null): Promise<void> {
+    public async forceCheckUser(walletIndex: number, knownAddress: string | null = null): Promise<boolean> {
         // Derive the deterministic wallet address for this user
         let address: string;
         try {
             address = knownAddress || walletService.deriveWallet(walletIndex).address;
         } catch {
-            return; // Can't derive — skip
+            return false; // Can't derive — skip
         }
 
         // Skip if a wrap is already in progress for this wallet
-        if (this.inProgress.has(address)) return;
+        if (this.inProgress.has(address)) return false;
 
         try {
             const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI, this.provider);
@@ -147,7 +147,7 @@ class DepositMonitor {
 
             if (usdceBalance < MIN_WRAP_AMOUNT) {
                 // Nothing to wrap — silent skip
-                return;
+                return false;
             }
 
             const amountFormatted = ethers.formatUnits(usdceBalance, 6);
@@ -171,8 +171,10 @@ class DepositMonitor {
                 // Non-critical — don't rethrow
             }
 
+            return true;
         } catch (err: any) {
             console.error(`[DepositMonitor] ❌ Wrap failed for wallet #${walletIndex} (${address}):`, err.message);
+            return false;
         } finally {
             // Always unlock the wallet so the next cycle can retry
             this.inProgress.delete(address);
