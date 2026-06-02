@@ -238,10 +238,10 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount, outcome, price, side })
             }),
-        depositGasless: (amount: number) => 
+        depositGasless: (amount: number, chain?: string, token?: string) => 
             request<{ success: boolean; txHash: string }>('/predictions/deposit', {
                 method: 'POST',
-                body: JSON.stringify({ amount })
+                body: JSON.stringify({ amount, chain, token })
             }),
         checkDeposit: () =>
             request<{ success: boolean; wrapped: boolean }>('/predictions/deposit/check', {

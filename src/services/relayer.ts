@@ -169,54 +169,120 @@ class PolymarketRelayerService {
     }
 
     /**
-     * Deposit funds into Polymarket by wrapping USDC.e → pUSD via the Collateral Onramp.
-     *
-     * Flow:
-     *  1. User's EOA must have USDC.e on Polygon (bridged there by the cross-chain flow or manually).
-     *  2. Approve the Collateral Onramp to spend the USDC.e amount.
-     *  3. Call wrap(amount) on the Onramp — this mints pUSD 1:1 and sends it to the deposit wallet.
-     *  4. Polymarket CLOB V2 detects the pUSD in the deposit wallet automatically.
+     * Deposit funds into Polymarket using the Bridge API (for multi-chain) or Native Onramp (for Polygon USDC.e).
      */
-    async depositGasless(userWalletIndex: number, amount: bigint): Promise<string> {
+    async depositGasless(userWalletIndex: number, amount: bigint, chainStr: string = 'polygon', tokenStr: string = 'USDC'): Promise<string> {
         if (this.isDemoMode) {
-            console.log(`[Relayer-Demo] Simulating pUSD deposit of ${amount} units (USDC.e → pUSD wrap)`);
+            console.log(`[Relayer-Demo] Simulating deposit of ${amount} units (${tokenStr} on ${chainStr})`);
             await new Promise(r => setTimeout(r, 1500));
-            return "0x_simulated_pusd_deposit_tx_hash";
+            return "0x_simulated_deposit_tx_hash";
         }
 
         const derived = walletService.deriveWallet(userWalletIndex);
-        const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+        const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+
+        // Standardize chain and token names
+        const chain = chainStr.toLowerCase().trim();
+        const token = tokenStr.toUpperCase().trim();
+
+        // If native Polygon USDC, we can still use the instant onramp to save bridge time
+        if (chain === 'polygon' && token === 'USDC') {
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const signer = new ethers.Wallet(derived.privateKey, provider);
+            const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, signer);
+            const onramp = new ethers.Contract(COLLATERAL_ONRAMP_ADDRESS, COLLATERAL_ONRAMP_ABI as any, signer);
+
+            const usdceBalance = await usdce.balanceOf(signer.address);
+            if (usdceBalance < amount) {
+                throw new Error(`Insufficient USDC balance on Polygon. Have: ${ethers.formatUnits(usdceBalance, 6)}, Need: ${ethers.formatUnits(amount, 6)}`);
+            }
+
+            const currentAllowance = await usdce.allowance(signer.address, COLLATERAL_ONRAMP_ADDRESS);
+            if (currentAllowance < amount) {
+                console.log(`[Relayer] Approving Collateral Onramp...`);
+                const approveTx = await usdce.approve(COLLATERAL_ONRAMP_ADDRESS, amount);
+                await approveTx.wait();
+            }
+
+            console.log(`[Relayer] Wrapping USDC → pUSD via Collateral Onramp...`);
+            const wrapTx = await onramp.wrap(amount);
+            const receipt = await wrapTx.wait();
+            return receipt?.hash || wrapTx.hash;
+        }
+
+        // --- Bridge API Flow for Multi-Chain (BSC, etc.) ---
+        console.log(`[Relayer] Requesting Bridge deposit address for ${depositWallet} (Asset: ${token} on ${chain})`);
+        
+        let bridgeAddress: string;
+        try {
+            // Polymarket Bridge API to generate a deposit address
+            const response = await fetch("https://bridge.polymarket.com/deposit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ address: depositWallet })
+            });
+            if (!response.ok) {
+                throw new Error(`Bridge API responded with ${response.status}`);
+            }
+            const data: any = await response.json();
+            
+            // Bridge API typically returns an array or mapping of addresses per network type (EVM, SVM, etc.)
+            // We expect an EVM address for BSC/Arbitrum/Base
+            bridgeAddress = data.evm || data.address || data[0]?.address;
+            
+            if (!bridgeAddress || !ethers.isAddress(bridgeAddress)) {
+                throw new Error("Invalid deposit address returned by Bridge API");
+            }
+            console.log(`[Relayer] Obtained Bridge Address: ${bridgeAddress}`);
+        } catch (e: any) {
+            console.warn(`[Relayer] Failed to generate bridge deposit address: ${e.message}`);
+            throw new Error("Polymarket Bridge API is currently unavailable. Please try again later.");
+        }
+
+        // Configure RPC and Token Address based on the source chain
+        let rpcUrl = POLYGON_RPC;
+        let tokenAddr = USDCE_ADDRESS;
+        let decimals = 6;
+
+        if (chain === 'bsc') {
+            rpcUrl = "https://bsc-dataseed.binance.org";
+            if (token === 'USDC') {
+                tokenAddr = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+                decimals = 18;
+            } else if (token === 'USDT') {
+                tokenAddr = "0x55d398326f99059fF775485246999027B3197955";
+                decimals = 18; // BSC USDT uses 18 decimals
+            }
+        } else if (chain === 'polygon' && token === 'USDT') {
+            tokenAddr = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+            decimals = 6;
+        }
+
+        // Adjust amount for decimals if it differs from the default 6
+        let actualAmount = amount;
+        if (decimals === 18) {
+            // The input amount is assuming 6 decimals (from miniapp.ts BigInt math)
+            // Multiply by 10^12 to scale 6 decimals to 18 decimals
+            actualAmount = amount * 1_000_000_000_000n;
+        }
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
         const signer = new ethers.Wallet(derived.privateKey, provider);
+        const sourceToken = new ethers.Contract(tokenAddr, ERC20_ABI as any, signer);
 
-        const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, signer);
-        const onramp = new ethers.Contract(COLLATERAL_ONRAMP_ADDRESS, COLLATERAL_ONRAMP_ABI as any, signer);
-
-        // Step 1: Check current USDC.e balance
-        const usdceBalance = await usdce.balanceOf(signer.address);
-        if (usdceBalance < amount) {
-            throw new Error(
-                `Insufficient USDC.e balance. Have: ${ethers.formatUnits(usdceBalance, 6)}, Need: ${ethers.formatUnits(amount, 6)}`
-            );
+        // Check user balance on source chain
+        const balance = await sourceToken.balanceOf(signer.address);
+        if (balance < actualAmount) {
+            throw new Error(`Insufficient ${token} balance on ${chain.toUpperCase()}. Have: ${ethers.formatUnits(balance, decimals)}, Need: ${ethers.formatUnits(actualAmount, decimals)}`);
         }
 
-        // Step 2: Approve Collateral Onramp to spend USDC.e (skip if already approved)
-        const currentAllowance = await usdce.allowance(signer.address, COLLATERAL_ONRAMP_ADDRESS);
-        if (currentAllowance < amount) {
-            console.log(`[Relayer] Approving Collateral Onramp to spend ${ethers.formatUnits(amount, 6)} USDC.e...`);
-            const approveTx = await usdce.approve(COLLATERAL_ONRAMP_ADDRESS, amount);
-            await approveTx.wait();
-            console.log(`[Relayer] Approval confirmed: ${approveTx.hash}`);
-            // Small delay to let RPC state settle
-            await new Promise(r => setTimeout(r, 1000));
-        }
-
-        // Step 3: Wrap USDC.e → pUSD (1:1 via Collateral Onramp)
-        console.log(`[Relayer] Wrapping ${ethers.formatUnits(amount, 6)} USDC.e → pUSD via Collateral Onramp...`);
-        const wrapTx = await onramp.wrap(amount);
-        const receipt = await wrapTx.wait();
-
-        console.log(`[Relayer] pUSD wrap confirmed! TX: ${receipt?.hash || wrapTx.hash}`);
-        return receipt?.hash || wrapTx.hash;
+        // Execute ERC20 Transfer to the Polymarket Bridge Address
+        console.log(`[Relayer] Transferring ${ethers.formatUnits(actualAmount, decimals)} ${token} on ${chain} to Bridge Address ${bridgeAddress}...`);
+        const tx = await sourceToken.transfer(bridgeAddress, actualAmount);
+        const receipt = await tx.wait();
+        
+        console.log(`[Relayer] Bridge Transfer confirmed! TX: ${receipt?.hash || tx.hash}`);
+        return receipt?.hash || tx.hash;
     }
 
     /**

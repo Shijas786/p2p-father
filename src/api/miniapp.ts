@@ -2126,7 +2126,7 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const { amount } = req.body;
+        const { amount, chain = 'polygon', token = 'USDC' } = req.body;
         if (!amount) return res.status(400).json({ error: "Missing amount" });
 
         if (parseFloat(amount) < 1) {
@@ -2134,7 +2134,7 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-        const txHash = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt);
+        const txHash = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
         res.json({ success: true, txHash });
     } catch (err: any) {

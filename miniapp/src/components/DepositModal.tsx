@@ -130,7 +130,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setErrorMsg('');
         try {
             // Note: Keep signature matching backend prediction deposit API
-            const r = await api.predictions.depositGasless(parseFloat(amount));
+            const r = await api.predictions.depositGasless(parseFloat(amount), selectedAsset?.chain, selectedAsset?.token);
             if (r && r.txHash) {
                 setTxHash(r.txHash);
                 haptic('success');
