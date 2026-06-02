@@ -132,6 +132,16 @@ class PolymarketService {
     }
 
     /**
+     * Helper to get a public client without credentials (for reading trades/markets)
+     */
+    getPublicClobClient(): ClobClient {
+        return new ClobClient({
+            host: CLOB_API,
+            chain: Chain.POLYGON,
+        });
+    }
+
+    /**
      * Discover the currently active BTC 5-minute prediction market
      */
     async getActiveBtcMarket(): Promise<ActiveMarketInfo> {
