@@ -280,7 +280,7 @@ class PolymarketService {
                     "Origin": "https://polymarket.com",
                     "Referer": "https://polymarket.com/"
                 },
-                timeout: 1500,
+                timeout: 5000,
             });
 
             const book = res.data;
@@ -300,11 +300,12 @@ class PolymarketService {
             return result;
         } catch (err: any) {
             console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
-            // Fallback gracefully if rate limited by returning last known safe values
-            return {
-                buyPrice: 0.50,
-                sellPrice: 0.50,
-            };
+            // Instead of returning 0.50, return a more obvious fallback or throw
+            // Since UI depends on it, returning a price that is 1 - other price might be better, 
+            // but we don't have the other price here. Let's just return a placeholder that makes it obvious it failed.
+            // Wait, if it's the YES token that failed, returning 0.5 is what caused the bug.
+            // Let's throw the error so the API returns 500 and the frontend retries.
+            throw new Error(`Failed to fetch price: ${err.message}`);
         }
     }
 
