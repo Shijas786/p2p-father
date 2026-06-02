@@ -74,7 +74,11 @@ const COLLATERAL_ONRAMP_ABI = [
     name: "wrap",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [{ name: "amount", type: "uint256" }],
+    inputs: [
+      { name: "_asset", type: "address" },
+      { name: "_to", type: "address" },
+      { name: "_amount", type: "uint256" }
+    ],
     outputs: []
   }
 ] as const;
@@ -204,8 +208,8 @@ class PolymarketRelayerService {
                 await approveTx.wait();
             }
 
-            console.log(`[Relayer] Wrapping USDC → pUSD via Collateral Onramp...`);
-            const wrapTx = await onramp.wrap(amount);
+            console.log(`[Relayer] Wrapping USDC → pUSD via Collateral Onramp directly to deposit wallet ${depositWallet}...`);
+            const wrapTx = await onramp.wrap(USDCE_ADDRESS, depositWallet, amount);
             const receipt = await wrapTx.wait();
             return { txHash: receipt?.hash || wrapTx.hash };
         }
