@@ -230,8 +230,8 @@ class PolymarketRelayerService {
                     "Content-Type": "application/json",
                     "X-Builder-Code": (env as any).POLYMARKET_BUILDER_CODE || ""
                 },
-                // Pass the user's EOA — this is what Polymarket links the deposit wallet to
-                body: JSON.stringify({ address: derived.address })
+                // Pass the Polymarket deposit wallet — this is the address that receives pUSD on Polygon
+                body: JSON.stringify({ address: depositWallet })
             });
 
             if (!depositRes.ok) {
