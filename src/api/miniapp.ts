@@ -242,7 +242,26 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
         res.status(500).json({ error: err.message });
     }
 });
+router.get("/wallet/bot-balances", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
+        const derived = wallet.deriveWallet(user.wallet_index);
+        const botAddress = derived.address;
+
+        const balances = await wallet.getBalances(botAddress);
+        
+        res.json({
+            ...balances,
+            address: botAddress,
+            wallet_type: 'bot'
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Bot wallet balances error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 router.post("/wallet/send", async (req: Request, res: Response) => {
     try {

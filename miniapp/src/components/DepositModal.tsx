@@ -36,10 +36,10 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const loadHotBalances = async () => {
         setLoadingBal(true);
         try {
-            const data = await api.wallet.getBalances();
+            const data = await api.wallet.getBotBalances();
             setHotBalances(data);
         } catch (e) {
-            console.error("Failed to load hot wallet balances:", e);
+            console.error("Failed to load bot wallet balances:", e);
         } finally {
             setLoadingBal(false);
         }

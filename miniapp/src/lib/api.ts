@@ -81,6 +81,16 @@ export const api = {
 
             wallet_type?: string;
         }>('/wallet/balances'),
+        getBotBalances: () => request<{
+            eth: string;
+            usdc: string;
+            usdt: string;
+            bnb: string;
+            bsc_usdc: string;
+            bsc_usdt: string;
+            address: string;
+            wallet_type?: string;
+        }>('/wallet/bot-balances'),
         send: (data: { to: string; amount: number; token: string; chain?: string }) =>
             request<{ txHash: string }>('/wallet/send', {
                 method: 'POST',
