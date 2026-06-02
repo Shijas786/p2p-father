@@ -182,7 +182,7 @@ class PolymarketService {
                     "Origin": "https://polymarket.com",
                     "Referer": "https://polymarket.com/"
                 },
-                timeout: 2000,
+                timeout: 5000,
             });
 
             const events = res.data || [];
