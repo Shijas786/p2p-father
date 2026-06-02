@@ -12,10 +12,11 @@ interface TradePanelProps {
     selectedRound: number;
     history: any[];
     loadData: () => void;
+    onOutcomeChange?: (outcome: 'UP' | 'DOWN') => void;
 }
 
 export function TradePanel({
-    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, loadData
+    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, loadData, onOutcomeChange
 }: TradePanelProps) {
     const { showToast } = useToast();
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
@@ -116,13 +117,13 @@ export function TradePanel({
             <div className="pm-outcome-selector">
                 <button
                     className={`pm-outcome-pill ${betType === 'UP' ? 'pm-outcome-pill-up-active' : 'pm-outcome-pill-inactive'}`}
-                    onClick={() => { haptic('selection'); setBetType('UP'); }}
+                    onClick={() => { haptic('selection'); setBetType('UP'); onOutcomeChange?.('UP'); }}
                     id="btn-bet-up">
                     Up {(yesPrice.buyPrice * 100).toFixed(0)}<span className="pm-cent-sign">¢</span>
                 </button>
                 <button
                     className={`pm-outcome-pill ${betType === 'DOWN' ? 'pm-outcome-pill-down-active' : 'pm-outcome-pill-inactive'}`}
-                    onClick={() => { haptic('selection'); setBetType('DOWN'); }}
+                    onClick={() => { haptic('selection'); setBetType('DOWN'); onOutcomeChange?.('DOWN'); }}
                     id="btn-bet-down">
                     Down {(noPrice.buyPrice * 100).toFixed(0)}<span className="pm-cent-sign">¢</span>
                 </button>

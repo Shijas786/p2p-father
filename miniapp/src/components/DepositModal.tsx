@@ -410,7 +410,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 
                 <div className="pm-dep-title">
                     <div>Deposit</div>
-                    <div className="pm-dep-balance-sub">Polymarket Balance: ${parseFloat(balances?.usdt || '0').toFixed(2)}</div>
+                    <div className="pm-dep-balance-sub">FatherBot Balance: ${parseFloat(balances?.usdt || '0').toFixed(2)}</div>
                 </div>
 
                 <button className="pm-dep-close" onClick={onClose}>×</button>

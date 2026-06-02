@@ -698,6 +698,7 @@ export function Predict({ user }: Props) {
                     selectedRound={selectedRound}
                     history={history}
                     loadData={loadData}
+                    onOutcomeChange={(outcome) => setBetType(outcome)}
                 />
 
             </div>
