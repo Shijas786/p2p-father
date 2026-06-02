@@ -94,18 +94,37 @@ class PolymarketService {
         }
         
         // Fallback to User client if no Builder keys
-        return this.getUserClobClient(userWalletIndex);
+        const userClient = await this.getUserClobClient(userWalletIndex);
+        if (!userClient) {
+            throw new Error("Cannot place bet: User proxy not deployed and no Builder API key configured.");
+        }
+        return userClient;
     }
 
     /**
      * Client for FETCHING trades using a generated Level 2 API key for the User's EOA
+     * Returns null if the user has no proxy wallet deployed yet.
      */
-    async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
+    async getUserClobClient(userWalletIndex: number): Promise<ClobClient | null> {
         const derived = walletService.deriveWallet(userWalletIndex);
         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
+        
+        const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+        // Check if the user's proxy wallet is deployed. If not, they can't have trades!
+        // We do this to avoid spamming Polymarket API with createOrDeriveApiKey which throws loud 400 errors for undeployed proxies.
+        const { polymarketRelayerService } = await import("./relayer");
+        const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
+        const code = await provider.getCode(depositWallet);
+        if (code === "0x") {
+            // Proxy not deployed yet (user has never placed a trade or deposited pUSD)
+            return null;
+        }
+
         const signer = createWalletClient({
             account,
-            transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
+            transport: http(rpcUrl),
         });
 
         if (clobCredsCache[userWalletIndex]) {
@@ -123,17 +142,20 @@ class PolymarketService {
             signer,
         });
 
-        // This will fail if the user has never placed a trade (proxy not deployed)
-        // The API route should catch it and return empty trades/positions
-        const creds = await tempClient.createOrDeriveApiKey();
-        clobCredsCache[userWalletIndex] = creds;
+        try {
+            const creds = await tempClient.createOrDeriveApiKey();
+            clobCredsCache[userWalletIndex] = creds;
 
-        return new ClobClient({
-            host: CLOB_API,
-            chain: Chain.POLYGON,
-            signer,
-            creds,
-        });
+            return new ClobClient({
+                host: CLOB_API,
+                chain: Chain.POLYGON,
+                signer,
+                creds,
+            });
+        } catch (e: any) {
+            console.warn("[Polymarket] Failed to derive API Key:", e.message);
+            return null;
+        }
     }
 
     /**

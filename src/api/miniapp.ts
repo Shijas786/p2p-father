@@ -2185,6 +2185,11 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         // Attempt to get real open positions from Polymarket CLOB
         try {
             const client = await polymarketService.getUserClobClient(user.wallet_index);
+            if (!client) {
+                // If client is null, the proxy hasn't been deployed yet (they have no trades)
+                return res.json({ positions: [] });
+            }
+
             const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
             const tradesRes = await client.getTrades({
                 maker: derived.address,
@@ -2268,6 +2273,10 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
         if (!user) return res.status(401).json({ error: "Unauthorized" });
         try {
             const client = await polymarketService.getUserClobClient(user.wallet_index);
+            if (!client) {
+                return res.json({ trades: [] });
+            }
+
             const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
             const tradesRes = await client.getTrades({ maker: derived.address } as any);
             const market = await polymarketService.getActiveBtcMarket();
