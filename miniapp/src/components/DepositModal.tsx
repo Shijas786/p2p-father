@@ -124,6 +124,13 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     background: #111318;
                     color: #ffffff;
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    top: 50% !important;
+                    transform: translate(-50%, -50%) !important;
+                    height: auto !important;
+                    max-height: 85vh !important;
+                    max-width: 380px !important;
+                    border-radius: 16px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }
                 .pm-dep-header {
                     display: flex;
@@ -266,11 +273,15 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     right: -2px;
                     background: #111318;
                     border-radius: 50%;
-                    width: 16px;
-                    height: 16px;
+                    width: 20px;
+                    height: 20px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                }
+                .pm-asset-chain-badge svg {
+                    width: 14px;
+                    height: 14px;
                 }
                 .pm-asset-meta {
                     display: flex;
@@ -481,7 +492,9 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                                             </div>
                                         </div>
                                         <div className="pm-asset-meta">
-                                            <span className="pm-asset-title">{asset.token}</span>
+                                            <span className="pm-asset-title">
+                                                {asset.token} <span style={{fontSize: 12, color: '#848e9c', fontWeight: 'normal'}}>on {asset.chain}</span>
+                                            </span>
                                             <span className="pm-asset-subtitle">{asset.balance.toFixed(5)} {asset.token}</span>
                                         </div>
                                     </div>
