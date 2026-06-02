@@ -132,12 +132,21 @@ class PolymarketService {
     }
 
     /**
-     * Helper to get a public client without credentials (for reading trades/markets)
+     * Helper to get a read-only client with a signer (for fetching user trades/positions)
+     * We purposefully omit Builder API keys here because /data/trades rejects mismatched keys.
      */
-    getPublicClobClient(): ClobClient {
+    getReadOnlyClobClient(userWalletIndex: number): ClobClient {
+        const derived = walletService.deriveWallet(userWalletIndex);
+        const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
+        const signer = createWalletClient({
+            account,
+            transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
+        });
+
         return new ClobClient({
             host: CLOB_API,
             chain: Chain.POLYGON,
+            signer, // Required for getTrades signature
         });
     }
 
