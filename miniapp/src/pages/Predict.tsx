@@ -228,15 +228,25 @@ export function Predict({ user }: Props) {
                     const bookY = await resY.json();
                     const bookN = await resN.json();
 
-                    if (bookY && bookY.bids && bookY.asks) {
-                        const bestBidY = bookY.bids.length ? Math.max(...bookY.bids.map((b: any) => parseFloat(b.price))) : 0.50;
-                        const bestAskY = bookY.asks.length ? Math.min(...bookY.asks.map((a: any) => parseFloat(a.price))) : 0.50;
-                        setYesPrice({ buyPrice: bestAskY, sellPrice: bestBidY });
-                    }
-                    if (bookN && bookN.bids && bookN.asks) {
-                        const bestBidN = bookN.bids.length ? Math.max(...bookN.bids.map((b: any) => parseFloat(b.price))) : 0.50;
-                        const bestAskN = bookN.asks.length ? Math.min(...bookN.asks.map((a: any) => parseFloat(a.price))) : 0.50;
-                        setNoPrice({ buyPrice: bestAskN, sellPrice: bestBidN });
+                    if (bookY && bookN) {
+                        let bestBidY = bookY.bids?.length ? Math.max(...bookY.bids.map((b: any) => parseFloat(b.price))) : null;
+                        let bestAskY = bookY.asks?.length ? Math.min(...bookY.asks.map((a: any) => parseFloat(a.price))) : null;
+                        let bestBidN = bookN.bids?.length ? Math.max(...bookN.bids.map((b: any) => parseFloat(b.price))) : null;
+                        let bestAskN = bookN.asks?.length ? Math.min(...bookN.asks.map((a: any) => parseFloat(a.price))) : null;
+
+                        if (bestAskY === null && bestAskN !== null) bestAskY = 1 - bestAskN;
+                        if (bestAskN === null && bestAskY !== null) bestAskN = 1 - bestAskY;
+                        if (bestBidY === null && bestBidN !== null) bestBidY = 1 - bestBidN;
+                        if (bestBidN === null && bestBidY !== null) bestBidN = 1 - bestBidY;
+
+                        setYesPrice(prev => ({ 
+                            buyPrice: bestAskY !== null ? bestAskY : prev.buyPrice, 
+                            sellPrice: bestBidY !== null ? bestBidY : prev.sellPrice 
+                        }));
+                        setNoPrice(prev => ({ 
+                            buyPrice: bestAskN !== null ? bestAskN : prev.buyPrice, 
+                            sellPrice: bestBidN !== null ? bestBidN : prev.sellPrice 
+                        }));
                     }
                 }
             } catch (e) {
