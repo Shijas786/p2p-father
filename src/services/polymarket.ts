@@ -70,10 +70,9 @@ class PolymarketService {
     }
 
     /**
-     * Helper to create a fully-authenticated ClobClient for a specific user
+     * Client for PLACING bets using Builder credentials but User signature
      */
-    async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
-        // Derive EOA credentials from master seed
+    async getBuilderClobClient(userWalletIndex: number): Promise<ClobClient> {
         const derived = walletService.deriveWallet(userWalletIndex);
         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
         const signer = createWalletClient({
@@ -86,20 +85,29 @@ class PolymarketService {
         const passphrase = (env as any).POLYMARKET_BUILDER_PASSPHRASE;
 
         if (apiKey && apiSecret && passphrase) {
-            // Use the Builder API credentials (Relayer) to authenticate the client
             return new ClobClient({
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
-                creds: {
-                    key: apiKey,
-                    secret: apiSecret,
-                    passphrase: passphrase
-                }
+                creds: { key: apiKey, secret: apiSecret, passphrase: passphrase }
             });
         }
+        
+        // Fallback to User client if no Builder keys
+        return this.getUserClobClient(userWalletIndex);
+    }
 
-        // Fallback: Use cached generated credentials if Builder API is missing
+    /**
+     * Client for FETCHING trades using a generated Level 2 API key for the User's EOA
+     */
+    async getUserClobClient(userWalletIndex: number): Promise<ClobClient> {
+        const derived = walletService.deriveWallet(userWalletIndex);
+        const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
+        const signer = createWalletClient({
+            account,
+            transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
+        });
+
         if (clobCredsCache[userWalletIndex]) {
             return new ClobClient({
                 host: CLOB_API,
@@ -109,44 +117,22 @@ class PolymarketService {
             });
         }
 
-        // Step 1: Initialize temporary client for credential derivation
         const tempClient = new ClobClient({
             host: CLOB_API,
             chain: Chain.POLYGON,
             signer,
         });
 
-        // Step 2: Obtain Level 2 API credentials via EIP-712 wallet signature
+        // This will fail if the user has never placed a trade (proxy not deployed)
+        // The API route should catch it and return empty trades/positions
         const creds = await tempClient.createOrDeriveApiKey();
-        
-        // Cache credentials so we don't hit the auth endpoint on every trade
         clobCredsCache[userWalletIndex] = creds;
 
-        // Step 3: Return authenticated client configured for trading
         return new ClobClient({
             host: CLOB_API,
             chain: Chain.POLYGON,
             signer,
             creds,
-        });
-    }
-
-    /**
-     * Helper to get a read-only client with a signer (for fetching user trades/positions)
-     * We purposefully omit Builder API keys here because /data/trades rejects mismatched keys.
-     */
-    getReadOnlyClobClient(userWalletIndex: number): ClobClient {
-        const derived = walletService.deriveWallet(userWalletIndex);
-        const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
-        const signer = createWalletClient({
-            account,
-            transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
-        });
-
-        return new ClobClient({
-            host: CLOB_API,
-            chain: Chain.POLYGON,
-            signer, // Required for getTrades signature
         });
     }
 
@@ -323,7 +309,7 @@ class PolymarketService {
         }
 
         try {
-            const client = await this.getUserClobClient(userWalletIndex);
+            const client = await this.getBuilderClobClient(userWalletIndex);
 
             // Size = Total spend / Limit price
             const size = amountUsdc / limitPrice;
