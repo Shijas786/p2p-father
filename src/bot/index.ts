@@ -189,6 +189,8 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
         .map(r => r.value);
 }
 
+let availableGifs: string[] = [];
+
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
         // ✨ Liveness Feedback - A small delay gives a "live processing" feel for completions
@@ -222,15 +224,23 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             "⚡ Trade safe with P2PFather → /start",
         ].join("\n");
 
-        // Try to send with a random GIF
+        // Try to send with a random GIF without repeating until all are shown
         const gifDir = path.join(process.cwd(), "assets", "trade complte gif collection");
         let randomGifPath = "";
         try {
             if (fs.existsSync(gifDir)) {
-                const files = fs.readdirSync(gifDir);
-                const gifFiles = files.filter(f => f.toLowerCase().endsWith('.gif'));
-                if (gifFiles.length > 0) {
-                    const randomFile = gifFiles[Math.floor(Math.random() * gifFiles.length)];
+                if (availableGifs.length === 0) {
+                    const files = fs.readdirSync(gifDir);
+                    availableGifs = files.filter(f => f.toLowerCase().endsWith('.gif'));
+                    // Shuffle array
+                    for (let i = availableGifs.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [availableGifs[i], availableGifs[j]] = [availableGifs[j], availableGifs[i]];
+                    }
+                }
+                
+                if (availableGifs.length > 0) {
+                    const randomFile = availableGifs.pop()!;
                     randomGifPath = path.join(gifDir, randomFile);
                 }
             }
