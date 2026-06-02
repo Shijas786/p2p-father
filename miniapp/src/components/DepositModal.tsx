@@ -34,6 +34,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [loadingBal, setLoadingBal] = useState(false);
     const [isCheckingDeposit, setIsCheckingDeposit] = useState(false);
     const [bridgePending, setBridgePending] = useState(false);
+    const [bridgeAddressState, setBridgeAddressState] = useState('');
     const [balanceBefore, setBalanceBefore] = useState<number>(0);
     const [elapsedSecs, setElapsedSecs] = useState(0);
 
@@ -55,13 +56,25 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         return () => clearInterval(timer);
     }, [step, loadBalances, haptic]);
 
-    // Poll pUSD balance after bridge deposit until it increases
+    // Poll bridge status & pUSD balance after bridge deposit
     useEffect(() => {
         if (!bridgePending) return;
         let elapsed = 0;
         const elapsedTimer = setInterval(() => { elapsed++; setElapsedSecs(elapsed); }, 1000);
         const pollTimer = setInterval(async () => {
             try {
+                // Poll bridge API if we have the address
+                if (bridgeAddressState) {
+                    const statusRes = await api.predictions.checkBridgeStatus(bridgeAddressState);
+                    if (statusRes && statusRes.status === 'COMPLETED') {
+                        setBridgePending(false);
+                        loadBalances();
+                        haptic('success');
+                        return;
+                    }
+                }
+
+                // Fallback to balance polling
                 const b = await api.predictions.getBalance();
                 const newBal = parseFloat(b.balance || '0');
                 if (newBal > balanceBefore) {
@@ -70,9 +83,9 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     haptic('success');
                 }
             } catch (e) {}
-        }, 8000);
+        }, 5000);
         return () => { clearInterval(elapsedTimer); clearInterval(pollTimer); };
-    }, [bridgePending, balanceBefore, loadBalances, haptic]);
+    }, [bridgePending, balanceBefore, bridgeAddressState, loadBalances, haptic]);
 
     const handleManualCheck = async () => {
         haptic('light');
@@ -161,9 +174,10 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 setTxHash(r.txHash);
                 haptic('success');
                 setStep('success');
-                // For bridge deposits (non-Polygon), start polling for balance change
+                // For bridge deposits (non-Polygon), start polling for bridge status
                 const isNativePolygon = selectedAsset?.chain === 'Polygon' && selectedAsset?.token === 'USDC';
                 if (!isNativePolygon) {
+                    if (r.bridgeAddress) setBridgeAddressState(r.bridgeAddress);
                     setBridgePending(true);
                     setElapsedSecs(0);
                 }

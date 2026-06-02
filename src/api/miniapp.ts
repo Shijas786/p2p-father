@@ -2134,11 +2134,27 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-        const txHash = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
+        const { txHash, bridgeAddress } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
-        res.json({ success: true, txHash });
+        res.json({ success: true, txHash, bridgeAddress });
     } catch (err: any) {
         console.error("[MINIAPP] Gasless deposit error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/bridge-status", async (req: Request, res: Response) => {
+    try {
+        const { address } = req.query;
+        if (!address) return res.status(400).json({ error: "Missing address" });
+
+        const r = await fetch(`https://bridge.polymarket.com/status/${address}`);
+        if (!r.ok) return res.status(r.status).json({ error: "Failed to check status" });
+        
+        const data = await r.json();
+        res.json(data);
+    } catch (err: any) {
+        console.error("[MINIAPP] Bridge status error:", err);
         res.status(500).json({ error: err.message });
     }
 });

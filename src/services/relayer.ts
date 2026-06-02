@@ -171,11 +171,11 @@ class PolymarketRelayerService {
     /**
      * Deposit funds into Polymarket using the Bridge API (for multi-chain) or Native Onramp (for Polygon USDC.e).
      */
-    async depositGasless(userWalletIndex: number, amount: bigint, chainStr: string = 'polygon', tokenStr: string = 'USDC'): Promise<string> {
+    async depositGasless(userWalletIndex: number, amount: bigint, chainStr: string = 'polygon', tokenStr: string = 'USDC'): Promise<{txHash: string, bridgeAddress?: string}> {
         if (this.isDemoMode) {
             console.log(`[Relayer-Demo] Simulating deposit of ${amount} units (${tokenStr} on ${chainStr})`);
             await new Promise(r => setTimeout(r, 1500));
-            return "0x_simulated_deposit_tx_hash";
+            return { txHash: "0x_simulated_deposit_tx_hash" };
         }
 
         const derived = walletService.deriveWallet(userWalletIndex);
@@ -207,7 +207,7 @@ class PolymarketRelayerService {
             console.log(`[Relayer] Wrapping USDC → pUSD via Collateral Onramp...`);
             const wrapTx = await onramp.wrap(amount);
             const receipt = await wrapTx.wait();
-            return receipt?.hash || wrapTx.hash;
+            return { txHash: receipt?.hash || wrapTx.hash };
         }
 
         // --- Bridge API Flow for Multi-Chain (BSC, etc.) ---
@@ -321,7 +321,7 @@ class PolymarketRelayerService {
         const receipt = await tx.wait();
         
         console.log(`[Relayer] Bridge Transfer confirmed! TX: ${receipt?.hash || tx.hash}`);
-        return receipt?.hash || tx.hash;
+        return { txHash: receipt?.hash || tx.hash, bridgeAddress };
     }
 
     /**
