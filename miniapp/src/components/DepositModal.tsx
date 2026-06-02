@@ -240,7 +240,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 .pm-asset-selector-list {
                     display: flex;
                     flex-direction: column;
-                    gap: 6px;
+                    gap: 4px;
                 }
                 .pm-asset-item-row {
                     display: flex;
@@ -248,8 +248,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     justify-content: space-between;
                     background: #161920;
                     border: 1px solid rgba(255, 255, 255, 0.04);
-                    border-radius: 10px;
-                    padding: 8px 12px;
+                    border-radius: 8px;
+                    padding: 6px 10px;
                     cursor: pointer;
                     transition: all 0.2s ease;
                 }
@@ -264,8 +264,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 }
                 .pm-asset-icon-wrapper {
                     position: relative;
-                    width: 28px;
-                    height: 28px;
+                    width: 24px;
+                    height: 24px;
                 }
                 .pm-asset-chain-badge {
                     position: absolute;
@@ -273,27 +273,29 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     right: -2px;
                     background: #111318;
                     border-radius: 50%;
-                    width: 20px;
-                    height: 20px;
+                    width: 16px;
+                    height: 16px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                 }
                 .pm-asset-chain-badge svg {
-                    width: 14px;
-                    height: 14px;
+                    width: 10px;
+                    height: 10px;
                 }
                 .pm-asset-meta {
                     display: flex;
                     flex-direction: column;
+                    line-height: 1.2;
+                    gap: 2px;
                 }
                 .pm-asset-title {
-                    font-size: 15px;
+                    font-size: 13px;
                     font-weight: 700;
                     color: #fff;
                 }
                 .pm-asset-subtitle {
-                    font-size: 12px;
+                    font-size: 10px;
                     color: #848e9c;
                 }
                 .pm-asset-value-col {
@@ -301,19 +303,21 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     display: flex;
                     flex-direction: column;
                     align-items: flex-end;
-                    gap: 4px;
+                    justify-content: center;
+                    line-height: 1.2;
+                    gap: 2px;
                 }
                 .pm-asset-bal-usd {
-                    font-size: 15px;
+                    font-size: 13px;
                     font-weight: 700;
                     color: #fff;
                 }
                 .pm-low-balance-badge {
-                    font-size: 10px;
+                    font-size: 9px;
                     color: #848e9c;
                     background: rgba(255, 255, 255, 0.04);
-                    padding: 2px 8px;
-                    border-radius: 10px;
+                    padding: 1px 6px;
+                    border-radius: 6px;
                 }
 
                 .pm-big-amount-wrapper {
@@ -486,14 +490,14 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                                 >
                                     <div className="pm-asset-item-left">
                                         <div className="pm-asset-icon-wrapper">
-                                            <TokenIcon size={28} />
+                                            <TokenIcon size={24} />
                                             <div className="pm-asset-chain-badge">
-                                                <ChainIcon size={12} />
+                                                <ChainIcon size={10} />
                                             </div>
                                         </div>
                                         <div className="pm-asset-meta">
                                             <span className="pm-asset-title">
-                                                {asset.token} <span style={{fontSize: 12, color: '#848e9c', fontWeight: 'normal'}}>on {asset.chain}</span>
+                                                {asset.token} <span style={{fontSize: 10, color: '#848e9c', fontWeight: 'normal'}}>on {asset.chain}</span>
                                             </span>
                                             <span className="pm-asset-subtitle">{asset.balance.toFixed(5)} {asset.token}</span>
                                         </div>
