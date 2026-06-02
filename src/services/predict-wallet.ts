@@ -27,7 +27,7 @@ export class PredictWalletService {
             const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
             const wallet = createWalletClient({
                 account,
-                transport: http("https://polygon-rpc.com")
+                transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com")
             });
 
             const creds = {

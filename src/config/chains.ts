@@ -50,7 +50,7 @@ export const CHAINS: Record<string, ChainConfig> = {
         id: 137,
         name: "Polygon",
         shortName: "pol",
-        rpcUrl: "https://polygon-rpc.com",
+        rpcUrl: process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com",
         explorerUrl: "https://polygonscan.com",
         usdcAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
         isTestnet: false,

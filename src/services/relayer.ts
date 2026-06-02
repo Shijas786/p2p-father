@@ -21,7 +21,7 @@ const COLLATERAL_ONRAMP_ADDRESS = "0x93070a847efef7f70739046a929d47a521f5b8ee";
 /** PermissionedRamp: wraps native USDC → pUSD (1:1) */
 const PERMISSIONED_RAMP_ADDRESS = "0xebc2459ec962869ca4c0bd1e06368272732bcb08";
 
-const POLYGON_RPC = "https://polygon-rpc.com";
+const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
 
 // ─── ABIs ────────────────────────────────────────────────────────
 
