@@ -204,8 +204,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 .pm-dep-option {
                     background: #161920;
                     border: 1px solid rgba(255, 255, 255, 0.06);
-                    border-radius: 12px;
-                    padding: 16px;
+                    border-radius: 10px;
+                    padding: 10px 14px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
@@ -240,7 +240,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 .pm-asset-selector-list {
                     display: flex;
                     flex-direction: column;
-                    gap: 8px;
+                    gap: 6px;
                 }
                 .pm-asset-item-row {
                     display: flex;
@@ -248,8 +248,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     justify-content: space-between;
                     background: #161920;
                     border: 1px solid rgba(255, 255, 255, 0.04);
-                    border-radius: 12px;
-                    padding: 14px 16px;
+                    border-radius: 10px;
+                    padding: 8px 12px;
                     cursor: pointer;
                     transition: all 0.2s ease;
                 }
@@ -264,8 +264,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 }
                 .pm-asset-icon-wrapper {
                     position: relative;
-                    width: 36px;
-                    height: 36px;
+                    width: 28px;
+                    height: 28px;
                 }
                 .pm-asset-chain-badge {
                     position: absolute;
@@ -486,7 +486,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                                 >
                                     <div className="pm-asset-item-left">
                                         <div className="pm-asset-icon-wrapper">
-                                            <TokenIcon size={36} />
+                                            <TokenIcon size={28} />
                                             <div className="pm-asset-chain-badge">
                                                 <ChainIcon size={12} />
                                             </div>
