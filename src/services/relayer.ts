@@ -211,32 +211,68 @@ class PolymarketRelayerService {
         }
 
         // --- Bridge API Flow for Multi-Chain (BSC, etc.) ---
-        console.log(`[Relayer] Requesting Bridge deposit address for ${depositWallet} (Asset: ${token} on ${chain})`);
-        
+        console.log(`[Relayer] Requesting Bridge deposit address for wallet ${depositWallet}`);
+
         let bridgeAddress: string;
         try {
-            // Polymarket Bridge API to generate a deposit address
-            const response = await fetch("https://bridge.polymarket.com/deposit", {
+            // Step 1: Validate chain+token combo against supported assets
+            const supportedRes = await fetch("https://bridge.polymarket.com/supported-assets");
+            if (!supportedRes.ok) throw new Error(`Supported assets fetch failed: ${supportedRes.status}`);
+            const supported: any = await supportedRes.json();
+
+            // Log full response so we can debug the shape on Railway
+            console.log(`[Relayer] Supported assets response:`, JSON.stringify(supported).slice(0, 500));
+
+            // Step 2: Request bridge deposit addresses linked to the user's Polymarket deposit wallet
+            const depositRes = await fetch("https://bridge.polymarket.com/deposit", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ address: depositWallet })
+                // Pass the user's EOA — this is what Polymarket links the deposit wallet to
+                body: JSON.stringify({ address: derived.address })
             });
-            if (!response.ok) {
-                throw new Error(`Bridge API responded with ${response.status}`);
+
+            if (!depositRes.ok) {
+                const errText = await depositRes.text();
+                throw new Error(`Bridge API ${depositRes.status}: ${errText}`);
             }
-            const data: any = await response.json();
-            
-            // Bridge API typically returns an array or mapping of addresses per network type (EVM, SVM, etc.)
-            // We expect an EVM address for BSC/Arbitrum/Base
-            bridgeAddress = data.evm || data.address || data[0]?.address;
-            
-            if (!bridgeAddress || !ethers.isAddress(bridgeAddress)) {
-                throw new Error("Invalid deposit address returned by Bridge API");
+
+            const data: any = await depositRes.json();
+
+            // Log the full raw response so we know the exact shape
+            console.log(`[Relayer] Bridge /deposit raw response:`, JSON.stringify(data));
+
+            // Determine address type based on source chain
+            // EVM covers: Polygon, BSC, Arbitrum, Base, Ethereum, Optimism
+            const isEvm = ['polygon', 'bsc', 'arbitrum', 'base', 'ethereum', 'optimism'].includes(chain);
+            const isSvm = chain === 'solana';
+            const isBtc = chain === 'bitcoin';
+            const isTvm = chain === 'tron';
+
+            if (isEvm) {
+                bridgeAddress = data.evm ?? data.evmAddress ?? data.addresses?.evm;
+            } else if (isSvm) {
+                bridgeAddress = data.svm ?? data.svmAddress ?? data.addresses?.svm;
+            } else if (isBtc) {
+                bridgeAddress = data.btc ?? data.btcAddress ?? data.addresses?.btc;
+            } else if (isTvm) {
+                bridgeAddress = data.tvm ?? data.tvmAddress ?? data.addresses?.tvm;
+            } else {
+                throw new Error(`Unsupported chain: ${chain}`);
             }
-            console.log(`[Relayer] Obtained Bridge Address: ${bridgeAddress}`);
+
+            if (!bridgeAddress) {
+                throw new Error(`Bridge API response missing ${isEvm ? 'evm' : chain} address. Full response: ${JSON.stringify(data)}`);
+            }
+
+            // EVM address validation
+            if (isEvm && !ethers.isAddress(bridgeAddress)) {
+                throw new Error(`Bridge returned invalid EVM address: ${bridgeAddress}`);
+            }
+
+            console.log(`[Relayer] Bridge address obtained (${chain}): ${bridgeAddress}`);
         } catch (e: any) {
-            console.warn(`[Relayer] Failed to generate bridge deposit address: ${e.message}`);
-            throw new Error("Polymarket Bridge API is currently unavailable. Please try again later.");
+            console.error(`[Relayer] Bridge API failure:`, e.message);
+            throw new Error(`Polymarket Bridge API error: ${e.message}`);
         }
 
         // Configure RPC and Token Address based on the source chain
