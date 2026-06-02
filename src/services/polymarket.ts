@@ -9,6 +9,8 @@ import { env } from "../config/env";
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_API = "https://clob.polymarket.com";
 
+const clobCredsCache: Record<number, any> = {};
+
 interface CacheEntry<T> {
     data: T;
     timestamp: number;
@@ -79,6 +81,16 @@ class PolymarketService {
             transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
         });
 
+        // Use cached credentials if we already generated them for this user
+        if (clobCredsCache[userWalletIndex]) {
+            return new ClobClient({
+                host: CLOB_API,
+                chain: Chain.POLYGON,
+                signer,
+                creds: clobCredsCache[userWalletIndex],
+            });
+        }
+
         // Step 1: Initialize temporary client for credential derivation
         const tempClient = new ClobClient({
             host: CLOB_API,
@@ -88,6 +100,9 @@ class PolymarketService {
 
         // Step 2: Obtain Level 2 API credentials via EIP-712 wallet signature
         const creds = await tempClient.createOrDeriveApiKey();
+        
+        // Cache credentials so we don't hit the auth endpoint on every trade
+        clobCredsCache[userWalletIndex] = creds;
 
         // Step 3: Return authenticated client configured for trading
         return new ClobClient({
