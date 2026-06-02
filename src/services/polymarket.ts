@@ -19,6 +19,19 @@ export interface ActiveMarketInfo {
 }
 
 class PolymarketService {
+    private isDemoMode = false;
+
+    constructor() {
+        const hasCredentials = (env as any).POLYMARKET_PRIVATE_KEY && 
+                               (env as any).POLYMARKET_BUILDER_API_KEY && 
+                               (env as any).POLYMARKET_BUILDER_SECRET && 
+                               (env as any).POLYMARKET_BUILDER_PASSPHRASE;
+
+        if (!hasCredentials) {
+            this.isDemoMode = true;
+        }
+    }
+
     /**
      * Get the user's pUSD balance in their Polymarket deposit wallet.
      * pUSD is Polymarket's native collateral token (launched April 2026, CLOB V2).
@@ -159,16 +172,19 @@ class PolymarketService {
             console.error("[Polymarket] CLOB markets fetch error:", err.message);
         }
 
-        // Hardcode a known valid fallback Token ID so CLOB API still works and returns real odds
-        console.log("[Polymarket] Falling back to known static BTC token IDs");
-        return {
-            conditionId: "0x_demo_condition_id",
-            yesTokenId: "40286392070894520973685412975931221774338575086053303358043681403206338547209", // Example active token
-            noTokenId: "77761009149959600109918073539828815183350293041935835923910609533355590928220",  // Example active token
-            question: "Will Bitcoin close higher today?",
-            slug: `btc-daily-fallback`,
-            endsAt: new Date(Date.now() + 86400000).toISOString(),
-        };
+        if (this.isDemoMode) {
+            console.log("[Polymarket] Demo mode: Falling back to known static BTC token IDs");
+            return {
+                conditionId: "0x_demo_condition_id",
+                yesTokenId: "40286392070894520973685412975931221774338575086053303358043681403206338547209", // Example active token
+                noTokenId: "77761009149959600109918073539828815183350293041935835923910609533355590928220",  // Example active token
+                question: "Will Bitcoin close higher today?",
+                slug: `btc-daily-fallback`,
+                endsAt: new Date(Date.now() + 86400000).toISOString(),
+            };
+        }
+
+        throw new Error("Polymarket active market lookup failed. Market APIs are currently unreachable.");
     }
 
     /**
@@ -223,7 +239,7 @@ class PolymarketService {
         limitPrice: number,
         side: "BUY" | "SELL" = "BUY"
     ): Promise<any> {
-        if (tokenId.startsWith("0x_demo_")) {
+        if (this.isDemoMode || tokenId.startsWith("0x_demo_")) {
             console.log(`[Polymarket] [Demo Mode] Placed ${side} order of ${amountUsdc} USDC on token ${tokenId} at limit price ${limitPrice}`);
             return {
                 orderId: `sim_${Math.random().toString(36).substring(2, 11)}`,
@@ -256,11 +272,7 @@ class PolymarketService {
             return response;
         } catch (err: any) {
             console.error("[Polymarket] Order execution failed:", err.message);
-            console.log("[Polymarket] Simulation mode active. Simulating successful order placement.");
-            return {
-                orderId: `sim_${Math.random().toString(36).substring(2, 11)}`,
-                success: true,
-            };
+            throw err;
         }
     }
 }

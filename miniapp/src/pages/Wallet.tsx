@@ -577,7 +577,7 @@ export function Wallet({ user }: Props) {
                                     <div className="mf-balance-header">
                                         <span>Your USDT Balance</span>
                                         <div className="mf-balance-actions">
-                                            <button className="mf-btn-secondary">Withdraw</button>
+                                            <button className="mf-btn-secondary" onClick={() => { haptic('selection'); setShowReceive(false); setShowSend(true); }}>Withdraw</button>
                                             <button className="mf-btn-icon" onClick={loadBalances}><IconRefresh size={14}/></button>
                                         </div>
                                     </div>

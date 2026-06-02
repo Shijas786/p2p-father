@@ -749,6 +749,10 @@ export function Predict({ user }: Props) {
                         } 
                     }}
                     haptic={haptic}
+                    onWithdraw={() => {
+                        setShowDepositModal(false);
+                        setShowWithdrawModal(true);
+                    }}
                 />
             )}
 

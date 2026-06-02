@@ -435,15 +435,27 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 {/* 3. Hot Wallet Address */}
                 <div className="prof-payment-item">
                     <div className="prof-payment-top">
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                             <img src="/icons for trade/profile icons/receiving-wallet.svg?v=3" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                            <span className="prof-payment-name">Hot Wallet Address</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span className="prof-payment-name">Receive Wallet Address</span>
+                                {!editingReceiveAddr && (
+                                    <span className="prof-payment-value" style={{ fontSize: '11px' }}>
+                                        {user?.receive_address
+                                            ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}`
+                                            : user?.wallet_address
+                                                ? `Default: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
+                                                : 'Default Bot Wallet'
+                                        }
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <button className="prof-edit-btn" onClick={() => { haptic('light'); setEditingReceiveAddr(!editingReceiveAddr); setMessage(''); }}>
                             {editingReceiveAddr ? 'Cancel' : (user?.receive_address ? 'Edit' : 'Add')}
                         </button>
                     </div>
-                    {editingReceiveAddr ? (
+                    {editingReceiveAddr && (
                         <div className="prof-edit-form">
                             <input placeholder="0x..." value={receiveAddrInput} onChange={e => setReceiveAddrInput(e.target.value)} autoFocus />
                             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -454,17 +466,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     Use Default
                                 </button>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="prof-bank-info">
-                            <span className="prof-payment-value">
-                                {user?.receive_address
-                                    ? `${user.receive_address.slice(0, 8)}...${user.receive_address.slice(-6)}`
-                                    : user?.wallet_address
-                                        ? `Default: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
-                                        : 'Default Bot Wallet'
-                                }
-                            </span>
                         </div>
                     )}
                 </div>
@@ -528,7 +529,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
             )}
 
-                <div className="text-center mt-8 pb-4" style={{ opacity: 0.3, fontSize: '10px' }}>
+                <div className="text-center" style={{ opacity: 0.3, fontSize: '10px', padding: '12px 0 4px' }}>
                     Build Version: {APP_VERSION}
                 </div>
             </div>
