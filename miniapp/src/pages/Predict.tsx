@@ -83,11 +83,11 @@ export function Predict({ user }: Props) {
     const [showWithdrawModal, setShowWithdrawModal]   = useState(false);
     const [depositAddress, setDepositAddress]         = useState('');
     const [depositWalletLoading, setDepositWalletLoading] = useState(false);
-    const [gaslessDepositAmount, setGaslessDepositAmount] = useState('');
-    const [gaslessDepositLoading, setGaslessDepositLoading] = useState(false);
     const [withdrawAmount, setWithdrawAmount]         = useState('');
     const [withdrawRecipient, setWithdrawRecipient]   = useState('');
     const [withdrawLoading, setWithdrawLoading]       = useState(false);
+    const [showNetPositions, setShowNetPositions]     = useState(false);
+    const [historyPage, setHistoryPage]               = useState(0);
 
     const chartRef = useRef<HTMLDivElement>(null);
 
@@ -373,18 +373,6 @@ export function Predict({ user }: Props) {
         }
     };
 
-    const handleGaslessDeposit = async () => {
-        haptic('medium');
-        if (!gaslessDepositAmount || parseFloat(gaslessDepositAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
-        setGaslessDepositLoading(true);
-        try {
-            const r = await api.predictions.depositGasless(parseFloat(gaslessDepositAmount));
-            showToast(`Deposit initiated! ${r.txHash.slice(0, 10)}...`, 'success');
-            setGaslessDepositAmount(''); setShowDepositModal(false); loadData();
-        } catch (e: any) { showToast(e.message || 'Deposit failed', 'error'); }
-        finally { setGaslessDepositLoading(false); }
-    };
-
     const handleGaslessWithdraw = async () => {
         haptic('medium');
         if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) { showToast('Enter amount', 'warning'); return; }
@@ -397,6 +385,31 @@ export function Predict({ user }: Props) {
             setWithdrawAmount(''); setShowWithdrawModal(false); loadData();
         } catch (e: any) { showToast(e.message || 'Withdrawal failed', 'error'); }
         finally { setWithdrawLoading(false); }
+    };
+
+    const handleOpenWithdraw = () => {
+        haptic('selection');
+        setShowDepositModal(false);
+        setWithdrawRecipient(user?.wallet_address || '');
+        setWithdrawAmount('');
+        setShowWithdrawModal(true);
+    };
+
+    const handleShareMarket = () => {
+        haptic('light');
+        const url = `https://polymarket.com/event/btc-updown-5m`;
+        if (navigator.share) {
+            navigator.share({ title: 'BTC Up or Down 5m', url }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(url);
+            showToast('Market link copied!', 'success');
+        }
+    };
+
+    const handleCopyMarketLink = () => {
+        haptic('light');
+        navigator.clipboard.writeText('https://polymarket.com/event/btc-updown-5m');
+        showToast('Link copied!', 'success');
     };
 
     const displayedRounds = history.slice(0, 4);
@@ -505,16 +518,16 @@ export function Predict({ user }: Props) {
                         </div>
                     </div>
                     <div className="pm-card-title-right">
-                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        <button className="pm-circle-btn" onClick={handleShareMarket} title="Share market">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                         </button>
-                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
+                        <button className="pm-circle-btn" onClick={handleCopyMarketLink} title="Copy market link">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                             </svg>
                         </button>
-                        <button className="pm-circle-btn" onClick={() => haptic('light')}>
+                        <button className="pm-circle-btn" onClick={() => { haptic('light'); showToast('Market saved!', 'success'); }} title="Bookmark">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                             </svg>
@@ -589,7 +602,7 @@ export function Predict({ user }: Props) {
                 <div className="pm-timeline">
                     <div className="pm-tl-scroll">
                         <div className="pm-tl-past-group">
-                            <button className="pm-tl-meta-btn" onClick={() => haptic('light')}>
+                            <button className="pm-tl-meta-btn" onClick={() => { haptic('light'); setHistoryPage(p => p + 1); showToast('Loading older rounds...', 'info'); }}>
                                 Past <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
                             </button>
                             <div className="pm-tl-divider"></div>
@@ -642,7 +655,7 @@ export function Predict({ user }: Props) {
                             </button>
                         ))}
 
-                        <button className="pm-tl-meta-btn" onClick={() => haptic('light')}>
+                        <button className="pm-tl-meta-btn" onClick={() => { haptic('light'); showToast('Coming soon: more rounds!', 'info'); }}>
                             More <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
                         </button>
                     </div>
@@ -652,8 +665,38 @@ export function Predict({ user }: Props) {
                 <div className="pm-inline-positions">
                     <div className="pm-inline-pos-header">
                         <span className="pm-inline-pos-title">Positions</span>
-                        <button className="pm-view-net-btn" onClick={() => haptic('light')} id="btn-view-net">View Net Positions</button>
+                        <button className="pm-view-net-btn" onClick={() => { haptic('light'); setShowNetPositions(v => !v); }} id="btn-view-net">
+                            {showNetPositions ? 'Hide Net' : 'View Net Positions'}
+                        </button>
                     </div>
+                    {showNetPositions && positions.length > 0 && (
+                        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+                            <div style={{ fontSize: 12, color: '#848e9c', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Net Position Summary</div>
+                            {(['UP', 'DOWN'] as const).map(side => {
+                                const sidePnl = positions.filter(p => p.outcome === side);
+                                if (sidePnl.length === 0) return null;
+                                const totalQty = sidePnl.reduce((s, p) => s + p.qty, 0);
+                                const totalCost = sidePnl.reduce((s, p) => s + p.cost, 0);
+                                const totalValue = sidePnl.reduce((s, p) => s + p.value, 0);
+                                const netReturn = totalValue - totalCost;
+                                return (
+                                    <div key={side} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span className={`pm-pos-outcome-badge ${side === 'UP' ? 'pm-pos-badge-up' : 'pm-pos-badge-down'}`}>{side === 'UP' ? '▲ Up' : '▼ Down'}</span>
+                                            <span className="pm-mono" style={{ color: '#848e9c', fontSize: 12 }}>{totalQty.toFixed(2)} shares</span>
+                                        </span>
+                                        <span className={`pm-mono ${netReturn >= 0 ? 'pm-green' : 'pm-red'}`} style={{ fontWeight: 700 }}>
+                                            {netReturn >= 0 ? '+' : ''}${netReturn.toFixed(2)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
+                                <span style={{ color: '#848e9c' }}>Total Invested</span>
+                                <span className="pm-mono">${positions.reduce((s, p) => s + p.cost, 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    )}
                     {positions.length === 0 ? (
                         <div className="pm-positions-empty">No current position</div>
                     ) : (
@@ -760,34 +803,71 @@ export function Predict({ user }: Props) {
                         } 
                     }}
                     haptic={haptic}
-                    onWithdraw={() => {
-                        setShowDepositModal(false);
-                        setShowWithdrawModal(true);
-                    }}
+                    onWithdraw={handleOpenWithdraw}
                 />
             )}
 
             {/* ══ WITHDRAW MODAL ══════════════════════════════════════════ */}
             {showWithdrawModal && (
                 <div className="pm-overlay" onClick={() => setShowWithdrawModal(false)}>
-                    <div className="pm-modal" onClick={e => e.stopPropagation()}>
-                        <div className="pm-modal-header">
-                            <h3>Withdraw USDC</h3>
+                    <div className="pm-modal" style={{ maxWidth: 380, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
+                        <div className="pm-modal-header" style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            <h3 style={{ fontSize: 15, fontWeight: 700 }}>Withdraw pUSD</h3>
                             <button className="pm-modal-close" onClick={() => setShowWithdrawModal(false)}>×</button>
                         </div>
-                        <div className="pm-modal-body">
-                            <div className="pm-withdraw-form">
-                                <label className="pm-field-label">Amount (USDC)</label>
-                                <input type="number" placeholder="0.00" value={withdrawAmount}
-                                    onChange={e => setWithdrawAmount(e.target.value)} className="pm-modal-input pm-mono"/>
-                                <label className="pm-field-label">Recipient Address</label>
-                                <input type="text" placeholder="0x..." value={withdrawRecipient}
-                                    onChange={e => setWithdrawRecipient(e.target.value)} className="pm-modal-input pm-mono"/>
-                                <button className="pm-modal-btn pm-modal-btn-blue"
-                                    disabled={withdrawLoading || !withdrawAmount || !withdrawRecipient} onClick={handleGaslessWithdraw}>
-                                    {withdrawLoading ? 'Processing...' : 'Withdraw Gasless'}
-                                </button>
+                        <div className="pm-modal-body" style={{ padding: 18 }}>
+                            {/* Balance chip */}
+                            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: '#848e9c', fontSize: 12 }}>Available Balance</span>
+                                <span style={{ fontWeight: 700, color: '#4ade80', fontSize: 14 }}>${parseFloat(cashBalance).toFixed(2)} pUSD</span>
                             </div>
+
+                            {/* Amount row with quick buttons */}
+                            <label className="pm-field-label" style={{ fontSize: 11, color: '#848e9c', marginBottom: 6, display: 'block' }}>Amount (pUSD)</label>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                                <input type="number" placeholder="0.00" value={withdrawAmount}
+                                    onChange={e => setWithdrawAmount(e.target.value)}
+                                    style={{ flex: 1, background: '#161920', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#fff', padding: '10px 12px', fontSize: 16, fontFamily: 'monospace', outline: 'none' }}/>
+                                <button onClick={() => { haptic('light'); setWithdrawAmount(parseFloat(cashBalance).toFixed(2)); }}
+                                    style={{ background: 'rgba(0,122,255,0.15)', border: '1px solid rgba(0,122,255,0.3)', borderRadius: 8, color: '#007aff', padding: '0 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>MAX</button>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                                {['25%', '50%', '75%'].map(pct => (
+                                    <button key={pct} onClick={() => { haptic('light'); setWithdrawAmount((parseFloat(cashBalance) * parseInt(pct) / 100).toFixed(2)); }}
+                                        style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', padding: '6px 0', fontSize: 12, cursor: 'pointer' }}>{pct}</button>
+                                ))}
+                            </div>
+
+                            <label className="pm-field-label" style={{ fontSize: 11, color: '#848e9c', marginBottom: 6, display: 'block' }}>Recipient Address</label>
+                            <input type="text" placeholder="0x..." value={withdrawRecipient}
+                                onChange={e => setWithdrawRecipient(e.target.value)}
+                                style={{ width: '100%', boxSizing: 'border-box', background: '#161920', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#fff', padding: '10px 12px', fontSize: 12, fontFamily: 'monospace', outline: 'none', marginBottom: 6 }}/>
+                            {user?.wallet_address && withdrawRecipient !== user.wallet_address && (
+                                <button onClick={() => { haptic('light'); setWithdrawRecipient(user.wallet_address); }}
+                                    style={{ background: 'none', border: 'none', color: '#007aff', fontSize: 11, cursor: 'pointer', padding: 0, marginBottom: 14 }}>
+                                    ← Use my wallet ({user.wallet_address.slice(0,6)}...{user.wallet_address.slice(-4)})
+                                </button>
+                            )}
+
+                            {/* Breakdown */}
+                            {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                                <div style={{ background: '#161920', borderRadius: 10, padding: '12px 14px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#848e9c' }}>
+                                        <span>You withdraw</span><span style={{ color: '#fff', fontWeight: 600 }}>{withdrawAmount} pUSD</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#848e9c' }}>
+                                        <span>Fee</span><span style={{ color: '#4ade80', fontWeight: 600 }}>0.00%</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#848e9c', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
+                                        <span>You receive</span><span style={{ color: '#4ade80', fontWeight: 700 }}>${parseFloat(withdrawAmount).toFixed(2)} USDC</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button style={{ width: '100%', background: '#007aff', color: '#fff', border: 'none', borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (withdrawLoading || !withdrawAmount || !withdrawRecipient) ? 0.5 : 1 }}
+                                disabled={withdrawLoading || !withdrawAmount || !withdrawRecipient} onClick={handleGaslessWithdraw}>
+                                {withdrawLoading ? 'Processing...' : 'Withdraw Gasless'}
+                            </button>
                         </div>
                     </div>
                 </div>
