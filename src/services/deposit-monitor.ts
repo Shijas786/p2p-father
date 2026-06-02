@@ -102,10 +102,16 @@ class DepositMonitor {
 
         if (users.length === 0) return;
 
-        // Process each user concurrently (with isolated error handling)
-        await Promise.allSettled(
-            users.map(u => this.checkAndWrap(u.wallet_index, u.wallet_address))
-        );
+        // Process in small batches to avoid RPC rate limits (e.g., Infura 429 Too Many Requests)
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < users.length; i += BATCH_SIZE) {
+            const batch = users.slice(i, i + BATCH_SIZE);
+            await Promise.allSettled(
+                batch.map(u => this.checkAndWrap(u.wallet_index, u.wallet_address))
+            );
+            // Wait 500ms between batches to stay well under typical free tier RPS limits
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
     }
 
     private async checkAndWrap(walletIndex: number, knownAddress: string | null): Promise<void> {
