@@ -81,7 +81,25 @@ class PolymarketService {
             transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
         });
 
-        // Use cached credentials if we already generated them for this user
+        const apiKey = (env as any).POLYMARKET_BUILDER_API_KEY;
+        const apiSecret = (env as any).POLYMARKET_BUILDER_SECRET;
+        const passphrase = (env as any).POLYMARKET_BUILDER_PASSPHRASE;
+
+        if (apiKey && apiSecret && passphrase) {
+            // Use the Builder API credentials (Relayer) to authenticate the client
+            return new ClobClient({
+                host: CLOB_API,
+                chain: Chain.POLYGON,
+                signer,
+                creds: {
+                    key: apiKey,
+                    secret: apiSecret,
+                    passphrase: passphrase
+                }
+            });
+        }
+
+        // Fallback: Use cached generated credentials if Builder API is missing
         if (clobCredsCache[userWalletIndex]) {
             return new ClobClient({
                 host: CLOB_API,
