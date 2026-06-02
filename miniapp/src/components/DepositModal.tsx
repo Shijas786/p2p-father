@@ -33,7 +33,11 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [hotBalances, setHotBalances] = useState<any>(null);
     const [loadingBal, setLoadingBal] = useState(false);
     const [isCheckingDeposit, setIsCheckingDeposit] = useState(false);
+    const [bridgePending, setBridgePending] = useState(false);
+    const [balanceBefore, setBalanceBefore] = useState<number>(0);
+    const [elapsedSecs, setElapsedSecs] = useState(0);
 
+    // Poll while manual step is open
     useEffect(() => {
         let timer: any;
         if (step === 'manual') {
@@ -46,10 +50,29 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         haptic('success');
                     }
                 } catch (e) { }
-            }, 10000); // Check every 10 seconds while modal is open
+            }, 10000);
         }
         return () => clearInterval(timer);
     }, [step, loadBalances, haptic]);
+
+    // Poll pUSD balance after bridge deposit until it increases
+    useEffect(() => {
+        if (!bridgePending) return;
+        let elapsed = 0;
+        const elapsedTimer = setInterval(() => { elapsed++; setElapsedSecs(elapsed); }, 1000);
+        const pollTimer = setInterval(async () => {
+            try {
+                const b = await api.predictions.getBalance();
+                const newBal = parseFloat(b.balance || '0');
+                if (newBal > balanceBefore) {
+                    setBridgePending(false);
+                    loadBalances();
+                    haptic('success');
+                }
+            } catch (e) {}
+        }, 8000);
+        return () => { clearInterval(elapsedTimer); clearInterval(pollTimer); };
+    }, [bridgePending, balanceBefore, loadBalances, haptic]);
 
     const handleManualCheck = async () => {
         haptic('light');
@@ -129,12 +152,21 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setStep('processing');
         setErrorMsg('');
         try {
-            // Note: Keep signature matching backend prediction deposit API
+            const currentBal = await api.predictions.getBalance();
+            setBalanceBefore(parseFloat(currentBal.balance || '0'));
+        } catch (e) {}
+        try {
             const r = await api.predictions.depositGasless(parseFloat(amount), selectedAsset?.chain, selectedAsset?.token);
             if (r && r.txHash) {
                 setTxHash(r.txHash);
                 haptic('success');
                 setStep('success');
+                // For bridge deposits (non-Polygon), start polling for balance change
+                const isNativePolygon = selectedAsset?.chain === 'Polygon' && selectedAsset?.token === 'USDC';
+                if (!isNativePolygon) {
+                    setBridgePending(true);
+                    setElapsedSecs(0);
+                }
                 loadBalances();
                 loadHotBalances();
             } else {
@@ -642,7 +674,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
 
             {/* STEP 5: SUCCESS */}
             {step === 'success' && (
-                <div className="pm-dep-content" style={{justifyContent: 'center', alignItems: 'center', gap: '20px'}}>
+                <div className="pm-dep-content" style={{justifyContent: 'center', alignItems: 'center', gap: '16px'}}>
                     <div style={{
                         width: '64px', height: '64px', borderRadius: '50%',
                         background: 'rgba(14,203,129,0.15)',
@@ -651,17 +683,38 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     }}>
                         ✓
                     </div>
-                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>Deposit Confirmed!</div>
-                    <div style={{color: '#848e9c', fontSize: '13px', textAlign: 'center'}}>
-                        Your funds have been deposited successfully. Your pUSD balance should update shortly.
-                    </div>
-                    {txHash && (
-                        <div style={{fontSize: '11px', color: '#848e9c', fontFamily: 'monospace'}}>
-                            TX: {txHash.slice(0, 15)}...
+                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>Transfer Sent!</div>
+
+                    {/* Bridge pending banner */}
+                    {bridgePending ? (
+                        <div style={{ background: 'rgba(251,188,4,0.1)', border: '1px solid rgba(251,188,4,0.3)', borderRadius: 12, padding: '12px 16px', width: '100%', boxSizing: 'border-box' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                <div className="pm-spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(251,188,4,0.3)', borderTopColor: '#fbbe04' }}/>
+                                <span style={{ color: '#fbbe04', fontWeight: 700, fontSize: 13 }}>Bridge Processing…</span>
+                                <span style={{ color: '#848e9c', fontSize: 11, marginLeft: 'auto' }}>{Math.floor(elapsedSecs / 60)}:{String(elapsedSecs % 60).padStart(2, '0')}</span>
+                            </div>
+                            <div style={{ color: '#848e9c', fontSize: 12 }}>Your {selectedAsset?.token} is being bridged to Polygon and converted to pUSD (1:1). This typically takes 5–20 minutes. Your balance will auto-update when complete.</div>
+                        </div>
+                    ) : (
+                        <div style={{ background: 'rgba(14,203,129,0.1)', border: '1px solid rgba(14,203,129,0.3)', borderRadius: 12, padding: '12px 16px', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
+                            <div style={{ color: '#0ecb81', fontWeight: 700, fontSize: 14 }}>✓ Balance Updated!</div>
+                            <div style={{ color: '#848e9c', fontSize: 12, marginTop: 4 }}>Your pUSD balance has been credited.</div>
                         </div>
                     )}
+
+                    {txHash && (
+                        <a
+                            href={selectedAsset?.chain === 'BSC'
+                                ? `https://bscscan.com/tx/${txHash}`
+                                : `https://polygonscan.com/tx/${txHash}`}
+                            target="_blank" rel="noreferrer"
+                            style={{ fontSize: 11, color: '#007aff', fontFamily: 'monospace', textDecoration: 'none' }}
+                        >
+                            TX: {txHash.slice(0, 12)}...{txHash.slice(-6)} ↗
+                        </a>
+                    )}
                     <button className="pm-btn-continue" onClick={onClose}>
-                        Close
+                        {bridgePending ? 'Close (Bridge Running in Background)' : 'Close'}
                     </button>
                 </div>
             )}
