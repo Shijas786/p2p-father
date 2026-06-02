@@ -89,7 +89,7 @@ export function TradePanel({
                     <div className="pm-btc-icon-sq">₿</div>
                     <div>
                         <p className="pm-trade-market-name">BTC Up or Down 5m</p>
-                        <p className={`pm-trade-direction ${isUp ? 'pm-green' : 'pm-red'}`}>{isUp ? 'Up' : 'Down'}</p>
+                        <p className={`pm-trade-direction ${betType === 'UP' ? 'pm-green' : 'pm-red'}`}>{betType === 'UP' ? 'Up' : 'Down'}</p>
                     </div>
                 </div>
             </div>
