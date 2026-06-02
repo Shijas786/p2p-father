@@ -113,15 +113,16 @@ class DepositMonitor {
 
         if (users.length === 0) return;
 
-        // Process in very small batches to strictly respect Infura free tier (30 RPS but tight burst limits)
-        const BATCH_SIZE = 3;
+        // Process sequentially (1 at a time) to completely avoid Infura rate limits.
+        // Ethers batches Promises, so Promise.allSettled with >1 can trigger batch-rejection on free RPCs.
+        const BATCH_SIZE = 1;
         for (let i = 0; i < users.length; i += BATCH_SIZE) {
             if (this.shouldStop) break;
             const batch = users.slice(i, i + BATCH_SIZE);
             await Promise.allSettled(
                 batch.map(u => this.checkAndWrap(u.wallet_index, u.wallet_address))
             );
-            // Wait 1000ms between batches for maximum stability
+            // Wait 1000ms between each wallet check (max 1 RPS)
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
