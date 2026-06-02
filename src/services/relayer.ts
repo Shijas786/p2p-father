@@ -226,7 +226,10 @@ class PolymarketRelayerService {
             // Step 2: Request bridge deposit addresses linked to the user's Polymarket deposit wallet
             const depositRes = await fetch("https://bridge.polymarket.com/deposit", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Builder-Code": (env as any).POLYMARKET_BUILDER_CODE || ""
+                },
                 // Pass the user's EOA — this is what Polymarket links the deposit wallet to
                 body: JSON.stringify({ address: derived.address })
             });
@@ -249,7 +252,7 @@ class PolymarketRelayerService {
             const isTvm = chain === 'tron';
 
             if (isEvm) {
-                bridgeAddress = data.evm ?? data.evmAddress ?? data.addresses?.evm;
+                bridgeAddress = data.address?.evm ?? data.evm ?? data.evmAddress;
             } else if (isSvm) {
                 bridgeAddress = data.svm ?? data.svmAddress ?? data.addresses?.svm;
             } else if (isBtc) {
