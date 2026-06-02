@@ -1,3 +1,34 @@
+
+// Withdraw
+app.post("/miniapp/withdraw", async (req: Request, res: Response) => {
+    try {
+        const { tgId, walletIndex, destChainId, destTokenAddress, amount, recipient } = req.body;
+        if (!tgId || walletIndex === undefined || !destChainId || !destTokenAddress || !amount || !recipient) {
+            return res.status(400).json({ success: false, error: "Missing parameters" });
+        }
+
+        const amountBig = BigInt(amount);
+        if (amountBig <= 0n) {
+            return res.status(400).json({ success: false, error: "Invalid amount" });
+        }
+
+        console.log(`[${tgId}] Withdrawal Request: ${amountBig} pUSD -> ${recipient} on Chain ${destChainId}`);
+        
+        const txHash = await polymarketRelayerService.withdrawCrossChain(
+            walletIndex,
+            Number(destChainId),
+            destTokenAddress,
+            recipient,
+            amountBig
+        );
+
+        return res.json({ success: true, txHash });
+    } catch (e: any) {
+        console.error("Withdrawal error:", e);
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  MINI APP API — Express Router for Telegram Mini App
 // ═══════════════════════════════════════════════════════════════
@@ -2134,27 +2165,11 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-        const { txHash, bridgeAddress } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
+        const { txHash } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
-        res.json({ success: true, txHash, bridgeAddress });
+        res.json({ success: true, txHash });
     } catch (err: any) {
         console.error("[MINIAPP] Gasless deposit error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.get("/predictions/bridge-status", async (req: Request, res: Response) => {
-    try {
-        const { address } = req.query;
-        if (!address) return res.status(400).json({ error: "Missing address" });
-
-        const r = await fetch(`https://bridge.polymarket.com/status/${address}`);
-        if (!r.ok) return res.status(r.status).json({ error: "Failed to check status" });
-        
-        const data = await r.json();
-        res.json(data);
-    } catch (err: any) {
-        console.error("[MINIAPP] Bridge status error:", err);
         res.status(500).json({ error: err.message });
     }
 });

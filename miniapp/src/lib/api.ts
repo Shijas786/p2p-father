@@ -239,7 +239,7 @@ export const api = {
                 body: JSON.stringify({ amount, outcome, price, side })
             }),
         depositGasless: (amount: number, chain?: string, token?: string) => 
-            request<{ success: boolean; txHash: string; bridgeAddress?: string }>('/predictions/deposit', {
+            request<{ success: boolean; txHash: string }>('/predictions/deposit', {
                 method: 'POST',
                 body: JSON.stringify({ amount, chain, token })
             }),
@@ -247,12 +247,10 @@ export const api = {
             request<{ success: boolean; wrapped: boolean }>('/predictions/deposit/check', {
                 method: 'POST'
             }),
-        checkBridgeStatus: (address: string) =>
-            request<any>(`/predictions/bridge-status?address=${encodeURIComponent(address)}`),
-        withdrawGasless: (amount: number, recipientAddress?: string) => 
-            request<{ success: boolean; txHash: string }>('/predictions/withdraw', {
+        withdrawGasless: (amount: number, destChainId: number, destTokenAddress: string, recipient: string) => 
+            request<{ success: boolean; txHash?: string, error?: string }>('/miniapp/withdraw', {
                 method: 'POST',
-                body: JSON.stringify({ amount, recipientAddress })
+                body: JSON.stringify({ amount, destChainId, destTokenAddress, recipient })
             }),
         getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
         getBalance: () => request<{ balance: string }>('/predictions/balance'),

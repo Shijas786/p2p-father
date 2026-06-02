@@ -380,8 +380,8 @@ export function Predict({ user }: Props) {
         if (!withdrawRecipient) { showToast('Enter recipient address', 'warning'); return; }
         setWithdrawLoading(true);
         try {
-            const r = await api.predictions.withdrawGasless(parseFloat(withdrawAmount), withdrawRecipient);
-            showToast(`Withdrawn! ${r.txHash.slice(0, 10)}...`, 'success');
+            const r = await api.predictions.withdrawGasless(parseFloat(withdrawAmount), 137, '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', withdrawRecipient);
+            showToast(`Withdrawn! ${r.txHash?.slice(0, 10)}...`, 'success');
             setWithdrawAmount(''); setShowWithdrawModal(false); loadData();
         } catch (e: any) { showToast(e.message || 'Withdrawal failed', 'error'); }
         finally { setWithdrawLoading(false); }
