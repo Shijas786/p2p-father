@@ -162,15 +162,16 @@ class PolymarketService {
      * Discover the currently active BTC 5-minute prediction market
      */
     async getActiveBtcMarket(): Promise<ActiveMarketInfo> {
-        try {
-            // Compute exact mathematically correct slug for the current 5-minute window
-            const now = Date.now();
-            const windowStartSeconds = Math.floor(now / 300000) * 300;
-            const slug = `btc-updown-5m-${windowStartSeconds}`;
+        // Compute exact mathematically correct slug for the current 5-minute window
+        const now = Date.now();
+        const windowStartSeconds = Math.floor(now / 300000) * 300;
+        const slug = `btc-updown-5m-${windowStartSeconds}`;
 
-            if (marketCache[slug] && now - marketCache[slug].timestamp < 15000) {
-                return marketCache[slug].data;
-            }
+        if (marketCache[slug] && now - marketCache[slug].timestamp < 15000) {
+            return marketCache[slug].data;
+        }
+
+        try {
 
             // Fetch real active markets from Polymarket
             const res = await axios.get(`${GAMMA_API}/events`, {
@@ -212,36 +213,34 @@ class PolymarketService {
             console.error("[Polymarket] Gamma active market fetch error:", err.message);
         }
 
-        // Try CLOB API as a secondary fallback if Gamma is blocked by Cloudflare
+        // Try CLOB API as a secondary fallback if Gamma is blocked by Cloudflare (or deprecated)
         try {
-            console.log("[Polymarket] Trying CLOB /markets endpoint as fallback...");
+            console.log(`[Polymarket] Trying CLOB /markets endpoint for slug: ${slug}...`);
             const res = await axios.get(`${CLOB_API}/markets`, {
-                params: { active: true },
+                params: { market_slug: slug },
                 headers: {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                     "Accept": "application/json",
                     "Origin": "https://polymarket.com",
                     "Referer": "https://polymarket.com/"
                 },
-                timeout: 2000,
+                timeout: 5000,
             });
             const markets = res.data?.data || res.data || [];
-            for (const m of markets) {
-                if (m.active && !m.closed && m.question && m.question.toLowerCase().includes("bitcoin")) {
-                    if (m.tokens && m.tokens.length >= 2) {
-                        console.log("[Polymarket] Found active BTC market via CLOB API fallback!");
-                        const result = {
-                            conditionId: m.condition_id,
-                            yesTokenId: m.tokens[0].token_id,
-                            noTokenId: m.tokens[1].token_id,
-                            question: m.question,
-                            slug: m.market_slug || 'btc-market',
-                            endsAt: m.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
-                        };
-                        marketCache['fallback'] = { data: result, timestamp: Date.now() };
-                        return result;
-                    }
-                }
+            const targetMarket = markets.find((m: any) => m.market_slug === slug);
+            
+            if (targetMarket && targetMarket.tokens && targetMarket.tokens.length >= 2) {
+                console.log("[Polymarket] Found active 5m BTC market via CLOB API!");
+                const result = {
+                    conditionId: targetMarket.condition_id,
+                    yesTokenId: targetMarket.tokens[0].token_id,
+                    noTokenId: targetMarket.tokens[1].token_id,
+                    question: targetMarket.question,
+                    slug: targetMarket.market_slug,
+                    endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
+                };
+                marketCache[slug] = { data: result, timestamp: Date.now() };
+                return result;
             }
         } catch (err: any) {
             console.error("[Polymarket] CLOB markets fetch error:", err.message);
