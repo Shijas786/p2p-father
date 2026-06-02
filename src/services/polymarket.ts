@@ -9,6 +9,13 @@ import { env } from "../config/env";
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_API = "https://clob.polymarket.com";
 
+interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+}
+const marketCache: { [slug: string]: CacheEntry<ActiveMarketInfo> } = {};
+const priceCache: { [tokenId: string]: CacheEntry<{ buyPrice: number; sellPrice: number }> } = {};
+
 export interface ActiveMarketInfo {
     conditionId: string;
     yesTokenId: string;
@@ -101,6 +108,10 @@ class PolymarketService {
             const windowStartSeconds = Math.floor(now / 300000) * 300;
             const slug = `btc-updown-5m-${windowStartSeconds}`;
 
+            if (marketCache[slug] && now - marketCache[slug].timestamp < 15000) {
+                return marketCache[slug].data;
+            }
+
             // Fetch real active markets from Polymarket
             const res = await axios.get(`${GAMMA_API}/events`, {
                 params: { slug },
@@ -122,7 +133,7 @@ class PolymarketService {
                         try {
                             const tokens = typeof market.clobTokenIds === 'string' ? JSON.parse(market.clobTokenIds) : market.clobTokenIds;
                             if (Array.isArray(tokens) && tokens.length >= 2) {
-                                return {
+                                const result = {
                                     conditionId: market.conditionId,
                                     yesTokenId: tokens[0], // YES (Up) outcome token ID
                                     noTokenId: tokens[1],  // NO (Down) outcome token ID
@@ -130,6 +141,8 @@ class PolymarketService {
                                     slug: market.slug,
                                     endsAt: market.endDate || new Date(Date.now() + 86400000).toISOString(),
                                 };
+                                marketCache[slug] = { data: result, timestamp: now };
+                                return result;
                             }
                         } catch (parseErr) {}
                     }
@@ -157,7 +170,7 @@ class PolymarketService {
                 if (m.active && !m.closed && m.question && m.question.toLowerCase().includes("bitcoin")) {
                     if (m.tokens && m.tokens.length >= 2) {
                         console.log("[Polymarket] Found active BTC market via CLOB API fallback!");
-                        return {
+                        const result = {
                             conditionId: m.condition_id,
                             yesTokenId: m.tokens[0].token_id,
                             noTokenId: m.tokens[1].token_id,
@@ -165,6 +178,8 @@ class PolymarketService {
                             slug: m.market_slug || 'btc-market',
                             endsAt: m.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
                         };
+                        marketCache['fallback'] = { data: result, timestamp: Date.now() };
+                        return result;
                     }
                 }
             }
@@ -191,6 +206,11 @@ class PolymarketService {
      * Get the current price / best order book bids and asks for a token outcome
      */
     async getOutcomePrice(tokenId: string, isNo: boolean = false): Promise<{ buyPrice: number; sellPrice: number }> {
+        const now = Date.now();
+        if (priceCache[tokenId] && now - priceCache[tokenId].timestamp < 1500) {
+            return priceCache[tokenId].data;
+        }
+
         try {
             const res = await axios.get(`${CLOB_API}/book`, {
                 params: { token_id: tokenId },
@@ -211,10 +231,13 @@ class PolymarketService {
                 throw new Error("Empty order book");
             }
 
-            return {
+            const result = {
                 buyPrice: bestAsk,
                 sellPrice: bestBid,
             };
+
+            priceCache[tokenId] = { data: result, timestamp: now };
+            return result;
         } catch (err: any) {
             console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
             // Fallback gracefully if rate limited by returning last known safe values
