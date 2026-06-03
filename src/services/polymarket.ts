@@ -73,35 +73,11 @@ class PolymarketService {
      * Client for PLACING bets using Builder credentials but User signature
      */
     async getBuilderClobClient(userWalletIndex: number): Promise<ClobClient> {
-        const derived = walletService.deriveWallet(userWalletIndex);
-        const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
-        const signer = createWalletClient({
-            account,
-            transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
-        });
-
-        const { polymarketRelayerService } = await import("./relayer");
-        const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
-
-        const apiKey = (env as any).POLYMARKET_BUILDER_API_KEY;
-        const apiSecret = (env as any).POLYMARKET_BUILDER_SECRET;
-        const passphrase = (env as any).POLYMARKET_BUILDER_PASSPHRASE;
-
-        if (apiKey && apiSecret && passphrase) {
-            return new ClobClient({
-                host: CLOB_API,
-                chain: Chain.POLYGON,
-                signer,
-                funderAddress: depositWallet,
-                signatureType: 1, // POLY_PROXY
-                creds: { key: apiKey, secret: apiSecret, passphrase: passphrase }
-            });
-        }
-        
-        // Fallback to User client if no Builder keys
+        // We bypass Builder API keys for individual user orders to avoid POLY_ADDRESS mismatch errors.
+        // Instead, we always use the user's own L2 API key via getUserClobClient.
         const userClient = await this.getUserClobClient(userWalletIndex);
         if (!userClient) {
-            throw new Error("Cannot place bet: User proxy not deployed and no Builder API key configured.");
+            throw new Error("Cannot place bet: User proxy not deployed. Please deposit USDC/pUSD first to initialize your Polymarket wallet.");
         }
         return userClient;
     }
