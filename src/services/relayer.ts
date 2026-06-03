@@ -270,10 +270,20 @@ class PolymarketRelayerService {
         
         try {
             console.log(`[Relayer] Redeeming positions for condition ${conditionId}...`);
-            const CTF_ADDRESS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
+            const CTF_ADAPTER = "0xAdA100Db00Ca00073811820692005400218FcE1f";
             
             const encodedData = encodeFunctionData({
-                abi: CTF_ABI,
+                abi: [{
+                    name: "redeemPositions",
+                    type: "function",
+                    inputs: [
+                        { name: "collateralToken", type: "address" },
+                        { name: "parentCollectionId", type: "bytes32" },
+                        { name: "conditionId", type: "bytes32" },
+                        { name: "indexSets", type: "uint256[]" }
+                    ],
+                    outputs: []
+                }],
                 functionName: "redeemPositions",
                 args: [
                     PUSD_ADDRESS, 
@@ -286,7 +296,7 @@ class PolymarketRelayerService {
             const depositWallet = await this.resolveDepositWallet(userWalletIndex);
             
             const calls = [{
-                target: CTF_ADDRESS,
+                target: CTF_ADAPTER,
                 value: "0",
                 data: encodedData
             }];

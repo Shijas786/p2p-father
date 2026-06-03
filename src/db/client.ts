@@ -5,7 +5,7 @@ import type { User, Order, Trade, PaymentProof } from "../types";
 class Database {
     private client: SupabaseClient | null = null;
 
-    private getClient(): SupabaseClient {
+    public getClient(): SupabaseClient {
         if (!this.client) {
             if (!env.SUPABASE_URL || (!env.SUPABASE_SERVICE_KEY && !env.SUPABASE_ANON_KEY)) {
                 throw new Error("Supabase credentials not configured");
