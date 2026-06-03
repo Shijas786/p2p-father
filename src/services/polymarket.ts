@@ -145,7 +145,8 @@ class PolymarketService {
         }
 
         try {
-            const ts = Math.floor(Date.now() / 1000).toString();
+            const timeRes = await axios.get(`${CLOB_API}/time`);
+            const ts = timeRes.data.time.toString();
             const nonce = 0;
             const domain = { 
                 name: "ClobAuthDomain", 
@@ -177,10 +178,10 @@ class PolymarketService {
             sig = sig + "03";
 
             const headers = {
-                "POLY_ADDRESS": depositWallet,
+                "POLY_ADDRESS": account.address,
                 "POLY_SIGNATURE": sig,
                 "POLY_TIMESTAMP": ts,
-                "POLY_NONCE": nonce.toString(),
+                "POLY_NONCE": "0",
                 "Content-Type": "application/json"
             };
 
