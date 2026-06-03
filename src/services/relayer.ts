@@ -1,4 +1,5 @@
 import { RelayClient } from "@polymarket/builder-relayer-client";
+import { BuilderConfig } from "@polymarket/builder-signing-sdk";
 import { createWalletClient, http, encodeFunctionData } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ethers } from "ethers";
@@ -115,16 +116,20 @@ class PolymarketRelayerService {
             });
 
             const creds = {
-                apiKey: (env as any).POLYMARKET_BUILDER_API_KEY || "",
-                apiSecret: (env as any).POLYMARKET_BUILDER_SECRET || "",
+                key: (env as any).POLYMARKET_BUILDER_API_KEY || "",
+                secret: (env as any).POLYMARKET_BUILDER_SECRET || "",
                 passphrase: (env as any).POLYMARKET_BUILDER_PASSPHRASE || ""
             };
+
+            const builderConfig = new BuilderConfig({
+                localBuilderCreds: creds
+            });
 
             return new RelayClient(
                 "https://relayer.polymarket.com",
                 137, // Polygon chain ID
                 wallet,
-                creds as any
+                builderConfig
             );
         } catch (e) {
             console.error("Failed to create RelayClient:", e);
