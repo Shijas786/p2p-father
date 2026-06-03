@@ -1,6 +1,33 @@
 
+
+// ═══════════════════════════════════════════════════════════════
+//  MINI APP API — Express Router for Telegram Mini App
+// ═══════════════════════════════════════════════════════════════
+
+import { Router, Request, Response, NextFunction } from "express";
+import crypto from "crypto";
+import multer from "multer";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "../config/env";
+import { db } from "../db/client";
+import { wallet } from "../services/wallet";
+import { escrow } from "../services/escrow";
+import { polymarketService } from "../services/polymarket";
+import { predictWalletService } from "../services/predict-wallet";
+import { polymarketRelayerService } from "../services/relayer";
+import { depositMonitor } from "../services/deposit-monitor";
+import { bot } from "../bot";
+
+// Multer for in-memory file uploads (max 5MB)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// Supabase client for storage
+const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+
+const router = Router();
+
 // Withdraw
-app.post("/miniapp/withdraw", async (req: Request, res: Response) => {
+router.post("/withdraw", async (req: Request, res: Response) => {
     try {
         const { tgId, walletIndex, destChainId, destTokenAddress, amount, recipient } = req.body;
         if (!tgId || walletIndex === undefined || !destChainId || !destTokenAddress || !amount || !recipient) {
@@ -28,32 +55,6 @@ app.post("/miniapp/withdraw", async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, error: e.message });
     }
 });
-
-// ═══════════════════════════════════════════════════════════════
-//  MINI APP API — Express Router for Telegram Mini App
-// ═══════════════════════════════════════════════════════════════
-
-import { Router, Request, Response, NextFunction } from "express";
-import crypto from "crypto";
-import multer from "multer";
-import { createClient } from "@supabase/supabase-js";
-import { env } from "../config/env";
-import { db } from "../db/client";
-import { wallet } from "../services/wallet";
-import { escrow } from "../services/escrow";
-import { polymarketService } from "../services/polymarket";
-import { predictWalletService } from "../services/predict-wallet";
-import { polymarketRelayerService } from "../services/relayer";
-import { depositMonitor } from "../services/deposit-monitor";
-import { bot } from "../bot";
-
-// Multer for in-memory file uploads (max 5MB)
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-
-// Supabase client for storage
-const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
-
-const router = Router();
 
 function escapeHTML(str: string): string {
     return str ? str.replace(/[&<>"']/g, (m) => {

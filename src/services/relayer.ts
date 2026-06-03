@@ -1,3 +1,4 @@
+import { getClient } from "@relayprotocol/relay-sdk";
 import { RelayClient } from "@polymarket/builder-relayer-client";
 import { createWalletClient, http, encodeFunctionData } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
