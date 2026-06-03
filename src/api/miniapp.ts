@@ -2201,7 +2201,8 @@ router.get("/predictions/balance", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const balance = await polymarketService.getPusdBalance(user.wallet_index);
+        const { polymarketRelayerService } = await import("../services/relayer");
+        const balance = await polymarketRelayerService.getPusdBalance(user.wallet_index);
         res.json({ balance, token: "pUSD" });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions balance error:", err);
