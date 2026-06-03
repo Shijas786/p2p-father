@@ -2226,30 +2226,26 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        // Attempt to get real open positions from Polymarket CLOB
+        // Attempt to get real open positions from Polymarket Data API
         try {
-            const client = await polymarketService.getUserClobClient(user.wallet_index);
-            if (!client) {
-                // If client is null, the proxy hasn't been deployed yet (they have no trades)
-                return res.json({ positions: [] });
-            }
-
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
             console.log("[DEBUG] Fetching positions for deposit wallet:", proxyAddress);
             if (!proxyAddress || proxyAddress.includes("Demo")) {
                 return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
             }
-            const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
+            // Fetch both trades and positions
+            const [tradesRes, positionsRes] = await Promise.all([
+                polymarketService.getTradesForProxy(proxyAddress),
+                polymarketService.getPositionsForProxy(proxyAddress).catch(() => [])
+            ]);
             
             // Auto-claim background check using Data API positions
-            polymarketService.getPositionsForProxy(proxyAddress).then(positions => {
-                for (const p of positions) {
-                    if (p.redeemable && p.size > 0 && p.conditionId) {
-                        console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
-                        polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId).catch(() => {});
-                    }
+            for (const p of positionsRes) {
+                if (p.redeemable && p.size > 0 && p.conditionId) {
+                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
+                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId).catch(e => console.error("[AutoClaim] redeemPositions error:", e));
                 }
-            }).catch(e => console.error("[AutoClaim] Background check failed:", e.message));
+            }
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
@@ -2293,11 +2289,29 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
             }
 
+            // Sync qty with Data API to reflect redemptions correctly
+            for (const key of Object.keys(positionMap)) {
+                const tokenId = key === "UP" ? market.yesTokenId : market.noTokenId;
+                const activePos = positionsRes.find((p: any) => p.asset === tokenId);
+                
+                // If avgPrice was calculated, keep it. But override qty.
+                if (positionMap[key].qty > 0) {
+                    positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
+                }
+
+                if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
+                    positionMap[key].qty = parseFloat(activePos.size);
+                    positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
+                } else {
+                    // Position was redeemed, or market resolved (redeemable=true), so hide it from open positions
+                    positionMap[key].qty = 0;
+                }
+            }
+
             // Build final positions list
             const positions = Object.values(positionMap)
                 .filter(p => p.qty > 0.001)
                 .map(p => {
-                    p.avgPrice = p.qty > 0 ? p.totalCost / p.qty : 0;
                     const effectivePrice = p.currentPrice ?? p.avgPrice;
                     const value = p.qty * effectivePrice;
                     const cost = p.qty * p.avgPrice;
@@ -2440,6 +2454,7 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
                 claimedCount++;
             } catch (e: any) {
                 // Expected if already claimed, or lost, or market not resolved yet
+                console.error("[AutoClaim] Manual redeem failed for condition", conditionId, ":", e.message);
             }
         }
         
