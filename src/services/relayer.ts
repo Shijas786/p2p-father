@@ -132,6 +132,10 @@ class PolymarketRelayerService {
         }
     }
 
+    /**
+     * Resolves the deterministic deposit wallet (proxy wallet) address for a user.
+     * This address is determined entirely by the user's EOA signer.
+     */
     async resolveDepositWallet(userWalletIndex: number): Promise<string> {
         if (this.isDemoMode) {
             try {
@@ -153,6 +157,27 @@ class PolymarketRelayerService {
             } catch (e) {
                 return "0x00000000000000000000000000000000000Demo";
             }
+        }
+    }
+
+    /**
+     * Deploys the deposit wallet for the given user natively using the Relayer API.
+     * This is required before the user can create an API key or place a trade.
+     */
+    async deployDepositWallet(userWalletIndex: number): Promise<void> {
+        try {
+            const client = this.getUserRelayClient(userWalletIndex);
+            if (!client) {
+                throw new Error("Could not instantiate RelayClient");
+            }
+            
+            console.log(`[Relayer] Calling relayer.deployDepositWallet() for user ${userWalletIndex}...`);
+            const tx = await client.deployDepositWallet();
+            await tx.wait();
+            console.log(`[Relayer] Successfully deployed deposit wallet for user ${userWalletIndex}!`);
+        } catch (e: any) {
+            console.error(`[Relayer] Failed to deploy deposit wallet:`, e.message || e);
+            throw new Error(`Failed to deploy deposit wallet: ${e.message}`);
         }
     }
 

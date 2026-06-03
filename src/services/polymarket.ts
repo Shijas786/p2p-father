@@ -96,6 +96,13 @@ class PolymarketService {
         const { polymarketRelayerService } = await import("./relayer");
         const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
 
+        // Gasless Onboarding: Check if proxy is deployed. If not, automatically deploy it via Biconomy Relayer
+        const code = await provider.getCode(depositWallet);
+        if (code === "0x") {
+            console.log(`[Polymarket] Proxy undeployed. Deploying natively via Relayer for user ${userWalletIndex}`);
+            await polymarketRelayerService.deployDepositWallet(userWalletIndex);
+        }
+
         const signer = createWalletClient({
             account,
             transport: http(rpcUrl),
@@ -107,7 +114,7 @@ class PolymarketService {
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
-                signatureType: 1, // POLY_PROXY
+                signatureType: 3, // POLY_1271
                 creds: clobCredsCache[userWalletIndex],
             });
         }
@@ -117,7 +124,7 @@ class PolymarketService {
             chain: Chain.POLYGON,
             signer,
             funderAddress: depositWallet,
-            signatureType: 1, // POLY_PROXY
+            signatureType: 3, // POLY_1271
         });
 
         try {
@@ -129,7 +136,7 @@ class PolymarketService {
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
-                signatureType: 1, // POLY_PROXY
+                signatureType: 3, // POLY_1271
                 creds,
             });
         } catch (e: any) {
