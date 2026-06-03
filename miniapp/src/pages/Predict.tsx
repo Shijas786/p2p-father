@@ -80,6 +80,7 @@ export function Predict({ user }: Props) {
 
     // Modals
     const [showDepositModal, setShowDepositModal]     = useState(false);
+    const [depositModalMode, setDepositModalMode]     = useState<'deposit'|'withdraw'>('deposit');
     const [showWithdrawModal, setShowWithdrawModal]   = useState(false);
     const [depositAddress, setDepositAddress]         = useState('');
     const [depositWalletLoading, setDepositWalletLoading] = useState(false);
@@ -364,7 +365,7 @@ export function Predict({ user }: Props) {
     };
 
     const handleOpenDeposit = async () => {
-        haptic('selection'); setShowDepositModal(true);
+        haptic('selection'); setDepositModalMode('deposit'); setShowDepositModal(true);
         if (!depositAddress) {
             setDepositWalletLoading(true);
             try { const r = await api.predictions.getDepositWallet(); setDepositAddress(r.address); }
@@ -389,10 +390,8 @@ export function Predict({ user }: Props) {
 
     const handleOpenWithdraw = () => {
         haptic('selection');
-        setShowDepositModal(false);
-        setWithdrawRecipient(user?.wallet_address || '');
-        setWithdrawAmount('');
-        setShowWithdrawModal(true);
+        setDepositModalMode('withdraw');
+        setShowDepositModal(true);
     };
 
     const handleShareMarket = () => {
@@ -770,6 +769,7 @@ export function Predict({ user }: Props) {
             {/* ══ DEPOSIT MODAL ═══════════════════════════════════════════ */}
             {showDepositModal && (
                 <DepositModal 
+                    initialMode={depositModalMode}
                     onClose={() => setShowDepositModal(false)}
                     balances={{ usdt: cashBalance, address: depositAddress }}
                     loadBalances={async () => {

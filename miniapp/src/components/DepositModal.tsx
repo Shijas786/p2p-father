@@ -13,6 +13,7 @@ interface DepositModalProps {
     copyAddress: () => void;
     haptic: (type: "light" | "medium" | "heavy" | "error" | "success" | "warning" | "selection") => void;
     onWithdraw?: () => void;
+    initialMode?: "deposit" | "withdraw";
 }
 
 interface WalletAsset {
@@ -24,8 +25,8 @@ interface WalletAsset {
     chainIcon: React.ComponentType<any>;
 }
 
-export function DepositModal({ onClose, balances, loadBalances, copyAddress, haptic, onWithdraw }: DepositModalProps) {
-    const [mode, setMode] = useState<'deposit'|'withdraw'>('deposit');
+export function DepositModal({ onClose, balances, loadBalances, copyAddress, haptic, onWithdraw, initialMode = "deposit" }: DepositModalProps) {
+    const [mode, setMode] = useState<'deposit'|'withdraw'>(initialMode);
     const [step, setStep] = useState<'options' | 'assets' | 'amount' | 'confirm' | 'processing' | 'success' | 'manual'>('options');
     const [selectedAsset, setSelectedAsset] = useState<WalletAsset | null>(null);
     const [amount, setAmount] = useState('');
