@@ -1,8 +1,9 @@
-import { Chain, ClobClient, OrderType, Side } from "@polymarket/clob-client-v2";
+import { Chain, ClobClient, OrderType, Side, ClobAuthDomain } from "@polymarket/clob-client-v2";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import axios from "axios";
 import { ethers } from "ethers";
+import crypto from "crypto";
 import { wallet as walletService } from "./wallet";
 import { env } from "../config/env";
 import { db } from "../db/client";
@@ -468,6 +469,44 @@ class PolymarketService {
         } catch (err: any) {
             console.error("[Polymarket] Order execution failed:", err.message);
             throw err;
+        }
+    }
+
+    async getTradesForProxy(proxyAddress: string): Promise<any[]> {
+        return this.fetchFromClobViaBuilder(`/trades?maker=${proxyAddress}`);
+    }
+
+    async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
+        return this.fetchFromClobViaBuilder(`/positions?user=${proxyAddress}`);
+    }
+
+    private async fetchFromClobViaBuilder(requestPath: string): Promise<any[]> {
+        const key = process.env.POLYMARKET_BUILDER_API_KEY as string;
+        const secret = process.env.POLYMARKET_BUILDER_SECRET as string;
+        const pass = process.env.POLYMARKET_BUILDER_PASSPHRASE as string;
+        if (!key || !secret) return [];
+        try {
+            const timeRes = await axios.get("https://clob.polymarket.com/time").catch(()=>({data:{time: Date.now()/1000}}));
+            const ts = (timeRes.data?.time ?? timeRes.data?.timestamp ?? Math.floor(Date.now() / 1000)).toString();
+            const method = "GET";
+            
+            const message = `${ts}${method}${requestPath}`;
+            const base64Secret = Buffer.from(secret, "base64");
+            const hmac = crypto.createHmac("sha256", base64Secret);
+            const signature = hmac.update(message).digest("base64");
+            
+            const headers = {
+                "POLY_ADDRESS": requestPath.includes("maker=") ? requestPath.split("maker=")[1].split("&")[0] : requestPath.split("user=")[1].split("&")[0],
+                "POLY_SIGNATURE": signature,
+                "POLY_TIMESTAMP": ts,
+                "POLY_API_KEY": key,
+                "POLY_PASSPHRASE": pass
+            };
+            const res = await axios.get(`https://clob.polymarket.com${requestPath}`, { headers });
+            return Array.isArray(res.data) ? res.data : [];
+        } catch (e: any) {
+            console.log("[Polymarket] Failed to fetch proxy data via Builder HMAC:", e.response?.data || e.message);
+            return [];
         }
     }
 }
