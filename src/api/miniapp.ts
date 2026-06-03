@@ -2335,7 +2335,7 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
             const wantAll = req.query.all === 'true';
             
             // Build trade list, mapping UP/DOWN
-            const rawTrades = tradesRes || [];
+            // rawTrades is already declared above
             const mappedTrades = [];
             
             for (const t of rawTrades) {

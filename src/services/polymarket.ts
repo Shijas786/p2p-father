@@ -1,4 +1,4 @@
-import { Chain, ClobClient, OrderType, Side, ClobAuthDomain } from "@polymarket/clob-client-v2";
+import { Chain, ClobClient, OrderType, Side } from "@polymarket/clob-client-v2";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import axios from "axios";
