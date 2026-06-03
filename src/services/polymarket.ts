@@ -146,7 +146,12 @@ class PolymarketService {
 
         try {
             const timeRes = await axios.get(`${CLOB_API}/time`);
-            const ts = timeRes.data.time.toString();
+            let ts: string;
+            if (typeof timeRes.data === 'number' || typeof timeRes.data === 'string') {
+                ts = timeRes.data.toString();
+            } else {
+                ts = (timeRes.data?.time ?? timeRes.data?.timestamp ?? Math.floor(Date.now() / 1000)).toString();
+            }
             const nonce = 0;
             const domain = { 
                 name: "ClobAuthDomain", 
