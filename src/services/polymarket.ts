@@ -101,7 +101,14 @@ class PolymarketService {
         if (code === "0x") {
             console.log(`[Polymarket] Proxy undeployed. Deploying natively via Relayer for user ${userWalletIndex}`);
             await polymarketRelayerService.deployDepositWallet(userWalletIndex);
+            
+            // Allow time for Polygon indexing before sending the next batch
+            await new Promise(r => setTimeout(r, 2000));
         }
+
+        // Gasless Onboarding: Ensure CTF Exchange is approved to spend proxy's USDC
+        // This checks allowance first, so it's a fast no-op if already approved
+        await polymarketRelayerService.approveExchange(userWalletIndex);
 
         const signer = createWalletClient({
             account,
