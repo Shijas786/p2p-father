@@ -125,8 +125,10 @@ class PolymarketRelayerService {
                 localBuilderCreds: creds
             });
 
+            const relayerUrl = process.env.RELAYER_URL || "https://relayer.polymarket.com";
+            
             return new RelayClient(
-                "https://relayer.polymarket.com",
+                relayerUrl,
                 137, // Polygon chain ID
                 wallet,
                 builderConfig
