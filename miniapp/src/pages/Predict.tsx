@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { createPublicClient, http } from 'viem';
 import { polygon } from 'viem/chains';
 import { api } from '../lib/api';
