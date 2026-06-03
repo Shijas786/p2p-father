@@ -56,6 +56,10 @@ export interface User {
     photo_url?: string; // Manual PFP
     total_volume?: number;
     points?: number;
+    polymarket_api_key?: string;
+    polymarket_secret?: string;
+    polymarket_passphrase?: string;
+    polymarket_approved?: boolean;
 }
 
 export interface BankDetails {

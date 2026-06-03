@@ -66,9 +66,14 @@ async function safeEditMessage(ctx: BotContext, text: string, extra: any = {}) {
     try {
         await ctx.editMessageText(text, extra);
     } catch (err: any) {
-        // Fallback to regular reply if edit fails
-        console.warn("[Bot] safeEditMessage failing, falling back to ctx.reply:", err.message);
-        await ctx.reply(text, extra);
+        const msg = err.message || "";
+        if (msg.includes("deactivated") || msg.includes("blocked") || msg.includes("kicked")) {
+            console.warn(`[Bot] safeEditMessage: User deactivated/blocked (${msg})`);
+            return;
+        }
+        // Fallback to regular reply if edit fails for other reasons (e.g. message is not modified)
+        console.warn("[Bot] safeEditMessage failing, falling back to ctx.reply:", msg);
+        await ctx.reply(text, extra).catch(() => {});
     }
 }
 
@@ -349,9 +354,13 @@ export async function updateAdBroadcasts(order: any, user: any) {
                 parse_mode: "HTML",
                 reply_markup: keyboard
             }).catch((err: any) => {
-                if (!err.description?.includes("message is not modified") &&
-                    !err.description?.includes("message to edit not found")) {
-                    console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, err.message);
+                const msg = err.description || err.message || "";
+                if (!msg.includes("message is not modified") &&
+                    !msg.includes("message to edit not found") &&
+                    !msg.includes("deactivated") &&
+                    !msg.includes("blocked") &&
+                    !msg.includes("kicked")) {
+                    console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, msg);
                 }
             });
             // ⏳ Small 50ms delay to respect Telegram's rate limits

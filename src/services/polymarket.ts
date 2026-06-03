@@ -5,6 +5,7 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { wallet as walletService } from "./wallet";
 import { env } from "../config/env";
+import { db } from "../db/client";
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_API = "https://clob.polymarket.com";
@@ -49,7 +50,8 @@ class PolymarketService {
     async getPusdBalance(userWalletIndex: number): Promise<string> {
         try {
             const derived = walletService.deriveWallet(userWalletIndex);
-            const address = derived.address;
+            const { polymarketRelayerService } = await import("./relayer");
+            const address = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
             // pUSD — Polymarket's native ERC-20 collateral (replaces USDC.e as of April 2026)
             const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
 
@@ -106,23 +108,39 @@ class PolymarketService {
             await new Promise(r => setTimeout(r, 2000));
         }
 
+        const user = await db.getUserByWalletIndex(userWalletIndex);
+
         // Gasless Onboarding: Ensure CTF Exchange is approved to spend proxy's USDC
-        // This checks allowance first, so it's a fast no-op if already approved
-        await polymarketRelayerService.approveExchange(userWalletIndex);
+        if (!user?.polymarket_approved) {
+            await polymarketRelayerService.approveExchange(userWalletIndex);
+            if (user) {
+                await db.updateUser(user.id, { polymarket_approved: true });
+            }
+        }
 
         const signer = createWalletClient({
             account,
             transport: http(rpcUrl),
         });
 
-        if (clobCredsCache[userWalletIndex]) {
+        let creds = clobCredsCache[userWalletIndex];
+        if (!creds && user?.polymarket_api_key) {
+            creds = {
+                key: user.polymarket_api_key,
+                secret: user.polymarket_secret,
+                passphrase: user.polymarket_passphrase,
+            };
+            clobCredsCache[userWalletIndex] = creds;
+        }
+
+        if (creds) {
             return new ClobClient({
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
-                signatureType: 2, // POLY_GNOSIS_SAFE
-                creds: clobCredsCache[userWalletIndex],
+                signatureType: 3, // POLY_1271
+                creds,
             });
         }
 
@@ -131,20 +149,28 @@ class PolymarketService {
             chain: Chain.POLYGON,
             signer,
             funderAddress: depositWallet,
-            signatureType: 2, // POLY_GNOSIS_SAFE
+            signatureType: 3, // POLY_1271
         });
 
         try {
-            const creds = await tempClient.createOrDeriveApiKey();
-            clobCredsCache[userWalletIndex] = creds;
+            const newCreds = await tempClient.createOrDeriveApiKey();
+            clobCredsCache[userWalletIndex] = newCreds;
+            
+            if (user && newCreds.key) {
+                await db.updateUser(user.id, {
+                    polymarket_api_key: newCreds.key,
+                    polymarket_secret: newCreds.secret,
+                    polymarket_passphrase: newCreds.passphrase,
+                });
+            }
 
             return new ClobClient({
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
-                signatureType: 2, // POLY_GNOSIS_SAFE
-                creds,
+                signatureType: 3, // POLY_1271
+                creds: newCreds,
             });
         } catch (e: any) {
             console.warn("[Polymarket] Failed to derive API Key:", e.message);
@@ -238,6 +264,44 @@ class PolymarketService {
             }
         } catch (err: any) {
             console.error("[Polymarket] CLOB markets fetch error:", err.message);
+        }
+
+        // Fallback: Try searching CLOB API by tag or series if slug format changed
+        try {
+            console.log(`[Polymarket] Fallback: Searching CLOB API for active BTC markets...`);
+            const res = await axios.get(`${CLOB_API}/markets`, {
+                params: { active: true },
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                },
+                timeout: 5000,
+            });
+            const markets = res.data?.data || res.data || [];
+            // Find a market that contains "BTC" or "Bitcoin" and is active
+            const targetMarket = markets.find((m: any) => 
+                m.active && 
+                !m.closed && 
+                m.tokens && 
+                m.tokens.length >= 2 && 
+                (m.question.includes("Bitcoin") || m.question.includes("BTC"))
+            );
+
+            if (targetMarket) {
+                console.log("[Polymarket] Found active BTC market via fallback search!");
+                const result = {
+                    conditionId: targetMarket.condition_id,
+                    yesTokenId: targetMarket.tokens[0].token_id,
+                    noTokenId: targetMarket.tokens[1].token_id,
+                    question: targetMarket.question,
+                    slug: targetMarket.market_slug,
+                    endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
+                };
+                marketCache[slug] = { data: result, timestamp: Date.now() };
+                return result;
+            }
+        } catch (err: any) {
+            console.error("[Polymarket] Fallback search error:", err.message);
         }
 
         if (this.isDemoMode) {
@@ -345,9 +409,12 @@ class PolymarketService {
                 };
 
                 console.log(`[Polymarket] Submitting FOK MARKET ${side} order to CLOB. Amount: ${amountUsdc}`);
+                const marketInfo = await client.getMarket(tokenId);
+                const negRisk = marketInfo?.neg_risk || false;
+                
                 const response = await client.createAndPostMarketOrder(
                     orderArgs,
-                    { tickSize: "0.01" },
+                    { tickSize: "0.01", negRisk },
                     OrderType.FOK
                 );
                 return response;

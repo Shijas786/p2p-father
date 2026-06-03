@@ -270,7 +270,7 @@ class PolymarketRelayerService {
         
         try {
             console.log(`[Relayer] Redeeming positions for condition ${conditionId}...`);
-            const CTF_ADDRESS = "0x4D97DCd97eC945f40cF65F87097CAe4c15228d15";
+            const CTF_ADDRESS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
             
             const encodedData = encodeFunctionData({
                 abi: CTF_ABI,
@@ -338,26 +338,46 @@ class PolymarketRelayerService {
         // If native Polygon USDC, we can still use the instant onramp to save bridge time
         if (chain === 'polygon' && token === 'USDC') {
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
-            const signer = new ethers.Wallet(derived.privateKey, provider);
-            const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, signer);
-            const onramp = new ethers.Contract(COLLATERAL_ONRAMP_ADDRESS, COLLATERAL_ONRAMP_ABI as any, signer);
+            const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, provider);
 
-            const usdceBalance = await usdce.balanceOf(signer.address);
+            const usdceBalance = await usdce.balanceOf(depositWallet);
             if (usdceBalance < amount) {
-                throw new Error(`Insufficient USDC balance on Polygon. Have: ${ethers.formatUnits(usdceBalance, 6)}, Need: ${ethers.formatUnits(amount, 6)}`);
+                throw new Error(`Insufficient USDC balance in proxy on Polygon. Have: ${ethers.formatUnits(usdceBalance, 6)}, Need: ${ethers.formatUnits(amount, 6)}`);
             }
 
-            const currentAllowance = await usdce.allowance(signer.address, COLLATERAL_ONRAMP_ADDRESS);
-            if (currentAllowance < amount) {
-                console.log(`[Relayer] Approving Collateral Onramp...`);
-                const approveTx = await usdce.approve(COLLATERAL_ONRAMP_ADDRESS, amount);
-                await approveTx.wait();
-            }
+            const client = this.getUserRelayClient(userWalletIndex);
+            if (!client) throw new Error("Failed to construct relayer client");
 
-            console.log(`[Relayer] Wrapping USDC → pUSD via Collateral Onramp directly to deposit wallet ${depositWallet}...`);
-            const wrapTx = await onramp.wrap(USDCE_ADDRESS, depositWallet, amount);
-            const receipt = await wrapTx.wait();
-            return { txHash: receipt?.hash || wrapTx.hash };
+            const approveData = encodeFunctionData({
+                abi: ERC20_ABI,
+                functionName: "approve",
+                args: [COLLATERAL_ONRAMP_ADDRESS, amount]
+            });
+
+            const wrapData = encodeFunctionData({
+                abi: COLLATERAL_ONRAMP_ABI,
+                functionName: "wrap",
+                args: [USDCE_ADDRESS, depositWallet, amount]
+            });
+
+            const approveCall = {
+                target: USDCE_ADDRESS,
+                value: "0",
+                data: approveData
+            };
+
+            const wrapCall = {
+                target: COLLATERAL_ONRAMP_ADDRESS,
+                value: "0",
+                data: wrapData
+            };
+
+            const deadline = Math.floor(Date.now() / 1000 + 3600).toString();
+
+            console.log(`[Relayer] Wrapping USDC → pUSD via proxy ${depositWallet}...`);
+            const response = await client.executeDepositWalletBatch([approveCall, wrapCall], depositWallet, deadline);
+            const receipt = await response.wait();
+            return { txHash: receipt?.transactionHash || response.transactionHash || response.hash };
         }
 
         // --- Bridge API Flow for Multi-Chain (BSC, etc.) ---
@@ -534,47 +554,32 @@ class PolymarketRelayerService {
             return await this.withdrawGasless(userWalletIndex, recipientAddress, amount);
         }
 
-        console.log(`[Relayer] Getting Relay quote to bridge ${amountStr} pUSD -> Chain ${destChainId}`);
-        
-        const quote = await fetch("https://api.relay.link/quote", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                user: depositWallet,
-                originChainId: 137,
-                destinationChainId: destChainId,
-                originCurrency: PUSD_ADDRESS,
-                destinationCurrency: destCurrencyAddress,
-                recipient: recipientAddress,
-                tradeType: "EXACT_INPUT",
-                amount: amountStr,
-                referrer: "p2pfather",
-                useExternalLiquidity: false
-            })
-        }).then(r => r.json());
+        console.log(`[Relayer] Getting LI.FI quote to bridge ${amountStr} pUSD -> Chain ${destChainId}`);
+        const { bridge: bridgeService } = await import("./bridge");
 
-        if (!quote || !quote.steps || quote.steps.length === 0) {
-            throw new Error("Relay SDK did not return valid execution steps for this route.");
+        const quote = await bridgeService.getQuote({
+            fromChainId: 137,
+            toChainId: destChainId,
+            fromTokenAddress: PUSD_ADDRESS,
+            toTokenAddress: destCurrencyAddress,
+            fromAmount: amountStr,
+            fromAddress: depositWallet,
+            toAddress: recipientAddress
+        });
+
+        if (!quote || !quote.transactionRequest) {
+            throw new Error("Bridge SDK did not return valid execution steps for this route.");
         }
 
-        console.log(`[Relayer] Relay Quote retrieved. Expected Output: ${quote.details?.currencyOut?.amountFormatted} ${quote.details?.currencyOut?.currency?.symbol}`);
+        console.log(`[Relayer] Bridge Quote retrieved. Target: ${quote.transactionRequest.to}`);
 
-        const batchCalls = [];
-        for (const step of quote.steps) {
-            if (step.items) {
-                for (const item of step.items) {
-                    if (item.data) {
-                        batchCalls.push({
-                            target: item.data.to,
-                            value: item.data.value ? item.data.value.toString() : "0",
-                            data: item.data.data
-                        });
-                    }
-                }
-            }
-        }
+        const batchCalls = [{
+            target: quote.transactionRequest.to,
+            value: quote.transactionRequest.value || "0",
+            data: quote.transactionRequest.data
+        }];
 
-        console.log(`[Relayer] Submitting batch of ${batchCalls.length} calls to Biconomy...`);
+        console.log(`[Relayer] Submitting batch to Biconomy...`);
         const client = this.getUserRelayClient(userWalletIndex);
         if (!client) throw new Error("Failed to construct relayer client");
 
@@ -584,7 +589,7 @@ class PolymarketRelayerService {
             console.log(`[Relayer] Biconomy Batch submitted! Hash: ${response.hash}`);
             const result = await response.wait();
             console.log("[Relayer] Biconomy Batch mined successfully.");
-            return response.hash;
+            return response.hash || result?.transactionHash;
         } catch (err: any) {
             console.error("[Relayer] Cross-chain withdrawal failed:", err.message);
             throw new Error(`Cross-chain withdrawal failed: ${err.message}`);

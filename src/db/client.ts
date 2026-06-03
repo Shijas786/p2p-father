@@ -115,6 +115,16 @@ class Database {
         return data as User | null;
     }
 
+    async getUserByWalletIndex(walletIndex: number): Promise<User | null> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("users")
+            .select("*")
+            .eq("wallet_index", walletIndex)
+            .single();
+        return data as User | null;
+    }
+
     async getUserById(userId: string): Promise<User | null> {
         const db = this.getClient();
         const { data } = await db
