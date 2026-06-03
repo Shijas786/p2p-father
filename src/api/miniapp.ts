@@ -2239,9 +2239,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             if (!proxyAddress || proxyAddress.includes("Demo")) {
                 return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
             }
-            const tradesRes = await client.getTrades({
-                maker_address: proxyAddress,
-            });
+            const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
@@ -2329,7 +2327,7 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 return res.json({ trades: [] });
             }
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
-            const tradesRes = await client.getTrades({ maker_address: proxyAddress });
+            const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
             const market = await polymarketService.getActiveBtcMarket();
             // Allow frontend to request all trades or filter by specific market
             const targetConditionId = req.query.conditionId as string;
