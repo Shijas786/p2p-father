@@ -68,8 +68,9 @@ export function Predict({ user }: Props) {
     // Positions & trades
     const [positions, setPositions]   = useState<Position[]>([]);
     const [trades, setTrades]         = useState<Trade[]>([]);
+    const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
 
-    // Trade form
+    // User Trade Actions
     const [tradeType, setTradeType]   = useState<'buy'|'sell'>('buy');
     const [betType, setBetType]       = useState<'UP'|'DOWN'>('UP');
     const [betAmount, setBetAmount]   = useState('');
@@ -98,12 +99,13 @@ export function Predict({ user }: Props) {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [aiRes, histRes, balRes, posRes, tradeRes, depRes] =
+            const [aiRes, histRes, balRes, posRes, allTradeRes, recentTradeRes, depRes] =
                 await Promise.allSettled([
                     api.predictions.getAIAnalysis(),
                     api.predictions.getHistory(),
                     api.predictions.getBalance(),
                     api.predictions.getPositions(),
+                    api.predictions.getTrades('?all=true'),
                     api.predictions.getTrades(),
                     api.predictions.getDepositWallet(),
                 ]);
@@ -119,7 +121,8 @@ export function Predict({ user }: Props) {
             }
             if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
             if (posRes.status === 'fulfilled')   setPositions(posRes.value.positions ?? []);
-            if (tradeRes.status === 'fulfilled') setTrades(tradeRes.value.trades ?? []);
+            if (allTradeRes.status === 'fulfilled') setTrades(allTradeRes.value.trades ?? []);
+            if (recentTradeRes.status === 'fulfilled') setRecentTrades(recentTradeRes.value.trades ?? []);
             if (depRes.status === 'fulfilled') setDepositAddress(depRes.value.address ?? '');
         } catch (e) { console.error('[Predict] loadData fatal error:', e); }
         finally { setLoading(false); }
@@ -466,7 +469,12 @@ export function Predict({ user }: Props) {
                                         <div className="pm-notif-empty">No notifications</div>
                                     ) : (
                                         trades.map((t) => (
-                                            <div key={t.id} className="pm-notif-item">
+                                            <div key={t.id} className="pm-notif-item" style={{ cursor: 'pointer' }} onClick={() => {
+                                                haptic('light');
+                                                const windowStartSeconds = Math.floor((t.timestamp || Date.now()) / 300000) * 300;
+                                                navigate(`/predict/btc-updown-5m-${windowStartSeconds}`);
+                                                setShowNotifications(false);
+                                            }}>
                                                 <div className="pm-btc-icon-sq pm-notif-btc">₿</div>
                                                 <div className="pm-notif-content">
                                                     <div className="pm-notif-top">
@@ -764,10 +772,10 @@ export function Predict({ user }: Props) {
                 <div className="pm-history-header">
                     <span className="pm-history-title">History</span>
                 </div>
-                {trades.length === 0 ? (
+                {recentTrades.length === 0 ? (
                     <div className="pm-history-empty">No trades yet this round</div>
                 ) : (
-                    trades.map((t, idx) => (
+                    recentTrades.map((t, idx) => (
                         <div key={t.id ?? idx} className="pm-history-row" id={`trade-${idx}`}>
                             <span className="pm-history-desc">
                                 {t.side === 'BUY' ? 'Bought' : 'Sold'}{' '}

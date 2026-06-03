@@ -2311,21 +2311,59 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
             if (!client) {
                 return res.json({ trades: [] });
             }
-
             const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
             const tradesRes = await client.getTrades({ maker: proxyAddress } as any);
             const market = await polymarketService.getActiveBtcMarket();
-            const trades = (tradesRes || []).slice(0, 20).map((t: any) => ({
-                id: t.id ?? t.trade_id,
-                side: t.side,
-                outcome: t.asset_id === market.yesTokenId ? "UP" : t.asset_id === market.noTokenId ? "DOWN" : "UNKNOWN",
-                conditionId: t.market,
-                qty: parseFloat(t.size ?? "0"),
-                price: parseFloat(t.price ?? "0"),
-                cost: parseFloat(t.size ?? "0") * parseFloat(t.price ?? "0"),
-                timestamp: t.timestamp ?? t.matched_time ?? Date.now(),
-            }));
-            return res.json({ trades });
+            // Allow frontend to request all trades or filter by specific market
+            const targetConditionId = req.query.conditionId as string;
+            const wantAll = req.query.all === 'true';
+            
+            // Build trade list, mapping UP/DOWN
+            const rawTrades = tradesRes || [];
+            const mappedTrades = [];
+            
+            for (const t of rawTrades) {
+                if (targetConditionId && t.market !== targetConditionId) {
+                    continue;
+                }
+                if (!wantAll && !targetConditionId && t.market !== market.conditionId) {
+                    continue;
+                }
+                
+                let outcome = t.asset_id === market.yesTokenId ? "UP" : t.asset_id === market.noTokenId ? "DOWN" : "UNKNOWN";
+                
+                // If it's UNKNOWN, we need to fetch the market details from Gamma API to figure out which token is YES/NO
+                if (outcome === "UNKNOWN" && t.market) {
+                    try {
+                        const mRes = await fetch(`https://gamma-api.polymarket.com/markets/${t.market}`);
+                        const mData = await mRes.json();
+                        if (mData && mData.clobTokenIds) {
+                            const tokens = JSON.parse(mData.clobTokenIds);
+                            if (t.asset_id === tokens[0]) outcome = "UP";
+                            else if (t.asset_id === tokens[1]) outcome = "DOWN";
+                        }
+                    } catch (e) {
+                        // ignore fetch error
+                    }
+                }
+                
+                const ti = t as any;
+                mappedTrades.push({
+                    id: ti.id ?? ti.trade_id,
+                    side: ti.side,
+                    outcome,
+                    conditionId: ti.market,
+                    qty: parseFloat(ti.size ?? "0"),
+                    price: parseFloat(ti.price ?? "0"),
+                    cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
+                    timestamp: parseInt(ti.timestamp || ti.matched_time || "0") || Date.now(),
+                });
+            }
+            
+            // Sort by latest first
+            mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
+            
+            return res.json({ trades: mappedTrades.slice(0, 30) });
         } catch (e: any) {
             console.warn("[MINIAPP] Real trades fetch failed:", e.message);
             return res.json({ trades: [] });

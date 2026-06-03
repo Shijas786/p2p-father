@@ -269,15 +269,16 @@ export const api = {
             returnAmt: number;
             returnPct: number;
         }> }>('/predictions/positions'),
-        getTrades: () => request<{ trades: Array<{
+        getTrades: (query?: string) => request<{ trades: Array<{
             id: string;
             side: string;
-            outcome: 'UP' | 'DOWN';
+            outcome: string;
             qty: number;
             price: number;
             cost: number;
             timestamp: number;
-        }> }>('/predictions/trades'),
+            conditionId?: string;
+        }> }>(`/predictions/trades${query || ''}`),
         autoClaim: () => request<{ success: boolean; claimed: number }>('/predictions/claim', {
             method: 'POST'
         }),

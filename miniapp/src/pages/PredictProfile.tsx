@@ -21,7 +21,7 @@ export function PredictProfile({ user }: Props) {
             if (res && res.positions) setPositions(res.positions);
         }).catch((e: any) => console.error(e));
 
-        api.predictions.getTrades().then((res: any) => {
+        api.predictions.getTrades('?all=true').then((res: any) => {
             if (res && res.trades) setTrades(res.trades);
         }).catch((e: any) => console.error(e));
     }, []);
