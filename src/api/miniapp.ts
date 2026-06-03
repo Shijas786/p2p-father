@@ -2332,18 +2332,14 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 
                 let outcome = t.asset_id === market.yesTokenId ? "UP" : t.asset_id === market.noTokenId ? "DOWN" : "UNKNOWN";
                 
-                // If it's UNKNOWN, we need to fetch the market details from Gamma API to figure out which token is YES/NO
+                // If it's UNKNOWN, we need to fetch the market details from CLOB API to figure out which token is YES/NO
                 if (outcome === "UNKNOWN" && t.market) {
                     try {
-                        const mRes = await fetch(`https://gamma-api.polymarket.com/events?condition_id=${t.market}`);
-                        const events = await mRes.json();
-                        if (events && events.length > 0 && events[0].markets && events[0].markets.length > 0) {
-                            const activeM = events[0].markets.find((m: any) => m.conditionId === t.market) || events[0].markets[0];
-                            if (activeM.clobTokenIds) {
-                                const tokens = JSON.parse(activeM.clobTokenIds);
-                                if (t.asset_id === tokens[0]) outcome = "UP";
-                                else if (t.asset_id === tokens[1]) outcome = "DOWN";
-                            }
+                        const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`);
+                        const mData = await mRes.json();
+                        if (mData && mData.tokens && mData.tokens.length >= 2) {
+                            if (t.asset_id === mData.tokens[0].token_id) outcome = "UP";
+                            else if (t.asset_id === mData.tokens[1].token_id) outcome = "DOWN";
                         }
                     } catch (e) {
                         // ignore fetch error

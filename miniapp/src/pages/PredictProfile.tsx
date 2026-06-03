@@ -4,6 +4,17 @@ import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
 import './PredictProfile.css';
 
+function timeAgo(ms: number) {
+    if (!ms) return '';
+    const diff = Date.now() - ms;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
 interface Props {
     user: any;
 }
@@ -123,14 +134,25 @@ export function PredictProfile({ user }: Props) {
             </div>
 
             {/* Table Header */}
-            <div className="pm-prof-table-header">
-                <div className="pm-th-market">MARKET <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></div>
-                <div className="pm-th-right">
-                    <span>AVG <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></span>
-                    <span>CURRENT</span>
-                    <span>VALUE <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></span>
+            {tab === 'positions' ? (
+                <div className="pm-prof-table-header">
+                    <div className="pm-th-market">MARKET <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></div>
+                    <div className="pm-th-right">
+                        <span>AVG <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></span>
+                        <span>CURRENT</span>
+                        <span>VALUE <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></span>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="pm-prof-table-header" style={{ display: 'flex', padding: '0 16px', color: '#888', fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px' }}>
+                    <div style={{ flex: '0 0 100px' }}>ACTIVITY</div>
+                    <div style={{ flex: 1 }}>MARKET</div>
+                    <div style={{ flex: '0 0 auto', display: 'flex', gap: '30px' }}>
+                        <div style={{ width: '60px', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>VALUE <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></div>
+                        <div style={{ width: '60px', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>TIME <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="7 10 12 15 17 10"/></svg></div>
+                    </div>
+                </div>
+            )}
 
             {/* List */}
             <div className="pm-prof-list">
@@ -173,32 +195,53 @@ export function PredictProfile({ user }: Props) {
                         <div className="pm-prof-row" style={{justifyContent: 'center', color: '#888'}}>
                             No trades found.
                         </div>
-                    ) : trades.map((trade: any, i: number) => (
-                        <div key={trade.id ?? i} className="pm-prof-row" style={{ cursor: 'pointer' }} onClick={() => {
-                            haptic('light');
-                            const windowStartSeconds = Math.floor((trade.timestamp || Date.now()) / 300000) * 300;
-                            navigate(`/predict/btc-updown-5m-${windowStartSeconds}`);
-                        }}>
-                            <div className="pm-prof-col-market">
-                                <div className="pm-prof-btc-icon">₿</div>
-                                <div className="pm-prof-market-info">
-                                    <h4>{String(trade.side).toUpperCase() === 'BUY' ? 'Buy' : 'Sell'} {trade.outcome}</h4>
-                                    <div className="pm-prof-market-bet">
-                                        <span className="pm-prof-bet-shares">{trade.qty.toFixed(1)} shares</span>
+                    ) : trades.map((trade: any, i: number) => {
+                        const isBuy = String(trade.side).toUpperCase() === 'BUY';
+                        const wStart = Math.floor((trade.timestamp || Date.now()) / 300000) * 300000;
+                        const wEnd = wStart + 300000;
+                        const dateStr = new Date(wStart).toLocaleString([], { month: 'short', day: 'numeric' });
+                        const tStart = new Date(wStart).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                        const tEnd = new Date(wEnd).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                        
+                        return (
+                            <div key={trade.id ?? i} className="pm-prof-row" style={{ cursor: 'pointer', padding: '16px' }} onClick={() => {
+                                haptic('light');
+                                navigate(`/predict/btc-updown-5m-${wStart/1000}`);
+                            }}>
+                                <div className="pm-prof-col-activity" style={{ flex: '0 0 100px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ 
+                                        width: 16, height: 16, borderRadius: '50%', backgroundColor: '#2f343d', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                    }}>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    </div>
+                                    <span style={{ fontWeight: 600, color: '#fff', fontSize: '14px' }}>{isBuy ? 'Buy' : 'Sell'}</span>
+                                </div>
+                                
+                                <div className="pm-prof-col-market" style={{ flex: 1 }}>
+                                    <div className="pm-prof-btc-icon" style={{ flexShrink: 0 }}>₿</div>
+                                    <div className="pm-prof-market-info">
+                                        <h4 style={{ fontSize: '13px', fontWeight: 500, color: '#e5e7eb', marginBottom: '4px' }}>Bitcoin Up or Down - {dateStr}, {tStart}-{tEnd}</h4>
+                                        <div className="pm-prof-market-bet" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span className={`pm-prof-bet-pill ${trade.outcome === 'UP' ? 'green' : 'red'}`} style={{ padding: '2px 6px', fontSize: '11px', borderRadius: '4px' }}>
+                                                {trade.outcome === 'UP' ? 'Up' : 'Down'} {(trade.price * 100).toFixed(0)}¢
+                                            </span>
+                                            <span className="pm-prof-bet-shares" style={{ color: '#888', fontSize: '12px' }}>{trade.qty.toFixed(1)} shares</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="pm-prof-col-right" style={{ flex: '0 0 auto', display: 'flex', gap: '30px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <div className="pm-prof-cell-value" style={{ width: '60px', textAlign: 'right', color: isBuy ? '#fff' : '#10b981', fontWeight: 500, fontSize: '14px' }}>
+                                        {isBuy ? `-$${trade.cost.toFixed(2)}` : `+$${trade.cost.toFixed(2)}`}
+                                    </div>
+                                    <div className="pm-prof-cell-time" style={{ color: '#888', fontSize: '12px', width: '60px', textAlign: 'right' }}>
+                                        {timeAgo(trade.timestamp)}
                                     </div>
                                 </div>
                             </div>
-                            <div className="pm-prof-col-right">
-                                <span className="pm-prof-cell-avg">{(trade.price * 100).toFixed(1)}<span className="pm-cent">¢</span></span>
-                                <div className="pm-prof-cell-value">
-                                    <div className="pm-prof-val-top">${trade.cost.toFixed(2)}</div>
-                                </div>
-                                <div style={{marginLeft: 10, opacity: 0.5}}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                    ))
+                        )
+                    })
                 )}
             </div>
         </div>

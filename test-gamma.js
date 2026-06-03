@@ -1,12 +1,16 @@
-const axios = require('axios');
-async function test() {
-    try {
-        // Shijas deposit proxy address: Let me just use a known polymarket user or check format.
-        // Actually I don't know a valid address offhand, but I can check the API format.
-        const res = await axios.get("https://gamma-api.polymarket.com/positions?user=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"); // vitalik.eth
-        console.log(JSON.stringify(res.data.slice(0, 2), null, 2));
-    } catch (e) {
-        console.error(e.message);
+const fetch = require('node-fetch');
+async function run() {
+    const res = await fetch('https://gamma-api.polymarket.com/events?slug=btc-updown-5m-1718000100');
+    const data = await res.json();
+    console.log("By slug:", data.length);
+    if (data.length > 0 && data[0].markets) {
+        const conditionId = data[0].markets[0].conditionId;
+        console.log("Condition ID:", conditionId);
+        
+        const res2 = await fetch('https://gamma-api.polymarket.com/events?condition_id=' + conditionId);
+        const data2 = await res2.json();
+        console.log("By condition_id:", data2.length > 0 ? "Found" : "Not Found");
+        if(data2.message) console.log(data2);
     }
 }
-test();
+run();
