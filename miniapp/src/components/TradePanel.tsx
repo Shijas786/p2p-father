@@ -99,7 +99,9 @@ export function TradePanel({
             haptic('medium');
             setClaiming(true);
             try {
-                await api.predictions.autoClaim(round.conditionId);
+                const targetConditionId = roundTrades[0]?.conditionId || round.conditionId;
+                if (!targetConditionId) throw new Error("No condition ID found for this round. Please wait for the system to auto-claim.");
+                await api.predictions.autoClaim(targetConditionId);
                 localStorage.setItem(claimKey, 'true');
                 showToast('Winnings successfully claimed!', 'success');
                 // Optional: delay reload to let UI update
