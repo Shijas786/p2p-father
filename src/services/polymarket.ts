@@ -144,16 +144,55 @@ class PolymarketService {
             });
         }
 
-        const tempClient = new ClobClient({
-            host: CLOB_API,
-            chain: Chain.POLYGON,
-            signer,
-            funderAddress: depositWallet,
-            signatureType: 3, // POLY_1271
-        });
-
         try {
-            const newCreds = await tempClient.createOrDeriveApiKey();
+            const ts = Math.floor(Date.now() / 1000).toString();
+            const nonce = "0";
+            const domain = { name: "ClobAuthDomain", version: "1", chainId: 137 };
+            const types = {
+                ClobAuth: [
+                    { name: "address", type: "address" },
+                    { name: "timestamp", type: "string" },
+                    { name: "nonce", type: "uint256" },
+                    { name: "message", type: "string" }
+                ]
+            };
+            const value = {
+                address: depositWallet,
+                timestamp: ts,
+                nonce,
+                message: "This message attests that I control the given wallet"
+            };
+            
+            let sig = await signer.signTypedData({
+                domain,
+                types,
+                primaryType: 'ClobAuth',
+                message: value
+            });
+            // Polymarket requires '03' suffix for POLY_1271 signatures
+            sig = sig + "03";
+
+            const headers = {
+                "POLY_ADDRESS": depositWallet,
+                "POLY_SIGNATURE": sig,
+                "POLY_TIMESTAMP": ts,
+                "POLY_NONCE": nonce,
+                "Content-Type": "application/json"
+            };
+
+            let newCreds: any;
+            try {
+                const res = await axios.post(`${CLOB_API}/auth/api-key`, {}, { headers });
+                newCreds = { key: res.data.apiKey, secret: res.data.secret, passphrase: res.data.passphrase };
+            } catch (createErr: any) {
+                if (createErr.response && createErr.response.status === 400) {
+                    // Fallback to derive if key already exists
+                    const res = await axios.get(`${CLOB_API}/auth/derive-api-key`, { headers });
+                    newCreds = { key: res.data.apiKey, secret: res.data.secret, passphrase: res.data.passphrase };
+                } else {
+                    throw createErr;
+                }
+            }
             clobCredsCache[userWalletIndex] = newCreds;
             
             if (user && newCreds.key) {
@@ -187,8 +226,15 @@ class PolymarketService {
         const windowStartSeconds = Math.floor(now / 300000) * 300;
         const slug = `btc-updown-5m-${windowStartSeconds}`;
 
-        if (marketCache[slug] && now - marketCache[slug].timestamp < 15000) {
-            return marketCache[slug].data;
+        if (marketCache[slug] && now - marketCache[slug].timestamp < 5000) {
+            try {
+                await this.getOutcomePrice(marketCache[slug].data.yesTokenId);
+                return marketCache[slug].data;
+            } catch {
+                // Cache is stale (illiquid token), bust it and refetch
+                delete marketCache[slug];
+                return await this.getActiveBtcMarket();
+            }
         }
 
         try {
