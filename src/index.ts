@@ -29,18 +29,25 @@ async function main() {
     console.log("");
 
     console.log("=== POLYMARKET RELAYER NETWORK TEST ===");
-    console.log(`Target URL: ${process.env.RELAYER_URL || "https://relayer.polymarket.com"}/submit`);
     try {
-        const res = await axios.post(`${process.env.RELAYER_URL || "https://relayer.polymarket.com"}/submit`, { test: true }, { timeout: 10000 });
+        const baseUrl = process.env.RELAYER_URL || "https://relayer-v2.polymarket.com";
+        console.log(`Target URL: ${baseUrl}`);
+        // Just do a simple GET request to check network reachability instead of an unauthenticated POST to /submit
+        const res = await axios.get(baseUrl, { timeout: 10000 });
         console.log("✅ Polymarket Relayer Connection SUCCESS!");
-        console.log("Status:", res.status);
     } catch (e: any) {
-        console.error("❌ Polymarket Relayer Connection FAILED!");
-        if (e.response) {
-            console.error("Status:", e.response.status);
-            console.error("Data:", JSON.stringify(e.response.data));
+        // We only care if it's a hard network error (DNS/Timeout). 
+        // 404 or 401 from the root path still means we can reach the server.
+        if (e.response && (e.response.status === 404 || e.response.status === 401 || e.response.status === 403)) {
+            console.log("✅ Polymarket Relayer Connection SUCCESS! (Reached Server)");
         } else {
-            console.error("Network Error (Timeout, DNS, or IP Blocked):", e.message);
+            console.error("❌ Polymarket Relayer Connection FAILED!");
+            if (e.response) {
+                console.error("Status:", e.response.status);
+                console.error("Data:", JSON.stringify(e.response.data));
+            } else {
+                console.error("Network Error (Timeout, DNS, or IP Blocked):", e.message);
+            }
         }
     }
     console.log("=======================================");

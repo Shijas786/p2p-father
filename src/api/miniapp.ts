@@ -2234,7 +2234,11 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 return res.json({ positions: [] });
             }
 
-            const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+            console.log("[DEBUG] Fetching positions for deposit wallet:", proxyAddress);
+            if (!proxyAddress || proxyAddress.includes("Demo")) {
+                return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
+            }
             const tradesRes = await client.getTrades({
                 maker: proxyAddress,
             } as any);
