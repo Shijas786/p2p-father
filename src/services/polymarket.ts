@@ -93,6 +93,7 @@ class PolymarketService {
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
+                signatureType: 1, // POLY_PROXY
                 creds: { key: apiKey, secret: apiSecret, passphrase: passphrase }
             });
         }
@@ -137,6 +138,7 @@ class PolymarketService {
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
+                signatureType: 1, // POLY_PROXY
                 creds: clobCredsCache[userWalletIndex],
             });
         }
@@ -146,6 +148,7 @@ class PolymarketService {
             chain: Chain.POLYGON,
             signer,
             funderAddress: depositWallet,
+            signatureType: 1, // POLY_PROXY
         });
 
         try {
@@ -157,6 +160,7 @@ class PolymarketService {
                 chain: Chain.POLYGON,
                 signer,
                 funderAddress: depositWallet,
+                signatureType: 1, // POLY_PROXY
                 creds,
             });
         } catch (e: any) {
