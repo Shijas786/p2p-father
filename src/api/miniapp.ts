@@ -2250,7 +2250,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const noPrice = priceResults[1].status === 'fulfilled' ? priceResults[1].value : null;
 
             // Aggregate open positions from recent trades
-            const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number }> = {};
+            const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
 
             for (const trade of (tradesRes || [])) {
                 const isUp = trade.asset_id === market.yesTokenId;
