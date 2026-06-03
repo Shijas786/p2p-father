@@ -8,7 +8,7 @@ import { escrow } from "../services/escrow";
 import { bridge } from "../services/bridge";
 import { wallet } from "../services/wallet";
 import { market } from "../services/market";
-import { polymarketRelayerService } from "../services/relayer";
+import { polymarketRelayerService, startRedemptionListener } from "../services/relayer";
 import { groupManager } from "../utils/groupManager";
 import {
     formatOrder,
@@ -3872,7 +3872,10 @@ bot.api.setMyCommands(groupCommands, { scope: { type: "all_group_chats" } })
 
 export { bot, notifyTrader };
 
-// Auto-Redeem Cron (Run every 30 mins)
+// Start WebSocket listener for instant redemptions
+startRedemptionListener();
+
+// Auto-Redeem Cron (Run every 30 mins as fallback)
 setInterval(async () => {
     try {
         console.log("[Cron] Checking for redeemable positions...");

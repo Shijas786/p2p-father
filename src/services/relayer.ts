@@ -5,6 +5,8 @@ import { privateKeyToAccount } from "viem/accounts";
 import { ethers } from "ethers";
 import { wallet as walletService } from "./wallet";
 import { env } from "../config/env";
+import WebSocket from "ws";
+import { db } from "../db/client";
 
 // ═══════════════════════════════════════════════════════════════
 //  Polymarket pUSD Token & Collateral Onramp Addresses (Polygon)
@@ -611,3 +613,72 @@ export const polymarketRelayerService = new PolymarketRelayerService();
 
 // Re-export key constants for use in other services/API routes
 export { PUSD_ADDRESS, USDCE_ADDRESS, COLLATERAL_ONRAMP_ADDRESS };
+
+export function startRedemptionListener() {
+    let ws: WebSocket;
+    
+    function connect() {
+        ws = new WebSocket("wss://ws-subscriptions-clob.polymarket.com/ws/market");
+
+        ws.on("open", () => {
+            console.log("[Relayer] Connected to Polymarket market WebSocket for auto-redemption");
+        });
+
+        ws.on("message", async (data: WebSocket.RawData) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                
+                if (msg.event_type === "market_resolved") {
+                    const conditionId = msg.condition_id;
+                    console.log(`[Relayer] Market resolved detected (condition_id: ${conditionId}). Triggering auto-redemption!`);
+                    
+                    // Immediately redeem for all users
+                    const { data: users, error } = await db.getClient()
+                        .from("users")
+                        .select("wallet_index, deposit_wallet_address")
+                        .not("deposit_wallet_address", "is", null);
+
+                    if (error || !users) return;
+
+                    for (const user of users) {
+                        if (!user.deposit_wallet_address) continue;
+                        
+                        try {
+                            const response = await fetch(
+                                `https://data-api.polymarket.com/positions?user=${user.deposit_wallet_address}&sizeThreshold=0.01`
+                            );
+                            if (!response.ok) continue;
+                            
+                            const positions = await response.json();
+                            // Find if user has a redeemable position in THIS resolved condition
+                            const redeemable = positions.filter((p: any) => p.redeemable > 0 && p.conditionId === conditionId);
+
+                            for (const pos of redeemable) {
+                                console.log(`[Relayer] Redeeming immediately ${pos.conditionId} for user ${user.wallet_index}`);
+                                await polymarketRelayerService.redeemPositions(
+                                    user.wallet_index,
+                                    pos.conditionId
+                                );
+                            }
+                        } catch (e) {
+                            console.error(`[Relayer] Event-driven redemption error for user ${user.wallet_index}:`, e);
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore parse errors
+            }
+        });
+
+        ws.on("error", (err) => {
+            console.error("[Relayer] WebSocket error:", err);
+        });
+
+        ws.on("close", () => {
+            console.log("[Relayer] WebSocket closed. Reconnecting in 5s...");
+            setTimeout(connect, 5000);
+        });
+    }
+
+    connect();
+}
