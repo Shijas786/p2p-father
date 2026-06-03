@@ -309,6 +309,8 @@ export function Predict({ user }: Props) {
                         .catch(console.error);
                 }
             }
+        } else if (!isHistorical) {
+            setSelectedRound(-1);
         }
     }, [history, priceToBeat, isHistorical, routeSlug]);
 

@@ -2394,26 +2394,32 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
             return res.json({ success: true, claimed: 0 });
         }
         
-        const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
-        
-        // Instantiate real ClobClient to get trades
-        const { ClobClient } = await import('@polymarket/clob-client-v2');
-        const ethers = require('ethers');
-        const clobClient = new ClobClient({
-            host: "https://clob.polymarket.com",
-            chain: 137,
-            signer: new ethers.Wallet("0x0000000000000000000000000000000000000000000000000000000000000001") // Dummy wallet for read-only
-        });
-        
-        const tradesRes = await clobClient.getTrades({ maker: proxyAddress } as any);
-        
         const uniqueConditions = new Set<string>();
-        for (const t of (tradesRes || [])) {
-            // Force bypass TS errors with any
-            const tradeItem = t as any;
-            const tradeMs = parseInt(tradeItem.timestamp || tradeItem.matched_time || "0");
-            if (tradeItem.market && tradeMs > 0 && Date.now() - tradeMs > 300000) {
-                uniqueConditions.add(tradeItem.market);
+        
+        if (req.body.conditionId) {
+            uniqueConditions.add(req.body.conditionId);
+        } else {
+            // Fallback for global claim if we don't know the conditionId
+            const client = await polymarketService.getUserClobClient(user.wallet_index);
+            if (!client) {
+                return res.json({ success: true, claimed: 0 });
+            }
+            
+            try {
+                const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
+                const tradesRes = await client.getTrades({ maker: proxyAddress } as any);
+                
+                for (const t of (tradesRes || [])) {
+                    // Force bypass TS errors with any
+                    const tradeItem = t as any;
+                    const tradeMs = parseInt(tradeItem.timestamp || tradeItem.matched_time || "0");
+                    if (tradeItem.market && tradeMs > 0 && Date.now() - tradeMs > 300000) {
+                        uniqueConditions.add(tradeItem.market);
+                    }
+                }
+            } catch (err: any) {
+                console.warn("[MINIAPP] Failed to fetch trades for autoClaim:", err.message);
+                return res.json({ success: true, claimed: 0, error: err.message });
             }
         }
         

@@ -62,10 +62,10 @@ export function TradePanel({
 
         const roundStart = new Date(round.timestamp);
         const roundEnd = new Date(round.timestamp + 300000);
-        const dateStr = roundStart.toLocaleString([], { month: 'short', day: 'numeric' });
-        const timeStartStr = roundStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        const timeEndStr = roundEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        const marketTitle = `Bitcoin Up or Down - ${dateStr}, ${timeStartStr}-${timeEndStr}`;
+        const dateStr = roundStart.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+        const timeStartStr = roundStart.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+        const timeEndStr = roundEnd.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+        const marketTitle = `Bitcoin Up or Down - ${dateStr}, ${timeStartStr}-${timeEndStr} ET`;
 
         // Wait 1 min after close to show realistic "determining" phase
         const isDetermining = Date.now() - roundEnd.getTime() < 60000;
@@ -74,13 +74,21 @@ export function TradePanel({
         const roundTrades = trades.filter(t => t.timestamp >= round.timestamp && t.timestamp < round.timestamp + 300000);
         let winQty = 0;
         let winCost = 0;
+        let positionUp = 0;
+        let positionDown = 0;
+        
         for (const t of roundTrades) {
+            const isBuy = t.side === 'BUY' || t.side === 'buy';
             if (t.outcome === round.outcome) {
-                if (t.side === 'BUY' || t.side === 'buy') {
-                    winQty += t.qty; winCost += t.cost;
-                } else {
-                    winQty -= t.qty; winCost -= t.cost;
-                }
+                if (isBuy) { winQty += t.qty; winCost += t.cost; }
+                else { winQty -= t.qty; winCost -= t.cost; }
+            }
+            if (t.outcome === 'UP') {
+                if (isBuy) positionUp += t.qty;
+                else positionUp -= t.qty;
+            } else {
+                if (isBuy) positionDown += t.qty;
+                else positionDown -= t.qty;
             }
         }
         
@@ -91,7 +99,7 @@ export function TradePanel({
             haptic('medium');
             setClaiming(true);
             try {
-                await api.predictions.autoClaim();
+                await api.predictions.autoClaim(round.conditionId);
                 localStorage.setItem(claimKey, 'true');
                 showToast('Winnings successfully claimed!', 'success');
                 // Optional: delay reload to let UI update
@@ -114,6 +122,24 @@ export function TradePanel({
                     <h3 className="pm-historical-h3">Hold on, determining winner...</h3>
                     <p className="pm-historical-market">{marketTitle}</p>
                     <p className="pm-historical-desc">This market has ended. Final resolution will appear automatically as soon as it is available on-chain.</p>
+                    
+                    {(positionUp > 0.01 || positionDown > 0.01) && (
+                        <div className="pm-earnings-card" style={{ marginTop: 24 }}>
+                            <h4 className="pm-earnings-title">Your Position</h4>
+                            {positionUp > 0.01 && (
+                                <div className="pm-earnings-row">
+                                    <span className="pm-earnings-label">Up</span>
+                                    <span className="pm-earnings-val">{positionUp.toFixed(2)} Shares</span>
+                                </div>
+                            )}
+                            {positionDown > 0.01 && (
+                                <div className="pm-earnings-row">
+                                    <span className="pm-earnings-label">Down</span>
+                                    <span className="pm-earnings-val">{positionDown.toFixed(2)} Shares</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -145,9 +171,33 @@ export function TradePanel({
                             <span className="pm-earnings-label">Total</span>
                             <span className="pm-earnings-val">${winQty.toFixed(2)}</span>
                         </div>
-                        <button className="pm-btn-claim" onClick={handleClaim} disabled={claiming}>
-                            {claiming ? <span className="pm-btn-loading"><div className="pm-spinner pm-spinner-sm"/> Claiming...</span> : 'Claim winnings'}
+                        <button 
+                            className="pm-btn-claim-win"
+                            onClick={handleClaim}
+                            disabled={claiming}
+                        >
+                            {claiming ? <span className="spinner" style={{ width: 16, height: 16, margin: '0 auto' }} /> : 'Claim Winnings'}
                         </button>
+                    </div>
+                )}
+                
+                {hasClaimed && winQty >= 0.01 && (
+                     <div className="pm-earnings-card">
+                        <h4 className="pm-earnings-title">Winnings Claimed</h4>
+                        <div className="pm-earnings-row">
+                            <span className="pm-earnings-label">Amount</span>
+                            <span className="pm-earnings-val pm-green">+${winQty.toFixed(2)}</span>
+                        </div>
+                     </div>
+                )}
+                
+                {winQty < 0.01 && (positionUp > 0.01 || positionDown > 0.01) && (
+                    <div className="pm-earnings-card">
+                        <h4 className="pm-earnings-title">Your Position</h4>
+                        <div className="pm-earnings-row">
+                            <span className="pm-earnings-label">Result</span>
+                            <span className="pm-earnings-val" style={{ color: '#ff4d4d' }}>Not a winner</span>
+                        </div>
                     </div>
                 )}
             </div>

@@ -279,8 +279,9 @@ export const api = {
             timestamp: number;
             conditionId?: string;
         }> }>(`/predictions/trades${query || ''}`),
-        autoClaim: () => request<{ success: boolean; claimed: number }>('/predictions/claim', {
-            method: 'POST'
+        autoClaim: (conditionId?: string) => request<{ success: boolean; claimed: number }>('/predictions/claim', {
+            method: 'POST',
+            body: conditionId ? JSON.stringify({ conditionId }) : undefined
         }),
     },
 
