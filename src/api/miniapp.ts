@@ -2228,18 +2228,20 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
         // Attempt to get real open positions from Polymarket CLOB
         try {
+            const client = await polymarketService.getUserClobClient(user.wallet_index);
+            if (!client) {
+                // If client is null, the proxy hasn't been deployed yet (they have no trades)
+                return res.json({ positions: [] });
+            }
+
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
             console.log("[DEBUG] Fetching positions for deposit wallet:", proxyAddress);
             if (!proxyAddress || proxyAddress.includes("Demo")) {
                 return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
             }
-            
-            const rawPositions = await polymarketService.getPositionsForProxy(proxyAddress);
-            // Polymarket /positions endpoint returns an array of positions directly.
-            // We'll rename it tradesRes so the rest of the code works if we just adapt it.
-            // Actually, wait, the rest of the code maps over `tradesRes` which used to be trades!
-            // If it expects trades, we should use getTradesForProxy, NOT getPositionsForProxy!
-            const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
+            const tradesRes = await client.getTrades({
+                maker_address: proxyAddress,
+            });
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
@@ -2321,21 +2323,20 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
-
         try {
-            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
-            let rawTrades: any[] = [];
-            
-            if (proxyAddress && !proxyAddress.includes("Demo")) {
-                rawTrades = await polymarketService.getTradesForProxy(proxyAddress);
+            const client = await polymarketService.getUserClobClient(user.wallet_index);
+            if (!client) {
+                return res.json({ trades: [] });
             }
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+            const tradesRes = await client.getTrades({ maker_address: proxyAddress });
             const market = await polymarketService.getActiveBtcMarket();
             // Allow frontend to request all trades or filter by specific market
             const targetConditionId = req.query.conditionId as string;
             const wantAll = req.query.all === 'true';
             
             // Build trade list, mapping UP/DOWN
-            // rawTrades is already declared above
+            const rawTrades = tradesRes || [];
             const mappedTrades = [];
             
             for (const t of rawTrades) {
