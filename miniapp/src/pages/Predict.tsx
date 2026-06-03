@@ -25,8 +25,8 @@ const CHAINLINK_BTC_USD = '0xc907E116054Ad103354f2D350FD2514433D57F6f';
 const chainlinkAbi = [{"inputs":[],"name":"latestRoundData","outputs":[{"internalType":"uint80","name":"roundId","type":"uint80"},{"internalType":"int256","name":"answer","type":"int256"},{"internalType":"uint256","name":"startedAt","type":"uint256"},{"internalType":"uint256","name":"updatedAt","type":"uint256"},{"internalType":"uint80","name":"answeredInRound","type":"uint80"}],"stateMutability":"view","type":"function"}];
 
 interface Trade {
-    id: string; side: string; outcome: 'UP' | 'DOWN';
-    qty: number; price: number; cost: number; timestamp: number;
+    id: string; side: string;
+    outcome: string; qty: number; price: number; cost: number; timestamp: number;
 }
 interface Position {
     outcome: 'UP' | 'DOWN'; qty: number; avg: number;
