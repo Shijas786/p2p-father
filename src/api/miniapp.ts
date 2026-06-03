@@ -159,8 +159,17 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
 router.get("/predictions/market", async (req: Request, res: Response) => {
     try {
         const market = await polymarketService.getActiveBtcMarket();
-        const yesPrice = await polymarketService.getOutcomePrice(market?.yesTokenId, false);
-        const noPrice = await polymarketService.getOutcomePrice(market?.noTokenId, true);
+        
+        const safeGetPrice = async (tokenId: string, side: boolean) => {
+            try {
+                return await polymarketService.getOutcomePrice(tokenId, side);
+            } catch (e: any) {
+                return { buyPrice: 0.5, sellPrice: 0.5 };
+            }
+        };
+
+        const yesPrice = await safeGetPrice(market?.yesTokenId, false);
+        const noPrice = await safeGetPrice(market?.noTokenId, true);
         
         res.json({
             market,
@@ -2232,9 +2241,17 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
+            const safeGetPrice = async (tokenId: string, side: boolean) => {
+                try {
+                    return await polymarketService.getOutcomePrice(tokenId, side);
+                } catch (e: any) {
+                    return { buyPrice: 0, sellPrice: 0 };
+                }
+            };
+
             const [yesPrice, noPrice] = await Promise.all([
-                polymarketService.getOutcomePrice(market.yesTokenId, false),
-                polymarketService.getOutcomePrice(market.noTokenId, true),
+                safeGetPrice(market.yesTokenId, false),
+                safeGetPrice(market.noTokenId, true),
             ]);
 
             // Aggregate open positions from recent trades
