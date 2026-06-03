@@ -589,7 +589,7 @@ class PolymarketRelayerService {
             console.log(`[Relayer] Biconomy Batch submitted! Hash: ${response.hash}`);
             const result = await response.wait();
             console.log("[Relayer] Biconomy Batch mined successfully.");
-            return response.hash || result?.transactionHash;
+            return response.hash || result?.transactionHash || "";
         } catch (err: any) {
             console.error("[Relayer] Cross-chain withdrawal failed:", err.message);
             throw new Error(`Cross-chain withdrawal failed: ${err.message}`);

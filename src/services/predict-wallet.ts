@@ -1,4 +1,5 @@
-import { RelayClient, BuilderConfig } from "@polymarket/builder-relayer-client";
+import { RelayClient } from "@polymarket/builder-relayer-client";
+import { BuilderConfig } from "@polymarket/builder-signing-sdk";
 import { createWalletClient, http, encodeFunctionData } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { wallet as walletService } from "./wallet";
