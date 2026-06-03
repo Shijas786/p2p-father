@@ -60,6 +60,7 @@ export interface User {
     polymarket_secret?: string;
     polymarket_passphrase?: string;
     polymarket_approved?: boolean;
+    deposit_wallet_address?: string;
 }
 
 export interface BankDetails {

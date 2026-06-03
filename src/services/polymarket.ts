@@ -205,6 +205,7 @@ class PolymarketService {
                     polymarket_api_key: newCreds.key,
                     polymarket_secret: newCreds.secret,
                     polymarket_passphrase: newCreds.passphrase,
+                    deposit_wallet_address: depositWallet,
                 });
             }
 
