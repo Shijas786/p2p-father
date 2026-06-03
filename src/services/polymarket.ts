@@ -328,9 +328,13 @@ class PolymarketService {
             const client = await this.getBuilderClobClient(userWalletIndex);
 
             // Size = Total spend / Limit price
-            const size = amountUsdc / limitPrice;
-            if (size <= 0) {
-                throw new Error("Invalid order size. Increase amount or choose a better price.");
+            let size = amountUsdc / limitPrice;
+            
+            // Polymarket minimum order constraints
+            const MIN_SHARES = 5;
+            if (size < MIN_SHARES) {
+                const requiredUsdc = (MIN_SHARES * limitPrice).toFixed(2);
+                throw new Error(`Polymarket requires a minimum order size of ${MIN_SHARES} shares. At a price of $${limitPrice.toFixed(2)}, you must bet at least $${requiredUsdc}.`);
             }
 
             const orderArgs = {
