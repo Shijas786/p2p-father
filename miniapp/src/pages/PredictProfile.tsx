@@ -14,12 +14,21 @@ export function PredictProfile({ user }: Props) {
     const [subTab, setSubTab] = useState<'active' | 'closed'>('active');
 
     const [positions, setPositions] = useState<any[]>([]);
+    const [trades, setTrades] = useState<any[]>([]);
     
     useEffect(() => {
         api.predictions.getPositions().then((res: any) => {
             if (res && res.positions) setPositions(res.positions);
         }).catch((e: any) => console.error(e));
+
+        api.predictions.getTrades().then((res: any) => {
+            if (res && res.trades) setTrades(res.trades);
+        }).catch((e: any) => console.error(e));
     }, []);
+
+    const totalPositionsValue = positions.reduce((sum, p) => sum + (p.value || 0), 0);
+    const predictionsCount = trades.length;
+    const totalPnl = positions.reduce((sum, p) => sum + (p.returnAmt || 0), 0);
 
     return (
         <div className="pm-prof-page">
@@ -34,22 +43,22 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-user-header">
                         <div className="pm-prof-avatar-gradient"></div>
                         <div className="pm-prof-user-info">
-                            <h2>{user?.username || 'shijashere'}</h2>
-                            <p>Joined May 2026</p>
+                            <h2>{user?.username || 'Trader'}</h2>
+                            <p>Joined {new Date(user?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
                         </div>
                     </div>
                     
                     <div className="pm-prof-stats-row">
                         <div className="pm-prof-stat">
-                            <h3>$0.00</h3>
+                            <h3>${totalPositionsValue.toFixed(2)}</h3>
                             <p>Positions</p>
                         </div>
                         <div className="pm-prof-stat">
-                            <h3>$23.71</h3>
-                            <p>Biggest Win</p>
+                            <h3>${totalPnl >= 0 ? '+' : '-'}${Math.abs(totalPnl).toFixed(2)}</h3>
+                            <p>Profit/Loss</p>
                         </div>
                         <div className="pm-prof-stat">
-                            <h3>768</h3>
+                            <h3>{predictionsCount}</h3>
                             <p>Predictions</p>
                         </div>
                     </div>
@@ -120,39 +129,65 @@ export function PredictProfile({ user }: Props) {
 
             {/* List */}
             <div className="pm-prof-list">
-                {positions.length === 0 ? (
-                    <div className="pm-prof-row" style={{justifyContent: 'center', color: '#888'}}>
-                        No positions found.
-                    </div>
-                ) : positions.map((pos: any, i: number) => (
-                    <div key={pos.id ?? i} className="pm-prof-row">
-                        <div className="pm-prof-col-market">
-                            <div className="pm-prof-btc-icon">₿</div>
-                            <div className="pm-prof-market-info">
-                                <h4>{pos.title || 'Bitcoin Up or Down'}</h4>
-                                <div className="pm-prof-market-bet">
-                                    <span className={`pm-prof-bet-pill ${pos.outcome === 'UP' ? 'green' : 'red'}`}>
-                                        {pos.outcome === 'UP' ? 'Up' : 'Down'} {(pos.avg * 100).toFixed(1)}<span className="pm-cent">¢</span>
-                                    </span>
-                                    <span className="pm-prof-bet-shares">{pos.qty.toFixed(1)} shares</span>
+                {tab === 'positions' ? (
+                    positions.length === 0 ? (
+                        <div className="pm-prof-row" style={{justifyContent: 'center', color: '#888'}}>
+                            No positions found.
+                        </div>
+                    ) : positions.map((pos: any, i: number) => (
+                        <div key={pos.id ?? i} className="pm-prof-row">
+                            <div className="pm-prof-col-market">
+                                <div className="pm-prof-btc-icon">₿</div>
+                                <div className="pm-prof-market-info">
+                                    <h4>{pos.title || 'Bitcoin Up or Down'}</h4>
+                                    <div className="pm-prof-market-bet">
+                                        <span className={`pm-prof-bet-pill ${pos.outcome === 'UP' ? 'green' : 'red'}`}>
+                                            {pos.outcome === 'UP' ? 'Up' : 'Down'} {(pos.avg * 100).toFixed(1)}<span className="pm-cent">¢</span>
+                                        </span>
+                                        <span className="pm-prof-bet-shares">{pos.qty.toFixed(1)} shares</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pm-prof-col-right">
+                                <span className="pm-prof-cell-avg">{(pos.avg * 100).toFixed(1)}<span className="pm-cent">¢</span></span>
+                                <span className="pm-prof-cell-current">{(pos.avg * 100).toFixed(0)}<span className="pm-cent">¢</span></span>
+                                <div className="pm-prof-cell-value">
+                                    <div className="pm-prof-val-top">${pos.value.toFixed(2)}</div>
+                                    <div className={`pm-prof-val-pnl ${pos.returnAmt >= 0 ? 'green' : 'red'}`}>
+                                        {pos.returnAmt < 0 ? '-' : '+'}${Math.abs(pos.returnAmt).toFixed(2)} ({pos.returnPct.toFixed(2)}%)
+                                    </div>
+                                </div>
+                                <button className="pm-prof-share-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    trades.length === 0 ? (
+                        <div className="pm-prof-row" style={{justifyContent: 'center', color: '#888'}}>
+                            No trades found.
+                        </div>
+                    ) : trades.map((trade: any, i: number) => (
+                        <div key={trade.id ?? i} className="pm-prof-row">
+                            <div className="pm-prof-col-market">
+                                <div className="pm-prof-btc-icon">₿</div>
+                                <div className="pm-prof-market-info">
+                                    <h4>{trade.side} {trade.outcome}</h4>
+                                    <div className="pm-prof-market-bet">
+                                        <span className="pm-prof-bet-shares">{trade.qty.toFixed(1)} shares</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pm-prof-col-right">
+                                <span className="pm-prof-cell-avg">{(trade.price * 100).toFixed(1)}<span className="pm-cent">¢</span></span>
+                                <div className="pm-prof-cell-value">
+                                    <div className="pm-prof-val-top">${trade.cost.toFixed(2)}</div>
                                 </div>
                             </div>
                         </div>
-                        <div className="pm-prof-col-right">
-                            <span className="pm-prof-cell-avg">{(pos.avg * 100).toFixed(1)}<span className="pm-cent">¢</span></span>
-                            <span className="pm-prof-cell-current">{(pos.avg * 100).toFixed(0)}<span className="pm-cent">¢</span></span>
-                            <div className="pm-prof-cell-value">
-                                <div className="pm-prof-val-top">${pos.value.toFixed(2)}</div>
-                                <div className={`pm-prof-val-pnl ${pos.returnAmt >= 0 ? 'green' : 'red'}`}>
-                                    {pos.returnAmt < 0 ? '-' : '+'}${Math.abs(pos.returnAmt).toFixed(2)} ({pos.returnPct.toFixed(2)}%)
-                                </div>
-                            </div>
-                            <button className="pm-prof-share-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );
