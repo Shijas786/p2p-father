@@ -2318,7 +2318,8 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
             const trades = (tradesRes || []).slice(0, 20).map((t: any) => ({
                 id: t.id ?? t.trade_id,
                 side: t.side,
-                outcome: t.asset_id === market.yesTokenId ? "UP" : "DOWN",
+                outcome: t.asset_id === market.yesTokenId ? "UP" : t.asset_id === market.noTokenId ? "DOWN" : "UNKNOWN",
+                conditionId: t.market,
                 qty: parseFloat(t.size ?? "0"),
                 price: parseFloat(t.price ?? "0"),
                 cost: parseFloat(t.size ?? "0") * parseFloat(t.price ?? "0"),
@@ -2330,6 +2331,56 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
             return res.json({ trades: [] });
         }
     } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/claim", async (req: Request, res: Response) => {
+    try {
+        const telegramUser = (req as any).telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user || user.wallet_index === undefined || user.wallet_index === null) {
+            return res.json({ success: true, claimed: 0 });
+        }
+        
+        const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
+        
+        // Instantiate real ClobClient to get trades
+        const { ClobClient } = await import('@polymarket/clob-client-v2');
+        const ethers = require('ethers');
+        const clobClient = new ClobClient({
+            host: "https://clob.polymarket.com",
+            chain: 137,
+            signer: new ethers.Wallet("0x0000000000000000000000000000000000000000000000000000000000000001") // Dummy wallet for read-only
+        });
+        
+        const tradesRes = await clobClient.getTrades({ maker: proxyAddress } as any);
+        
+        const uniqueConditions = new Set<string>();
+        for (const t of (tradesRes || [])) {
+            // Force bypass TS errors with any
+            const tradeItem = t as any;
+            const tradeMs = parseInt(tradeItem.timestamp || tradeItem.matched_time || "0");
+            if (tradeItem.market && tradeMs > 0 && Date.now() - tradeMs > 300000) {
+                uniqueConditions.add(tradeItem.market);
+            }
+        }
+        
+        let claimedCount = 0;
+        for (const conditionId of uniqueConditions) {
+            try {
+                await polymarketRelayerService.redeemPositions(user.wallet_index, conditionId);
+                claimedCount++;
+            } catch (e: any) {
+                // Expected if already claimed, or lost, or market not resolved yet
+            }
+        }
+        
+        res.json({ success: true, claimed: claimedCount });
+    } catch (err: any) {
+        console.error('[AutoClaim] Error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

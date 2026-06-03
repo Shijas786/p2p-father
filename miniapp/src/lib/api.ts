@@ -278,6 +278,9 @@ export const api = {
             cost: number;
             timestamp: number;
         }> }>('/predictions/trades'),
+        autoClaim: () => request<{ success: boolean; claimed: number }>('/predictions/claim', {
+            method: 'POST'
+        }),
     },
 
     getLeaderboard: (page = 1, timeframe = 'all') =>

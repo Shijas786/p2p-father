@@ -45,6 +45,8 @@ function timeAgo(ts: number): string {
 export function Predict({ user }: Props) {
     const { showToast } = useToast();
     const navigate = useNavigate();
+    const { slug: routeSlug } = useParams<{slug?: string}>();
+    const isHistorical = !!routeSlug;
 
     // Price & timer
     const [livePrice, setLivePrice]   = useState(0);
@@ -178,11 +180,10 @@ export function Predict({ user }: Props) {
         const fetchPoly = async () => {
             try {
                 const now = Date.now();
-                
                 const windowStartSeconds = Math.floor(now / 300000) * 300;
-                const slug = `btc-updown-5m-${windowStartSeconds}`;
+                const slug = routeSlug || `btc-updown-5m-${windowStartSeconds}`;
                 
-                // Invalidate cache if the exact 5m slug has rolled over
+                // Invalidate cache if the slug has changed
                 if (activeBtcMarket && activeBtcMarket.slug !== slug) {
                     activeBtcMarket = null;
                 }
@@ -212,6 +213,9 @@ export function Predict({ user }: Props) {
                                             endDate: new Date(activeM.endDate).getTime(),
                                             slug: slug
                                         };
+                                        if (isHistorical) {
+                                            setLiveEndMs(activeBtcMarket.endDate);
+                                        }
                                     }
                                 } catch (e) {}
                             }
@@ -270,13 +274,27 @@ export function Predict({ user }: Props) {
         if (priceToBeat === 0 && history && history.length > 0) {
             setPriceToBeat(history[history.length - 1].open);
         }
-    }, [history, priceToBeat]);
+
+        // If historical slug, find and select that round
+        if (isHistorical && routeSlug && history.length > 0) {
+            const match = routeSlug.match(/-(\d+)$/);
+            if (match) {
+                const targetMs = parseInt(match[1]) * 1000;
+                const idx = history.findIndex(r => r.timestamp === targetMs);
+                if (idx >= 0) {
+                    setSelectedRound(idx);
+                }
+            }
+        }
+    }, [history, priceToBeat, isHistorical, routeSlug]);
 
     // ── Countdown ───────────────────────────────────────────────────────────
     useEffect(() => {
+        if (isHistorical) return;
         let lastNextTime = 0;
         
         const tick = () => {
+            if (isHistorical) return;
             const now = new Date();
             const next = new Date(Math.ceil(now.getTime() / 300000) * 300000);
             const nextTime = next.getTime();

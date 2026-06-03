@@ -174,11 +174,15 @@ export function PredictProfile({ user }: Props) {
                             No trades found.
                         </div>
                     ) : trades.map((trade: any, i: number) => (
-                        <div key={trade.id ?? i} className="pm-prof-row">
+                        <div key={trade.id ?? i} className="pm-prof-row" style={{ cursor: 'pointer' }} onClick={() => {
+                            haptic('light');
+                            const windowStartSeconds = Math.floor((trade.timestamp || Date.now()) / 300000) * 300;
+                            navigate(`/predict/btc-updown-5m-${windowStartSeconds}`);
+                        }}>
                             <div className="pm-prof-col-market">
                                 <div className="pm-prof-btc-icon">₿</div>
                                 <div className="pm-prof-market-info">
-                                    <h4>{trade.side} {trade.outcome}</h4>
+                                    <h4>{trade.side === 'buy' ? 'Buy' : 'Sell'} {trade.outcome}</h4>
                                     <div className="pm-prof-market-bet">
                                         <span className="pm-prof-bet-shares">{trade.qty.toFixed(1)} shares</span>
                                     </div>
@@ -188,6 +192,9 @@ export function PredictProfile({ user }: Props) {
                                 <span className="pm-prof-cell-avg">{(trade.price * 100).toFixed(1)}<span className="pm-cent">¢</span></span>
                                 <div className="pm-prof-cell-value">
                                     <div className="pm-prof-val-top">${trade.cost.toFixed(2)}</div>
+                                </div>
+                                <div style={{marginLeft: 10, opacity: 0.5}}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                                 </div>
                             </div>
                         </div>

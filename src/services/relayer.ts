@@ -84,6 +84,25 @@ const COLLATERAL_ONRAMP_ABI = [
   }
 ] as const;
 
+/**
+ * Conditional Tokens Framework (CTF) ABI
+ * Used to redeem winning positions for collateral.
+ */
+const CTF_ABI = [
+  {
+    name: "redeemPositions",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "collateralToken", type: "address" },
+      { name: "parentCollectionId", type: "bytes32" },
+      { name: "conditionId", type: "bytes32" },
+      { name: "indexSets", type: "uint256[]" }
+    ],
+    outputs: []
+  }
+] as const;
+
 // ─── Service ─────────────────────────────────────────────────────
 
 class PolymarketRelayerService {
@@ -235,10 +254,54 @@ class PolymarketRelayerService {
             await batchTx.wait();
             console.log(`[Relayer] Successfully approved tokens for CTF Exchange!`);
         } catch (e: any) {
-            console.error(`[Relayer] Failed to approve CTF exchange:`, e.message || e);
-            throw new Error(`Failed to approve CTF exchange: ${e.message}`);
+            console.error("[Relayer] Failed to approve CTF exchange:", e.message);
+            throw e;
         }
     }
+
+    async redeemPositions(userWalletIndex: number, conditionId: string): Promise<string> {
+        if (this.isDemoMode) {
+            console.log(`[Relayer] DEMO MODE: Skipping auto-redeem for ${conditionId}`);
+            return "demo-tx-hash";
+        }
+
+        const client = this.getUserRelayClient(userWalletIndex);
+        if (!client) throw new Error("Could not instantiate RelayClient");
+        
+        try {
+            console.log(`[Relayer] Redeeming positions for condition ${conditionId}...`);
+            const CTF_ADDRESS = "0x4D97DCd97eC945f40cF65F87097CAe4c15228d15";
+            
+            const encodedData = encodeFunctionData({
+                abi: CTF_ABI,
+                functionName: "redeemPositions",
+                args: [
+                    PUSD_ADDRESS, 
+                    "0x0000000000000000000000000000000000000000000000000000000000000000", 
+                    conditionId as `0x${string}`,
+                    [1n, 2n] // Always redeem both indices for binary markets
+                ]
+            });
+
+            const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+            
+            const calls = [{
+                target: CTF_ADDRESS,
+                value: "0",
+                data: encodedData
+            }];
+            
+            const deadline = Math.floor(Date.now() / 1000) + 600;
+            const tx = await client.executeDepositWalletBatch(calls, depositWallet, deadline.toString());
+            await tx.wait();
+            console.log(`[Relayer] Successfully redeemed condition ${conditionId}!`);
+            return tx.hash;
+        } catch (e: any) {
+            console.error(`[Relayer] Failed to redeem positions for ${conditionId}:`, e.message);
+            throw e;
+        }
+    }
+
     /**
      * Get the user's current pUSD balance in their Polymarket deposit wallet.
      */
