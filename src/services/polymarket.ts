@@ -149,19 +149,11 @@ class PolymarketService {
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
+                funderAddress: depositWallet,
+                signatureType: 3,
             });
 
-            let newCreds: any;
-            try {
-                newCreds = await tempClient.createApiKey();
-            } catch (createErr: any) {
-                if (createErr.response && createErr.response.status === 400) {
-                    newCreds = await tempClient.deriveApiKey();
-                } else {
-                    console.log(`[Polymarket] createApiKey failed for EOA:`, createErr.message);
-                    newCreds = await tempClient.deriveApiKey();
-                }
-            }
+            const newCreds = await tempClient.createOrDeriveApiKey();
 
             if (!newCreds?.secret) {
                 throw new Error("CLOB credentials not initialized — API key creation failed");
