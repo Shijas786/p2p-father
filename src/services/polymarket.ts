@@ -96,35 +96,6 @@ class PolymarketService {
         const { polymarketRelayerService } = await import("./relayer");
         const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
 
-        // Programmatic Onboarding: If the proxy wallet is not deployed yet, we MUST register it on-chain
-        // before we can create an API key or place trades. This requires MATIC in the Bot Wallet.
-        const code = await provider.getCode(depositWallet);
-        if (code === "0x") {
-            console.log(`[Polymarket] Proxy undeployed. Attempting programmatic proxy registration for user ${userWalletIndex}`);
-            const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"; // Polygon USDC
-            const CTF_EXCHANGE = "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E";
-            const ERC20_ABI = ["function approve(address spender, uint256 amount) external returns (bool)"];
-            const EXCHANGE_ABI = ["function registerProxy() external returns (address)"];
-            
-            const ethersSigner = new ethers.Wallet(derived.privateKey, provider);
-            
-            try {
-                const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, ethersSigner);
-                console.log("[Polymarket] Approving USDC for CTF Exchange...");
-                const approveTx = await usdc.approve(CTF_EXCHANGE, ethers.MaxUint256);
-                await approveTx.wait();
-                
-                const exchange = new ethers.Contract(CTF_EXCHANGE, EXCHANGE_ABI, ethersSigner);
-                console.log("[Polymarket] Registering proxy wallet on-chain...");
-                const registerTx = await exchange.registerProxy();
-                await registerTx.wait();
-                console.log("[Polymarket] Proxy wallet registered successfully!");
-            } catch (err: any) {
-                console.error("[Polymarket] Failed to register proxy. User likely needs MATIC for gas.", err.message);
-                throw new Error("Cannot initialize Polymarket wallet: Not enough MATIC for gas. Please send a few cents of MATIC to your Bot Wallet and try again.");
-            }
-        }
-
         const signer = createWalletClient({
             account,
             transport: http(rpcUrl),
