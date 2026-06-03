@@ -2374,7 +2374,12 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 // If it's UNKNOWN, we need to fetch the market details from CLOB API to figure out which token is YES/NO
                 if (outcome === "UNKNOWN" && t.market) {
                     try {
-                        const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`);
+                        const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`, {
+                            headers: {
+                                "User-Agent": "Mozilla/5.0",
+                                "Accept": "application/json"
+                            }
+                        });
                         const mData = await mRes.json();
                         if (mData && mData.tokens && mData.tokens.length >= 2) {
                             if (t.asset_id === mData.tokens[0].token_id) outcome = "UP";
