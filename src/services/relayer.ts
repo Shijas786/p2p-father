@@ -1,4 +1,3 @@
-import { getClient } from "@relayprotocol/relay-sdk";
 import { RelayClient } from "@polymarket/builder-relayer-client";
 import { createWalletClient, http, encodeFunctionData } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -391,16 +390,22 @@ class PolymarketRelayerService {
 
         console.log(`[Relayer] Getting Relay quote to bridge ${amountStr} pUSD -> Chain ${destChainId}`);
         
-        const quote = await getClient().actions.getQuote({
-            chainId: 137,
-            toChainId: destChainId,
-            currency: PUSD_ADDRESS,
-            toCurrency: destCurrencyAddress,
-            recipient: recipientAddress,
-            user: depositWallet,
-            amount: amountStr,
-            tradeType: "EXACT_INPUT"
-        });
+        const quote = await fetch("https://api.relay.link/quote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user: depositWallet,
+                originChainId: 137,
+                destinationChainId: destChainId,
+                originCurrency: PUSD_ADDRESS,
+                destinationCurrency: destCurrencyAddress,
+                recipient: recipientAddress,
+                tradeType: "EXACT_INPUT",
+                amount: amountStr,
+                referrer: "p2pfather",
+                useExternalLiquidity: false
+            })
+        }).then(r => r.json());
 
         if (!quote || !quote.steps || quote.steps.length === 0) {
             throw new Error("Relay SDK did not return valid execution steps for this route.");
