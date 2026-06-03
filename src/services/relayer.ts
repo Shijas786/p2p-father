@@ -188,7 +188,7 @@ class PolymarketRelayerService {
         }
     }
     /**
-     * Approves the CTF Exchange to spend the proxy wallet's USDC.e
+     * Approves the CTF Exchange to spend the proxy wallet's collateral tokens
      */
     async approveExchange(userWalletIndex: number): Promise<void> {
         try {
@@ -200,27 +200,40 @@ class PolymarketRelayerService {
             
             // The CTF Exchange V2 spender from the error log
             const CTF_EXCHANGE_V2 = "0xE111180000d2663C0091e4f400237545B87B996B";
-            const usdc = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, provider);
             
-            const allowance = await usdc.allowance(depositWallet, CTF_EXCHANGE_V2);
-            if (allowance >= ethers.parseUnits("100", 6)) {
-                // Already approved
-                return;
+            const NATIVE_USDC = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
+            
+            const tokensToApprove = [
+                USDCE_ADDRESS,
+                NATIVE_USDC,
+                PUSD_ADDRESS
+            ];
+
+            const calls: any[] = [];
+            
+            for (const tokenAddr of tokensToApprove) {
+                const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI as any, provider);
+                const allowance = await tokenContract.allowance(depositWallet, CTF_EXCHANGE_V2);
+                
+                if (allowance < ethers.parseUnits("100", 6)) {
+                    const tx = await tokenContract.approve.populateTransaction(CTF_EXCHANGE_V2, ethers.MaxUint256);
+                    calls.push({
+                        target: tokenAddr,
+                        value: "0",
+                        data: tx.data
+                    });
+                }
             }
 
-            console.log(`[Relayer] Approving CTF Exchange for user ${userWalletIndex} via relayer batch...`);
-            const tx = await usdc.approve.populateTransaction(CTF_EXCHANGE_V2, ethers.MaxUint256);
+            if (calls.length === 0) {
+                return; // Everything already approved
+            }
 
-            const calls = [{
-                target: USDCE_ADDRESS,
-                value: "0",
-                data: tx.data
-            }];
-
+            console.log(`[Relayer] Approving ${calls.length} tokens for CTF Exchange via relayer batch...`);
             const deadline = Math.floor(Date.now() / 1000) + 600;
             const batchTx = await client.executeDepositWalletBatch(calls, depositWallet, deadline.toString());
             await batchTx.wait();
-            console.log(`[Relayer] Successfully approved CTF Exchange for user ${userWalletIndex}!`);
+            console.log(`[Relayer] Successfully approved tokens for CTF Exchange!`);
         } catch (e: any) {
             console.error(`[Relayer] Failed to approve CTF exchange:`, e.message || e);
             throw new Error(`Failed to approve CTF exchange: ${e.message}`);
