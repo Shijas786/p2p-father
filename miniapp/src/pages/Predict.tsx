@@ -328,8 +328,8 @@ export function Predict({ user }: Props) {
             if (lastNextTime !== 0 && nextTime > lastNextTime) {
                 setTimeout(async () => {
                     await loadData(); // Wait 1s for backend to settle the round before fetching
-                    // Move the user to view the round that just ended, or shift their current view
-                    setSelectedRound(prev => prev === -1 ? 0 : (prev >= 0 ? prev + 1 : prev));
+                    // Shift their historical view if they are viewing a past round, otherwise stay on live
+                    setSelectedRound(prev => prev >= 1 ? prev + 1 : prev);
                 }, 1000); 
             }
             lastNextTime = nextTime;
@@ -340,12 +340,12 @@ export function Predict({ user }: Props) {
             });
             
             const start = new Date(next.getTime() - 300000);
-            const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).replace(' ', '');
+            const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(' ', '');
             
             const startTimeStr = formatTime(start);
             const endTimeStr = formatTime(next);
             
-            setRoundLabel(`${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })}, ${startTimeStr}-${endTimeStr} ET`);
+            setRoundLabel(`${now.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${startTimeStr}-${endTimeStr}`);
             setLiveEndMs(next.getTime());
         };
         tick();
@@ -505,7 +505,7 @@ export function Predict({ user }: Props) {
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: 6, opacity: 0.6}}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                                         </div>
                                                     </div>
-                                                    <div className="pm-notif-market">Bitcoin Up or Down - {new Date(t.timestamp).toLocaleString('en-US', {month: 'short', day: 'numeric'})}, {new Date(t.timestamp).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})}-{new Date(t.timestamp + 5*60000).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})} ET</div>
+                                                    <div className="pm-notif-market">Bitcoin Up or Down - {new Date(t.timestamp).toLocaleString([], {month: 'short', day: 'numeric'})}, {new Date(t.timestamp).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}-{new Date(t.timestamp + 5*60000).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}</div>
                                                     <div className="pm-notif-detail">{String(t.side).toUpperCase() === 'BUY' ? `${t.qty} shares @ ${(t.price * 100).toFixed(1)}¢` : `Sold ${t.qty} shares for $${(t.cost).toFixed(2)}`}</div>
                                                 </div>
                                             </div>
@@ -642,7 +642,7 @@ export function Predict({ user }: Props) {
                                 {[-5, -4, -3].map((offset) => {
                                     if (!liveEndMs) return null;
                                     const targetMs = liveEndMs + (offset * 300000);
-                                    const historyIndex = Math.abs(offset) - 1;
+                                    const historyIndex = Math.abs(offset);
                                     const h = history.find(r => r.timestamp === targetMs - 300000);
                                     const outcome = h ? h.outcome : 'UP';
                                     return (
@@ -662,12 +662,12 @@ export function Predict({ user }: Props) {
                         {[-2, -1].map((offset) => {
                             if (!liveEndMs) return null;
                             const targetMs = liveEndMs + (offset * 300000);
-                            const historyIndex = Math.abs(offset) - 1;
+                            const historyIndex = Math.abs(offset);
                             return (
                                 <button key={`past-${offset}`} id={`round-${historyIndex}`}
                                     className={`pm-tl-pill ${selectedRound === historyIndex ? 'pm-tl-pill-active' : ''}`}
                                     onClick={() => { haptic('selection'); setSelectedRound(historyIndex); }}>
-                                    {new Date(targetMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })}
+                                    {new Date(targetMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                                 </button>
                             );
                         })}
@@ -675,7 +675,7 @@ export function Predict({ user }: Props) {
                         <button className={`pm-tl-pill ${selectedRound === -1 ? 'pm-tl-pill-active' : ''}`}
                             onClick={() => { haptic('selection'); setSelectedRound(-1); }} id="round-live">
                             <span className="pm-tl-live-dot" style={{marginRight: 6}}/> 
-                            {liveEndMs ? new Date(liveEndMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'Live'}
+                            {liveEndMs ? new Date(liveEndMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Live'}
                         </button>
                         
                         {[1].map((offset) => (
@@ -683,7 +683,7 @@ export function Predict({ user }: Props) {
                                 className={`pm-tl-pill ${selectedRound === -99 ? 'pm-tl-pill-active' : ''}`}
                                 style={{ opacity: selectedRound === -99 ? 1 : 0.6 }}
                                 onClick={() => { haptic('selection'); setSelectedRound(-99); }}>
-                                {liveEndMs ? new Date(liveEndMs + (offset * 300000)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '...'}
+                                {liveEndMs ? new Date(liveEndMs + (offset * 300000)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '...'}
                             </button>
                         ))}
 

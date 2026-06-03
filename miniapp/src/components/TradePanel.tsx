@@ -62,10 +62,10 @@ export function TradePanel({
 
         const roundStart = new Date(round.timestamp);
         const roundEnd = new Date(round.timestamp + 300000);
-        const dateStr = roundStart.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
-        const timeStartStr = roundStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-        const timeEndStr = roundEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-        const marketTitle = `Bitcoin Up or Down - ${dateStr}, ${timeStartStr}-${timeEndStr} ET`;
+        const dateStr = roundStart.toLocaleString([], { month: 'short', day: 'numeric' });
+        const timeStartStr = roundStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const timeEndStr = roundEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const marketTitle = `Bitcoin Up or Down - ${dateStr}, ${timeStartStr}-${timeEndStr}`;
 
         // Wait 1 min after close to show realistic "determining" phase
         const isDetermining = Date.now() - roundEnd.getTime() < 60000;
