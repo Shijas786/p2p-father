@@ -146,7 +146,7 @@ class PolymarketService {
 
         try {
             const ts = Math.floor(Date.now() / 1000).toString();
-            const nonce = "0";
+            const nonce = 0;
             const domain = { name: "ClobAuthDomain", version: "1", chainId: 137 };
             const types = {
                 ClobAuth: [
@@ -176,7 +176,7 @@ class PolymarketService {
                 "POLY_ADDRESS": depositWallet,
                 "POLY_SIGNATURE": sig,
                 "POLY_TIMESTAMP": ts,
-                "POLY_NONCE": nonce,
+                "POLY_NONCE": nonce.toString(),
                 "Content-Type": "application/json"
             };
 
