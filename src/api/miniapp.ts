@@ -2120,13 +2120,15 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         const tokenId = outcome === 'UP' || outcome === 'YES' ? market.yesTokenId : market.noTokenId;
         const limitPrice = price ? parseFloat(price) : 0.50;
         const betSide = side || "BUY";
+        const orderType = req.body.orderType === "LIMIT" ? "LIMIT" : "MARKET";
 
         const result = await polymarketService.placeBet(
             user.wallet_index,
             tokenId,
             parseFloat(amount),
             limitPrice,
-            betSide
+            betSide,
+            orderType
         );
 
         res.json({ success: true, result });

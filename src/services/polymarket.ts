@@ -319,7 +319,8 @@ class PolymarketService {
         tokenId: string,
         amountUsdc: number,
         limitPrice: number,
-        side: "BUY" | "SELL" = "BUY"
+        side: "BUY" | "SELL" = "BUY",
+        orderType: "MARKET" | "LIMIT" = "MARKET"
     ): Promise<any> {
         if (this.isDemoMode || tokenId.startsWith("0x_demo_")) {
             console.log(`[Polymarket] [Demo Mode] Placed ${side} order of ${amountUsdc} USDC on token ${tokenId} at limit price ${limitPrice}`);
@@ -332,31 +333,50 @@ class PolymarketService {
         try {
             const client = await this.getBuilderClobClient(userWalletIndex);
 
-            // Size = Total spend / Limit price
-            let size = amountUsdc / limitPrice;
-            
-            // Polymarket minimum order constraints
-            // Auto-bump to 5 shares if below minimum to prevent API rejection
-            const MIN_SHARES = 5;
-            if (size < MIN_SHARES) {
-                console.log(`[Polymarket] Auto-bumping order size from ${size} to ${MIN_SHARES} shares to meet CLOB minimums.`);
-                size = MIN_SHARES;
+            if (orderType === "MARKET") {
+                if (amountUsdc < 1) {
+                    throw new Error("Polymarket requires a minimum of $1 for market orders.");
+                }
+
+                const orderArgs = {
+                    tokenID: tokenId,
+                    amount: amountUsdc,
+                    side: side === "SELL" ? Side.SELL : Side.BUY,
+                };
+
+                console.log(`[Polymarket] Submitting FOK MARKET ${side} order to CLOB. Amount: ${amountUsdc}`);
+                const response = await client.createAndPostMarketOrder(
+                    orderArgs,
+                    { tickSize: "0.01" },
+                    OrderType.FOK
+                );
+                return response;
+            } else {
+                // LIMIT order
+                let size = amountUsdc / limitPrice;
+                
+                // Polymarket minimum order constraints for LIMIT orders
+                const MIN_SHARES = 5;
+                if (size < MIN_SHARES) {
+                    console.log(`[Polymarket] Auto-bumping limit order size from ${size} to ${MIN_SHARES} shares to meet CLOB minimums.`);
+                    size = MIN_SHARES;
+                }
+
+                const orderArgs = {
+                    tokenID: tokenId,
+                    price: limitPrice,
+                    side: side === "SELL" ? Side.SELL : Side.BUY,
+                    size,
+                };
+
+                console.log(`[Polymarket] Submitting GTC LIMIT ${side} order to CLOB. Size: ${size} shares at $${limitPrice}`);
+                const response = await client.createAndPostOrder(
+                    orderArgs,
+                    { tickSize: "0.01" },
+                    OrderType.GTC
+                );
+                return response;
             }
-
-            const orderArgs = {
-                tokenID: tokenId,
-                price: limitPrice,
-                side: side === "SELL" ? Side.SELL : Side.BUY,
-                size,
-            };
-
-            console.log(`[Polymarket] Submitting GTC ${side} order to CLOB. Size: ${size} shares at $${limitPrice}`);
-            const response = await client.createAndPostOrder(
-                orderArgs,
-                { tickSize: "0.01" },
-                OrderType.GTC
-            );
-            return response;
         } catch (err: any) {
             console.error("[Polymarket] Order execution failed:", err.message);
             throw err;
