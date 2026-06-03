@@ -179,8 +179,7 @@ class PolymarketService {
                 primaryType: 'ClobAuth',
                 message: value
             });
-            // Polymarket requires '03' suffix for POLY_1271 signatures
-            sig = sig + "03";
+            // We DO NOT append '03' here! API Key derivation expects a standard 65-byte EOA signature for EIP-1271 validation.
 
             const headers = {
                 "POLY_ADDRESS": depositWallet, // MUST be the deposit wallet for EIP-1271 to trigger!
