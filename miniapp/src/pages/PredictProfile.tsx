@@ -43,7 +43,7 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-user-header">
                         <div className="pm-prof-avatar-gradient"></div>
                         <div className="pm-prof-user-info">
-                            <h2>{user?.username || 'Trader'}</h2>
+                            <h2>{user?.first_name || user?.username || 'Trader'}</h2>
                             <p>Joined {new Date(user?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
                         </div>
                     </div>
@@ -54,7 +54,7 @@ export function PredictProfile({ user }: Props) {
                             <p>Positions</p>
                         </div>
                         <div className="pm-prof-stat">
-                            <h3>${totalPnl >= 0 ? '+' : '-'}${Math.abs(totalPnl).toFixed(2)}</h3>
+                            <h3 className={totalPnl >= 0 ? 'green' : 'red'}>{totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}</h3>
                             <p>Profit/Loss</p>
                         </div>
                         <div className="pm-prof-stat">
@@ -68,8 +68,13 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-chart-header">
                         <div className="pm-prof-chart-left">
                             <span className="pm-prof-pnl-label"><span className="pm-prof-pnl-dot"/> Profit/Loss</span>
-                            <div className="pm-prof-pnl-amount">
-                                $8.86 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <div className={`pm-prof-pnl-amount ${totalPnl >= 0 ? 'green' : 'red'}`}>
+                                {totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}
+                                {totalPnl >= 0 ? (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                ) : (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
+                                )}
                             </div>
                             <span className="pm-prof-pnl-time">Past Day</span>
                         </div>
