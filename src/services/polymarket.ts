@@ -475,8 +475,12 @@ class PolymarketService {
         try {
             const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`);
             const trades = Array.isArray(res.data) ? res.data : [];
-            // Map asset to asset_id for legacy compatibility in miniapp
-            return trades.map(t => ({ ...t, asset_id: t.asset }));
+            // Map properties for legacy compatibility in miniapp
+            return trades.map(t => ({ 
+                ...t, 
+                asset_id: t.asset,
+                market: t.conditionId 
+            }));
         } catch (e: any) {
             console.log("[Polymarket Data API] Failed to fetch proxy trades:", e.response?.data || e.message);
             return [];

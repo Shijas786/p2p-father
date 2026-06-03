@@ -2240,6 +2240,16 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
             }
             const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
+            
+            // Auto-claim background check using Data API positions
+            polymarketService.getPositionsForProxy(proxyAddress).then(positions => {
+                for (const p of positions) {
+                    if (p.redeemable && p.size > 0 && p.conditionId) {
+                        console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
+                        polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId).catch(() => {});
+                    }
+                }
+            }).catch(e => console.error("[AutoClaim] Background check failed:", e.message));
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
@@ -2414,9 +2424,13 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
         if (req.body.conditionId) {
             uniqueConditions.add(req.body.conditionId);
         } else {
-            // Removing the fallback trade fetch per user request because it causes 401 API Key derivation errors.
-            // Redemption is now handled automatically via WebSocket in the background anyway.
-            return res.json({ success: true, claimed: 0, message: "Auto-claim is active in the background." });
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+            const positions = await polymarketService.getPositionsForProxy(proxyAddress);
+            for (const p of positions) {
+                if (p.redeemable && p.size > 0 && p.conditionId) {
+                    uniqueConditions.add(p.conditionId);
+                }
+            }
         }
         
         let claimedCount = 0;
