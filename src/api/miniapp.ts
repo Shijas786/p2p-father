@@ -2241,18 +2241,13 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Get current market to know token IDs
             const market = await polymarketService.getActiveBtcMarket();
-            const safeGetPrice = async (tokenId: string, side: boolean) => {
-                try {
-                    return await polymarketService.getOutcomePrice(tokenId, side);
-                } catch (e: any) {
-                    return { buyPrice: 0, sellPrice: 0 };
-                }
-            };
-
-            const [yesPrice, noPrice] = await Promise.all([
-                safeGetPrice(market.yesTokenId, false),
-                safeGetPrice(market.noTokenId, true),
+            const priceResults = await Promise.allSettled([
+                polymarketService.getOutcomePrice(market.yesTokenId, false),
+                polymarketService.getOutcomePrice(market.noTokenId, true),
             ]);
+
+            const yesPrice = priceResults[0].status === 'fulfilled' ? priceResults[0].value : null;
+            const noPrice = priceResults[1].status === 'fulfilled' ? priceResults[1].value : null;
 
             // Aggregate open positions from recent trades
             const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number }> = {};
@@ -2273,7 +2268,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         qty: 0,
                         totalCost: 0,
                         avgPrice: 0,
-                        currentPrice: isUp ? yesPrice.buyPrice : noPrice.buyPrice,
+                        currentPrice: isUp ? yesPrice?.buyPrice ?? null : noPrice?.buyPrice ?? null,
                     };
                 }
 
@@ -2291,7 +2286,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 .filter(p => p.qty > 0.001)
                 .map(p => {
                     p.avgPrice = p.qty > 0 ? p.totalCost / p.qty : 0;
-                    const value = p.qty * p.currentPrice;
+                    const effectivePrice = p.currentPrice ?? p.avgPrice;
+                    const value = p.qty * effectivePrice;
                     const cost = p.qty * p.avgPrice;
                     const returnAmt = value - cost;
                     const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
@@ -2299,7 +2295,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         outcome: p.outcome,
                         qty: parseFloat(p.qty.toFixed(2)),
                         avg: parseFloat(p.avgPrice.toFixed(2)),
-                        currentPrice: parseFloat(p.currentPrice.toFixed(2)),
+                        currentPrice: parseFloat(effectivePrice.toFixed(2)),
                         value: parseFloat(value.toFixed(2)),
                         cost: parseFloat(cost.toFixed(2)),
                         returnAmt: parseFloat(returnAmt.toFixed(2)),
