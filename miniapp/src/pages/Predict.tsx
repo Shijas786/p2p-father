@@ -192,37 +192,21 @@ export function Predict({ user }: Props) {
                 }
 
                 if (!activeBtcMarket) {
-                    const r = await window.fetch(`https://gamma-api.polymarket.com/events?slug=${slug}`);
-                    const events = await r.json();
-                    
-                    if (events && events.length > 0) {
-                        const ev = events[0];
-                        if (ev.markets && ev.markets.length > 0) {
-                            const activeM = ev.markets[0];
-                            if (activeM.clobTokenIds) {
-                                try {
-                                    const tokenIds = JSON.parse(activeM.clobTokenIds);
-                                    if (tokenIds && tokenIds.length >= 2) {
-                                        const titleStr = (ev.title || "") + " " + (activeM.question || "") + " " + (activeM.description || "");
-                                        const strikeMatch = titleStr.match(/Bitcoin\s*>\s*\$?([\d,]+(\.\d+)?)/i) || titleStr.match(/\$?([\d,]+(\.\d{2}))/);
-                                        if (strikeMatch) {
-                                            const exactStrike = parseFloat(strikeMatch[1].replace(/,/g, ''));
-                                            setPriceToBeat(exactStrike);
-                                        }
-
-                                        activeBtcMarket = {
-                                            yesTokenId: tokenIds[0],
-                                            noTokenId: tokenIds[1],
-                                            endDate: new Date(activeM.endDate).getTime(),
-                                            slug: slug
-                                        };
-                                        if (isHistorical) {
-                                            setLiveEndMs(activeBtcMarket.endDate);
-                                        }
-                                    }
-                                } catch (e) {}
+                    try {
+                        const r = await api.predictions.getMarket();
+                        if (r && r.market) {
+                            activeBtcMarket = {
+                                yesTokenId: r.market.yesTokenId,
+                                noTokenId: r.market.noTokenId,
+                                endDate: new Date(r.market.endsAt).getTime(),
+                                slug: r.market.slug || slug
+                            };
+                            if (isHistorical) {
+                                setLiveEndMs(activeBtcMarket.endDate);
                             }
                         }
+                    } catch (e) {
+                        console.warn("Failed to fetch market from backend API", e);
                     }
                 }
 
@@ -335,6 +319,7 @@ export function Predict({ user }: Props) {
                 }, 1000); 
             }
             lastNextTime = nextTime;
+            setLiveEndMs(nextTime);
 
             setTimeLeft({
                 mins: Math.floor(diff / 60000).toString().padStart(2, '0'),
@@ -612,7 +597,7 @@ export function Predict({ user }: Props) {
                                 </div>
                             </div>
                         ) : (
-                            <button className="pm-go-live-btn" onClick={() => { haptic('selection'); setSelectedRound(-1); }}>
+                            <button className="pm-go-live-btn" onClick={() => { haptic('selection'); navigate('/predict'); setSelectedRound(-1); }}>
                                 <span className="pm-live-dot"/> Go to live market &gt;
                             </button>
                         )}
@@ -675,7 +660,7 @@ export function Predict({ user }: Props) {
                         })}
                         
                         <button className={`pm-tl-pill ${selectedRound === -1 ? 'pm-tl-pill-active' : ''}`}
-                            onClick={() => { haptic('selection'); setSelectedRound(-1); }} id="round-live">
+                            onClick={() => { haptic('selection'); navigate('/predict'); setSelectedRound(-1); }} id="round-live">
                             <span className="pm-tl-live-dot" style={{marginRight: 6}}/> 
                             {liveEndMs ? new Date(liveEndMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Live'}
                         </button>
