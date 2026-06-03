@@ -80,6 +80,9 @@ class PolymarketService {
             transport: http(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com"),
         });
 
+        const { polymarketRelayerService } = await import("./relayer");
+        const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
+
         const apiKey = (env as any).POLYMARKET_BUILDER_API_KEY;
         const apiSecret = (env as any).POLYMARKET_BUILDER_SECRET;
         const passphrase = (env as any).POLYMARKET_BUILDER_PASSPHRASE;
@@ -89,6 +92,7 @@ class PolymarketService {
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
+                funderAddress: depositWallet,
                 creds: { key: apiKey, secret: apiSecret, passphrase: passphrase }
             });
         }
@@ -132,6 +136,7 @@ class PolymarketService {
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
+                funderAddress: depositWallet,
                 creds: clobCredsCache[userWalletIndex],
             });
         }
@@ -140,6 +145,7 @@ class PolymarketService {
             host: CLOB_API,
             chain: Chain.POLYGON,
             signer,
+            funderAddress: depositWallet,
         });
 
         try {
@@ -150,6 +156,7 @@ class PolymarketService {
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
+                funderAddress: depositWallet,
                 creds,
             });
         } catch (e: any) {
