@@ -5,6 +5,7 @@ import { db } from "./db/client"; // Import DB for stats
 import express from "express";
 import path from "path";
 import dns from "node:dns";
+import axios from "axios";
 
 // Force Node.js to use Cloudflare DNS to bypass ISP blocking of Polymarket API
 dns.setServers(['1.1.1.1', '1.0.0.1']);
@@ -26,6 +27,24 @@ async function main() {
     console.log(`  Supabase:    ${env.SUPABASE_URL ? "✅ Configured" : "❌ Not set"}`);
     console.log(`  Escrow:      ${env.ESCROW_CONTRACT_ADDRESS ? "✅ " + env.ESCROW_CONTRACT_ADDRESS : "❌ Not deployed"}`);
     console.log("");
+
+    console.log("=== POLYMARKET RELAYER NETWORK TEST ===");
+    console.log(`Target URL: ${process.env.RELAYER_URL || "https://relayer.polymarket.com"}/submit`);
+    try {
+        const res = await axios.post(`${process.env.RELAYER_URL || "https://relayer.polymarket.com"}/submit`, { test: true }, { timeout: 10000 });
+        console.log("✅ Polymarket Relayer Connection SUCCESS!");
+        console.log("Status:", res.status);
+    } catch (e: any) {
+        console.error("❌ Polymarket Relayer Connection FAILED!");
+        if (e.response) {
+            console.error("Status:", e.response.status);
+            console.error("Data:", JSON.stringify(e.response.data));
+        } else {
+            console.error("Network Error (Timeout, DNS, or IP Blocked):", e.message);
+        }
+    }
+    console.log("=======================================");
+
 
     // Start the bot
     console.log("  Starting Telegram bot (long polling)...");
