@@ -145,61 +145,21 @@ class PolymarketService {
         }
 
         try {
-            const timeRes = await axios.get(`${CLOB_API}/time`);
-            let ts: string;
-            if (typeof timeRes.data === 'number' || typeof timeRes.data === 'string') {
-                ts = timeRes.data.toString();
-            } else {
-                ts = (timeRes.data?.time ?? timeRes.data?.timestamp ?? Math.floor(Date.now() / 1000)).toString();
-            }
-            const nonce = 0;
-            const domain = { 
-                name: "ClobAuthDomain", 
-                version: "1", 
-                chainId: 137
-            };
-            const types = {
-                ClobAuth: [
-                    { name: "address", type: "address" },
-                    { name: "timestamp", type: "string" },
-                    { name: "nonce", type: "uint256" },
-                    { name: "message", type: "string" }
-                ]
-            };
-            const value = {
-                address: depositWallet,
-                timestamp: ts,
-                nonce,
-                message: "This message attests that I control the given wallet"
-            };
-            
-            let sig = await signer.signTypedData({
-                domain,
-                types,
-                primaryType: 'ClobAuth',
-                message: value
+            const tempClient = new ClobClient({
+                host: CLOB_API,
+                chain: Chain.POLYGON,
+                signer,
             });
-            // We DO NOT append '03' here! API Key derivation expects a standard 65-byte EOA signature for EIP-1271 validation.
-
-            const headers = {
-                "POLY_ADDRESS": depositWallet, // MUST be the deposit wallet for EIP-1271 to trigger!
-                "POLY_SIGNATURE": sig,
-                "POLY_TIMESTAMP": ts,
-                "POLY_NONCE": "0",
-                "Content-Type": "application/json"
-            };
 
             let newCreds: any;
             try {
-                const res = await axios.post(`${CLOB_API}/auth/api-key`, {}, { headers });
-                newCreds = { key: res.data.apiKey, secret: res.data.secret, passphrase: res.data.passphrase };
+                newCreds = await tempClient.createApiKey();
             } catch (createErr: any) {
                 if (createErr.response && createErr.response.status === 400) {
-                    // Fallback to derive if key already exists
-                    const res = await axios.get(`${CLOB_API}/auth/derive-api-key`, { headers });
-                    newCreds = { key: res.data.apiKey, secret: res.data.secret, passphrase: res.data.passphrase };
+                    newCreds = await tempClient.deriveApiKey();
                 } else {
-                    throw createErr;
+                    console.log(`[Polymarket] createApiKey failed for EOA:`, createErr.message);
+                    newCreds = await tempClient.deriveApiKey();
                 }
             }
 
@@ -226,9 +186,9 @@ class PolymarketService {
                 signatureType: 3, // POLY_1271
                 creds: newCreds,
             });
-        } catch (e: any) {
-            console.warn("[Polymarket] Failed to derive API Key:", e.message);
-            return null;
+        } catch (err: any) {
+            console.error("[Polymarket] Failed to derive API Key:", err.message);
+            throw err;
         }
     }
 
