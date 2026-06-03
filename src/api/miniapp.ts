@@ -2225,9 +2225,9 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 return res.json({ positions: [] });
             }
 
-            const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
+            const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
             const tradesRes = await client.getTrades({
-                maker: derived.address,
+                maker: proxyAddress,
             } as any);
 
             // Get current market to know token IDs
@@ -2312,8 +2312,8 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 return res.json({ trades: [] });
             }
 
-            const derived = (await import("../services/wallet")).wallet.deriveWallet(user.wallet_index);
-            const tradesRes = await client.getTrades({ maker: derived.address } as any);
+            const proxyAddress = await predictWalletService.getDepositAddress(user.wallet_index);
+            const tradesRes = await client.getTrades({ maker: proxyAddress } as any);
             const market = await polymarketService.getActiveBtcMarket();
             const trades = (tradesRes || []).slice(0, 20).map((t: any) => ({
                 id: t.id ?? t.trade_id,
