@@ -277,11 +277,16 @@ class PolymarketService {
             });
 
             const book = res.data;
+            
+            if (!book?.bids?.length && !book?.asks?.length) {
+                throw new Error("This market has no liquidity. Try a different market.");
+            }
+
             const bestBid = book?.bids?.[0]?.price ? parseFloat(book.bids[0].price) : null;
             const bestAsk = book?.asks?.[0]?.price ? parseFloat(book.asks[0].price) : null;
 
             if (bestBid === null || bestAsk === null) {
-                throw new Error("Empty order book");
+                throw new Error("This market has no liquidity on one or more sides. Try a different market.");
             }
 
             const result = {
@@ -331,10 +336,11 @@ class PolymarketService {
             let size = amountUsdc / limitPrice;
             
             // Polymarket minimum order constraints
+            // Auto-bump to 5 shares if below minimum to prevent API rejection
             const MIN_SHARES = 5;
             if (size < MIN_SHARES) {
-                const requiredUsdc = (MIN_SHARES * limitPrice).toFixed(2);
-                throw new Error(`Polymarket requires a minimum order size of ${MIN_SHARES} shares. At a price of $${limitPrice.toFixed(2)}, you must bet at least $${requiredUsdc}.`);
+                console.log(`[Polymarket] Auto-bumping order size from ${size} to ${MIN_SHARES} shares to meet CLOB minimums.`);
+                size = MIN_SHARES;
             }
 
             const orderArgs = {
