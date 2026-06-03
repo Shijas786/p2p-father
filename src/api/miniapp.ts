@@ -2335,12 +2335,15 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 // If it's UNKNOWN, we need to fetch the market details from Gamma API to figure out which token is YES/NO
                 if (outcome === "UNKNOWN" && t.market) {
                     try {
-                        const mRes = await fetch(`https://gamma-api.polymarket.com/markets/${t.market}`);
-                        const mData = await mRes.json();
-                        if (mData && mData.clobTokenIds) {
-                            const tokens = JSON.parse(mData.clobTokenIds);
-                            if (t.asset_id === tokens[0]) outcome = "UP";
-                            else if (t.asset_id === tokens[1]) outcome = "DOWN";
+                        const mRes = await fetch(`https://gamma-api.polymarket.com/events?condition_id=${t.market}`);
+                        const events = await mRes.json();
+                        if (events && events.length > 0 && events[0].markets && events[0].markets.length > 0) {
+                            const activeM = events[0].markets.find((m: any) => m.conditionId === t.market) || events[0].markets[0];
+                            if (activeM.clobTokenIds) {
+                                const tokens = JSON.parse(activeM.clobTokenIds);
+                                if (t.asset_id === tokens[0]) outcome = "UP";
+                                else if (t.asset_id === tokens[1]) outcome = "DOWN";
+                            }
                         }
                     } catch (e) {
                         // ignore fetch error
@@ -2348,6 +2351,18 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 }
                 
                 const ti = t as any;
+                let ts = Date.now();
+                if (ti.create_time) ts = new Date(ti.create_time).getTime();
+                else if (ti.timestamp || ti.matched_time) {
+                    const raw = (ti.timestamp || ti.matched_time).toString();
+                    if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
+                    else {
+                        const p = parseInt(raw);
+                        if (p > 0 && p < 2000000000) ts = p * 1000;
+                        else if (p > 0) ts = p;
+                    }
+                }
+
                 mappedTrades.push({
                     id: ti.id ?? ti.trade_id,
                     side: ti.side,
@@ -2356,7 +2371,7 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                     qty: parseFloat(ti.size ?? "0"),
                     price: parseFloat(ti.price ?? "0"),
                     cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
-                    timestamp: parseInt(ti.timestamp || ti.matched_time || "0") || Date.now(),
+                    timestamp: ts,
                 });
             }
             

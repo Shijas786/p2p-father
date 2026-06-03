@@ -286,6 +286,27 @@ export function Predict({ user }: Props) {
                 const idx = history.findIndex(r => r.timestamp === targetMs);
                 if (idx >= 0) {
                     setSelectedRound(idx);
+                } else if (targetMs > 0) {
+                    // Fetch historical round from Binance
+                    fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${targetMs}&limit=1`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                const k = data[0];
+                                const open = parseFloat(k[1]);
+                                const close = parseFloat(k[4]);
+                                setHistory(prev => {
+                                    if (prev.some(r => r.timestamp === targetMs)) return prev;
+                                    return [...prev, {
+                                        timestamp: targetMs,
+                                        time: new Date(targetMs).toLocaleTimeString(),
+                                        open, close, high: parseFloat(k[2]), low: parseFloat(k[3]),
+                                        outcome: close >= open ? 'UP' : 'DOWN'
+                                    } as Round].sort((a, b) => a.timestamp - b.timestamp);
+                                });
+                            }
+                        })
+                        .catch(console.error);
                 }
             }
         }
@@ -478,14 +499,14 @@ export function Predict({ user }: Props) {
                                                 <div className="pm-btc-icon-sq pm-notif-btc">₿</div>
                                                 <div className="pm-notif-content">
                                                     <div className="pm-notif-top">
-                                                        <span className="pm-notif-title">{t.side === 'buy' ? `Buy ${t.outcome === 'UP' ? 'Up' : 'Down'}` : `Winning position redeemed`}</span>
+                                                        <span className="pm-notif-title">{String(t.side).toUpperCase() === 'BUY' ? `Buy ${t.outcome === 'UP' ? 'Up' : 'Down'}` : `Sell ${t.outcome === 'UP' ? 'Up' : 'Down'}`}</span>
                                                         <div className="pm-notif-time">
                                                             {timeAgo(t.timestamp)}
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: 6, opacity: 0.6}}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                                         </div>
                                                     </div>
                                                     <div className="pm-notif-market">Bitcoin Up or Down - {new Date(t.timestamp).toLocaleString('en-US', {month: 'short', day: 'numeric'})}, {new Date(t.timestamp).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})}-{new Date(t.timestamp + 5*60000).toLocaleTimeString('en-US', {hour: 'numeric', minute:'2-digit', timeZone: 'America/New_York'})} ET</div>
-                                                    <div className="pm-notif-detail">{t.side === 'buy' ? `${t.qty} shares @ ${(t.price * 100).toFixed(1)}¢` : `You won $${(t.qty).toFixed(2)}`}</div>
+                                                    <div className="pm-notif-detail">{String(t.side).toUpperCase() === 'BUY' ? `${t.qty} shares @ ${(t.price * 100).toFixed(1)}¢` : `Sold ${t.qty} shares for $${(t.cost).toFixed(2)}`}</div>
                                                 </div>
                                             </div>
                                         ))
@@ -761,6 +782,7 @@ export function Predict({ user }: Props) {
                     positions={positions}
                     selectedRound={selectedRound}
                     history={history}
+                    trades={trades}
                     loadData={loadData}
                     onOutcomeChange={(outcome) => setBetType(outcome)}
                 />
@@ -778,7 +800,7 @@ export function Predict({ user }: Props) {
                     recentTrades.map((t, idx) => (
                         <div key={t.id ?? idx} className="pm-history-row" id={`trade-${idx}`}>
                             <span className="pm-history-desc">
-                                {t.side === 'BUY' ? 'Bought' : 'Sold'}{' '}
+                                {String(t.side).toUpperCase() === 'BUY' ? 'Bought' : 'Sold'}{' '}
                                 <span className="pm-mono">{t.qty.toFixed(2)}</span>{' '}
                                 <span className={t.outcome === 'UP' ? 'pm-green' : 'pm-red'}>
                                     {t.outcome === 'UP' ? 'Up' : 'Down'}

@@ -11,18 +11,20 @@ interface TradePanelProps {
     positions: any[];
     selectedRound: number;
     history: any[];
+    trades: any[];
     loadData: () => void;
     onOutcomeChange?: (outcome: 'UP' | 'DOWN') => void;
 }
 
 export function TradePanel({
-    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, loadData, onOutcomeChange
+    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange
 }: TradePanelProps) {
     const { showToast } = useToast();
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
     const [betType, setBetType] = useState<'UP' | 'DOWN'>('UP');
     const [betAmount, setBetAmount] = useState('');
     const [placingBet, setPlacingBet] = useState(false);
+    const [claiming, setClaiming] = useState(false);
 
     const computedYesBuy = yesPrice.buyPrice;
     const computedNoBuy = noPrice.buyPrice;
@@ -55,28 +57,99 @@ export function TradePanel({
     };
 
     if (selectedRound >= 0) {
+        const round = history[selectedRound];
+        if (!round) return null;
+
+        const roundStart = new Date(round.timestamp);
+        const roundEnd = new Date(round.timestamp + 300000);
+        const dateStr = roundStart.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+        const timeStartStr = roundStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+        const timeEndStr = roundEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+        const marketTitle = `Bitcoin Up or Down - ${dateStr}, ${timeStartStr}-${timeEndStr} ET`;
+
+        // Wait 1 min after close to show realistic "determining" phase
+        const isDetermining = Date.now() - roundEnd.getTime() < 60000;
+
+        // Compute user earnings
+        const roundTrades = trades.filter(t => t.timestamp >= round.timestamp && t.timestamp < round.timestamp + 300000);
+        let winQty = 0;
+        let winCost = 0;
+        for (const t of roundTrades) {
+            if (t.outcome === round.outcome) {
+                if (t.side === 'BUY' || t.side === 'buy') {
+                    winQty += t.qty; winCost += t.cost;
+                } else {
+                    winQty -= t.qty; winCost -= t.cost;
+                }
+            }
+        }
+        
+        const claimKey = `pm-claimed-${round.timestamp}`;
+        const hasClaimed = localStorage.getItem(claimKey) === 'true';
+
+        const handleClaim = async () => {
+            haptic('medium');
+            setClaiming(true);
+            try {
+                await api.predictions.autoClaim();
+                localStorage.setItem(claimKey, 'true');
+                showToast('Winnings successfully claimed!', 'success');
+                // Optional: delay reload to let UI update
+                setTimeout(() => loadData(), 1000);
+            } catch (e: any) {
+                showToast(e.message || 'Failed to claim', 'error');
+            } finally {
+                setClaiming(false);
+            }
+        };
+
+        if (isDetermining) {
+            return (
+                <div className="pm-trade-card pm-historical-panel-ui">
+                    <div className="pm-determining-spinner">
+                        <svg className="pm-spinner" viewBox="0 0 50 50">
+                            <circle className="path" cx="25" cy="25" r="20" fill="none" strokeWidth="4"></circle>
+                        </svg>
+                    </div>
+                    <h3 className="pm-historical-h3">Hold on, determining winner...</h3>
+                    <p className="pm-historical-market">{marketTitle}</p>
+                    <p className="pm-historical-desc">This market has ended. Final resolution will appear automatically as soon as it is available on-chain.</p>
+                </div>
+            );
+        }
+
         return (
-            <div className="pm-trade-card pm-result-card-layout">
-                <div className="pm-result-icon">
-                    {history[selectedRound]?.outcome === 'UP' ? (
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4169E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+            <div className="pm-trade-card pm-historical-panel-ui">
+                <div className="pm-result-icon-wrapper">
+                    <div className="pm-result-checkmark">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
-                    ) : (
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
-                        </svg>
-                    )}
+                    </div>
                 </div>
-                <div className="pm-result-title">
-                    Result: {history[selectedRound]?.outcome === 'UP' ? 'Up' : 'Down'}
-                </div>
-                <div className="pm-result-date">
-                    {new Date(history[selectedRound]?.timestamp || 0).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <div className="pm-result-claim-box">
-                    <button className="pm-btn-claim-nothing">Nothing to Claim</button>
-                </div>
+                <h3 className="pm-historical-h3 pm-outcome-title">Outcome: {round.outcome === 'UP' ? 'Up' : 'Down'}</h3>
+                <p className="pm-historical-market">{marketTitle}</p>
+                
+                {winQty >= 0.01 && !hasClaimed && (
+                    <div className="pm-earnings-card">
+                        <h4 className="pm-earnings-title">Your Earnings</h4>
+                        <div className="pm-earnings-row">
+                            <span className="pm-earnings-label">Position</span>
+                            <span className="pm-earnings-val">{winQty.toFixed(2)} {round.outcome === 'UP' ? 'Up' : 'Down'}</span>
+                        </div>
+                        <div className="pm-earnings-row">
+                            <span className="pm-earnings-label">Value per share</span>
+                            <span className="pm-earnings-val">$1.00</span>
+                        </div>
+                        <div className="pm-earnings-row pm-earnings-total-row">
+                            <span className="pm-earnings-label">Total</span>
+                            <span className="pm-earnings-val">${winQty.toFixed(2)}</span>
+                        </div>
+                        <button className="pm-btn-claim" onClick={handleClaim} disabled={claiming}>
+                            {claiming ? <span className="pm-btn-loading"><div className="pm-spinner pm-spinner-sm"/> Claiming...</span> : 'Claim winnings'}
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }

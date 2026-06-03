@@ -43,7 +43,7 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-user-header">
                         <div className="pm-prof-avatar-gradient"></div>
                         <div className="pm-prof-user-info">
-                            <h2>{user?.first_name || user?.username || 'Trader'}</h2>
+                            <h2>{user?.first_name || user?.username || 'Telegram User'}</h2>
                             <p>Joined {new Date(user?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
                         </div>
                     </div>
@@ -55,7 +55,7 @@ export function PredictProfile({ user }: Props) {
                         </div>
                         <div className="pm-prof-stat">
                             <h3 className={totalPnl >= 0 ? 'green' : 'red'}>{totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}</h3>
-                            <p>Profit/Loss</p>
+                            <p>Active PNL</p>
                         </div>
                         <div className="pm-prof-stat">
                             <h3>{predictionsCount}</h3>
@@ -182,7 +182,7 @@ export function PredictProfile({ user }: Props) {
                             <div className="pm-prof-col-market">
                                 <div className="pm-prof-btc-icon">₿</div>
                                 <div className="pm-prof-market-info">
-                                    <h4>{trade.side === 'buy' ? 'Buy' : 'Sell'} {trade.outcome}</h4>
+                                    <h4>{String(trade.side).toUpperCase() === 'BUY' ? 'Buy' : 'Sell'} {trade.outcome}</h4>
                                     <div className="pm-prof-market-bet">
                                         <span className="pm-prof-bet-shares">{trade.qty.toFixed(1)} shares</span>
                                     </div>
