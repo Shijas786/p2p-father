@@ -171,13 +171,7 @@ export function TradePanel({
                             <span className="pm-earnings-label">Total</span>
                             <span className="pm-earnings-val">${winQty.toFixed(2)}</span>
                         </div>
-                        <button 
-                            className="pm-btn-claim-win"
-                            onClick={handleClaim}
-                            disabled={claiming}
-                        >
-                            {claiming ? <span className="spinner" style={{ width: 16, height: 16, margin: '0 auto' }} /> : 'Claim Winnings'}
-                        </button>
+
                     </div>
                 )}
                 

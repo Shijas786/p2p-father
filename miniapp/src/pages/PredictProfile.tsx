@@ -113,45 +113,7 @@ export function PredictProfile({ user }: Props) {
                             <path d="M0,50 C20,40 30,30 50,30 C70,30 80,60 100,60 L280,60 C300,60 320,50 340,40 C360,30 380,10 400,0 L400,80 L0,80 Z" fill="url(#chartGradient)" />
                         </svg>
                     </div>
-                    {/* Claim Winnings Button */}
-                    <div style={{ marginTop: '16px', padding: '0 16px', paddingBottom: '16px' }}>
-                        <button 
-                            className="pm-btn-claim-all" 
-                            style={{ 
-                                width: '100%', 
-                                padding: '12px', 
-                                backgroundColor: '#10b981', 
-                                color: '#fff', 
-                                border: 'none', 
-                                borderRadius: '8px', 
-                                fontWeight: 600, 
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                opacity: claiming ? 0.7 : 1
-                            }}
-                            disabled={claiming}
-                            onClick={async () => {
-                                haptic('light');
-                                setClaiming(true);
-                                try {
-                                    const res = await api.predictions.autoClaim();
-                                    if (res && res.claimed > 0) {
-                                        loadData();
-                                        // Update global balance via some trigger or just rely on the user seeing their wallet
-                                    }
-                                } catch (e) {
-                                    console.error(e);
-                                } finally {
-                                    setClaiming(false);
-                                }
-                            }}
-                        >
-                            {claiming ? 'Claiming...' : 'Claim Winnings'}
-                        </button>
-                    </div>
+
                 </div>
             </div>
 
