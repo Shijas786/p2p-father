@@ -243,6 +243,16 @@ async function main() {
     // Health Check (Koyeb needs a 200 OK)
     app.get("/health", (req, res) => res.send("OK"));
 
+    // Check server public IP
+    app.get('/ip', async (req, res) => {
+        try {
+            const r = await fetch('https://api.ipify.org?format=json');
+            res.json(await r.json());
+        } catch (e) {
+            res.status(500).json({ error: "Failed to fetch IP" });
+        }
+    });
+
     // Mini App SPA fallback — also set no-cache headers
     app.get(/^\/app(?:\/.*)?$/, (req, res) => {
         noCacheHeaders(res);

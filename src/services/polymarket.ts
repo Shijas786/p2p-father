@@ -93,15 +93,8 @@ class PolymarketService {
         const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
         const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-        // Check if the user's proxy wallet is deployed. If not, they can't have trades!
-        // We do this to avoid spamming Polymarket API with createOrDeriveApiKey which throws loud 400 errors for undeployed proxies.
         const { polymarketRelayerService } = await import("./relayer");
         const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);
-        const code = await provider.getCode(depositWallet);
-        if (code === "0x") {
-            // Proxy not deployed yet (user has never placed a trade or deposited pUSD)
-            return null;
-        }
 
         const signer = createWalletClient({
             account,
