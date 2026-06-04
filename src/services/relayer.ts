@@ -287,13 +287,16 @@ class PolymarketRelayerService {
 
             console.log(`[Relayer] Using CTF Adapter: ${CTF_ADAPTER} (isNegRisk: ${isNegRisk})`);
 
+            const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+
             // 2. Query ConditionalTokens contract to check resolution and payout numerators
             const CTF_CONTRACT_ADDRESS = ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045");
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
             
             const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
                 "function payoutDenominator(bytes32) view returns (uint256)",
-                "function payoutNumerators(bytes32, uint256) view returns (uint256)"
+                "function payoutNumerators(bytes32, uint256) view returns (uint256)",
+                "function balanceOf(address, uint256) view returns (uint256)"
             ], provider);
 
             const denominator = await ctfContract.payoutDenominator(conditionId);
@@ -306,6 +309,23 @@ class PolymarketRelayerService {
             const payoutNum = await ctfContract.payoutNumerators(conditionId, payoutIndex);
             if (payoutNum === 0n) {
                 throw new Error(`Requested indexSet ${indexSet} is not a winning outcome for condition ${conditionId} (payout is 0).`);
+            }
+
+            // Calculate exact ERC-1155 tokenId for Gnosis Conditional Tokens position
+            const parentCollectionId = "0x0000000000000000000000000000000000000000000000000000000000000000";
+            const collectionId = ethers.solidityPackedKeccak256(
+                ["bytes32", "bytes32", "uint256"],
+                [parentCollectionId, conditionId, BigInt(indexSet)]
+            );
+            const tokenId = BigInt(ethers.solidityPackedKeccak256(
+                ["address", "bytes32"],
+                [PUSD_ADDRESS, collectionId]
+            ));
+
+            const balance = await ctfContract.balanceOf(depositWallet, tokenId);
+            if (balance === 0n) {
+                console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed.`);
+                return "skipped-zero-balance";
             }
 
             console.log(`[Relayer] Redeeming indexSet [${indexSet}] for condition ${conditionId}`);
@@ -331,7 +351,7 @@ class PolymarketRelayerService {
                 ]
             });
 
-            const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+            // depositWallet is already resolved at the top of redeemPositions
             
             const calls = [{
                 target: CTF_ADAPTER,
