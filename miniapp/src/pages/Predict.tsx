@@ -99,20 +99,30 @@ export function Predict({ user }: Props) {
     // ── Load all data ───────────────────────────────────────────────────────
     const loadData = useCallback(async () => {
         setLoading(true);
-        try {
-            const [aiRes, histRes, balRes, posRes, allTradeRes, recentTradeRes, depRes, marketRes] =
-                await Promise.allSettled([
-                    api.predictions.getAIAnalysis(),
-                    api.predictions.getHistory(),
-                    api.predictions.getBalance(),
-                    api.predictions.getPositions(),
-                    api.predictions.getTrades('?all=true'),
-                    api.predictions.getTrades(),
-                    api.predictions.getDepositWallet(),
-                    api.predictions.getMarket(),
-                ]);
+        
+        // Fire slow background calls independently so they don't block the UI
+        api.predictions.getAIAnalysis()
+            .then(aiRes => setAiData(aiRes))
+            .catch(console.error);
+            
+        api.predictions.getTrades('?all=true')
+            .then(res => setTrades(res.trades ?? []))
+            .catch(console.error);
+            
+        api.predictions.getTrades()
+            .then(res => setRecentTrades(res.trades ?? []))
+            .catch(console.error);
 
-            if (aiRes.status === 'fulfilled') setAiData(aiRes.value);
+        try {
+            // Await only the critical fast calls
+            const [histRes, balRes, posRes, depRes, marketRes] = await Promise.allSettled([
+                api.predictions.getHistory(),
+                api.predictions.getBalance(),
+                api.predictions.getPositions(),
+                api.predictions.getDepositWallet(),
+                api.predictions.getMarket(),
+            ]);
+
             if (histRes.status === 'fulfilled' && histRes.value?.history) {
                 const parsed: Round[] = histRes.value.history.map((h: any) => ({
                     time: h.time, open: h.open, close: h.close,
@@ -122,9 +132,7 @@ export function Predict({ user }: Props) {
                 if (parsed.length > 0) setPriceToBeat(parsed[0].close || parsed[0].open || 0);
             }
             if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
-            if (posRes.status === 'fulfilled')   setPositions(posRes.value.positions ?? []);
-            if (allTradeRes.status === 'fulfilled') setTrades(allTradeRes.value.trades ?? []);
-            if (recentTradeRes.status === 'fulfilled') setRecentTrades(recentTradeRes.value.trades ?? []);
+            if (posRes.status === 'fulfilled') setPositions(posRes.value.positions ?? []);
             if (depRes.status === 'fulfilled') setDepositAddress(depRes.value.address ?? '');
             
             // Sync WebSocket with backend positions to remove duplicates

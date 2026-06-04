@@ -366,32 +366,36 @@ export const api = {
                     const { polygon } = await import('viem/chains');
                     const client = createPublicClient({ chain: polygon, transport: http('https://polygon.llamarpc.com') });
                     
+                    const rpcPromises = [];
                     for (const [cid, data] of Object.entries(conditionMap)) {
                         if (openConditionIds.has(cid)) continue;
                         if (data.shares <= 0.001) continue;
                         
-                        try {
-                            const denominator = await client.readContract({
-                                address: '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-                                abi: [{inputs:[{type:'bytes32'}],name:'payoutDenominator',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
-                                functionName: 'payoutDenominator',
-                                args: [cid as `0x${string}`]
-                            }) as bigint;
-                            
-                            if (denominator > 0n) {
-                                const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
-                                const payoutNum = await client.readContract({
+                        rpcPromises.push((async () => {
+                            try {
+                                const denominator = await client.readContract({
                                     address: '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-                                    abi: [{inputs:[{type:'bytes32'},{type:'uint256'}],name:'payoutNumerators',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
-                                    functionName: 'payoutNumerators',
-                                    args: [cid as `0x${string}`, pnIndex]
+                                    abi: [{inputs:[{type:'bytes32'}],name:'payoutDenominator',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
+                                    functionName: 'payoutDenominator',
+                                    args: [cid as `0x${string}`]
                                 }) as bigint;
                                 
-                                const payoutFraction = Number(payoutNum) / Number(denominator);
-                                realizedPnl += (data.shares * payoutFraction) - data.cost;
-                            }
-                        } catch (e) { /* ignore */ }
+                                if (denominator > 0n) {
+                                    const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
+                                    const payoutNum = await client.readContract({
+                                        address: '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                                        abi: [{inputs:[{type:'bytes32'},{type:'uint256'}],name:'payoutNumerators',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
+                                        functionName: 'payoutNumerators',
+                                        args: [cid as `0x${string}`, pnIndex]
+                                    }) as bigint;
+                                    
+                                    const payoutFraction = Number(payoutNum) / Number(denominator);
+                                    realizedPnl += (data.shares * payoutFraction) - data.cost;
+                                }
+                            } catch (e) { /* ignore */ }
+                        })());
                     }
+                    await Promise.all(rpcPromises);
                 } catch (e) { console.warn("Viem dynamic import failed", e); }
 
                 const positions = Object.keys(positionMap).map(key => {
