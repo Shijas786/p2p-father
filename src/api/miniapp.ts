@@ -2243,7 +2243,9 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             for (const p of positionsRes) {
                 if (p.redeemable && p.size > 0 && p.conditionId) {
                     console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
-                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId).catch(e => console.error("[AutoClaim] redeemPositions error:", e));
+                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
+                    const indexSet = outcomeIndex === 0 ? 1 : 2;
+                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).catch(e => console.error("[AutoClaim] redeemPositions error:", e));
                 }
             }
 
@@ -2438,24 +2440,43 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
             return res.json({ success: true, claimed: 0 });
         }
         
-        const uniqueConditions = new Set<string>();
+        const uniqueConditions = new Map<string, number>();
         
         if (req.body.conditionId) {
-            uniqueConditions.add(req.body.conditionId);
+            let indexSet = req.body.indexSet;
+            if (!indexSet && req.body.outcomeIndex !== undefined) {
+                const outcomeIndex = typeof req.body.outcomeIndex === 'string' ? parseInt(req.body.outcomeIndex) : req.body.outcomeIndex;
+                indexSet = outcomeIndex === 0 ? 1 : 2;
+            }
+            if (!indexSet) {
+                const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+                const positions = await polymarketService.getPositionsForProxy(proxyAddress);
+                const pos = positions.find((p: any) => p.conditionId === req.body.conditionId);
+                if (pos) {
+                    const outcomeIndex = typeof pos.outcomeIndex === 'string' ? parseInt(pos.outcomeIndex) : pos.outcomeIndex;
+                    indexSet = outcomeIndex === 0 ? 1 : 2;
+                }
+            }
+            if (!indexSet) {
+                indexSet = 1; // Default fallback to YES
+            }
+            uniqueConditions.set(req.body.conditionId, indexSet);
         } else {
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
             const positions = await polymarketService.getPositionsForProxy(proxyAddress);
             for (const p of positions) {
                 if (p.redeemable && p.size > 0 && p.conditionId) {
-                    uniqueConditions.add(p.conditionId);
+                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
+                    const indexSet = outcomeIndex === 0 ? 1 : 2;
+                    uniqueConditions.set(p.conditionId, indexSet);
                 }
             }
         }
         
         let claimedCount = 0;
-        for (const conditionId of uniqueConditions) {
+        for (const [conditionId, indexSet] of uniqueConditions.entries()) {
             try {
-                await polymarketRelayerService.redeemPositions(user.wallet_index, conditionId);
+                await polymarketRelayerService.redeemPositions(user.wallet_index, conditionId, indexSet);
                 claimedCount++;
             } catch (e: any) {
                 // Expected if already claimed, or lost, or market not resolved yet
