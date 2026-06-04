@@ -18,14 +18,15 @@ interface TradePanelProps {
     setTradeType: (t: 'buy' | 'sell') => void;
     betType: 'UP' | 'DOWN';
     setBetType: (t: 'UP' | 'DOWN') => void;
+    betAmount: string;
+    setBetAmount: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export function TradePanel({
     isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
-    tradeType, setTradeType, betType, setBetType
+    tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount
 }: TradePanelProps) {
     const { showToast } = useToast();
-    const [betAmount, setBetAmount] = useState('');
     const [placingBet, setPlacingBet] = useState(false);
     const [claiming, setClaiming] = useState(false);
 
@@ -291,7 +292,10 @@ export function TradePanel({
             ) : (
                 <div className="pm-amount-block pm-sell-block">
                     <div className="pm-amount-row pm-sell-row">
-                        <span className="pm-amount-title pm-shares-title">Shares</span>
+                        <div className="pm-amount-left">
+                            <span className="pm-amount-title pm-shares-title" style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 700, color: 'var(--pm-muted)' }}>SHARES</span>
+                            <span className="pm-amount-sub">{positions.find(p => p.outcome === betType)?.qty?.toFixed(2) || '0.00'} Available</span>
+                        </div>
                         <input
                             type="number"
                             value={betAmount}
@@ -307,7 +311,7 @@ export function TradePanel({
                                 haptic('light');
                                 const available = positions.find(p => p.outcome === betType)?.qty || 0;
                                 if (v === 'Max') setBetAmount(available.toString());
-                                else setBetAmount((available * parseInt(v) / 100).toFixed(0));
+                                else setBetAmount((available * parseInt(v) / 100).toFixed(2));
                             }} id={`quick-${v}`}>{v}</button>
                         ))}
                     </div>

@@ -842,7 +842,7 @@ export function Predict({ user }: Props) {
                                     </div>
                                     <div className="pm-pos-col-action">
                                         <button className="pm-pos-sell-btn" id={`btn-sell-${idx}`}
-                                            onClick={() => { haptic('medium'); setBetType(pos.outcome); setTradeType('sell'); }}>
+                                            onClick={() => { haptic('medium'); setBetType(pos.outcome); setTradeType('sell'); setBetAmount(pos.qty.toString()); }}>
                                             Sell
                                         </button>
                                         <button className="pm-pos-share-btn" onClick={() => haptic('light')}>
@@ -874,6 +874,8 @@ export function Predict({ user }: Props) {
                     setTradeType={setTradeType}
                     betType={betType}
                     setBetType={setBetType}
+                    betAmount={betAmount}
+                    setBetAmount={setBetAmount}
                 />
 
             </div>
