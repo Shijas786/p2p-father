@@ -2056,59 +2056,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
         
-        let dbLeaderboard: any[] | null = null;
-        try {
-            // Try to use the new custom app leaderboard architecture (DB-first)
-            // This will fail if the user hasn't run the CREATE TABLE script yet
-            const { data: tradesData, error: tradesErr } = await supabase
-                .from("miniapp_trades")
-                .select("telegram_id, amount, side");
-                
-            if (!tradesErr && tradesData) {
-                // Group by telegram_id in memory (since Supabase JS client doesn't support GROUP BY natively without RPC)
-                const userVols: Record<string, { vol: number, trades: number }> = {};
-                for (const t of tradesData) {
-                    if (t.side === 'BUY') {
-                        if (!userVols[t.telegram_id]) userVols[t.telegram_id] = { vol: 0, trades: 0 };
-                        userVols[t.telegram_id].vol += parseFloat(t.amount);
-                        userVols[t.telegram_id].trades++;
-                    }
-                }
-                
-                const { data: usersData } = await supabase.from("users").select("telegram_id, first_name, username");
-                
-                if (usersData) {
-                    dbLeaderboard = Object.entries(userVols).map(([tgId, stats]) => {
-                        const u = usersData.find(u => u.telegram_id.toString() === tgId);
-                        return {
-                            user: u?.first_name || u?.username || 'Anonymous',
-                            telegram_id: parseInt(tgId),
-                            pred: `$${stats.vol.toFixed(2)}`,
-                            pnl: `$0.00`, // PNL tracking via DB requires more complex logic, left as 0 for now
-                            pnlRaw: 0,
-                            volRaw: stats.vol,
-                            trades: stats.trades
-                        };
-                    });
-                }
-            }
-        } catch (e) {
-            // Fallback to old logic
-        }
-
-        if (dbLeaderboard) {
-            // Sort by volume descending
-            dbLeaderboard.sort((a, b) => b.volRaw - a.volRaw);
-            const currentUserId = req.telegramUser?.id;
-            const finalLeaderboard = dbLeaderboard.slice(0, 100).map((e, index) => ({
-                ...e,
-                rank: index + 1,
-                is_me: currentUserId === e.telegram_id
-            }));
-            return res.json({ leaderboard: finalLeaderboard });
-        }
-
-        // Fallback: Fetch all users who have a wallet_index (old logic)
+        // Fetch all users who have a wallet_index (old logic)
         const { data: usersWithWallets } = await supabase
             .from("users")
             .select("id, first_name, username, wallet_index, telegram_id")

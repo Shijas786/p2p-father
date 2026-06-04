@@ -260,19 +260,23 @@ export const api = {
             yesPrice: { buyPrice: number; sellPrice: number };
             noPrice: { buyPrice: number; sellPrice: number };
         }>('/predictions/market'),
-        getPositions: async () => {
+        getPositions: async (all: boolean = false) => {
             const [{ address }, marketRes] = await Promise.all([
                 api.predictions.getDepositWallet(),
                 api.predictions.getMarket()
             ]);
             
-            if (!address || address.includes("Demo") || !marketRes?.market) {
+            if (!address || address.includes("Demo")) {
+                return { positions: [], realizedPnl: 0 };
+            }
+            if (!all && !marketRes?.market) {
                 return { positions: [], realizedPnl: 0 };
             }
 
-            const { yesTokenId, noTokenId } = marketRes.market;
-            const yesTokenIdLc = yesTokenId.toLowerCase();
-            const noTokenIdLc = noTokenId.toLowerCase();
+            const yesTokenId = marketRes?.market?.yesTokenId;
+            const noTokenId = marketRes?.market?.noTokenId;
+            const yesTokenIdLc = yesTokenId?.toLowerCase() || '';
+            const noTokenIdLc = noTokenId?.toLowerCase() || '';
 
             try {
                 const [tradesRes, positionsRes] = await Promise.all([
@@ -313,21 +317,30 @@ export const api = {
                     const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
                     const isUp = tradeAssetLc === yesTokenIdLc;
                     const isDown = tradeAssetLc === noTokenIdLc;
-                    if (!isUp && !isDown) continue;
+                    
+                    if (!all && !isUp && !isDown) continue;
 
-                    const key = isUp ? "UP" : "DOWN";
+                    let key: string;
+                    if (all) {
+                        key = tradeAssetLc;
+                    } else {
+                        key = isUp ? "UP" : "DOWN";
+                    }
+
                     const qty = parseFloat(trade.size ?? "0");
                     const price = parseFloat(trade.price ?? "0");
                     const isSell = trade.side === "SELL";
 
                     if (!positionMap[key]) {
                         positionMap[key] = {
-                            outcome: key,
+                            outcome: all ? (trade.outcomeIndex === 0 ? 'UP' : 'DOWN') : (isUp ? 'UP' : 'DOWN'),
+                            asset: tradeAssetLc,
+                            title: trade.title,
                             qty: 0,
                             totalCost: 0,
                             avgPrice: 0,
-                            currentPrice: isUp ? marketRes.yesPrice.buyPrice : marketRes.noPrice.buyPrice,
-                        };
+                            currentPrice: isUp && marketRes?.yesPrice ? marketRes.yesPrice.buyPrice : (isDown && marketRes?.noPrice ? marketRes.noPrice.buyPrice : parseFloat(trade.price ?? "0")),
+                        } as any;
                     }
 
                     if (isSell) {
@@ -341,8 +354,7 @@ export const api = {
                 }
 
                 for (const key of Object.keys(positionMap)) {
-                    const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
-                    const activePos = (Array.isArray(positionsRes) ? positionsRes : []).find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
+                    const activePos = (Array.isArray(positionsRes) ? positionsRes : []).find((p: any) => (p.asset || "").toLowerCase() === (positionMap[key] as any).asset);
                     
                     if (positionMap[key].qty > 0) {
                         positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
@@ -411,7 +423,7 @@ export const api = {
                         returnAmt: parseFloat((value - p.totalCost).toFixed(2)),
                         returnPct: p.totalCost > 0 ? parseFloat((((value - p.totalCost) / p.totalCost) * 100).toFixed(2)) : 0
                     };
-                }).filter(p => p.qty > 0);
+                }).filter(p => all || p.qty > 0);
 
                 return { positions, realizedPnl };
             } catch (err) {

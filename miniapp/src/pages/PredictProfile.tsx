@@ -30,8 +30,10 @@ export function PredictProfile({ user }: Props) {
     const [realizedPnl, setRealizedPnl] = useState(0);
     
     const loadData = () => {
-        api.predictions.getPositions().then((res: any) => {
-            if (res && res.positions) setPositions(res.positions);
+        api.predictions.getPositions(true).then((res: any) => {
+            if (res && res.positions) {
+                setPositions(res.positions);
+            }
             if (typeof res?.realizedPnl === 'number') setRealizedPnl(res.realizedPnl);
         }).catch((e: any) => console.error(e));
 
@@ -44,7 +46,8 @@ export function PredictProfile({ user }: Props) {
         loadData();
     }, []);
 
-    const totalPositionsValue = positions.reduce((sum, p) => sum + (p.value || 0), 0);
+    const displayPositions = positions.filter((p: any) => subTab === 'active' ? p.qty > 0 : p.qty <= 0);
+    const totalPositionsValue = displayPositions.reduce((acc, pos: any) => acc + (pos.value || 0), 0);
     const predictionsCount = trades.length;
     const unrealizedPnl = positions.reduce((sum, p) => sum + (p.returnAmt || 0), 0);
     const totalPnl = unrealizedPnl + realizedPnl;
@@ -172,11 +175,11 @@ export function PredictProfile({ user }: Props) {
             {/* List */}
             <div className="pm-prof-list">
                 {tab === 'positions' ? (
-                    positions.length === 0 ? (
+                    displayPositions.length === 0 ? (
                         <div className="pm-prof-row" style={{justifyContent: 'center', color: '#888'}}>
                             No positions found.
                         </div>
-                    ) : positions.map((pos: any, i: number) => (
+                    ) : displayPositions.map((pos: any, i: number) => (
                         <div key={pos.id ?? i} className="pm-prof-row">
                             <div className="pm-prof-col-market">
                                 <div className="pm-prof-btc-icon">₿</div>

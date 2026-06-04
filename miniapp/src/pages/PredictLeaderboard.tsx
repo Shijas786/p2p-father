@@ -37,7 +37,7 @@ export function PredictLeaderboard() {
                 </div>
             </div>
 
-            <p className="pm-lb-subtitle">262 traders ranked by total trading volume</p>
+            <p className="pm-lb-subtitle">{leaderboard.length} traders ranked by total trading volume</p>
 
             {/* Search */}
             <div className="pm-lb-search-container">
