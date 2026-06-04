@@ -463,6 +463,7 @@ class PolymarketService {
                     price: limitPrice,
                     side: side === "SELL" ? Side.SELL : Side.BUY,
                     size,
+                    builderCode: "P2P_KERALA"
                 };
 
                 console.log(`[Polymarket] Submitting GTC LIMIT ${side} order to CLOB. Size: ${size} shares at $${limitPrice}`);

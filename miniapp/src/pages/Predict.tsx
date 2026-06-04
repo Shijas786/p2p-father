@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createPublicClient, http } from 'viem';
 import { polygon } from 'viem/chains';
 import { api } from '../lib/api';
+import { polymarketWs } from '../lib/polymarketWs';
 import { haptic } from '../lib/telegram';
 import { useToast } from '../components/Toast';
 import { PredictChart } from '../components/PredictChart';
@@ -124,9 +125,83 @@ export function Predict({ user }: Props) {
             if (allTradeRes.status === 'fulfilled') setTrades(allTradeRes.value.trades ?? []);
             if (recentTradeRes.status === 'fulfilled') setRecentTrades(recentTradeRes.value.trades ?? []);
             if (depRes.status === 'fulfilled') setDepositAddress(depRes.value.address ?? '');
+            
+            // Sync WebSocket with backend positions to remove duplicates
+            if (posRes.status === 'fulfilled' && posRes.value?.positions) {
+                // Remove ws positions that are now in data API
+                polymarketWs.syncWithBackend(posRes.value.positions.map(p => p.outcome === 'UP' ? activeBtcMarket?.yesTokenId : activeBtcMarket?.noTokenId).filter(Boolean));
+                
+                // Merge WS positions into data API positions
+                const basePositions = posRes.value.positions;
+                const wsPositions = polymarketWs.getPositions();
+                for (const wsPos of wsPositions) {
+                    const idx = basePositions.findIndex(p => p.outcome === wsPos.outcome);
+                    if (idx >= 0) {
+                        basePositions[idx].qty = wsPos.size;
+                        basePositions[idx].value = wsPos.size * basePositions[idx].currentPrice;
+                    } else {
+                        basePositions.push({
+                            outcome: wsPos.outcome as 'UP'|'DOWN',
+                            qty: wsPos.size,
+                            avg: wsPos.price,
+                            currentPrice: wsPos.price,
+                            cost: wsPos.size * wsPos.price,
+                            value: wsPos.size * wsPos.price,
+                            returnAmt: 0,
+                            returnPct: 0
+                        });
+                    }
+                }
+                setPositions(basePositions);
+            }
+
         } catch (e) { console.error('[Predict] loadData fatal error:', e); }
         finally { setLoading(false); }
     }, []);
+
+    // ── WebSocket Initialization ─────────────────────────────────────────────
+    useEffect(() => {
+        let unsubscribe = () => {};
+        const initWs = async () => {
+            try {
+                const keys = await api.predictions.getClobKeys();
+                if (keys.apiKey && keys.secret && keys.passphrase) {
+                    polymarketWs.connect(keys.apiKey, keys.secret, keys.passphrase);
+                    unsubscribe = polymarketWs.subscribe((wsPositions) => {
+                        // Merge WS positions immediately into state
+                        setPositions(prev => {
+                            const newPos = [...prev];
+                            for (const wsPos of wsPositions) {
+                                const idx = newPos.findIndex(p => p.outcome === wsPos.outcome);
+                                if (idx >= 0) {
+                                    newPos[idx].qty = wsPos.size;
+                                    newPos[idx].value = wsPos.size * newPos[idx].currentPrice;
+                                } else {
+                                    newPos.push({
+                                        outcome: wsPos.outcome as 'UP'|'DOWN',
+                                        qty: wsPos.size,
+                                        avg: wsPos.price,
+                                        currentPrice: wsPos.price,
+                                        cost: wsPos.size * wsPos.price,
+                                        value: wsPos.size * wsPos.price,
+                                        returnAmt: 0,
+                                        returnPct: 0
+                                    });
+                                }
+                            }
+                            return newPos;
+                        });
+                        loadData();
+                    });
+                }
+            } catch (e) { console.warn("Failed to init CLOB keys", e); }
+        };
+        initWs();
+        return () => {
+            unsubscribe();
+            polymarketWs.disconnect();
+        };
+    }, [loadData]);
 
     // ── Live price from Binance WebSocket (Fastest, ~50ms lag) ──────
     useEffect(() => {
@@ -382,12 +457,28 @@ export function Predict({ user }: Props) {
         if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
         setPlacingBet(true);
         try {
+            const price = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
             const res = await api.predictions.placeBet(
                 parseFloat(betAmount), betType,
-                betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice,
+                price,
                 tradeType.toUpperCase() as 'BUY'|'SELL'
             );
-            if (res.success) { showToast('Prediction placed!', 'success'); setBetAmount(''); loadData(); }
+            if (res.success) { 
+                showToast('Prediction placed!', 'success');
+                // Optimistically update WS state for instant UI response
+                const marketRes = await api.predictions.getMarket().catch(()=>null);
+                if (marketRes?.market) {
+                    const tokenId = betType === 'UP' ? marketRes.market.yesTokenId : marketRes.market.noTokenId;
+                    const size = parseFloat(betAmount) / price;
+                    if (tradeType === 'buy') {
+                        polymarketWs.optimisticBuy(tokenId, betType, size, price, marketRes.market.conditionId);
+                    } else {
+                        polymarketWs.optimisticSell(tokenId, size);
+                    }
+                }
+                setBetAmount(''); 
+                loadData(); 
+            }
             else showToast('Failed to place prediction', 'error');
         } catch (e: any) { showToast(e.message || 'Order failed', 'error'); }
         finally { setPlacingBet(false); }

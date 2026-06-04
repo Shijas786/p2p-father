@@ -253,22 +253,168 @@ export const api = {
                 body: JSON.stringify({ amount, destChainId, destTokenAddress, recipient })
             }),
         getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
+        getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
         getBalance: () => request<{ balance: string }>('/predictions/balance'),
         getMarket: () => request<{
             market: any;
             yesPrice: { buyPrice: number; sellPrice: number };
             noPrice: { buyPrice: number; sellPrice: number };
         }>('/predictions/market'),
-        getPositions: () => request<{ positions: Array<{
-            outcome: 'UP' | 'DOWN';
-            qty: number;
-            avg: number;
-            currentPrice: number;
-            value: number;
-            cost: number;
-            returnAmt: number;
-            returnPct: number;
-        }> }>('/predictions/positions'),
+        getPositions: async () => {
+        getPositions: async () => {
+            const [{ address }, marketRes] = await Promise.all([
+                api.predictions.getDepositWallet(),
+                api.predictions.getMarket()
+            ]);
+            
+            if (!address || address.includes("Demo") || !marketRes?.market) {
+                return { positions: [], realizedPnl: 0 };
+            }
+
+            const { yesTokenId, noTokenId } = marketRes.market;
+            const yesTokenIdLc = yesTokenId.toLowerCase();
+            const noTokenIdLc = noTokenId.toLowerCase();
+
+            try {
+                const [tradesRes, positionsRes] = await Promise.all([
+                    fetch(`https://data-api.polymarket.com/trades?user=${address}`).then(r => r.json()).catch(() => []),
+                    fetch(`https://data-api.polymarket.com/positions?user=${address}`).then(r => r.json()).catch(() => [])
+                ]);
+
+                const positionMap: Record<string, { outcome: 'UP'|'DOWN'; qty: number; totalCost: number; avgPrice: number; currentPrice: number }> = {};
+                let realizedPnl = 0;
+                const openConditionIds = new Set<string>();
+
+                if (Array.isArray(positionsRes)) {
+                    for (const p of positionsRes) {
+                        realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
+                        if (p.conditionId) openConditionIds.add(p.conditionId);
+                    }
+                }
+                
+                const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
+
+                for (const trade of (Array.isArray(tradesRes) ? tradesRes : [])) {
+                    // Collect condition data for realizedPnl
+                    const cid = trade.conditionId;
+                    if (cid) {
+                        const size = parseFloat(trade.size ?? '0');
+                        const price = parseFloat(trade.price ?? '0');
+                        if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: trade.outcomeIndex ?? 1 };
+                        if (trade.side === 'BUY') {
+                            conditionMap[cid].cost += size * price;
+                            conditionMap[cid].shares += size;
+                        } else if (trade.side === 'SELL') {
+                            conditionMap[cid].cost -= size * price;
+                            conditionMap[cid].shares -= size;
+                        }
+                    }
+
+                    // Process active market positions
+                    const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
+                    const isUp = tradeAssetLc === yesTokenIdLc;
+                    const isDown = tradeAssetLc === noTokenIdLc;
+                    if (!isUp && !isDown) continue;
+
+                    const key = isUp ? "UP" : "DOWN";
+                    const qty = parseFloat(trade.size ?? "0");
+                    const price = parseFloat(trade.price ?? "0");
+                    const isSell = trade.side === "SELL";
+
+                    if (!positionMap[key]) {
+                        positionMap[key] = {
+                            outcome: key,
+                            qty: 0,
+                            totalCost: 0,
+                            avgPrice: 0,
+                            currentPrice: isUp ? marketRes.yesPrice.buyPrice : marketRes.noPrice.buyPrice,
+                        };
+                    }
+
+                    if (isSell) {
+                        positionMap[key].qty -= qty;
+                        positionMap[key].totalCost -= qty * price;
+                    } else {
+                        positionMap[key].qty += qty;
+                        positionMap[key].totalCost += qty * price;
+                    }
+                }
+
+                for (const key of Object.keys(positionMap)) {
+                    const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
+                    const activePos = (Array.isArray(positionsRes) ? positionsRes : []).find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
+                    
+                    if (positionMap[key].qty > 0) {
+                        positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
+                    }
+
+                    if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
+                        positionMap[key].qty = parseFloat(activePos.size);
+                        positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
+                    } else if (activePos && activePos.redeemable) {
+                        positionMap[key].qty = 0;
+                    } else if (!activePos) {
+                        // Keep trade qty!
+                    } else {
+                        positionMap[key].qty = 0;
+                    }
+                }
+
+                // Check viem for realizedPnl of resolved but not in positions API
+                try {
+                    const { createPublicClient, http } = await import('viem');
+                    const { polygon } = await import('viem/chains');
+                    const client = createPublicClient({ chain: polygon, transport: http('https://polygon.llamarpc.com') });
+                    
+                    for (const [cid, data] of Object.entries(conditionMap)) {
+                        if (openConditionIds.has(cid)) continue;
+                        if (data.shares <= 0.001) continue;
+                        
+                        try {
+                            const denominator = await client.readContract({
+                                address: '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                                abi: [{inputs:[{type:'bytes32'}],name:'payoutDenominator',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
+                                functionName: 'payoutDenominator',
+                                args: [cid as `0x${string}`]
+                            }) as bigint;
+                            
+                            if (denominator > 0n) {
+                                const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
+                                const payoutNum = await client.readContract({
+                                    address: '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                                    abi: [{inputs:[{type:'bytes32'},{type:'uint256'}],name:'payoutNumerators',outputs:[{type:'uint256'}],stateMutability:'view',type:'function'}],
+                                    functionName: 'payoutNumerators',
+                                    args: [cid as `0x${string}`, pnIndex]
+                                }) as bigint;
+                                
+                                const payoutFraction = Number(payoutNum) / Number(denominator);
+                                realizedPnl += (data.shares * payoutFraction) - data.cost;
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+                } catch (e) { console.warn("Viem dynamic import failed", e); }
+
+                const positions = Object.keys(positionMap).map(key => {
+                    const p = positionMap[key];
+                    const value = p.qty * p.currentPrice;
+                    return {
+                        outcome: p.outcome,
+                        qty: parseFloat(p.qty.toFixed(2)),
+                        avg: p.avgPrice,
+                        currentPrice: p.currentPrice,
+                        value: parseFloat(value.toFixed(2)),
+                        cost: parseFloat(p.totalCost.toFixed(2)),
+                        returnAmt: parseFloat((value - p.totalCost).toFixed(2)),
+                        returnPct: p.totalCost > 0 ? parseFloat((((value - p.totalCost) / p.totalCost) * 100).toFixed(2)) : 0
+                    };
+                }).filter(p => p.qty > 0);
+
+                return { positions, realizedPnl };
+            } catch (err) {
+                console.error("Client-side getPositions failed:", err);
+                return { positions: [], realizedPnl: 0 };
+            }
+        },
         getTrades: (query?: string) => request<{ trades: Array<{
             id: string;
             side: string;
