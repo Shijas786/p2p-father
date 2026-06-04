@@ -331,10 +331,10 @@ class PolymarketRelayerService {
             if (balUSDCE > 0n) {
                 collateralToken = USDCE_ADDRESS;
                 balance = balUSDCE;
-                // Use old adapter for USDC.e
+                // Use whitelisted V2 adapter for standard USDC.e markets
                 CTF_ADAPTER = isNegRisk 
                     ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab" // fallback to NegRisk
-                    : "0xADa100874d00e3331D00F2007a9c336a65009718"; // Old standard adapter
+                    : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // Correct whitelisted V2 adapter
             } else {
                 collateralToken = PUSD_ADDRESS;
                 balance = balPUSD;
