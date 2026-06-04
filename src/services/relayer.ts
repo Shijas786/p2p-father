@@ -296,7 +296,9 @@ class PolymarketRelayerService {
             const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
                 "function payoutDenominator(bytes32) view returns (uint256)",
                 "function payoutNumerators(bytes32, uint256) view returns (uint256)",
-                "function balanceOf(address, uint256) view returns (uint256)"
+                "function balanceOf(address, uint256) view returns (uint256)",
+                "function isApprovedForAll(address, address) view returns (bool)",
+                "function setApprovalForAll(address, bool)"
             ], provider);
 
             const denominator = await ctfContract.payoutDenominator(conditionId);
@@ -353,11 +355,23 @@ class PolymarketRelayerService {
 
             // depositWallet is already resolved at the top of redeemPositions
             
-            const calls = [{
+            const isApproved = await ctfContract.isApprovedForAll(depositWallet, CTF_ADAPTER);
+            const calls: any[] = [];
+            if (!isApproved) {
+                console.log(`[Relayer] Approving CTF Adapter (${CTF_ADAPTER}) on CTF contract...`);
+                const approveTx = await ctfContract.setApprovalForAll.populateTransaction(CTF_ADAPTER, true);
+                calls.push({
+                    target: CTF_CONTRACT_ADDRESS,
+                    value: "0",
+                    data: approveTx.data
+                });
+            }
+
+            calls.push({
                 target: CTF_ADAPTER,
                 value: "0",
                 data: encodedData
-            }];
+            });
             
             const deadline = Math.floor(Date.now() / 1000) + 600;
             const tx = await client.executeDepositWalletBatch(calls, depositWallet, deadline.toString());
