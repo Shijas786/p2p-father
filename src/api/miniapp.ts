@@ -2051,6 +2051,8 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
     }
 });
 
+const conditionResolutionCache = new Map<string, { denominator: number, num0: number, num1: number }>();
+
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
     try {
         const { createClient } = await import("@supabase/supabase-js");
@@ -2089,14 +2091,82 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                             .filter((t: any) => t.side === 'BUY')
                             .reduce((s: number, t: any) => s + (parseFloat(t.size ?? '0') * parseFloat(t.price ?? '0')), 0);
 
-                        // Fetch positions for cashPnl (open positions)
+                        let wins = 0;
+                        let losses = 0;
                         let totalPnl = 0;
+
+                        // Calculate cashPnl (unrealized) and track open conditions
+                        const openConditionIds = new Set<string>();
                         try {
                             const positions = await polymarketService.getPositionsForProxy(proxyAddress);
                             if (Array.isArray(positions)) {
-                                totalPnl = positions.reduce((s: number, p: any) => s + (parseFloat(p.cashPnl ?? '0') || 0), 0);
+                                totalPnl += positions.reduce((s: number, p: any) => {
+                                    openConditionIds.add(p.conditionId);
+                                    return s + (parseFloat(p.cashPnl ?? '0') || 0);
+                                }, 0);
                             }
                         } catch { /* ignore */ }
+
+                        // Group trades by condition to compute realized PNL and wins/losses
+                        const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
+                        for (const t of trades) {
+                            const cid = t.conditionId;
+                            if (!cid) continue;
+                            const size = parseFloat(t.size ?? '0');
+                            const price = parseFloat(t.price ?? '0');
+                            if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: typeof t.outcomeIndex === 'string' ? parseInt(t.outcomeIndex) : (t.outcomeIndex ?? 1) };
+                            if (t.side === 'BUY') {
+                                conditionMap[cid].cost += size * price;
+                                conditionMap[cid].shares += size;
+                            } else if (t.side === 'SELL') {
+                                conditionMap[cid].cost -= size * price;
+                                conditionMap[cid].shares -= size;
+                            }
+                        }
+
+                        // For conditions NOT in active positions, check resolution using cache or on-chain
+                        const { ethers } = await import('ethers');
+                        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
+                        const ctf = new ethers.Contract(
+                            '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                            [
+                                'function payoutDenominator(bytes32) view returns (uint256)',
+                                'function payoutNumerators(bytes32, uint256) view returns (uint256)'
+                            ],
+                            provider
+                        );
+
+                        for (const [cid, data] of Object.entries(conditionMap)) {
+                            if (openConditionIds.has(cid)) continue; 
+                            if (data.shares <= 0.001) continue; 
+                            
+                            let resolution = conditionResolutionCache.get(cid);
+                            if (!resolution) {
+                                try {
+                                    const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
+                                    if (denominator > 0n) {
+                                        const num0 = await ctf.payoutNumerators(cid as `0x${string}`, 0n);
+                                        const num1 = await ctf.payoutNumerators(cid as `0x${string}`, 1n);
+                                        resolution = { denominator: Number(denominator), num0: Number(num0), num1: Number(num1) };
+                                        conditionResolutionCache.set(cid, resolution);
+                                    }
+                                } catch (e) {
+                                    // ignore
+                                }
+                            }
+
+                            if (resolution) {
+                                const num = data.outcomeIndex === 0 ? resolution.num0 : resolution.num1;
+                                const payoutFraction = num / resolution.denominator;
+                                const profit = (data.shares * payoutFraction) - data.cost;
+                                totalPnl += profit;
+
+                                if (payoutFraction > 0.5) wins++;
+                                else losses++;
+                            }
+                        }
+
+                        const winRatio = (wins + losses) > 0 ? ((wins / (wins + losses)) * 100).toFixed(0) + '%' : '0%';
 
                         return {
                             user: u.first_name || u.username || 'Anonymous',
@@ -2106,8 +2176,11 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                             pnlRaw: totalPnl,
                             volRaw: totalVolume,
                             trades: trades.length,
+                            wins,
+                            losses,
+                            winRatio
                         };
-                    } catch {
+                    } catch (e) {
                         return null;
                     }
                 })
@@ -2127,6 +2200,9 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             pred: e.pred,
             pnl: e.pnl,
             trades: e.trades,
+            wins: e.wins,
+            losses: e.losses,
+            winRatio: e.winRatio,
             is_me: currentUserId === e.telegram_id,
         }));
 

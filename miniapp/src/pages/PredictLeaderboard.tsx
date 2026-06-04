@@ -56,11 +56,12 @@ export function PredictLeaderboard() {
                             <th className="th-user">User</th>
                             <th className="th-num">Predictions Vol</th>
                             <th className="th-num">All-time PNL</th>
+                            <th className="th-num">W/L (Ratio)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {leaderboard.length === 0 ? (
-                            <tr><td colSpan={4} style={{textAlign: 'center', padding: '20px', color: '#888'}}>No traders found</td></tr>
+                            <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px', color: '#888'}}>No traders found</td></tr>
                         ) : leaderboard.map((row, i) => (
                             <tr key={row.rank || i}>
                                 <td className="td-rank">
@@ -72,7 +73,11 @@ export function PredictLeaderboard() {
                                     </div>
                                 </td>
                                 <td className="td-num">{row.pred || '$0.00'}</td>
-                                <td className="td-num bold">{row.pnl || '$0.00'}</td>
+                                <td className="td-num bold" style={{ color: row.pnl?.includes('+') ? '#00e676' : row.pnl?.includes('-') ? '#ff1744' : 'inherit' }}>{row.pnl || '$0.00'}</td>
+                                <td className="td-num">
+                                    <span style={{color: '#00e676'}}>{row.wins || 0}W</span> / <span style={{color: '#ff1744'}}>{row.losses || 0}L</span>
+                                    <div style={{fontSize: '10px', color: '#888', marginTop: '2px'}}>{row.winRatio || '0%'}</div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
