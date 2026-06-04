@@ -146,7 +146,7 @@ class PolymarketRelayerService {
                 localBuilderCreds: creds
             });
 
-            const relayerUrl = process.env.RELAYER_URL || "https://relayer.polymarket.com";
+            const relayerUrl = process.env.RELAYER_URL || "https://relayer-v2.polymarket.com";
             
             return new RelayClient(
                 relayerUrl,
@@ -179,12 +179,7 @@ class PolymarketRelayerService {
             return await client.deriveDepositWalletAddress();
         } catch (err: any) {
             console.error("[Relayer] Failed to derive deposit wallet address:", err.message);
-            try {
-                const derived = walletService.deriveWallet(userWalletIndex);
-                return derived.address;
-            } catch (e) {
-                return "0x00000000000000000000000000000000000Demo";
-            }
+            throw err;
         }
     }
 
@@ -552,60 +547,7 @@ class PolymarketRelayerService {
      * Withdraw pUSD cross-chain using Relay SDK and Polymarket Biconomy Relayer natively.
      */
     async withdrawCrossChain(userWalletIndex: number, destChainId: number, destCurrencyAddress: string, recipientAddress: string, amount: bigint): Promise<string> {
-        if (this.isDemoMode) {
-            console.log(`[Relayer-Demo] Simulating cross-chain withdrawal of ${amount} to chain ${destChainId}`);
-            await new Promise(r => setTimeout(r, 1500));
-            return "0x_simulated_cross_chain_withdraw";
-        }
-
-        const depositWallet = await this.resolveDepositWallet(userWalletIndex);
-        const amountStr = amount.toString();
-
-        if (destChainId === 137 && destCurrencyAddress.toLowerCase() === PUSD_ADDRESS.toLowerCase()) {
-            console.log("[Relayer] Destination is Polygon pUSD. Using simple withdrawGasless.");
-            return await this.withdrawGasless(userWalletIndex, recipientAddress, amount);
-        }
-
-        console.log(`[Relayer] Getting LI.FI quote to bridge ${amountStr} pUSD -> Chain ${destChainId}`);
-        const { bridge: bridgeService } = await import("./bridge");
-
-        const quote = await bridgeService.getQuote({
-            fromChainId: 137,
-            toChainId: destChainId,
-            fromTokenAddress: PUSD_ADDRESS,
-            toTokenAddress: destCurrencyAddress,
-            fromAmount: amountStr,
-            fromAddress: depositWallet,
-            toAddress: recipientAddress
-        });
-
-        if (!quote || !quote.transactionRequest) {
-            throw new Error("Bridge SDK did not return valid execution steps for this route.");
-        }
-
-        console.log(`[Relayer] Bridge Quote retrieved. Target: ${quote.transactionRequest.to}`);
-
-        const batchCalls = [{
-            target: quote.transactionRequest.to,
-            value: quote.transactionRequest.value || "0",
-            data: quote.transactionRequest.data
-        }];
-
-        console.log(`[Relayer] Submitting batch to Biconomy...`);
-        const client = this.getUserRelayClient(userWalletIndex);
-        if (!client) throw new Error("Failed to construct relayer client");
-
-        const deadline = Math.floor(Date.now() / 1000 + 3600).toString();
-        try {
-            const response = await client.executeDepositWalletBatch(batchCalls, depositWallet, deadline);
-            console.log(`[Relayer] Biconomy Batch submitted! Hash: ${response.hash}`);
-            const result = await response.wait();
-            console.log("[Relayer] Biconomy Batch mined successfully.");
-            return response.hash || result?.transactionHash || "";
-        } catch (err: any) {
-            console.error("[Relayer] Cross-chain withdrawal failed:", err.message);
-            throw new Error(`Cross-chain withdrawal failed: ${err.message}`);
-        }
+        throw new Error("Cross-chain withdrawals require native gas and are currently disabled. Please use Polygon pUSD withdrawals.");
     }
 }
 
@@ -614,71 +556,3 @@ export const polymarketRelayerService = new PolymarketRelayerService();
 // Re-export key constants for use in other services/API routes
 export { PUSD_ADDRESS, USDCE_ADDRESS, COLLATERAL_ONRAMP_ADDRESS };
 
-export function startRedemptionListener() {
-    let ws: WebSocket;
-    
-    function connect() {
-        ws = new WebSocket("wss://ws-subscriptions-clob.polymarket.com/ws/market");
-
-        ws.on("open", () => {
-            console.log("[Relayer] Connected to Polymarket market WebSocket for auto-redemption");
-        });
-
-        ws.on("message", async (data: WebSocket.RawData) => {
-            try {
-                const msg = JSON.parse(data.toString());
-                
-                if (msg.event_type === "market_resolved") {
-                    const conditionId = msg.condition_id;
-                    console.log(`[Relayer] Market resolved detected (condition_id: ${conditionId}). Triggering auto-redemption!`);
-                    
-                    // Immediately redeem for all users
-                    const { data: users, error } = await db.getClient()
-                        .from("users")
-                        .select("wallet_index, deposit_wallet_address")
-                        .not("deposit_wallet_address", "is", null);
-
-                    if (error || !users) return;
-
-                    for (const user of users) {
-                        if (!user.deposit_wallet_address) continue;
-                        
-                        try {
-                            const response = await fetch(
-                                `https://data-api.polymarket.com/positions?user=${user.deposit_wallet_address}&sizeThreshold=0.01`
-                            );
-                            if (!response.ok) continue;
-                            
-                            const positions = await response.json();
-                            // Find if user has a redeemable position in THIS resolved condition
-                            const redeemable = positions.filter((p: any) => p.redeemable > 0 && p.conditionId === conditionId);
-
-                            for (const pos of redeemable) {
-                                console.log(`[Relayer] Redeeming immediately ${pos.conditionId} for user ${user.wallet_index}`);
-                                await polymarketRelayerService.redeemPositions(
-                                    user.wallet_index,
-                                    pos.conditionId
-                                );
-                            }
-                        } catch (e) {
-                            console.error(`[Relayer] Event-driven redemption error for user ${user.wallet_index}:`, e);
-                        }
-                    }
-                }
-            } catch (e) {
-                // Ignore parse errors
-            }
-        });
-
-        ws.on("error", (err) => {
-            console.error("[Relayer] WebSocket error:", err);
-        });
-
-        ws.on("close", () => {
-            console.log("[Relayer] WebSocket closed. Reconnecting in 5s...");
-            setTimeout(connect, 5000);
-        });
-    }
-
-    connect();
-}

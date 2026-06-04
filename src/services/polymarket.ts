@@ -145,15 +145,49 @@ class PolymarketService {
         }
 
         try {
-            const tempClient = new ClobClient({
-                host: CLOB_API,
-                chain: Chain.POLYGON,
-                signer,
-                funderAddress: depositWallet,
-                signatureType: 3,
-            });
+            const ts = Math.floor(Date.now() / 1000);
+            const nonce = 0;
+            const domain = { name: "ClobAuthDomain", version: "1", chainId: 137 };
+            const types = {
+                ClobAuth: [
+                    { name: "address", type: "address" },
+                    { name: "timestamp", type: "string" },
+                    { name: "nonce", type: "uint256" },
+                    { name: "message", type: "string" }
+                ]
+            };
+            const value = {
+                address: depositWallet,
+                timestamp: `${ts}`,
+                nonce,
+                message: "This message attests that I control the given wallet"
+            };
 
-            const newCreds = await tempClient.createOrDeriveApiKey();
+            const signerWallet = new ethers.Wallet(derived.privateKey);
+            let sig = await signerWallet.signTypedData(domain, types, value);
+            sig = sig + "03"; // append POLY_1271 signature type flag
+
+            const headers = {
+                "POLY_ADDRESS": depositWallet,
+                "POLY_SIGNATURE": sig,
+                "POLY_TIMESTAMP": `${ts}`,
+                "POLY_NONCE": `${nonce}`
+            };
+
+            let apiKeyRaw;
+            try {
+                const res = await axios.post(`${CLOB_API}/auth/api-key`, {}, { headers });
+                apiKeyRaw = res.data;
+            } catch (e: any) {
+                const res = await axios.get(`${CLOB_API}/auth/api-key`, { headers });
+                apiKeyRaw = res.data;
+            }
+
+            const newCreds = {
+                key: apiKeyRaw.apiKey,
+                secret: apiKeyRaw.secret,
+                passphrase: apiKeyRaw.passphrase
+            };
 
             if (!newCreds?.secret) {
                 throw new Error("CLOB credentials not initialized — API key creation failed");
@@ -291,13 +325,12 @@ class PolymarketService {
                 timeout: 5000,
             });
             const markets = res.data?.data || res.data || [];
-            // Find a market that contains "BTC" or "Bitcoin" and is active
             const targetMarket = markets.find((m: any) => 
                 m.active && 
                 !m.closed && 
                 m.tokens && 
                 m.tokens.length >= 2 && 
-                (m.question.includes("Bitcoin") || m.question.includes("BTC"))
+                m.market_slug && m.market_slug.includes("btc-updown-5m")
             );
 
             if (targetMarket) {
@@ -465,27 +498,41 @@ class PolymarketService {
 
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`);
+            const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000 });
             const trades = Array.isArray(res.data) ? res.data : [];
-            // Map properties for legacy compatibility in miniapp
             return trades.map(t => ({ 
                 ...t, 
-                asset_id: t.asset,
+                asset_id: t.asset_id || t.asset,
                 market: t.conditionId 
             }));
         } catch (e: any) {
-            console.log("[Polymarket Data API] Failed to fetch proxy trades:", e.response?.data || e.message);
-            return [];
+            try {
+                const res = await axios.get(`https://gamma-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000 });
+                const trades = Array.isArray(res.data) ? res.data : [];
+                return trades.map(t => ({ 
+                    ...t, 
+                    asset_id: t.asset_id || t.asset,
+                    market: t.conditionId 
+                }));
+            } catch (e2: any) {
+                console.log("[Polymarket] Both trade APIs failed:", e2.message);
+                return [];
+            }
         }
     }
 
     async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/positions?user=${proxyAddress}`);
+            const res = await axios.get(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0.01`, { timeout: 5000 });
             return Array.isArray(res.data) ? res.data : [];
         } catch (e: any) {
-            console.log("[Polymarket Data API] Failed to fetch proxy positions:", e.response?.data || e.message);
-            return [];
+            try {
+                const res = await axios.get(`https://gamma-api.polymarket.com/positions?user=${proxyAddress}`, { timeout: 5000 });
+                return Array.isArray(res.data) ? res.data : [];
+            } catch (e2: any) {
+                console.log("[Polymarket] Both position APIs failed:", e2.message);
+                return [];
+            }
         }
     }
 }

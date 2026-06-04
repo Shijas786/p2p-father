@@ -13,7 +13,7 @@ import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
 import { polymarketService } from "../services/polymarket";
-import { predictWalletService } from "../services/predict-wallet";
+
 import { polymarketRelayerService } from "../services/relayer";
 import { depositMonitor } from "../services/deposit-monitor";
 import { bot } from "../bot";
@@ -2109,7 +2109,7 @@ router.get("/predictions/deposit-wallet", async (req: Request, res: Response) =>
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const address = await predictWalletService.getDepositAddress(user.wallet_index);
+        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
         res.json({ address });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions deposit wallet error:", err);

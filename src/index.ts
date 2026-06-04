@@ -58,13 +58,14 @@ async function main() {
 
     // Background Jobs
     if (env.NODE_ENV !== 'test') {
-        const { startExpiryJob, startLiquiditySyncJob } = await import("./services/jobs");
+        const { startExpiryJob, startLiquiditySyncJob, startAutoClaimJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
         // 🚀 Deposit Monitor disabled globally - now runs on-demand via API
         
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
+        startAutoClaimJob();
     }
 
 

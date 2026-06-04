@@ -177,3 +177,51 @@ export function startLiquiditySyncJob(escrowService: any) {
         }
     }, 5 * 60 * 1000); // 5 minutes
 }
+
+export function startAutoClaimJob() {
+    console.log("⏰ Starting Auto Claim Job...");
+
+    setInterval(async () => {
+        try {
+            const client = (db as any).getClient();
+            const { data: users, error } = await client
+                .from("users")
+                .select("id, wallet_index, deposit_wallet_address, telegram_id")
+                .not("deposit_wallet_address", "is", null);
+
+            if (error || !users) return;
+
+            const { polymarketRelayerService } = await import("./relayer");
+            const { polymarketService } = await import("./polymarket");
+            const { bot } = await import("../bot");
+
+            for (const user of users) {
+                try {
+                    const positions = await polymarketService.getPositionsForProxy(user.deposit_wallet_address);
+                    const redeemable = positions.filter((p: any) => p.redeemable > 0);
+
+                    for (const pos of redeemable) {
+                        console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index}`);
+                        await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId);
+                        
+                        // Notify Telegram Bot
+                        if (user.telegram_id) {
+                            try {
+                                await bot.api.sendMessage(user.telegram_id,
+                                    `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                    { parse_mode: "Markdown" }
+                                );
+                            } catch (botErr) {
+                                console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
+                            }
+                        }
+                    }
+                } catch (e: any) {
+                    console.error(`[AutoClaim] Failed for user ${user.wallet_index}:`, e.message);
+                }
+            }
+        } catch (e) {
+            console.error("[JOB] Auto claim error:", e);
+        }
+    }, 60 * 1000); // every 60 seconds
+}
