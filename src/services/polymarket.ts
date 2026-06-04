@@ -150,6 +150,8 @@ class PolymarketService {
                 host: CLOB_API,
                 chain: Chain.POLYGON,
                 signer,
+                signatureType: 3, // POLY_1271
+                funderAddress: depositWallet,
             });
 
             let newCreds;
