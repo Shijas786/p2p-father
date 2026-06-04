@@ -179,7 +179,7 @@ class PolymarketService {
                 const res = await axios.post(`${CLOB_API}/auth/api-key`, {}, { headers });
                 apiKeyRaw = res.data;
             } catch (e: any) {
-                const res = await axios.get(`${CLOB_API}/auth/api-key`, { headers });
+                const res = await axios.get(`${CLOB_API}/auth/derive-api-key`, { headers });
                 apiKeyRaw = res.data;
             }
 

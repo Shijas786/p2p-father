@@ -3,6 +3,7 @@ import { BuilderConfig } from "@polymarket/builder-signing-sdk";
 import { createWalletClient, http, encodeFunctionData } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ethers } from "ethers";
+import axios from "axios";
 import { wallet as walletService } from "./wallet";
 import { env } from "../config/env";
 import WebSocket from "ws";
@@ -267,8 +268,57 @@ class PolymarketRelayerService {
         
         try {
             console.log(`[Relayer] Redeeming positions for condition ${conditionId}...`);
-            const CTF_ADAPTER = "0xAdA100Db00Ca00073811820692005400218FcE1f";
+
+            // 1. Determine if market is NegRisk or Standard
+            let isNegRisk = false;
+            try {
+                const marketRes = await axios.get(`https://gamma-api.polymarket.com/markets`, {
+                    params: { conditionId },
+                    timeout: 5000
+                });
+                isNegRisk = !!marketRes.data?.[0]?.negRisk;
+            } catch (err: any) {
+                console.warn(`[Relayer] Failed to check negRisk via Gamma: ${err.message}. Defaulting to false.`);
+            }
+
+            const CTF_ADAPTER = isNegRisk 
+                ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
+                : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
+
+            console.log(`[Relayer] Using CTF Adapter: ${CTF_ADAPTER} (isNegRisk: ${isNegRisk})`);
+
+            // 2. Query ConditionalTokens contract to check resolution and payout numerators
+            const CTF_CONTRACT_ADDRESS = "0x4D97dcd97EC945f40cf65F87097AcE5EA0476045";
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
             
+            const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
+                "function payoutDenominator(bytes32) view returns (uint256)",
+                "function payoutNumerators(bytes32, uint256) view returns (uint256)"
+            ], provider);
+
+            const denominator = await ctfContract.payoutDenominator(conditionId);
+            if (denominator === 0n) {
+                throw new Error(`Market condition ${conditionId} is not resolved on-chain yet (payout denominator is 0).`);
+            }
+
+            // Determine which outcome index sets are winners (payoutNumerator > 0)
+            const indexSets: bigint[] = [];
+            const payoutNum0 = await ctfContract.payoutNumerators(conditionId, 0n);
+            const payoutNum1 = await ctfContract.payoutNumerators(conditionId, 1n);
+
+            if (payoutNum0 > 0n) {
+                indexSets.push(1n); // 1 << 0
+            }
+            if (payoutNum1 > 0n) {
+                indexSets.push(2n); // 1 << 1
+            }
+
+            if (indexSets.length === 0) {
+                throw new Error(`No winning index sets found for condition ${conditionId}. Both payouts are 0.`);
+            }
+
+            console.log(`[Relayer] Redeeming indexSets ${indexSets.map(x => x.toString())} for condition ${conditionId}`);
+
             const encodedData = encodeFunctionData({
                 abi: [{
                     name: "redeemPositions",
@@ -286,7 +336,7 @@ class PolymarketRelayerService {
                     PUSD_ADDRESS, 
                     "0x0000000000000000000000000000000000000000000000000000000000000000", 
                     conditionId as `0x${string}`,
-                    [1n, 2n] // Always redeem both indices for binary markets
+                    indexSets
                 ]
             });
 

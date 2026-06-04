@@ -178,6 +178,8 @@ export function startLiquiditySyncJob(escrowService: any) {
     }, 5 * 60 * 1000); // 5 minutes
 }
 
+const attemptedRedeems = new Set<string>();
+
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
 
@@ -201,19 +203,27 @@ export function startAutoClaimJob() {
                     const redeemable = positions.filter((p: any) => p.redeemable > 0);
 
                     for (const pos of redeemable) {
-                        console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index}`);
-                        await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId);
-                        
-                        // Notify Telegram Bot
-                        if (user.telegram_id) {
-                            try {
-                                await bot.api.sendMessage(user.telegram_id,
-                                    `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
-                                    { parse_mode: "Markdown" }
-                                );
-                            } catch (botErr) {
-                                console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
+                        const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
+                        if (attemptedRedeems.has(attemptKey)) continue;
+
+                        try {
+                            console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index}`);
+                            await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId);
+                            attemptedRedeems.add(attemptKey);
+                            
+                            // Notify Telegram Bot
+                            if (user.telegram_id) {
+                                try {
+                                    await bot.api.sendMessage(user.telegram_id,
+                                        `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                        { parse_mode: "Markdown" }
+                                    );
+                                } catch (botErr) {
+                                    console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
+                                }
                             }
+                        } catch (posErr: any) {
+                            console.error(`[AutoClaim] Failed to redeem ${pos.conditionId} for user ${user.wallet_index}:`, posErr.message);
                         }
                     }
                 } catch (e: any) {
