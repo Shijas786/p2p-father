@@ -2053,8 +2053,73 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
 
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
     try {
-        res.json({ leaderboard: [] });
+        // Fetch all users with deposit wallets from DB
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
+        const { data: usersWithWallets } = await supabase
+            .from("users")
+            .select("id, first_name, username, deposit_wallet_address, telegram_id")
+            .not("deposit_wallet_address", "is", null)
+            .limit(100);
+
+        if (!usersWithWallets || usersWithWallets.length === 0) {
+            return res.json({ leaderboard: [] });
+        }
+
+        // Fetch positions for all users from Polymarket Data API in parallel (with throttling)
+        const leaderboardEntries: any[] = [];
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < usersWithWallets.length; i += BATCH_SIZE) {
+            const batch = usersWithWallets.slice(i, i + BATCH_SIZE);
+            const results = await Promise.allSettled(
+                batch.map(async (u: any) => {
+                    try {
+                        const r = await fetch(
+                            `https://data-api.polymarket.com/positions?user=${u.deposit_wallet_address}&sizeThreshold=0`,
+                            { signal: AbortSignal.timeout(5000) }
+                        );
+                        const positions: any[] = await r.json().catch(() => []);
+                        if (!Array.isArray(positions) || positions.length === 0) return null;
+
+                        const totalCashPnl = positions.reduce((sum: number, p: any) => sum + (parseFloat(p.cashPnl ?? '0') || 0), 0);
+                        const totalVolume = positions.reduce((sum: number, p: any) => sum + (parseFloat(p.initialValue ?? '0') || 0), 0);
+                        const tradeCount = positions.length;
+
+                        return {
+                            user: u.first_name || u.username || 'Anonymous',
+                            telegram_id: u.telegram_id,
+                            pred: `$${totalVolume.toFixed(2)}`,
+                            pnl: `${totalCashPnl >= 0 ? '+' : ''}$${totalCashPnl.toFixed(2)}`,
+                            pnlRaw: totalCashPnl,
+                            volRaw: totalVolume,
+                            trades: tradeCount,
+                        };
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+            for (const r of results) {
+                if (r.status === 'fulfilled' && r.value) leaderboardEntries.push(r.value);
+            }
+        }
+
+        // Sort by PNL descending
+        leaderboardEntries.sort((a, b) => b.pnlRaw - a.pnlRaw);
+
+        const currentUserId = req.telegramUser?.id;
+        const leaderboard = leaderboardEntries.map((e, i) => ({
+            rank: i + 1,
+            user: e.user,
+            pred: e.pred,
+            pnl: e.pnl,
+            trades: e.trades,
+            is_me: currentUserId === e.telegram_id,
+        }));
+
+        res.json({ leaderboard });
     } catch (err: any) {
+        console.error("[MINIAPP] Predictions leaderboard error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -2315,6 +2380,20 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
             }
 
+            // Calculate realized PNL from Data API positions (includes closed/redeemed positions)
+            // Use sizeThreshold=0 to get ALL positions including zero-size redeemed ones
+            let realizedPnl = 0;
+            try {
+                const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`, { signal: AbortSignal.timeout(5000) });
+                const allPositions: any[] = await allPositionsRes.json().catch(() => []);
+                if (Array.isArray(allPositions)) {
+                    // Sum cashPnl (which includes both open and closed positions' realized P&L)
+                    realizedPnl = allPositions.reduce((sum: number, p: any) => sum + (parseFloat(p.cashPnl ?? p.realizedPnl ?? '0') || 0), 0);
+                }
+            } catch (e) {
+                // ignore
+            }
+
             // Build final positions list
             const positions = Object.values(positionMap)
                 .filter(p => p.qty > 0.001)
@@ -2336,7 +2415,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                     };
                 });
 
-            return res.json({ positions });
+            return res.json({ positions, realizedPnl: parseFloat(realizedPnl.toFixed(2)) });
         } catch (innerErr: any) {
             console.warn("[MINIAPP] Real positions fetch failed, returning empty:", innerErr.message);
             // Return empty positions for demo/dev

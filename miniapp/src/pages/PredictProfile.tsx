@@ -27,10 +27,12 @@ export function PredictProfile({ user }: Props) {
     const [positions, setPositions] = useState<any[]>([]);
     const [trades, setTrades] = useState<any[]>([]);
     const [claiming, setClaiming] = useState(false);
+    const [realizedPnl, setRealizedPnl] = useState(0);
     
     const loadData = () => {
         api.predictions.getPositions().then((res: any) => {
             if (res && res.positions) setPositions(res.positions);
+            if (typeof res?.realizedPnl === 'number') setRealizedPnl(res.realizedPnl);
         }).catch((e: any) => console.error(e));
 
         api.predictions.getTrades('?all=true').then((res: any) => {
@@ -44,7 +46,8 @@ export function PredictProfile({ user }: Props) {
 
     const totalPositionsValue = positions.reduce((sum, p) => sum + (p.value || 0), 0);
     const predictionsCount = trades.length;
-    const totalPnl = positions.reduce((sum, p) => sum + (p.returnAmt || 0), 0);
+    const unrealizedPnl = positions.reduce((sum, p) => sum + (p.returnAmt || 0), 0);
+    const totalPnl = unrealizedPnl + realizedPnl;
 
     return (
         <div className="pm-prof-page">
@@ -92,7 +95,13 @@ export function PredictProfile({ user }: Props) {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
                                 )}
                             </div>
-                            <span className="pm-prof-pnl-time">Past Day</span>
+                            {realizedPnl !== 0 && (
+                                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                                    Realized: <span style={{ color: realizedPnl >= 0 ? '#10b981' : '#ef4444' }}>{realizedPnl >= 0 ? '+' : ''}${realizedPnl.toFixed(2)}</span>
+                                    {unrealizedPnl !== 0 && <> · Open: <span style={{ color: unrealizedPnl >= 0 ? '#10b981' : '#ef4444' }}>{unrealizedPnl >= 0 ? '+' : ''}${unrealizedPnl.toFixed(2)}</span></>}
+                                </div>
+                            )}
+                            <span className="pm-prof-pnl-time">All Time</span>
                         </div>
                         <div className="pm-prof-chart-right">
                             <div className="pm-prof-timeframes">
