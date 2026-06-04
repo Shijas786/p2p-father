@@ -391,6 +391,25 @@ class PolymarketRelayerService {
                 value: "0",
                 data: encodedData
             });
+
+            if (collateralToken === USDCE_ADDRESS) {
+                console.log(`[Relayer] Appending USDC.e -> pUSD wrap calls to the batch...`);
+                const usdceContract = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, provider);
+                const approveOnrampTx = await usdceContract.approve.populateTransaction(COLLATERAL_ONRAMP_ADDRESS, balance);
+                calls.push({
+                    target: USDCE_ADDRESS,
+                    value: "0",
+                    data: approveOnrampTx.data
+                });
+
+                const onrampContract = new ethers.Contract(COLLATERAL_ONRAMP_ADDRESS, COLLATERAL_ONRAMP_ABI as any, provider);
+                const wrapTx = await onrampContract.wrap.populateTransaction(USDCE_ADDRESS, depositWallet, balance);
+                calls.push({
+                    target: COLLATERAL_ONRAMP_ADDRESS,
+                    value: "0",
+                    data: wrapTx.data
+                });
+            }
             
             const deadline = Math.floor(Date.now() / 1000) + 600;
             const tx = await client.executeDepositWalletBatch(calls, depositWallet, deadline.toString());
