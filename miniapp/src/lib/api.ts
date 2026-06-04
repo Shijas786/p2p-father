@@ -331,8 +331,9 @@ export const api = {
                     }
 
                     if (isSell) {
+                        const currentAvg = positionMap[key].qty > 0 ? (positionMap[key].totalCost / positionMap[key].qty) : 0;
                         positionMap[key].qty -= qty;
-                        positionMap[key].totalCost -= qty * price;
+                        positionMap[key].totalCost -= qty * currentAvg; // Deduct cost proportionally based on acquisition cost
                     } else {
                         positionMap[key].qty += qty;
                         positionMap[key].totalCost += qty * price;

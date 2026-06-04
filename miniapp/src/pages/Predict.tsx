@@ -470,7 +470,14 @@ export function Predict({ user }: Props) {
     const handlePlacePrediction = async () => {
         haptic('medium');
         if (!betAmount || parseFloat(betAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
-        if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
+        
+        if (tradeType === 'buy') {
+            if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
+        } else {
+            const availableShares = positions.find(p => p.outcome === betType)?.qty || 0;
+            if (parseFloat(betAmount) > availableShares) { showToast('Insufficient shares to sell', 'warning'); return; }
+        }
+        
         setPlacingBet(true);
         try {
             const price = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
