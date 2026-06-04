@@ -405,7 +405,7 @@ class PolymarketRelayerService {
             const wrapData = encodeFunctionData({
                 abi: COLLATERAL_ONRAMP_ABI,
                 functionName: "wrap",
-                args: [USDCE_ADDRESS, depositWallet, amount]
+                args: [USDCE_ADDRESS, depositWallet as `0x${string}`, amount]
             });
 
             const approveCall = {
