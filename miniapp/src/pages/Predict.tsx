@@ -100,7 +100,7 @@ export function Predict({ user }: Props) {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [aiRes, histRes, balRes, posRes, allTradeRes, recentTradeRes, depRes] =
+            const [aiRes, histRes, balRes, posRes, allTradeRes, recentTradeRes, depRes, marketRes] =
                 await Promise.allSettled([
                     api.predictions.getAIAnalysis(),
                     api.predictions.getHistory(),
@@ -109,6 +109,7 @@ export function Predict({ user }: Props) {
                     api.predictions.getTrades('?all=true'),
                     api.predictions.getTrades(),
                     api.predictions.getDepositWallet(),
+                    api.predictions.getMarket(),
                 ]);
 
             if (aiRes.status === 'fulfilled') setAiData(aiRes.value);
@@ -133,20 +134,29 @@ export function Predict({ user }: Props) {
                 
                 // Merge WS positions into data API positions
                 const basePositions = posRes.value.positions;
+                const activeBtcMarket = marketRes.status === 'fulfilled' ? marketRes.value.market : null;
                 const wsPositions = polymarketWs.getPositions();
                 for (const wsPos of wsPositions) {
-                    const idx = basePositions.findIndex(p => p.outcome === wsPos.outcome);
+                    let mappedOutcome = wsPos.outcome as 'UP'|'DOWN'|undefined;
+                    if (!mappedOutcome && activeBtcMarket) {
+                        const assetLc = wsPos.asset.toLowerCase();
+                        if (assetLc === activeBtcMarket.yesTokenId.toLowerCase()) mappedOutcome = 'UP';
+                        else if (assetLc === activeBtcMarket.noTokenId.toLowerCase()) mappedOutcome = 'DOWN';
+                    }
+                    if (!mappedOutcome) continue;
+
+                    const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
                     if (idx >= 0) {
                         basePositions[idx].qty = wsPos.size;
                         basePositions[idx].value = wsPos.size * basePositions[idx].currentPrice;
                     } else {
                         basePositions.push({
-                            outcome: wsPos.outcome as 'UP'|'DOWN',
+                            outcome: mappedOutcome,
                             qty: wsPos.size,
                             avg: wsPos.price,
                             currentPrice: wsPos.price,
                             cost: wsPos.size * wsPos.price,
-                            value: wsPos.size * wsPos.price,
+                            value: wsPos.size * (mappedOutcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice),
                             returnAmt: 0,
                             returnPct: 0
                         });
