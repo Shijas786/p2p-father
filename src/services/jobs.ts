@@ -179,8 +179,9 @@ export function startLiquiditySyncJob(escrowService: any) {
     }, 5 * 60 * 1000); // 5 minutes
 }
 
-const attemptedRedeems = new Set<string>();
-const redeemAttempts = new Map<string, number>();
+export const attemptedRedeems = new Set<string>();
+export const redeemAttempts = new Map<string, number>();
+export const failedRedeemCounts = new Map<string, number>();
 
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
@@ -255,6 +256,7 @@ export function startAutoClaimJob() {
 
                             if (success) {
                                 attemptedRedeems.add(attemptKey);
+                                failedRedeemCounts.delete(attemptKey);
                                 
                                 // Notify Telegram Bot
                                 if (user.telegram_id) {
@@ -269,6 +271,12 @@ export function startAutoClaimJob() {
                                 }
                             } else {
                                 console.error(`[AutoClaim] Both indexSets failed to redeem for ${pos.conditionId} (user: ${user.wallet_index})`);
+                                const fails = (failedRedeemCounts.get(attemptKey) ?? 0) + 1;
+                                failedRedeemCounts.set(attemptKey, fails);
+                                if (fails >= 3) {
+                                    console.warn(`[AutoClaim] Condition ${pos.conditionId} failed 3 times. Blacklisting to prevent log spam.`);
+                                    attemptedRedeems.add(attemptKey);
+                                }
                             }
                         } catch (posErr: any) {
                             console.error(`[AutoClaim] Loop error for ${pos.conditionId} (user: ${user.wallet_index}):`, posErr.message);

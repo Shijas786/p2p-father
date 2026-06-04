@@ -16,6 +16,7 @@ import { polymarketService } from "../services/polymarket";
 
 import { polymarketRelayerService } from "../services/relayer";
 import { depositMonitor } from "../services/deposit-monitor";
+import { attemptedRedeems } from "../services/jobs";
 import { bot } from "../bot";
 
 // Multer for in-memory file uploads (max 5MB)
@@ -2242,6 +2243,10 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             // Auto-claim background check using Data API positions
             for (const p of positionsRes) {
                 if (p.redeemable && p.size > 0 && p.conditionId) {
+                    const attemptKey = `${user.wallet_index}-${p.conditionId}`;
+                    if (attemptedRedeems.has(attemptKey)) {
+                        continue;
+                    }
                     console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
                     const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
                     const indexSet = outcomeIndex === 0 ? 1 : 2;
