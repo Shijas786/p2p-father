@@ -2053,20 +2053,21 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
 
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
     try {
-        // Fetch all users with deposit wallets from DB
+        // Fetch all users who have a wallet_index (i.e. have a Polymarket proxy wallet)
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
         const { data: usersWithWallets } = await supabase
             .from("users")
-            .select("id, first_name, username, deposit_wallet_address, telegram_id")
-            .not("deposit_wallet_address", "is", null)
+            .select("id, first_name, username, wallet_index, telegram_id")
+            .not("wallet_index", "is", null)
+            .gt("wallet_index", 0)
             .limit(100);
 
         if (!usersWithWallets || usersWithWallets.length === 0) {
             return res.json({ leaderboard: [] });
         }
 
-        // Fetch positions for all users from Polymarket Data API in parallel (with throttling)
+        // Resolve proxy address for each user and fetch their Polymarket trade stats
         const leaderboardEntries: any[] = [];
         const BATCH_SIZE = 5;
         for (let i = 0; i < usersWithWallets.length; i += BATCH_SIZE) {
@@ -2074,25 +2075,44 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             const results = await Promise.allSettled(
                 batch.map(async (u: any) => {
                     try {
-                        const r = await fetch(
-                            `https://data-api.polymarket.com/positions?user=${u.deposit_wallet_address}&sizeThreshold=0`,
+                        // Resolve the deposit wallet (proxy) address
+                        const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
+                        if (!proxyAddress || proxyAddress.toLowerCase().includes('demo')) return null;
+
+                        // Fetch trades from Data API
+                        const tradesRes = await fetch(
+                            `https://data-api.polymarket.com/trades?user=${proxyAddress}&limit=500`,
                             { signal: AbortSignal.timeout(5000) }
                         );
-                        const positions: any[] = await r.json().catch(() => []);
-                        if (!Array.isArray(positions) || positions.length === 0) return null;
+                        const trades: any[] = await tradesRes.json().catch(() => []);
+                        if (!Array.isArray(trades) || trades.length === 0) return null;
 
-                        const totalCashPnl = positions.reduce((sum: number, p: any) => sum + (parseFloat(p.cashPnl ?? '0') || 0), 0);
-                        const totalVolume = positions.reduce((sum: number, p: any) => sum + (parseFloat(p.initialValue ?? '0') || 0), 0);
-                        const tradeCount = positions.length;
+                        // Compute volume and trade count
+                        const totalVolume = trades
+                            .filter((t: any) => t.side === 'BUY')
+                            .reduce((s: number, t: any) => s + (parseFloat(t.size ?? '0') * parseFloat(t.price ?? '0')), 0);
+
+                        // Fetch positions for cashPnl (open positions)
+                        let totalPnl = 0;
+                        try {
+                            const posRes = await fetch(
+                                `https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`,
+                                { signal: AbortSignal.timeout(5000) }
+                            );
+                            const positions: any[] = await posRes.json().catch(() => []);
+                            if (Array.isArray(positions)) {
+                                totalPnl = positions.reduce((s: number, p: any) => s + (parseFloat(p.cashPnl ?? '0') || 0), 0);
+                            }
+                        } catch { /* ignore */ }
 
                         return {
                             user: u.first_name || u.username || 'Anonymous',
                             telegram_id: u.telegram_id,
                             pred: `$${totalVolume.toFixed(2)}`,
-                            pnl: `${totalCashPnl >= 0 ? '+' : ''}$${totalCashPnl.toFixed(2)}`,
-                            pnlRaw: totalCashPnl,
+                            pnl: `${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toFixed(2)}`,
+                            pnlRaw: totalPnl,
                             volRaw: totalVolume,
-                            trades: tradeCount,
+                            trades: trades.length,
                         };
                     } catch {
                         return null;
@@ -2104,8 +2124,8 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             }
         }
 
-        // Sort by PNL descending
-        leaderboardEntries.sort((a, b) => b.pnlRaw - a.pnlRaw);
+        // Sort by volume descending (most active traders first), fallback to PNL
+        leaderboardEntries.sort((a, b) => b.volRaw - a.volRaw || b.pnlRaw - a.pnlRaw);
 
         const currentUserId = req.telegramUser?.id;
         const leaderboard = leaderboardEntries.map((e, i) => ({
