@@ -156,15 +156,15 @@ class PolymarketService {
 
             let newCreds;
             try {
-                console.log(`[Polymarket] Attempting to create API key...`);
-                newCreds = await tempClient.createApiKey();
+                console.log(`[Polymarket] Attempting to derive existing API key...`);
+                newCreds = await tempClient.deriveApiKey();
             } catch (err: any) {
-                console.log(`[Polymarket] createApiKey failed (status: ${err?.response?.status || err.message}). Attempting to derive existing API key...`);
+                console.log(`[Polymarket] deriveApiKey failed (status: ${err?.response?.status || err.message}). Attempting to create new API key...`);
                 try {
-                    newCreds = await tempClient.deriveApiKey();
-                } catch (deriveErr: any) {
-                    console.error(`[Polymarket] deriveApiKey also failed:`, deriveErr?.response?.data || deriveErr.message);
-                    throw deriveErr;
+                    newCreds = await tempClient.createApiKey();
+                } catch (createErr: any) {
+                    console.error(`[Polymarket] createApiKey also failed:`, createErr?.response?.data || createErr.message);
+                    throw createErr;
                 }
             }
 
