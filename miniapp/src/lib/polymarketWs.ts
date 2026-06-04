@@ -157,16 +157,14 @@ class PolymarketWsClient {
     }
 
     // Called when the backend Data API catches up, to avoid double-counting
-    syncWithBackend(backendAssets: string[]) {
+    syncWithBackend(backendOutcomes: string[]) {
         let changed = false;
-        for (const asset of backendAssets) {
-            const assetLc = asset.toLowerCase();
-            // If the backend has it, we assume it's fully confirmed and indexed,
-            // so we can remove our local optimistic/websocket state for this asset 
-            // to rely entirely on the backend data.
-            if (this.localPositions[assetLc]) {
-                delete this.localPositions[assetLc];
-                changed = true;
+        for (const outcome of backendOutcomes) {
+            for (const assetLc in this.localPositions) {
+                if (this.localPositions[assetLc].outcome === outcome) {
+                    delete this.localPositions[assetLc];
+                    changed = true;
+                }
             }
         }
         if (changed) this.notifyListeners();

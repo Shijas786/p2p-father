@@ -129,7 +129,7 @@ export function Predict({ user }: Props) {
             // Sync WebSocket with backend positions to remove duplicates
             if (posRes.status === 'fulfilled' && posRes.value?.positions) {
                 // Remove ws positions that are now in data API
-                polymarketWs.syncWithBackend(posRes.value.positions.map(p => p.outcome === 'UP' ? activeBtcMarket?.yesTokenId : activeBtcMarket?.noTokenId).filter(Boolean));
+                polymarketWs.syncWithBackend(posRes.value.positions.map(p => p.outcome));
                 
                 // Merge WS positions into data API positions
                 const basePositions = posRes.value.positions;

@@ -261,7 +261,6 @@ export const api = {
             noPrice: { buyPrice: number; sellPrice: number };
         }>('/predictions/market'),
         getPositions: async () => {
-        getPositions: async () => {
             const [{ address }, marketRes] = await Promise.all([
                 api.predictions.getDepositWallet(),
                 api.predictions.getMarket()
