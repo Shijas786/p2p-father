@@ -217,7 +217,7 @@ export function startAutoClaimJob() {
                                 const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
                                 const provider = new ethers.JsonRpcProvider(rpcUrl);
                                 const ctfContract = new ethers.Contract(
-                                    "0x4D97DCd97eC945f40cf65F87097ACe5EA0476045",
+                                    ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
                                     ["function balanceOf(address, uint256) view returns (uint256)"],
                                     provider
                                 );

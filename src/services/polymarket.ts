@@ -386,7 +386,11 @@ class PolymarketService {
             priceCache[tokenId] = { data: result, timestamp: now };
             return result;
         } catch (err: any) {
-            console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
+            if (err.message?.includes('no liquidity')) {
+                console.log(`[SYNC] Skipping illiquid market ${tokenId}`);
+            } else {
+                console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
+            }
             // Instead of returning 0.50, return a more obvious fallback or throw
             // Since UI depends on it, returning a price that is 1 - other price might be better, 
             // but we don't have the other price here. Let's just return a placeholder that makes it obvious it failed.
