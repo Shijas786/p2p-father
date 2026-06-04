@@ -101,13 +101,18 @@ export function TradePanel({
             try {
                 const targetConditionId = roundTrades[0]?.conditionId || round.conditionId;
                 if (!targetConditionId) throw new Error("No condition ID found for this round. Please wait for the system to auto-claim.");
-                await api.predictions.autoClaim(targetConditionId);
-                localStorage.setItem(claimKey, 'true');
-                showToast('Winnings successfully claimed!', 'success');
-                // Optional: delay reload to let UI update
-                setTimeout(() => loadData(), 1000);
+                
+                const res = await api.predictions.autoClaim(targetConditionId);
+                if (res.claimed > 0) {
+                    localStorage.setItem(claimKey, 'true');
+                    showToast('Winnings successfully claimed!', 'success');
+                    // Optional: delay reload to let UI update
+                    setTimeout(() => loadData(), 1000);
+                } else {
+                    showToast('Market resolving... please try again in a few moments', 'error');
+                }
             } catch (e: any) {
-                showToast(e.message || 'Failed to claim', 'error');
+                showToast(e.message || 'Claim failed or already redeemed', 'error');
             } finally {
                 setClaiming(false);
             }
