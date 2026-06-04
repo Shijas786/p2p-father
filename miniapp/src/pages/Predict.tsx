@@ -164,7 +164,11 @@ export function Predict({ user }: Props) {
                         });
                     }
                 }
-                setPositions(basePositions);
+                
+                // Filter out any positions that have been fully sold (qty <= 0)
+                posRes.value.positions = basePositions.filter(p => p.qty > 0.001);
+
+                setPositions(posRes.value.positions);
             }
 
         } catch (e) { console.error('[Predict] loadData fatal error:', e); }
@@ -477,19 +481,19 @@ export function Predict({ user }: Props) {
             );
             if (res.success) { 
                 showToast('Prediction placed!', 'success');
-                // Optimistically update WS state for instant UI response
-                const marketRes = await api.predictions.getMarket().catch(()=>null);
-                if (marketRes?.market) {
-                    const tokenId = betType === 'UP' ? marketRes.market.yesTokenId : marketRes.market.noTokenId;
-                    const size = parseFloat(betAmount) / price;
-                    if (tradeType === 'buy') {
-                        polymarketWs.optimisticBuy(tokenId, betType, size, price, marketRes.market.conditionId);
-                    } else {
-                        polymarketWs.optimisticSell(tokenId, size);
-                    }
+
+                // Optimistically update cash balance to prevent portfolio dipping
+                if (tradeType === 'buy') {
+                    setCashBalance(prev => (parseFloat(prev || '0') - parseFloat(betAmount)).toFixed(2));
+                } else {
+                    const receivedUsdc = parseFloat(betAmount) * price;
+                    setCashBalance(prev => (parseFloat(prev || '0') + receivedUsdc).toFixed(2));
                 }
+
                 setBetAmount(''); 
-                loadData(); 
+                
+                // Delay backend fetch to allow relayer to settle funds
+                setTimeout(loadData, 3000);
             }
             else showToast('Failed to place prediction', 'error');
         } catch (e: any) { showToast(e.message || 'Order failed', 'error'); }

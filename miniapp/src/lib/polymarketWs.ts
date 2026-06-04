@@ -153,7 +153,7 @@ class PolymarketWsClient {
     }
 
     getPositions() {
-        return Object.values(this.localPositions).filter(p => p.size > 0.001);
+        return Object.values(this.localPositions);
     }
 
     // Called when the backend Data API catches up, to avoid double-counting
