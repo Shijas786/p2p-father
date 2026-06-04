@@ -8,7 +8,7 @@ import { escrow } from "../services/escrow";
 import { bridge } from "../services/bridge";
 import { wallet } from "../services/wallet";
 import { market } from "../services/market";
-import { polymarketRelayerService, startRedemptionListener } from "../services/relayer";
+import { polymarketRelayerService } from "../services/relayer";
 import { groupManager } from "../utils/groupManager";
 import {
     formatOrder,
@@ -3872,48 +3872,4 @@ bot.api.setMyCommands(groupCommands, { scope: { type: "all_group_chats" } })
 
 export { bot, notifyTrader };
 
-// Start WebSocket listener for instant redemptions
-startRedemptionListener();
 
-// Auto-Redeem Cron (Run every 30 mins as fallback)
-setInterval(async () => {
-    try {
-        console.log("[Cron] Checking for redeemable positions...");
-        const { data: users, error } = await db.getClient()
-            .from("users")
-            .select("wallet_index, deposit_wallet_address")
-            .not("deposit_wallet_address", "is", null);
-
-        if (error || !users) {
-            console.error("[Cron] Failed to fetch users for redemption:", error);
-            return;
-        }
-
-        for (const user of users) {
-            try {
-                if (!user.deposit_wallet_address) continue;
-                
-                const response = await fetch(
-                    `https://data-api.polymarket.com/positions?user=${user.deposit_wallet_address}&sizeThreshold=0.01`
-                );
-                
-                if (!response.ok) continue;
-                
-                const positions = await response.json();
-                const redeemable = positions.filter((p: any) => p.redeemable > 0);
-
-                for (const pos of redeemable) {
-                    console.log(`[Cron] Redeeming ${pos.conditionId} for user ${user.wallet_index}`);
-                    await polymarketRelayerService.redeemPositions(
-                        user.wallet_index,
-                        pos.conditionId
-                    );
-                }
-            } catch (err) {
-                console.error(`[Cron] Error redeeming for user ${user.wallet_index}:`, err);
-            }
-        }
-    } catch (e) {
-        console.error("[Cron] Auto-Redeem cron failed:", e);
-    }
-}, 30 * 60 * 1000);
