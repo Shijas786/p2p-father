@@ -179,6 +179,7 @@ export function startLiquiditySyncJob(escrowService: any) {
 }
 
 const attemptedRedeems = new Set<string>();
+const redeemAttempts = new Map<string, number>();
 
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
@@ -206,9 +207,16 @@ export function startAutoClaimJob() {
                         const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
                         if (attemptedRedeems.has(attemptKey)) continue;
 
+                        const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
+                        if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
+
                         try {
-                            console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index}`);
-                            await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId);
+                            const outcomeIndex = typeof pos.outcomeIndex === 'string' ? parseInt(pos.outcomeIndex) : pos.outcomeIndex;
+                            const indexSet = outcomeIndex === 0 ? 1 : 2;
+
+                            redeemAttempts.set(attemptKey, Date.now());
+                            console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index} (indexSet: ${indexSet})`);
+                            await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
                             attemptedRedeems.add(attemptKey);
                             
                             // Notify Telegram Bot

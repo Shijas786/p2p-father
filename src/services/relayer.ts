@@ -257,7 +257,7 @@ class PolymarketRelayerService {
         }
     }
 
-    async redeemPositions(userWalletIndex: number, conditionId: string): Promise<string> {
+    async redeemPositions(userWalletIndex: number, conditionId: string, indexSet: number): Promise<string> {
         if (this.isDemoMode) {
             console.log(`[Relayer] DEMO MODE: Skipping auto-redeem for ${conditionId}`);
             return "demo-tx-hash";
@@ -288,7 +288,7 @@ class PolymarketRelayerService {
             console.log(`[Relayer] Using CTF Adapter: ${CTF_ADAPTER} (isNegRisk: ${isNegRisk})`);
 
             // 2. Query ConditionalTokens contract to check resolution and payout numerators
-            const CTF_CONTRACT_ADDRESS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
+            const CTF_CONTRACT_ADDRESS = "0x4D97DCd97eC945f40cf65F87097ACe5EA0476045";
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
             
             const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
@@ -301,23 +301,14 @@ class PolymarketRelayerService {
                 throw new Error(`Market condition ${conditionId} is not resolved on-chain yet (payout denominator is 0).`);
             }
 
-            // Determine which outcome index sets are winners (payoutNumerator > 0)
-            const indexSets: bigint[] = [];
-            const payoutNum0 = await ctfContract.payoutNumerators(conditionId, 0n);
-            const payoutNum1 = await ctfContract.payoutNumerators(conditionId, 1n);
-
-            if (payoutNum0 > 0n) {
-                indexSets.push(1n); // 1 << 0
-            }
-            if (payoutNum1 > 0n) {
-                indexSets.push(2n); // 1 << 1
+            // Verify that the requested indexSet is a winner (payoutNumerator > 0)
+            const payoutIndex = indexSet === 1 ? 0n : 1n;
+            const payoutNum = await ctfContract.payoutNumerators(conditionId, payoutIndex);
+            if (payoutNum === 0n) {
+                throw new Error(`Requested indexSet ${indexSet} is not a winning outcome for condition ${conditionId} (payout is 0).`);
             }
 
-            if (indexSets.length === 0) {
-                throw new Error(`No winning index sets found for condition ${conditionId}. Both payouts are 0.`);
-            }
-
-            console.log(`[Relayer] Redeeming indexSets ${indexSets.map(x => x.toString())} for condition ${conditionId}`);
+            console.log(`[Relayer] Redeeming indexSet [${indexSet}] for condition ${conditionId}`);
 
             const encodedData = encodeFunctionData({
                 abi: [{
@@ -336,7 +327,7 @@ class PolymarketRelayerService {
                     PUSD_ADDRESS, 
                     "0x0000000000000000000000000000000000000000000000000000000000000000", 
                     conditionId as `0x${string}`,
-                    indexSets
+                    [BigInt(indexSet)]
                 ]
             });
 
