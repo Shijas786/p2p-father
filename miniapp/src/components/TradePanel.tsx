@@ -14,14 +14,17 @@ interface TradePanelProps {
     trades: any[];
     loadData: () => void;
     onOutcomeChange?: (outcome: 'UP' | 'DOWN') => void;
+    tradeType: 'buy' | 'sell';
+    setTradeType: (t: 'buy' | 'sell') => void;
+    betType: 'UP' | 'DOWN';
+    setBetType: (t: 'UP' | 'DOWN') => void;
 }
 
 export function TradePanel({
-    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange
+    isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
+    tradeType, setTradeType, betType, setBetType
 }: TradePanelProps) {
     const { showToast } = useToast();
-    const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-    const [betType, setBetType] = useState<'UP' | 'DOWN'>('UP');
     const [betAmount, setBetAmount] = useState('');
     const [placingBet, setPlacingBet] = useState(false);
     const [claiming, setClaiming] = useState(false);

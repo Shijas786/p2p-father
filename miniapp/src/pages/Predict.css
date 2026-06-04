@@ -678,7 +678,7 @@
 
 .pm-pos-table-head {
     display: grid;
-    grid-template-columns: 68px 32px 38px 1fr 1fr 80px;
+    grid-template-columns: 60px 38px 38px 1fr 1fr 70px;
     gap: 6px; align-items: center;
     padding: 0 4px 8px;
     border-bottom: 1px solid var(--pm-border);
@@ -690,7 +690,7 @@
 }
 .pm-pos-row {
     display: grid;
-    grid-template-columns: 68px 32px 38px 1fr 1fr 80px;
+    grid-template-columns: 60px 38px 38px 1fr 1fr 70px;
     gap: 6px; align-items: center;
     padding: 12px 4px;
     border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -699,8 +699,8 @@
 .pm-pos-row:last-child { border-bottom: none; }
 .pm-pos-outcome-badge {
     display: inline-flex; align-items: center;
-    padding: 4px 10px; border-radius: 6px;
-    font-size: 11px; font-weight: 700; white-space: nowrap;
+    padding: 3px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; white-space: nowrap;
 }
 .pm-pos-badge-up   { background: rgba(14,203,129,0.12); color: var(--pm-green); border: 1px solid rgba(14,203,129,0.22); }
 .pm-pos-badge-down { background: rgba(246,70,93,0.12);  color: var(--pm-red);   border: 1px solid rgba(246,70,93,0.22); }

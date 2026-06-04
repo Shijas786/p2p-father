@@ -541,7 +541,7 @@ export function Predict({ user }: Props) {
                 <div className="pm-topbar-metrics">
                     <div className="pm-metric">
                         <span className="pm-metric-label">PORTFOLIO</span>
-                        <span className="pm-metric-value pm-green">${parseFloat(user?.balance || '0').toFixed(2)}</span>
+                        <span className="pm-metric-value pm-green">${(parseFloat(cashBalance || '0') + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
                     </div>
                     <div className="pm-metric">
                         <span className="pm-metric-label">CASH</span>
@@ -821,17 +821,24 @@ export function Predict({ user }: Props) {
                                             {pos.outcome === 'UP' ? '▲ Up' : '▼ Down'}
                                         </span>
                                     </div>
-                                    <span className="pm-mono">{pos.qty}</span>
+                                    <span className="pm-mono">{typeof pos.qty === 'number' ? pos.qty.toFixed(2) : pos.qty}</span>
                                     <span className="pm-mono">{(pos.avg * 100).toFixed(0)}¢</span>
                                     <div className="pm-pos-col-value">
-                                        <span className="pm-pos-value-main pm-mono">${pos.value.toFixed(2)}</span>
+                                        <span className="pm-pos-value-main pm-mono">${(pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)).toFixed(2)}</span>
                                         <span className="pm-pos-cost-sub">Cost ${pos.cost.toFixed(2)}</span>
                                     </div>
                                     <div>
-                                        <span className={`pm-pos-return-val ${pos.returnAmt >= 0 ? 'pm-green' : 'pm-red'}`}>
-                                            {pos.returnAmt >= 0 ? '+' : ''}${pos.returnAmt.toFixed(2)}
-                                            <span className="pm-pos-return-pct"> ({pos.returnPct >= 0 ? '+' : ''}{pos.returnPct.toFixed(2)}%)</span>
-                                        </span>
+                                        {(() => {
+                                            const dynamicValue = pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice);
+                                            const dynamicReturnAmt = dynamicValue - pos.cost;
+                                            const dynamicReturnPct = pos.cost > 0 ? (dynamicReturnAmt / pos.cost) * 100 : 0;
+                                            return (
+                                                <span className={`pm-pos-return-val ${dynamicReturnAmt >= 0 ? 'pm-green' : 'pm-red'}`}>
+                                                    {dynamicReturnAmt >= 0 ? '+' : ''}${dynamicReturnAmt.toFixed(2)}
+                                                    <span className="pm-pos-return-pct"> ({dynamicReturnPct >= 0 ? '+' : ''}{dynamicReturnPct.toFixed(2)}%)</span>
+                                                </span>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="pm-pos-col-action">
                                         <button className="pm-pos-sell-btn" id={`btn-sell-${idx}`}
@@ -863,6 +870,10 @@ export function Predict({ user }: Props) {
                     trades={trades}
                     loadData={loadData}
                     onOutcomeChange={(outcome) => setBetType(outcome)}
+                    tradeType={tradeType}
+                    setTradeType={setTradeType}
+                    betType={betType}
+                    setBetType={setBetType}
                 />
 
             </div>
