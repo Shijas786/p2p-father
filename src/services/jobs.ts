@@ -182,6 +182,7 @@ export function startLiquiditySyncJob(escrowService: any) {
 export const attemptedRedeems = new Set<string>();
 export const redeemAttempts = new Map<string, number>();
 export const failedRedeemCounts = new Map<string, number>();
+export const resolvedConditionsCache = new Set<string>();
 
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
@@ -203,25 +204,51 @@ export function startAutoClaimJob() {
             for (const user of users) {
                 try {
                     const positions = await polymarketService.getPositionsForProxy(user.deposit_wallet_address);
-                    const redeemable = positions.filter((p: any) => p.redeemable > 0);
+                    // Check positions that API marks as redeemable, OR positions that have size > 0 (might be resolved but API is slow)
+                    const potentialClaims = positions.filter((p: any) => p.redeemable > 0 || parseFloat(p.size) > 0.001);
 
-                    for (const pos of redeemable) {
+                    for (const pos of potentialClaims) {
                         const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
                         if (attemptedRedeems.has(attemptKey)) continue;
 
                         const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
                         if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
 
-                        // Check on-chain balance before redeeming to avoid revert: execution reverted
+                        // Check on-chain balance and resolution before redeeming
+                        let isResolved = false;
+                        if (pos.redeemable > 0) {
+                            isResolved = true;
+                        }
+
                         if (pos.asset) {
                             try {
                                 const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
                                 const provider = new ethers.JsonRpcProvider(rpcUrl);
                                 const ctfContract = new ethers.Contract(
                                     ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
-                                    ["function balanceOf(address, uint256) view returns (uint256)"],
+                                    [
+                                        "function balanceOf(address, uint256) view returns (uint256)",
+                                        "function payoutDenominator(bytes32) view returns (uint256)"
+                                    ],
                                     provider
                                 );
+                                
+                                // 1. Check if the market is actually resolved if API didn't say so
+                                if (!isResolved) {
+                                    if (resolvedConditionsCache.has(pos.conditionId)) {
+                                        isResolved = true;
+                                    } else {
+                                        const denom = await ctfContract.payoutDenominator(pos.conditionId);
+                                        if (denom > 0n) {
+                                            isResolved = true;
+                                            resolvedConditionsCache.add(pos.conditionId);
+                                        }
+                                    }
+                                }
+
+                                if (!isResolved) continue; // Skip if not resolved yet
+
+                                // 2. Check if user actually has balance
                                 const balance = await ctfContract.balanceOf(user.deposit_wallet_address, BigInt(pos.asset));
                                 if (balance === 0n) {
                                     console.log(`[AutoClaim] User ${user.wallet_index} (${user.deposit_wallet_address}) has 0 balance on-chain for asset ${pos.asset}. Skipping and caching.`);
@@ -229,9 +256,12 @@ export function startAutoClaimJob() {
                                     continue;
                                 }
                             } catch (balanceErr: any) {
-                                console.warn(`[AutoClaim] Failed to verify balance for condition ${pos.conditionId}:`, balanceErr.message);
-                                // If the RPC/check fails, we proceed with caution rather than aborting or cached skipping
+                                console.warn(`[AutoClaim] Failed to verify balance/resolution for condition ${pos.conditionId}:`, balanceErr.message);
+                                // If the RPC/check fails and we don't know it's resolved, skip to be safe.
+                                if (!isResolved) continue;
                             }
+                        } else if (!isResolved) {
+                            continue;
                         }
 
                         try {
@@ -262,7 +292,7 @@ export function startAutoClaimJob() {
                                 if (user.telegram_id) {
                                     try {
                                         await bot.api.sendMessage(user.telegram_id,
-                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable || "Unknown"} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
                                             { parse_mode: "Markdown" }
                                         );
                                     } catch (botErr) {
