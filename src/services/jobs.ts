@@ -1,6 +1,7 @@
 import { db } from "../db/client";
 import { env } from "../config/env";
 import { deleteAdBroadcasts } from "../bot";
+import { ethers } from "ethers";
 
 export function startExpiryJob() {
     console.log("⏰ Starting Ad Expiry Job...");
@@ -209,6 +210,28 @@ export function startAutoClaimJob() {
 
                         const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
                         if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
+
+                        // Check on-chain balance before redeeming to avoid revert: execution reverted
+                        if (pos.asset) {
+                            try {
+                                const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+                                const provider = new ethers.JsonRpcProvider(rpcUrl);
+                                const ctfContract = new ethers.Contract(
+                                    "0x4D97DCd97eC945f40cf65F87097ACe5EA0476045",
+                                    ["function balanceOf(address, uint256) view returns (uint256)"],
+                                    provider
+                                );
+                                const balance = await ctfContract.balanceOf(user.deposit_wallet_address, BigInt(pos.asset));
+                                if (balance === 0n) {
+                                    console.log(`[AutoClaim] User ${user.wallet_index} (${user.deposit_wallet_address}) has 0 balance on-chain for asset ${pos.asset}. Skipping and caching.`);
+                                    attemptedRedeems.add(attemptKey); // already claimed or nothing to claim, cache to avoid querying again
+                                    continue;
+                                }
+                            } catch (balanceErr: any) {
+                                console.warn(`[AutoClaim] Failed to verify balance for condition ${pos.conditionId}:`, balanceErr.message);
+                                // If the RPC/check fails, we proceed with caution rather than aborting or cached skipping
+                            }
+                        }
 
                         try {
                             const outcomeIndex = typeof pos.outcomeIndex === 'string' ? parseInt(pos.outcomeIndex) : pos.outcomeIndex;

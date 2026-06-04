@@ -22,6 +22,12 @@
         "paths": {
             "@/*": [
                 "src/*"
+            ],
+            "ox": [
+                "node_modules/ox/_types/index.d.ts"
+            ],
+            "ox/*": [
+                "node_modules/ox/_types/*"
             ]
         }
     },

@@ -1,18 +1,15 @@
-const { ClobClient } = require('@polymarket/clob-client');
-const ethers = require('ethers');
-
-async function test() {
-    const clobClient = new ClobClient({
-        host: "https://clob.polymarket.com",
-        chain: 137,
-        signer: new ethers.Wallet("0x0000000000000000000000000000000000000000000000000000000000000001")
-    });
-
+const axios = require('axios');
+async function run() {
     try {
-        const res = await clobClient.getTrades({ maker: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" });
-        console.log(JSON.stringify(res.slice(0, 1), null, 2));
+        const res = await axios.get('https://clob.polymarket.com/markets/0x7b4a242ec4cfb5c4013444abefbcbf8e146c820c75cc9e909a349c065f49673a', {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            }
+        });
+        console.log(Object.keys(res.data));
+        console.log(res.data.tokens ? 'Has tokens' : 'No tokens');
     } catch (e) {
         console.error(e.message);
     }
 }
-test();
+run();

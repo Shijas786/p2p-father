@@ -145,49 +145,14 @@ class PolymarketService {
         }
 
         try {
-            const ts = Math.floor(Date.now() / 1000);
-            const nonce = 0;
-            const domain = { name: "ClobAuthDomain", version: "1", chainId: 137 };
-            const types = {
-                ClobAuth: [
-                    { name: "address", type: "address" },
-                    { name: "timestamp", type: "string" },
-                    { name: "nonce", type: "uint256" },
-                    { name: "message", type: "string" }
-                ]
-            };
-            const value = {
-                address: depositWallet,
-                timestamp: `${ts}`,
-                nonce,
-                message: "This message attests that I control the given wallet"
-            };
+            console.log(`[Polymarket] Deriving API credentials for user ${userWalletIndex} via standard SDK...`);
+            const tempClient = new ClobClient({
+                host: CLOB_API,
+                chain: Chain.POLYGON,
+                signer,
+            });
 
-            const signerWallet = new ethers.Wallet(derived.privateKey);
-            let sig = await signerWallet.signTypedData(domain, types, value);
-            sig = sig + "03"; // append POLY_1271 signature type flag
-
-            const headers = {
-                "POLY_ADDRESS": depositWallet,
-                "POLY_SIGNATURE": sig,
-                "POLY_TIMESTAMP": `${ts}`,
-                "POLY_NONCE": `${nonce}`
-            };
-
-            let apiKeyRaw;
-            try {
-                const res = await axios.post(`${CLOB_API}/auth/api-key`, {}, { headers });
-                apiKeyRaw = res.data;
-            } catch (e: any) {
-                const res = await axios.get(`${CLOB_API}/auth/derive-api-key`, { headers });
-                apiKeyRaw = res.data;
-            }
-
-            const newCreds = {
-                key: apiKeyRaw.apiKey,
-                secret: apiKeyRaw.secret,
-                passphrase: apiKeyRaw.passphrase
-            };
+            const newCreds = await tempClient.createOrDeriveApiKey();
 
             if (!newCreds?.secret) {
                 throw new Error("CLOB credentials not initialized — API key creation failed");
