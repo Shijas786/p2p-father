@@ -288,7 +288,7 @@ class PolymarketRelayerService {
             console.log(`[Relayer] Using CTF Adapter: ${CTF_ADAPTER} (isNegRisk: ${isNegRisk})`);
 
             // 2. Query ConditionalTokens contract to check resolution and payout numerators
-            const CTF_CONTRACT_ADDRESS = "0x4D97dcd97EC945f40cf65F87097AcE5EA0476045";
+            const CTF_CONTRACT_ADDRESS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
             
             const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
