@@ -152,7 +152,19 @@ class PolymarketService {
                 signer,
             });
 
-            const newCreds = await tempClient.createOrDeriveApiKey();
+            let newCreds;
+            try {
+                console.log(`[Polymarket] Attempting to create API key...`);
+                newCreds = await tempClient.createApiKey();
+            } catch (err: any) {
+                console.log(`[Polymarket] createApiKey failed (status: ${err?.response?.status || err.message}). Attempting to derive existing API key...`);
+                try {
+                    newCreds = await tempClient.deriveApiKey();
+                } catch (deriveErr: any) {
+                    console.error(`[Polymarket] deriveApiKey also failed:`, deriveErr?.response?.data || deriveErr.message);
+                    throw deriveErr;
+                }
+            }
 
             if (!newCreds?.secret) {
                 throw new Error("CLOB credentials not initialized — API key creation failed");
