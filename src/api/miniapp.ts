@@ -2380,18 +2380,76 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
             }
 
-            // Calculate realized PNL from Data API positions (includes closed/redeemed positions)
-            // Use sizeThreshold=0 to get ALL positions including zero-size redeemed ones
+            // Calculate realized PNL using trade history + on-chain resolution
+            // The Data API removes redeemed positions entirely, so we compute from trades:
+            // Group BUY trades by conditionId → for resolved conditions not in active positions,
+            // profit = shares * payoutFraction - cost  (payoutFraction = payoutNumerator/denominator)
             let realizedPnl = 0;
             try {
+                // Step 1: Try Data API cashPnl first (works for recently resolved ones still in API)
                 const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`, { signal: AbortSignal.timeout(5000) });
                 const allPositions: any[] = await allPositionsRes.json().catch(() => []);
-                if (Array.isArray(allPositions)) {
-                    // Sum cashPnl (which includes both open and closed positions' realized P&L)
-                    realizedPnl = allPositions.reduce((sum: number, p: any) => sum + (parseFloat(p.cashPnl ?? p.realizedPnl ?? '0') || 0), 0);
+                const openConditionIds = new Set<string>();
+                if (Array.isArray(allPositions) && allPositions.length > 0) {
+                    for (const p of allPositions) {
+                        realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
+                        openConditionIds.add(p.conditionId);
+                    }
                 }
-            } catch (e) {
-                // ignore
+
+                // Step 2: Fetch all trade history to find closed/redeemed positions
+                const allTradesRes = await fetch(`https://data-api.polymarket.com/trades?user=${proxyAddress}&limit=500`, { signal: AbortSignal.timeout(8000) });
+                const allTrades: any[] = await allTradesRes.json().catch(() => []);
+                if (Array.isArray(allTrades) && allTrades.length > 0) {
+                    // Group by conditionId → track net buy cost and shares
+                    const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
+                    for (const t of allTrades) {
+                        const cid = t.conditionId;
+                        if (!cid) continue;
+                        const size = parseFloat(t.size ?? '0');
+                        const price = parseFloat(t.price ?? '0');
+                        if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: t.outcomeIndex ?? 1 };
+                        if (t.side === 'BUY') {
+                            conditionMap[cid].cost += size * price;
+                            conditionMap[cid].shares += size;
+                        } else if (t.side === 'SELL') {
+                            conditionMap[cid].cost -= size * price;
+                            conditionMap[cid].shares -= size;
+                        }
+                    }
+
+                    // Step 3: For conditions NOT in active positions (already redeemed), check on-chain
+                    const { ethers } = await import('ethers');
+                    const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
+                    const ctf = new ethers.Contract(
+                        '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                        [
+                            'function payoutDenominator(bytes32) view returns (uint256)',
+                            'function payoutNumerators(bytes32, uint256) view returns (uint256)'
+                        ],
+                        provider
+                    );
+
+                    for (const [cid, data] of Object.entries(conditionMap)) {
+                        if (openConditionIds.has(cid)) continue; // Already accounted for by cashPnl above
+                        if (data.shares <= 0.001) continue; // No net position
+                        try {
+                            const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
+                            if (denominator === 0n) continue; // Not resolved
+                            // outcomeIndex 0 = YES (indexSet 1), outcomeIndex 1 = NO (indexSet 2)
+                            const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
+                            const payoutNum = await ctf.payoutNumerators(cid as `0x${string}`, pnIndex);
+                            const payoutFraction = Number(payoutNum) / Number(denominator);
+                            const profit = data.shares * payoutFraction - data.cost;
+                            console.log(`[PNL] Resolved condition ${cid.slice(0,12)}: shares=${data.shares.toFixed(3)}, cost=$${data.cost.toFixed(3)}, payout=${payoutFraction}, profit=$${profit.toFixed(3)}`);
+                            realizedPnl += profit;
+                        } catch {
+                            // Ignore per-condition errors
+                        }
+                    }
+                }
+            } catch (e: any) {
+                console.warn('[MINIAPP] Realized PNL calculation error:', e.message);
             }
 
             // Build final positions list
