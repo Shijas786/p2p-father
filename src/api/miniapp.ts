@@ -2060,7 +2060,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             .from("users")
             .select("id, first_name, username, wallet_index, telegram_id")
             .not("wallet_index", "is", null)
-            .gt("wallet_index", 0)
+            .gte("wallet_index", 0)
             .limit(100);
 
         if (!usersWithWallets || usersWithWallets.length === 0) {
