@@ -2061,7 +2061,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             .select("id, first_name, username, wallet_index, telegram_id")
             .not("wallet_index", "is", null)
             .gte("wallet_index", 0)
-            .limit(100);
+            .limit(1000);
 
         if (!usersWithWallets || usersWithWallets.length === 0) {
             return res.json({ leaderboard: [] });
@@ -2397,8 +2397,11 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
                     positionMap[key].qty = parseFloat(activePos.size);
                     positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
+                } else if (activePos && activePos.redeemable) {
+                    positionMap[key].qty = 0;
+                } else if (!activePos) {
+                    // Missing from Data API (likely cache lag on recent entry). Keep trade qty!
                 } else {
-                    // Position was redeemed, or market resolved (redeemable=true), so hide it from open positions
                     positionMap[key].qty = 0;
                 }
             }
