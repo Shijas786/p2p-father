@@ -130,11 +130,18 @@ export function Predict({ user }: Props) {
             // Sync WebSocket with backend positions to remove duplicates
             if (posRes.status === 'fulfilled' && posRes.value?.positions) {
                 // Remove ws positions that are now in data API
-                polymarketWs.syncWithBackend(posRes.value.positions.map(p => p.outcome));
+                const activeBtcMarket = marketRes.status === 'fulfilled' ? marketRes.value.market : null;
+                if (activeBtcMarket) {
+                    const syncedAssets: string[] = [];
+                    for (const p of posRes.value.positions) {
+                        if (p.outcome === 'UP') syncedAssets.push(activeBtcMarket.yesTokenId);
+                        if (p.outcome === 'DOWN') syncedAssets.push(activeBtcMarket.noTokenId);
+                    }
+                    polymarketWs.syncWithBackend(syncedAssets);
+                }
                 
                 // Merge WS positions into data API positions
                 const basePositions = posRes.value.positions;
-                const activeBtcMarket = marketRes.status === 'fulfilled' ? marketRes.value.market : null;
                 const wsPositions = polymarketWs.getPositions();
                 for (const wsPos of wsPositions) {
                     if (!activeBtcMarket) continue;
@@ -149,8 +156,10 @@ export function Predict({ user }: Props) {
 
                     const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
                     if (idx >= 0) {
-                        basePositions[idx].qty = wsPos.size;
-                        basePositions[idx].value = wsPos.size * basePositions[idx].currentPrice;
+                        basePositions[idx].qty += wsPos.size;
+                        basePositions[idx].cost += wsPos.size * wsPos.price;
+                        basePositions[idx].value += wsPos.size * basePositions[idx].currentPrice;
+                        basePositions[idx].avg = basePositions[idx].cost / basePositions[idx].qty;
                     } else {
                         basePositions.push({
                             outcome: mappedOutcome,

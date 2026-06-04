@@ -106,12 +106,17 @@ class PolymarketWsClient {
                 price: parseFloat(msg.price)
             };
 
-            const sizeFloat = parseFloat(msg.size);
-            if (msg.side === 'BUY') {
-                current.size += sizeFloat;
-            } else if (msg.side === 'SELL') {
-                current.size -= sizeFloat;
-                if (current.size < 0) current.size = 0;
+            // Only accumulate size on the initial MATCHED event to avoid double counting 
+            // when the CONFIRMED event arrives for the exact same trade.
+            if (msg.status === 'MATCHED') {
+                const sizeFloat = parseFloat(msg.size);
+                if (msg.side === 'BUY') {
+                    current.size += sizeFloat;
+                } else if (msg.side === 'SELL') {
+                    current.size -= sizeFloat;
+                    // Do NOT clamp to 0! A negative size represents a sell delta 
+                    // that correctly reduces the DB position in Predict.tsx.
+                }
             }
 
             // Upgrade status if it was MATCHED and now CONFIRMED
@@ -157,14 +162,13 @@ class PolymarketWsClient {
     }
 
     // Called when the backend Data API catches up, to avoid double-counting
-    syncWithBackend(backendOutcomes: string[]) {
+    syncWithBackend(backendAssets: string[]) {
         let changed = false;
-        for (const outcome of backendOutcomes) {
-            for (const assetLc in this.localPositions) {
-                if (this.localPositions[assetLc].outcome === outcome) {
-                    delete this.localPositions[assetLc];
-                    changed = true;
-                }
+        for (const assetLc of backendAssets) {
+            const lc = assetLc.toLowerCase();
+            if (this.localPositions[lc]) {
+                delete this.localPositions[lc];
+                changed = true;
             }
         }
         if (changed) this.notifyListeners();
