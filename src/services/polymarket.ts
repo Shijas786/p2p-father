@@ -499,7 +499,7 @@ class PolymarketService {
                     market: t.conditionId 
                 }));
             } catch (e2: any) {
-                console.log("[Polymarket] Both trade APIs failed:", e2.message);
+                console.log("[Polymarket] Both trade APIs failed. Data API Error:", e.message, "| Gamma API Error:", e2.message);
                 return [];
             }
         }

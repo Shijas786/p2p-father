@@ -13,6 +13,7 @@ import { db } from "../db/client";
 import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
 import { polymarketService } from "../services/polymarket";
+import { ethers } from "ethers";
 
 import { polymarketRelayerService } from "../services/relayer";
 import { depositMonitor } from "../services/deposit-monitor";
@@ -2054,6 +2055,7 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
 const conditionResolutionCache = new Map<string, { denominator: number, num0: number, num1: number }>();
 
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
+    console.log("=== HIT PREDICTIONS LEADERBOARD ROUTE IN MINIAPP.TS ===");
     try {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
@@ -2072,6 +2074,18 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
 
         // Resolve proxy address for each user and fetch their Polymarket trade stats
         const leaderboardEntries: any[] = [];
+        
+        // Single provider and contract for all users in this request
+        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
+        const ctf = new ethers.Contract(
+            '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+            [
+                'function payoutDenominator(bytes32) view returns (uint256)',
+                'function payoutNumerators(bytes32, uint256) view returns (uint256)'
+            ],
+            provider
+        );
+
         const BATCH_SIZE = 5;
         for (let i = 0; i < usersWithWallets.length; i += BATCH_SIZE) {
             const batch = usersWithWallets.slice(i, i + BATCH_SIZE);
@@ -2125,16 +2139,6 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                         }
 
                         // For conditions NOT in active positions, check resolution using cache or on-chain
-                        const { ethers } = await import('ethers');
-                        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
-                        const ctf = new ethers.Contract(
-                            '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-                            [
-                                'function payoutDenominator(bytes32) view returns (uint256)',
-                                'function payoutNumerators(bytes32, uint256) view returns (uint256)'
-                            ],
-                            provider
-                        );
 
                         for (const [cid, data] of Object.entries(conditionMap)) {
                             if (openConditionIds.has(cid)) continue; 
@@ -2180,7 +2184,8 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                             losses,
                             winRatio
                         };
-                    } catch (e) {
+                    } catch (e: any) {
+                        console.error(`[Leaderboard] Error processing user ${u.telegram_id}:`, e.message);
                         return null;
                     }
                 })
@@ -2206,6 +2211,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             is_me: currentUserId === e.telegram_id,
         }));
 
+        console.log("LEADERBOARD RESPONSE DATA:", JSON.stringify(leaderboard, null, 2));
         res.json({ leaderboard });
     } catch (err: any) {
         console.error("[MINIAPP] Predictions leaderboard error:", err);

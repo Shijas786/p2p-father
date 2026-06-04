@@ -4,11 +4,7 @@ import { env } from "./config/env";
 import { db } from "./db/client"; // Import DB for stats
 import express from "express";
 import path from "path";
-import dns from "node:dns";
 import axios from "axios";
-
-// Force Node.js to use Cloudflare DNS to bypass ISP blocking of Polymarket API
-dns.setServers(['1.1.1.1', '1.0.0.1']);
 
 import { miniappRouter } from "./api/miniapp";
 
