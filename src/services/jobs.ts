@@ -212,26 +212,43 @@ export function startAutoClaimJob() {
 
                         try {
                             const outcomeIndex = typeof pos.outcomeIndex === 'string' ? parseInt(pos.outcomeIndex) : pos.outcomeIndex;
-                            const indexSet = outcomeIndex === 0 ? 1 : 2;
+                            const preferredIndexSet = outcomeIndex === 0 ? 1 : 2;
+                            const fallbackIndexSet = preferredIndexSet === 1 ? 2 : 1;
 
                             redeemAttempts.set(attemptKey, Date.now());
-                            console.log(`[AutoClaim] Redeeming ${pos.conditionId} for user ${user.wallet_index} (indexSet: ${indexSet})`);
-                            await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
-                            attemptedRedeems.add(attemptKey);
-                            
-                            // Notify Telegram Bot
-                            if (user.telegram_id) {
+
+                            let success = false;
+                            for (const indexSet of [preferredIndexSet, fallbackIndexSet]) {
                                 try {
-                                    await bot.api.sendMessage(user.telegram_id,
-                                        `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
-                                        { parse_mode: "Markdown" }
-                                    );
-                                } catch (botErr) {
-                                    console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
+                                    console.log(`[AutoClaim] Attempting redeem for ${pos.conditionId} (user: ${user.wallet_index}, indexSet: ${indexSet})...`);
+                                    await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
+                                    success = true;
+                                    console.log(`[AutoClaim] Redeemed indexSet ${indexSet} successfully for user ${user.wallet_index}`);
+                                    break;
+                                } catch (redeemErr: any) {
+                                    console.warn(`[AutoClaim] Redeem failed for indexSet ${indexSet} (user: ${user.wallet_index}):`, redeemErr.message);
                                 }
                             }
+
+                            if (success) {
+                                attemptedRedeems.add(attemptKey);
+                                
+                                // Notify Telegram Bot
+                                if (user.telegram_id) {
+                                    try {
+                                        await bot.api.sendMessage(user.telegram_id,
+                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                            { parse_mode: "Markdown" }
+                                        );
+                                    } catch (botErr) {
+                                        console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
+                                    }
+                                }
+                            } else {
+                                console.error(`[AutoClaim] Both indexSets failed to redeem for ${pos.conditionId} (user: ${user.wallet_index})`);
+                            }
                         } catch (posErr: any) {
-                            console.error(`[AutoClaim] Failed to redeem ${pos.conditionId} for user ${user.wallet_index}:`, posErr.message);
+                            console.error(`[AutoClaim] Loop error for ${pos.conditionId} (user: ${user.wallet_index}):`, posErr.message);
                         }
                     }
                 } catch (e: any) {
