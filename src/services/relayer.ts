@@ -372,47 +372,28 @@ class PolymarketRelayerService {
                 ]
             });
 
-            // depositWallet is already resolved at the top of redeemPositions
-            
             const isApproved = await ctfContract.isApprovedForAll(depositWallet, CTF_ADAPTER);
-            const calls: any[] = [];
             if (!isApproved) {
-                console.log(`[Relayer] Approving CTF Adapter (${CTF_ADAPTER}) on CTF contract...`);
+                console.log(`[Relayer] Approving CTF Adapter (${CTF_ADAPTER}) on CTF contract first...`);
                 const approveTx = await ctfContract.setApprovalForAll.populateTransaction(CTF_ADAPTER, true);
-                calls.push({
+                const deadline = Math.floor(Date.now() / 1000) + 600;
+                const tx = await client.executeDepositWalletBatch([{
                     target: CTF_CONTRACT_ADDRESS,
                     value: "0",
                     data: approveTx.data
-                });
+                }], depositWallet, deadline.toString());
+                await tx.wait();
+                console.log(`[Relayer] Approved CTF Adapter (${CTF_ADAPTER}) successfully. Waiting for next cycle to redeem.`);
+                throw new Error(`Approval transaction submitted (${tx.hash}). Redeeming will resume in the next cycle.`);
             }
 
-            calls.push({
+            console.log(`[Relayer] Submitting gasless redemption call for condition ${conditionId}...`);
+            const deadline = Math.floor(Date.now() / 1000) + 600;
+            const tx = await client.executeDepositWalletBatch([{
                 target: CTF_ADAPTER,
                 value: "0",
                 data: encodedData
-            });
-
-            if (collateralToken === USDCE_ADDRESS) {
-                console.log(`[Relayer] Appending USDC.e -> pUSD wrap calls to the batch...`);
-                const usdceContract = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, provider);
-                const approveOnrampTx = await usdceContract.approve.populateTransaction(COLLATERAL_ONRAMP_ADDRESS, balance);
-                calls.push({
-                    target: USDCE_ADDRESS,
-                    value: "0",
-                    data: approveOnrampTx.data
-                });
-
-                const onrampContract = new ethers.Contract(COLLATERAL_ONRAMP_ADDRESS, COLLATERAL_ONRAMP_ABI as any, provider);
-                const wrapTx = await onrampContract.wrap.populateTransaction(USDCE_ADDRESS, depositWallet, balance);
-                calls.push({
-                    target: COLLATERAL_ONRAMP_ADDRESS,
-                    value: "0",
-                    data: wrapTx.data
-                });
-            }
-            
-            const deadline = Math.floor(Date.now() / 1000) + 600;
-            const tx = await client.executeDepositWalletBatch(calls, depositWallet, deadline.toString());
+            }], depositWallet, deadline.toString());
             await tx.wait();
             console.log(`[Relayer] Successfully redeemed condition ${conditionId}!`);
             return tx.hash;
