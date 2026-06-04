@@ -2351,10 +2351,13 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Aggregate open positions from recent trades
             const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
+            const yesTokenIdLc = market.yesTokenId.toLowerCase();
+            const noTokenIdLc = market.noTokenId.toLowerCase();
 
             for (const trade of (tradesRes || [])) {
-                const isUp = trade.asset_id === market.yesTokenId;
-                const isDown = trade.asset_id === market.noTokenId;
+                const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
+                const isUp = tradeAssetLc === yesTokenIdLc;
+                const isDown = tradeAssetLc === noTokenIdLc;
                 if (!isUp && !isDown) continue;
 
                 const key = isUp ? "UP" : "DOWN";
@@ -2383,8 +2386,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Sync qty with Data API to reflect redemptions correctly
             for (const key of Object.keys(positionMap)) {
-                const tokenId = key === "UP" ? market.yesTokenId : market.noTokenId;
-                const activePos = positionsRes.find((p: any) => p.asset === tokenId);
+                const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
+                const activePos = positionsRes.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
                 
                 // If avgPrice was calculated, keep it. But override qty.
                 if (positionMap[key].qty > 0) {
@@ -2532,8 +2535,10 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 if (!wantAll && !targetConditionId && t.market !== market.conditionId) {
                     continue;
                 }
-                
-                let outcome = t.asset_id === market.yesTokenId ? "UP" : t.asset_id === market.noTokenId ? "DOWN" : "UNKNOWN";
+                const assetLc = (t.asset_id || "").toLowerCase();
+                const yesLc = market.yesTokenId.toLowerCase();
+                const noLc = market.noTokenId.toLowerCase();
+                let outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
                 
                 // If it's UNKNOWN, we need to fetch the market details from CLOB API to figure out which token is YES/NO
                 if (outcome === "UNKNOWN" && t.market) {
@@ -2546,8 +2551,8 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                         });
                         const mData = await mRes.json();
                         if (mData && mData.tokens && mData.tokens.length >= 2) {
-                            if (t.asset_id === mData.tokens[0].token_id) outcome = "UP";
-                            else if (t.asset_id === mData.tokens[1].token_id) outcome = "DOWN";
+                            if (assetLc === (mData.tokens[0].token_id || "").toLowerCase()) outcome = "UP";
+                            else if (assetLc === (mData.tokens[1].token_id || "").toLowerCase()) outcome = "DOWN";
                         }
                     } catch (e) {
                         // ignore fetch error
