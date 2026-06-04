@@ -137,13 +137,15 @@ export function Predict({ user }: Props) {
                 const activeBtcMarket = marketRes.status === 'fulfilled' ? marketRes.value.market : null;
                 const wsPositions = polymarketWs.getPositions();
                 for (const wsPos of wsPositions) {
-                    let mappedOutcome = wsPos.outcome as 'UP'|'DOWN'|undefined;
-                    if (!mappedOutcome && activeBtcMarket) {
-                        const assetLc = wsPos.asset.toLowerCase();
-                        if (assetLc === activeBtcMarket.yesTokenId.toLowerCase()) mappedOutcome = 'UP';
-                        else if (assetLc === activeBtcMarket.noTokenId.toLowerCase()) mappedOutcome = 'DOWN';
-                    }
-                    if (!mappedOutcome) continue;
+                    if (!activeBtcMarket) continue;
+                    
+                    const assetLc = wsPos.asset.toLowerCase();
+                    const isYes = assetLc === activeBtcMarket.yesTokenId.toLowerCase();
+                    const isNo = assetLc === activeBtcMarket.noTokenId.toLowerCase();
+                    
+                    if (!isYes && !isNo) continue; // Skip stale positions from old markets
+
+                    const mappedOutcome = isYes ? 'UP' : 'DOWN';
 
                     const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
                     if (idx >= 0) {
