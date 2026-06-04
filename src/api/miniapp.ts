@@ -2079,12 +2079,8 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                         const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
                         if (!proxyAddress || proxyAddress.toLowerCase().includes('demo')) return null;
 
-                        // Fetch trades from Data API
-                        const tradesRes = await fetch(
-                            `https://data-api.polymarket.com/trades?user=${proxyAddress}&limit=500`,
-                            { signal: AbortSignal.timeout(5000) }
-                        );
-                        const trades: any[] = await tradesRes.json().catch(() => []);
+                        // Fetch trades using the service (which has fallbacks)
+                        const trades = await polymarketService.getTradesForProxy(proxyAddress);
                         if (!Array.isArray(trades) || trades.length === 0) return null;
 
                         // Compute volume and trade count
@@ -2095,11 +2091,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                         // Fetch positions for cashPnl (open positions)
                         let totalPnl = 0;
                         try {
-                            const posRes = await fetch(
-                                `https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`,
-                                { signal: AbortSignal.timeout(5000) }
-                            );
-                            const positions: any[] = await posRes.json().catch(() => []);
+                            const positions = await polymarketService.getPositionsForProxy(proxyAddress);
                             if (Array.isArray(positions)) {
                                 totalPnl = positions.reduce((s: number, p: any) => s + (parseFloat(p.cashPnl ?? '0') || 0), 0);
                             }
