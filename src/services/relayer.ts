@@ -281,7 +281,7 @@ class PolymarketRelayerService {
                 console.warn(`[Relayer] Failed to check negRisk via Gamma: ${err.message}. Defaulting to false.`);
             }
 
-            const CTF_ADAPTER = isNegRisk 
+            let CTF_ADAPTER = isNegRisk 
                 ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
                 : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
 
@@ -298,7 +298,9 @@ class PolymarketRelayerService {
                 "function payoutNumerators(bytes32, uint256) view returns (uint256)",
                 "function balanceOf(address, uint256) view returns (uint256)",
                 "function isApprovedForAll(address, address) view returns (bool)",
-                "function setApprovalForAll(address, bool)"
+                "function setApprovalForAll(address, bool)",
+                "function getCollectionId(bytes32 parentCollectionId, bytes32 conditionId, uint256 indexSet) view returns (bytes32)",
+                "function getPositionId(address collateralToken, bytes32 collectionId) view returns (uint256)"
             ], provider);
 
             const denominator = await ctfContract.payoutDenominator(conditionId);
@@ -313,24 +315,41 @@ class PolymarketRelayerService {
                 throw new Error(`Requested indexSet ${indexSet} is not a winning outcome for condition ${conditionId} (payout is 0).`);
             }
 
-            // Calculate exact ERC-1155 tokenId for Gnosis Conditional Tokens position
+            // Calculate collectionId and tokenIds on-chain dynamically to avoid local packing bugs
             const parentCollectionId = "0x0000000000000000000000000000000000000000000000000000000000000000";
-            const collectionId = ethers.solidityPackedKeccak256(
-                ["bytes32", "bytes32", "uint256"],
-                [parentCollectionId, conditionId, BigInt(indexSet)]
-            );
-            const tokenId = BigInt(ethers.solidityPackedKeccak256(
-                ["address", "bytes32"],
-                [PUSD_ADDRESS, collectionId]
-            ));
+            const collectionId = await ctfContract.getCollectionId(parentCollectionId, conditionId, BigInt(indexSet));
+            
+            const tokenIdPUSD = await ctfContract.getPositionId(PUSD_ADDRESS, collectionId);
+            const tokenIdUSDCE = await ctfContract.getPositionId(USDCE_ADDRESS, collectionId);
 
-            const balance = await ctfContract.balanceOf(depositWallet, tokenId);
+            const balPUSD = await ctfContract.balanceOf(depositWallet, tokenIdPUSD);
+            const balUSDCE = await ctfContract.balanceOf(depositWallet, tokenIdUSDCE);
+
+            let collateralToken = PUSD_ADDRESS;
+            let balance = 0n;
+
+            if (balUSDCE > 0n) {
+                collateralToken = USDCE_ADDRESS;
+                balance = balUSDCE;
+                // Use old adapter for USDC.e
+                CTF_ADAPTER = isNegRisk 
+                    ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab" // fallback to NegRisk
+                    : "0xADa100874d00e3331D00F2007a9c336a65009718"; // Old standard adapter
+            } else {
+                collateralToken = PUSD_ADDRESS;
+                balance = balPUSD;
+                // Use V2 adapter for pUSD
+                CTF_ADAPTER = isNegRisk 
+                    ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
+                    : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
+            }
+
             if (balance === 0n) {
                 console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed.`);
                 return "skipped-zero-balance";
             }
 
-            console.log(`[Relayer] Redeeming indexSet [${indexSet}] for condition ${conditionId}`);
+            console.log(`[Relayer] Redeeming indexSet [${indexSet}] for condition ${conditionId} using collateral ${collateralToken} (balance: ${ethers.formatUnits(balance, 6)}) and adapter ${CTF_ADAPTER}`);
 
             const encodedData = encodeFunctionData({
                 abi: [{
@@ -346,7 +365,7 @@ class PolymarketRelayerService {
                 }],
                 functionName: "redeemPositions",
                 args: [
-                    PUSD_ADDRESS, 
+                    collateralToken as `0x${string}`, 
                     "0x0000000000000000000000000000000000000000000000000000000000000000", 
                     conditionId as `0x${string}`,
                     [BigInt(indexSet)]
