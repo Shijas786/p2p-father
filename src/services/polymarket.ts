@@ -16,22 +16,40 @@ async function resolveDoH(hostname: string): Promise<string> {
 
     try {
         const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${hostname}&type=A`, {
-            headers: { 'accept': 'application/dns-json' }
+            headers: { 'accept': 'application/dns-json' },
+            signal: AbortSignal.timeout(3000)
         });
         const data = await res.json();
         if (data.Answer && data.Answer.length > 0) {
-            // Find the first A record (type 1)
             const aRecord = data.Answer.find((r: any) => r.type === 1);
             if (aRecord && aRecord.data) {
                 const ip = aRecord.data;
-                dnsCache[hostname] = { ip, expires: now + 300000 }; // 5 min cache
+                dnsCache[hostname] = { ip, expires: now + 300000 };
                 return ip;
             }
         }
     } catch (e) {
-        console.warn(`[DoH] Failed to resolve ${hostname} via Cloudflare DoH`);
+        console.warn(`[DoH] Cloudflare DoH failed for ${hostname}, trying Google DoH`);
     }
-    throw new Error("DoH resolution failed");
+
+    try {
+        const res = await fetch(`https://dns.google/resolve?name=${hostname}&type=A`, {
+            signal: AbortSignal.timeout(3000)
+        });
+        const data = await res.json();
+        if (data.Answer && data.Answer.length > 0) {
+            const aRecord = data.Answer.find((r: any) => r.type === 1);
+            if (aRecord && aRecord.data) {
+                const ip = aRecord.data;
+                dnsCache[hostname] = { ip, expires: now + 300000 };
+                return ip;
+            }
+        }
+    } catch (e) {
+        console.warn(`[DoH] Google DoH failed for ${hostname}`);
+    }
+
+    throw new Error("DoH resolution failed on all providers");
 }
 
 const customLookup = async (hostname: string, options: any, callback: any) => {
