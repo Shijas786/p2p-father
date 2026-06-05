@@ -8,54 +8,26 @@ import https from "https";
 // ==========================================
 const dnsCache: Record<string, { ip: string; expires: number }> = {};
 
-async function resolveDoH(hostname: string): Promise<string> {
-    const now = Date.now();
-    if (dnsCache[hostname] && dnsCache[hostname].expires > now) {
-        return dnsCache[hostname].ip;
-    }
+async function resolveWithDoH(hostname: string): Promise<string> {
+    const res = await axios.get(`https://cloudflare-dns.com/dns-query`, {
+        params: { name: hostname, type: "A" },
+        headers: { Accept: "application/dns-json" },
+        timeout: 3000,
+    });
 
-    try {
-        const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${hostname}&type=A`, {
-            headers: { 'accept': 'application/dns-json' },
-            signal: AbortSignal.timeout(3000)
-        });
-        const data = await res.json();
-        if (data.Answer && data.Answer.length > 0) {
-            const aRecord = data.Answer.find((r: any) => r.type === 1);
-            if (aRecord && aRecord.data) {
-                const ip = aRecord.data;
-                dnsCache[hostname] = { ip, expires: now + 300000 };
-                return ip;
-            }
-        }
-    } catch (e) {
-        console.warn(`[DoH] Cloudflare DoH failed for ${hostname}, trying Google DoH`);
-    }
-
-    try {
-        const res = await fetch(`https://dns.google/resolve?name=${hostname}&type=A`, {
-            signal: AbortSignal.timeout(3000)
-        });
-        const data = await res.json();
-        if (data.Answer && data.Answer.length > 0) {
-            const aRecord = data.Answer.find((r: any) => r.type === 1);
-            if (aRecord && aRecord.data) {
-                const ip = aRecord.data;
-                dnsCache[hostname] = { ip, expires: now + 300000 };
-                return ip;
-            }
-        }
-    } catch (e) {
-        console.warn(`[DoH] Google DoH failed for ${hostname}`);
-    }
-
-    throw new Error("DoH resolution failed on all providers");
+    const answers = res.data?.Answer ?? [];
+    
+    // Filter only A records (type 1) — skip CNAME (type 5)
+    const aRecord = answers.find((a: any) => a.type === 1);
+    
+    if (!aRecord) throw new Error(`No A record found for ${hostname}`);
+    return aRecord.data; // actual IPv4
 }
 
 const customLookup = async (hostname: string, options: any, callback: any) => {
     try {
         if (hostname.includes('polymarket.com')) {
-            const ip = await resolveDoH(hostname);
+            const ip = await resolveWithDoH(hostname);
             callback(null, ip, 4);
             return;
         }

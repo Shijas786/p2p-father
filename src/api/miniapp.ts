@@ -2053,9 +2053,17 @@ router.get("/predictions/ai", async (req: Request, res: Response) => {
 });
 
 const conditionResolutionCache = new Map<string, { denominator: number, num0: number, num1: number }>();
+let leaderboardCache: { data: any[]; ts: number } | null = null;
+const LEADERBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
     console.log("=== HIT PREDICTIONS LEADERBOARD ROUTE IN MINIAPP.TS ===");
+    
+    // Serve from cache if valid
+    if (leaderboardCache && Date.now() - leaderboardCache.ts < LEADERBOARD_CACHE_TTL) {
+        console.log("[Leaderboard] Serving from cache");
+        return res.json({ leaderboard: leaderboardCache.data });
+    }
     try {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
@@ -2063,7 +2071,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
         // Fetch all users who have a wallet_index (old logic)
         const { data: usersWithWallets } = await supabase
             .from("users")
-            .select("id, first_name, username, wallet_index, telegram_id")
+            .select("id, first_name, username, wallet_index, telegram_id, deposit_wallet_address, polymarket_api_key")
             .not("wallet_index", "is", null)
             .gte("wallet_index", 0)
             .limit(100);
@@ -2086,16 +2094,17 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             provider
         );
 
-        // Process in chunks to prevent RPC rate limiting and socket exhaustion
-        const CHUNK_SIZE = 5;
-        for (let i = 0; i < usersWithWallets.length; i += CHUNK_SIZE) {
-            const chunk = usersWithWallets.slice(i, i + CHUNK_SIZE);
-            const results = await Promise.allSettled(
-                chunk.map(async (u: any) => {
-                    try {
-                        // Resolve the deposit wallet (proxy) address
-                        const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
-                        if (!proxyAddress || proxyAddress.toLowerCase().includes('demo')) return null;
+        const pLimit = (await import('p-limit')).default;
+        const limit = pLimit(5);
+
+        const results = await Promise.allSettled(
+            usersWithWallets.map((u: any) => limit(async () => {
+                try {
+                    if (!u.deposit_wallet_address || !u.polymarket_api_key) return null;
+
+                    // Resolve the deposit wallet (proxy) address
+                    const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
+                    if (!proxyAddress || proxyAddress.toLowerCase().includes('demo')) return null;
 
                         // Fetch trades using the service (which has fallbacks)
                         const trades = await polymarketService.getTradesForProxy(proxyAddress);
@@ -2190,11 +2199,10 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                         return null;
                     }
                 })
-            );
+            ));
             for (const r of results) {
                 if (r.status === 'fulfilled' && r.value) leaderboardEntries.push(r.value);
             }
-        }
 
         // Sort by volume descending (most active traders first), fallback to PNL
         leaderboardEntries.sort((a, b) => b.volRaw - a.volRaw || b.pnlRaw - a.pnlRaw);
@@ -2211,6 +2219,8 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             winRatio: e.winRatio,
             is_me: currentUserId === e.telegram_id,
         }));
+
+        leaderboardCache = { data: leaderboard, ts: Date.now() };
 
         console.log("LEADERBOARD RESPONSE DATA:", JSON.stringify(leaderboard, null, 2));
         res.json({ leaderboard });
