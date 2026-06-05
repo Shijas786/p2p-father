@@ -22,6 +22,7 @@ async function polymarketGet(hostname: string, path: string, params?: any, extra
             ...(extraOptions?.headers || {})
         },
         httpsAgent: new https.Agent({
+            servername: hostname, // ← critical for SNI
             checkServerIdentity: (host, cert) => undefined
         }),
         ...extraOptions
