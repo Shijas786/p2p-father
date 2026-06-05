@@ -14,6 +14,7 @@ import { wallet } from "../services/wallet";
 import { escrow } from "../services/escrow";
 import { polymarketService } from "../services/polymarket";
 import { ethers } from "ethers";
+import axios from "axios";
 
 import { polymarketRelayerService } from "../services/relayer";
 import { depositMonitor } from "../services/deposit-monitor";
@@ -45,7 +46,7 @@ router.post("/withdraw", async (req: Request, res: Response) => {
         
         const txHash = await polymarketRelayerService.withdrawCrossChain(
             walletIndex,
-            Number(destChainId),
+            destChainId.toString(),
             destTokenAddress,
             recipient,
             amountBig
