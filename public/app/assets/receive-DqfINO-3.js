@@ -1,4 +1,4 @@
-import{cF as k,cG as v,cH as N,cI as x,cJ as $,cK as C,cL as u,c_ as c,cU as h,dc as m,dd as f,cP as R,de as A,cY as I,cZ as S,cT as T,d0 as _,df as b}from"./index-CmnP8RuI.js";const O=k`
+import{c as y,r as v,e as N,n as x,a as $,i as C,b as u,k as c,S as h,$ as m,a0 as f,U as R,a1 as A,j as S,W as I,R as T,l as O,a2 as b}from"./index-NgAxpcPP.js";const _=y`
   button {
     width: 100%;
     display: flex;
@@ -69,7 +69,7 @@ import{cF as k,cG as v,cH as N,cI as x,cJ as $,cK as C,cL as u,c_ as c,cU as h,d
       </button>
     `}networksTemplate(){const t=this.networkImages.slice(0,5);return u` <wui-flex class="networks">
       ${t==null?void 0:t.map(o=>u` <wui-flex class="network-icon"> <wui-image src=${o}></wui-image> </wui-flex>`)}
-    </wui-flex>`}};p.styles=[v,N,O];g([x({type:Array})],p.prototype,"networkImages",void 0);g([x()],p.prototype,"text",void 0);p=g([$("wui-compatible-network")],p);const E=k`
+    </wui-flex>`}};p.styles=[v,N,_];g([x({type:Array})],p.prototype,"networkImages",void 0);g([x()],p.prototype,"text",void 0);p=g([$("wui-compatible-network")],p);const E=y`
   wui-compatible-network {
     margin-top: ${({spacing:e})=>e[4]};
     width: 100%;
@@ -120,12 +120,12 @@ import{cF as k,cG as v,cH as N,cI as x,cJ as $,cK as C,cL as u,c_ as c,cU as h,d
         </wui-button>
       </wui-flex>
       ${this.networkTemplate()}
-    </wui-flex>`}networkTemplate(){var a;const t=c.getAllRequestedCaipNetworks(),o=c.checkIfSmartAccountEnabled(),i=c.state.activeCaipNetwork,s=t.filter(l=>(l==null?void 0:l.chainNamespace)===(i==null?void 0:i.chainNamespace));if(I(i==null?void 0:i.chainNamespace)===S.ACCOUNT_TYPES.SMART_ACCOUNT&&o)return i?u`<wui-compatible-network
+    </wui-flex>`}networkTemplate(){var a;const t=c.getAllRequestedCaipNetworks(),o=c.checkIfSmartAccountEnabled(),i=c.state.activeCaipNetwork,s=t.filter(l=>(l==null?void 0:l.chainNamespace)===(i==null?void 0:i.chainNamespace));if(S(i==null?void 0:i.chainNamespace)===I.ACCOUNT_TYPES.SMART_ACCOUNT&&o)return i?u`<wui-compatible-network
         @click=${this.onReceiveClick.bind(this)}
         text="Only receive assets on this network"
         .networkImages=${[m.getNetworkImage(i)??""]}
-      ></wui-compatible-network>`:null;const n=((a=s==null?void 0:s.filter(l=>{var y;return(y=l==null?void 0:l.assets)==null?void 0:y.imageId}))==null?void 0:a.slice(0,5)).map(m.getNetworkImage).filter(Boolean);return u`<wui-compatible-network
+      ></wui-compatible-network>`:null;const n=((a=s==null?void 0:s.filter(l=>{var k;return(k=l==null?void 0:l.assets)==null?void 0:k.imageId}))==null?void 0:a.slice(0,5)).map(m.getNetworkImage).filter(Boolean);return u`<wui-compatible-network
       @click=${this.onReceiveClick.bind(this)}
       text="Only receive assets on these networks"
       .networkImages=${n}
-    ></wui-compatible-network>`}onReceiveClick(){T.push("WalletCompatibleNetworks")}onCopyClick(){try{this.address&&(_.copyToClopboard(this.address),h.showSuccess("Address copied"))}catch{h.showError("Failed to copy")}}};d.styles=E;w([b()],d.prototype,"address",void 0);w([b()],d.prototype,"profileName",void 0);w([b()],d.prototype,"network",void 0);d=w([$("w3m-wallet-receive-view")],d);export{d as W3mWalletReceiveView};
+    ></wui-compatible-network>`}onReceiveClick(){T.push("WalletCompatibleNetworks")}onCopyClick(){try{this.address&&(O.copyToClopboard(this.address),h.showSuccess("Address copied"))}catch{h.showError("Failed to copy")}}};d.styles=E;w([b()],d.prototype,"address",void 0);w([b()],d.prototype,"profileName",void 0);w([b()],d.prototype,"network",void 0);d=w([$("w3m-wallet-receive-view")],d);export{d as W3mWalletReceiveView};

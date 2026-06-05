@@ -1,4 +1,4 @@
-import{dW as k,el as le,cT as c,cV as pe,cF as v,cG as V,cJ as f,cK as g,cL as d,cI as l,de as $,d2 as H,df as u,cH as me,c_ as w,cN as B,dc as U,eh as fe,e0 as F,cX as K,dQ as A,d6 as M,cQ as we,cU as E,dY as z,ee as oe,dd as be,cP as ce,em as ge,en as ye}from"./index-CmnP8RuI.js";import{P as D}from"./index-DN8-_0_z.js";import{S as ve}from"./SwapController-BwQ0iwIW.js";const de={isUnsupportedChainView(){return c.state.view==="UnsupportedChain"||c.state.view==="SwitchNetwork"&&c.state.history.includes("UnsupportedChain")},async safeClose(){if(this.isUnsupportedChainView()){k.shake();return}if(await le.isSIWXCloseDisabled()){k.shake();return}(c.state.view==="DataCapture"||c.state.view==="DataCaptureOtpConfirm")&&pe.disconnect(),k.close()}},xe=v`
+import{ab as k,bf as le,R as c,C as pe,c as v,r as V,a as f,i as g,b as d,n as l,a1 as $,A as H,a2 as u,e as me,k as w,v as B,$ as U,bb as fe,ah as F,E as K,a5 as A,s as M,g as we,S as E,ad as z,b8 as oe,a0 as be,U as ce,bg as ge,bh as ye}from"./index-NgAxpcPP.js";import{P as D}from"./index-BA8jPnsK.js";import{S as ve}from"./SwapController-DlZU2AB2.js";const de={isUnsupportedChainView(){return c.state.view==="UnsupportedChain"||c.state.view==="SwitchNetwork"&&c.state.history.includes("UnsupportedChain")},async safeClose(){if(this.isUnsupportedChainView()){k.shake();return}if(await le.isSIWXCloseDisabled()){k.shake();return}(c.state.view==="DataCapture"||c.state.view==="DataCaptureOtpConfirm")&&pe.disconnect(),k.close()}},xe=v`
   :host {
     display: block;
     border-radius: clamp(0px, ${({borderRadius:e})=>e[8]}, 44px);
@@ -249,7 +249,7 @@ import{dW as k,el as le,cT as c,cV as pe,cF as v,cG as V,cJ as f,cK as g,cL as d
     border: 1px solid ${({tokens:e})=>e.theme.foregroundSecondary};
     border-radius: ${({borderRadius:e})=>e[4]};
   }
-`;var Q=function(e,t,i,r){var a=arguments.length,o=a<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,i):r,n;if(typeof Reflect=="object"&&typeof Reflect.decorate=="function")o=Reflect.decorate(e,t,i,r);else for(var s=e.length-1;s>=0;s--)(n=e[s])&&(o=(a<3?n(o):a>3?n(t,i,o):n(t,i))||o);return a>3&&o&&Object.defineProperty(t,i,o),o};let T=class extends g{constructor(){super(),this.unsubscribe=[],this.paymentAsset=D.state.paymentAsset,this.amount=D.state.amount,this.unsubscribe.push(D.subscribeKey("paymentAsset",t=>{this.paymentAsset=t}),D.subscribeKey("amount",t=>{this.amount=t}))}disconnectedCallback(){this.unsubscribe.forEach(t=>t())}render(){const i=w.getAllRequestedCaipNetworks().find(r=>r.caipNetworkId===this.paymentAsset.network);return d`<wui-flex
+`;var q=function(e,t,i,r){var a=arguments.length,o=a<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,i):r,n;if(typeof Reflect=="object"&&typeof Reflect.decorate=="function")o=Reflect.decorate(e,t,i,r);else for(var s=e.length-1;s>=0;s--)(n=e[s])&&(o=(a<3?n(o):a>3?n(t,i,o):n(t,i))||o);return a>3&&o&&Object.defineProperty(t,i,o),o};let T=class extends g{constructor(){super(),this.unsubscribe=[],this.paymentAsset=D.state.paymentAsset,this.amount=D.state.amount,this.unsubscribe.push(D.subscribeKey("paymentAsset",t=>{this.paymentAsset=t}),D.subscribeKey("amount",t=>{this.amount=t}))}disconnectedCallback(){this.unsubscribe.forEach(t=>t())}render(){const i=w.getAllRequestedCaipNetworks().find(r=>r.caipNetworkId===this.paymentAsset.network);return d`<wui-flex
       alignItems="center"
       gap="1"
       .padding=${["1","2","1","1"]}
@@ -262,7 +262,7 @@ import{dW as k,el as le,cT as c,cV as pe,cF as v,cG as V,cJ as f,cK as g,cL as d
       <wui-text variant="sm-regular" color="secondary">
         on ${(i==null?void 0:i.name)??"Unknown"}
       </wui-text>
-    </wui-flex>`}};T.styles=[Ee];Q([l()],T.prototype,"paymentAsset",void 0);Q([l()],T.prototype,"amount",void 0);T=Q([f("w3m-pay-header")],T);const Pe=v`
+    </wui-flex>`}};T.styles=[Ee];q([l()],T.prototype,"paymentAsset",void 0);q([l()],T.prototype,"amount",void 0);T=q([f("w3m-pay-header")],T);const Pe=v`
   :host {
     height: 60px;
   }
@@ -438,7 +438,7 @@ import{dW as k,el as le,cT as c,cV as pe,cF as v,cG as V,cJ as f,cK as g,cL as d
     background-color: ${({tokens:e})=>e.core.foregroundAccent010};
     border-radius: ${({borderRadius:e})=>e.round} !important;
   }
-`;var q=function(e,t,i,r){var a=arguments.length,o=a<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,i):r,n;if(typeof Reflect=="object"&&typeof Reflect.decorate=="function")o=Reflect.decorate(e,t,i,r);else for(var s=e.length-1;s>=0;s--)(n=e[s])&&(o=(a<3?n(o):a>3?n(t,i,o):n(t,i))||o);return a>3&&o&&Object.defineProperty(t,i,o),o};let _=class extends g{constructor(){super(...arguments),this.message="",this.variant="success"}render(){return d`
+`;var Q=function(e,t,i,r){var a=arguments.length,o=a<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,i):r,n;if(typeof Reflect=="object"&&typeof Reflect.decorate=="function")o=Reflect.decorate(e,t,i,r);else for(var s=e.length-1;s>=0;s--)(n=e[s])&&(o=(a<3?n(o):a>3?n(t,i,o):n(t,i))||o);return a>3&&o&&Object.defineProperty(t,i,o),o};let _=class extends g{constructor(){super(...arguments),this.message="",this.variant="success"}render(){return d`
       ${this.templateIcon()}
       <wui-text variant="lg-regular" color="primary" data-testid="wui-snackbar-message"
         >${this.message}</wui-text
@@ -447,7 +447,7 @@ import{dW as k,el as le,cT as c,cV as pe,cF as v,cG as V,cJ as f,cK as g,cL as d
       size="md"
       color=${t[this.variant]}
       icon=${i[this.variant]}
-    ></wui-icon-box>`}};_.styles=[V,Te];q([l()],_.prototype,"message",void 0);q([l()],_.prototype,"variant",void 0);_=q([f("wui-snackbar")],_);const _e=we`
+    ></wui-icon-box>`}};_.styles=[V,Te];Q([l()],_.prototype,"message",void 0);Q([l()],_.prototype,"variant",void 0);_=Q([f("wui-snackbar")],_);const _e=we`
   :host {
     display: block;
     position: absolute;
