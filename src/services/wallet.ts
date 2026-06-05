@@ -29,7 +29,7 @@ class WalletService {
 
     private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
         if (!this.providers[chain]) {
-            const url = chain === 'base' ? env.BASE_RPC_URL : chain === 'bsc' ? env.BSC_RPC_URL : "https://polygon-rpc.com";
+            const url = chain === 'base' ? env.BASE_RPC_URL : chain === 'bsc' ? env.BSC_RPC_URL : (process.env.POLYGON_RPC_URL || "https://polygon-rpc.com");
             this.providers[chain] = new ethers.JsonRpcProvider(url);
         }
         return this.providers[chain]!;
