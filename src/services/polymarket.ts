@@ -553,7 +553,7 @@ class PolymarketService {
 
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await polymarketGet("data-api.polymarket.com", "/trades", { user: proxyAddress });
+            const res = await polymarketGet("data-api.polymarket.com", "/trades", { user: proxyAddress, limit: "500" });
             const trades = Array.isArray(res.data) ? res.data : [];
             return trades.map(t => ({ 
                 ...t, 
@@ -562,7 +562,7 @@ class PolymarketService {
             }));
         } catch (e: any) {
             try {
-                const res = await polymarketGet("gamma-api.polymarket.com", "/trades", { user: proxyAddress });
+                const res = await polymarketGet("gamma-api.polymarket.com", "/trades", { user: proxyAddress, limit: "500" });
                 const trades = Array.isArray(res.data) ? res.data : [];
                 return trades.map(t => ({ 
                     ...t, 

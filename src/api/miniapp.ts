@@ -2552,6 +2552,14 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
                 if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
                     positionMap[key].qty = parseFloat(activePos.size);
+                    
+                    // Use exact entry cost directly from Polymarket API if available!
+                    if (activePos.initialValue !== undefined) {
+                        positionMap[key].avgPrice = parseFloat(activePos.initialValue) / positionMap[key].qty;
+                    } else if (activePos.price !== undefined) {
+                        positionMap[key].avgPrice = parseFloat(activePos.price);
+                    }
+                    
                     positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
                 } else if (activePos && activePos.redeemable) {
                     positionMap[key].qty = 0;
