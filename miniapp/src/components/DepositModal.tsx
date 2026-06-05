@@ -19,7 +19,7 @@ interface DepositModalProps {
 interface WalletAsset {
     id: string;
     token: 'USDT' | 'USDC' | 'pUSD';
-    chain: 'Polygon' | 'BSC';
+    chain: 'Polygon' | 'BSC' | 'Base';
     balance: number;
     icon: React.ComponentType<any>;
     chainIcon: React.ComponentType<any>;
@@ -114,12 +114,12 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     // Get asset list with exact values
     const availableAssets: WalletAsset[] = [
         {
-            id: 'poly_usdc',
+            id: 'base_usdc',
             token: 'USDC',
-            chain: 'Polygon',
+            chain: 'Base',
             balance: parseFloat(hotBalances?.usdc || '0'),
             icon: IconTokenUSDC,
-            chainIcon: IconChainPolygon
+            chainIcon: IconChainBase
         },
         {
             id: 'bsc_usdc',
@@ -130,12 +130,12 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             chainIcon: IconChainBsc
         },
         {
-            id: 'poly_usdt',
+            id: 'base_usdt',
             token: 'USDT',
-            chain: 'Polygon',
+            chain: 'Base',
             balance: parseFloat(hotBalances?.usdt || '0'),
             icon: IconTokenUSDT,
-            chainIcon: IconChainPolygon
+            chainIcon: IconChainBase
         },
         {
             id: 'bsc_usdt',
