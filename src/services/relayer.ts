@@ -375,9 +375,6 @@ class PolymarketRelayerService {
             
             let collateralToken = PUSD_ADDRESS;
             let balance = balPUSD;
-            let CTF_ADAPTER = isNegRisk 
-                ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
-                : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
 
             if (balance === 0n) {
                 console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed.`);
