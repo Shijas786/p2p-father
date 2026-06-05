@@ -3,8 +3,30 @@ import { encodePacked, keccak256, createWalletClient, http } from "viem";
 import https from "https";
 
 // ==========================================
-// Custom DNS over HTTPS (DoH) Resolver for Axios
-// Bypasses ISP and Cloud provider DNS blocking of Polymarket APIs
+// ==========================================
+// Direct IP Polymarket API Helper
+// ==========================================
+const POLYMARKET_IPS: Record<string, string> = {
+    "data-api.polymarket.com": "104.18.34.205",
+    "gamma-api.polymarket.com": "104.18.34.205",
+    "clob.polymarket.com": "104.18.34.205",
+};
+
+async function polymarketGet(hostname: string, path: string, params?: any, extraOptions?: any) {
+    const ip = POLYMARKET_IPS[hostname] || "104.18.34.205";
+    return axios.get(`https://${ip}${path}`, {
+        params,
+        timeout: 8000,
+        headers: {
+            "Host": hostname,
+            ...(extraOptions?.headers || {})
+        },
+        httpsAgent: new https.Agent({
+            checkServerIdentity: (host, cert) => undefined
+        }),
+        ...extraOptions
+    });
+}
 // ==========================================
 const dnsCache: Record<string, { ip: string; expires: number }> = {};
 
@@ -264,15 +286,13 @@ class PolymarketService {
         try {
 
             // Fetch real active markets from Polymarket
-            const res = await axios.get(`${GAMMA_API}/events`, {
-                params: { slug },
+            const res = await polymarketGet("gamma-api.polymarket.com", "/events", { slug }, {
                 headers: {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "User-Agent": "Mozilla/5.0",
                     "Accept": "application/json",
                     "Origin": "https://polymarket.com",
                     "Referer": "https://polymarket.com/"
-                },
-                timeout: 5000,
+                }
             });
 
             const events = res.data || [];
@@ -306,7 +326,7 @@ class PolymarketService {
         // Try CLOB API as a secondary fallback if Gamma is blocked by Cloudflare (or deprecated)
         try {
             console.log(`[Polymarket] Trying CLOB /markets endpoint for slug: ${slug}...`);
-            const res = await axios.get(`${CLOB_API}/markets`, {
+            const res = await polymarketGet("clob.polymarket.com", "/markets", {
                 params: { market_slug: slug },
                 headers: {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -339,7 +359,7 @@ class PolymarketService {
         // Fallback: Try searching CLOB API by tag or series if slug format changed
         try {
             console.log(`[Polymarket] Fallback: Searching CLOB API for active BTC markets...`);
-            const res = await axios.get(`${CLOB_API}/markets`, {
+            const res = await polymarketGet("clob.polymarket.com", "/markets", {
                 params: { active: true },
                 headers: {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -398,7 +418,7 @@ class PolymarketService {
         }
 
         try {
-            const res = await axios.get(`${CLOB_API}/book`, {
+            const res = await polymarketGet("clob.polymarket.com", "/book", {
                 params: { token_id: tokenId },
                 headers: {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -526,7 +546,7 @@ class PolymarketService {
 
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
+            const res = await polymarketGet("data-api.polymarket.com", "/trades", { user: proxyAddress });
             const trades = Array.isArray(res.data) ? res.data : [];
             return trades.map(t => ({ 
                 ...t, 
@@ -535,7 +555,7 @@ class PolymarketService {
             }));
         } catch (e: any) {
             try {
-                const res = await axios.get(`https://gamma-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
+                const res = await polymarketGet("gamma-api.polymarket.com", "/trades", { user: proxyAddress });
                 const trades = Array.isArray(res.data) ? res.data : [];
                 return trades.map(t => ({ 
                     ...t, 
@@ -551,11 +571,11 @@ class PolymarketService {
 
     async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0.01`, { timeout: 5000, httpsAgent: customHttpsAgent });
+            const res = await polymarketGet("data-api.polymarket.com", "/positions", { user: proxyAddress, sizeThreshold: "0.01" });
             return Array.isArray(res.data) ? res.data : [];
         } catch (e: any) {
             try {
-                const res = await axios.get(`https://gamma-api.polymarket.com/positions?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
+                const res = await polymarketGet("gamma-api.polymarket.com", "/positions", { user: proxyAddress });
                 return Array.isArray(res.data) ? res.data : [];
             } catch (e2: any) {
                 console.log("[Polymarket] Both position APIs failed:", e2.message);
