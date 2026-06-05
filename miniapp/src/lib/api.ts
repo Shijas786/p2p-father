@@ -291,7 +291,7 @@ export const api = {
 
             try {
                 const [tradesRes, positionsRes] = await Promise.all([
-                    fetch(`https://data-api.polymarket.com/trades?user=${address}`).then(r => r.json()).catch(() => []),
+                    fetch(`https://data-api.polymarket.com/trades?user=${address}&limit=500`).then(r => r.json()).catch(() => []),
                     fetch(`https://data-api.polymarket.com/positions?user=${address}`).then(r => r.json()).catch(() => [])
                 ]);
 
@@ -372,8 +372,23 @@ export const api = {
                     }
 
                     if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
-                        positionMap[key].qty = parseFloat(activePos.size);
-                        positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
+                        const syncedQty = parseFloat(activePos.size);
+                        
+                        if (activePos.initialValue !== undefined) {
+                            const initialValue = parseFloat(activePos.initialValue);
+                            positionMap[key].qty = syncedQty;
+                            positionMap[key].totalCost = initialValue;
+                            positionMap[key].avgPrice = initialValue / syncedQty;
+                        } else {
+                            const oldQty = positionMap[key].qty;
+                            if (oldQty > 0 && syncedQty !== oldQty) {
+                                positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                            }
+                            positionMap[key].qty = syncedQty;
+                            positionMap[key].avgPrice = positionMap[key].qty > 0
+                                ? positionMap[key].totalCost / positionMap[key].qty
+                                : 0;
+                        }
                     } else if (activePos && activePos.redeemable) {
                         positionMap[key].qty = 0;
                     } else if (!activePos) {
