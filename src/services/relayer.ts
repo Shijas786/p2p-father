@@ -683,7 +683,11 @@ class PolymarketRelayerService {
         try {
             console.log(`[Relayer] Submitting gasless pUSD withdrawal from deposit wallet: ${depositWallet} → ${recipientAddress}`);
             const response = await client.executeDepositWalletBatch([withdrawCall], depositWallet, deadline);
+            
+            console.log("[Relayer] Withdraw raw response:", JSON.stringify(response));
             const result = await response.wait();
+            console.log("[Relayer] Withdraw wait result:", JSON.stringify(result));
+            
             return result?.transactionHash || response.transactionHash || response.hash;
         } catch (err: any) {
             console.error("[Relayer] pUSD withdrawal failed:", err.message);
@@ -768,7 +772,11 @@ class PolymarketRelayerService {
         try {
             console.log(`[Relayer] Submitting gasless transfer to bridge: ${bridgeAddress}`);
             const response = await client.executeDepositWalletBatch([withdrawCall], depositWallet, deadline);
+            
+            console.log("[Relayer] Bridge transfer raw response:", JSON.stringify(response));
             const result = await response.wait();
+            console.log("[Relayer] Bridge transfer wait result:", JSON.stringify(result));
+            
             return bridgeAddress; // Return bridge address so we can poll status
         } catch (err: any) {
             console.error("[Relayer] Bridge transfer failed:", err.message);
