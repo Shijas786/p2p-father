@@ -735,7 +735,7 @@ export function Predict({ user }: Props) {
                             )}
                         </div>
                         <div className="pm-price-current-row">
-                            <span key={`price-${livePrice}`} className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '20px', display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out'}}>
+                            <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '20px'}}>
                                 ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
                             </span>
                         </div>
