@@ -2334,7 +2334,7 @@ router.get("/predictions/deposit-wallet", async (req: Request, res: Response) =>
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
         res.json({ address });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions deposit wallet error:", err);
@@ -2347,7 +2347,7 @@ router.get("/predictions/clob-keys", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+        const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
         
         // Return proxy address and CLOB API keys if they exist in DB
         res.json({
@@ -2527,9 +2527,11 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
+        const all = req.query.all === 'true';
+
         // Attempt to get real open positions from Polymarket Data API
         try {
-            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
             console.log("[DEBUG] Fetching positions for deposit wallet:", proxyAddress);
             if (!proxyAddress || proxyAddress.includes("Demo")) {
                 return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
@@ -2568,7 +2570,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const noPrice = priceResults[1].status === 'fulfilled' ? priceResults[1].value : null;
 
             // Aggregate open positions from recent trades
-            const positionMap: Record<string, { outcome: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
+            const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
             const yesTokenIdLc = market.yesTokenId.toLowerCase();
             const noTokenIdLc = market.noTokenId.toLowerCase();
 
@@ -2579,20 +2581,22 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
                 const isUp = tradeAssetLc === yesTokenIdLc;
                 const isDown = tradeAssetLc === noTokenIdLc;
-                if (!isUp && !isDown) continue;
+                if (!all && !isUp && !isDown) continue;
 
-                const key = isUp ? "UP" : "DOWN";
+                const key = all ? tradeAssetLc : (isUp ? "UP" : "DOWN");
                 const qty = parseFloat(trade.size ?? "0");
                 const price = parseFloat(trade.price ?? "0");
                 const isSell = trade.side === "SELL";
 
                 if (!positionMap[key]) {
                     positionMap[key] = {
-                        outcome: key,
+                        outcome: all ? (trade.outcomeIndex === 0 ? 'UP' : 'DOWN') : (isUp ? 'UP' : 'DOWN'),
+                        asset: tradeAssetLc,
+                        title: trade.title,
                         qty: 0,
                         totalCost: 0,
                         avgPrice: 0,
-                        currentPrice: isUp ? yesPrice?.buyPrice ?? null : noPrice?.buyPrice ?? null,
+                        currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
                     };
                 }
 
@@ -2609,7 +2613,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Sync qty with Data API to reflect redemptions correctly
             for (const key of Object.keys(positionMap)) {
-                const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
+                const tokenIdLc = all ? key : (key === "UP" ? yesTokenIdLc : noTokenIdLc);
                 const activePos = positionsRes.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
                 
                 console.log("[DEBUG] activePos fields:", JSON.stringify({
@@ -2733,7 +2737,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
             // Build final positions list
             const positions = Object.values(positionMap)
-                .filter(p => p.qty > 0.001)
+                .filter(p => all || p.qty > 0.001)
                 .map(p => {
                     const effectivePrice = p.currentPrice ?? p.avgPrice;
                     const value = p.qty * effectivePrice;
@@ -2749,6 +2753,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         cost: parseFloat(cost.toFixed(2)),
                         returnAmt: parseFloat(returnAmt.toFixed(2)),
                         returnPct: parseFloat(returnPct.toFixed(2)),
+                        title: p.title,
                     };
                 });
 

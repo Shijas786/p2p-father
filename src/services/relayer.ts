@@ -170,9 +170,14 @@ class PolymarketRelayerService {
 
     /**
      * Resolves the deterministic deposit wallet (proxy wallet) address for a user.
-     * This address is determined entirely by the user's EOA signer.
+     * Caches the result in Supabase after first derivation so mobile clients never wait.
      */
-    async resolveDepositWallet(userWalletIndex: number): Promise<string> {
+    async resolveDepositWallet(userWalletIndex: number, cachedAddress?: string | null): Promise<string> {
+        // Return cached address immediately if available — avoids slow relayer call
+        if (cachedAddress && cachedAddress !== '' && !cachedAddress.includes('Demo')) {
+            return cachedAddress;
+        }
+
         if (this.isDemoMode) {
             try {
                 const derived = walletService.deriveWallet(userWalletIndex);
@@ -184,7 +189,20 @@ class PolymarketRelayerService {
         try {
             const client = this.getUserRelayClient(userWalletIndex);
             if (!client) throw new Error("Failed to construct relayer client");
-            return await client.deriveDepositWalletAddress();
+            const address = await client.deriveDepositWalletAddress();
+
+            // Persist to DB so future calls are instant
+            try {
+                const { db } = await import("../db/client");
+                const supabase = (db as any).getClient();
+                await supabase.from("users")
+                    .update({ deposit_wallet_address: address })
+                    .eq("wallet_index", userWalletIndex);
+            } catch (dbErr: any) {
+                console.warn("[Relayer] Failed to cache deposit wallet in DB:", dbErr.message);
+            }
+
+            return address;
         } catch (err: any) {
             console.error("[Relayer] Failed to derive deposit wallet address:", err.message);
             throw err;
