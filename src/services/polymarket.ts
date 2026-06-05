@@ -21,6 +21,7 @@ async function polymarketGet(hostname: string, path: string, params?: any, extra
             "Accept": "application/json",
             ...(extraOptions?.headers || {})
         },
+        httpsAgent: customHttpsAgent,
         ...extraOptions
     });
 }
@@ -81,6 +82,9 @@ interface CacheEntry<T> {
 }
 const marketCache: { [slug: string]: CacheEntry<ActiveMarketInfo> } = {};
 const priceCache: { [tokenId: string]: CacheEntry<{ buyPrice: number; sellPrice: number }> } = {};
+const positionsCache: { [proxyAddress: string]: CacheEntry<any[]> } = {};
+const tradesCache: { [proxyAddress: string]: CacheEntry<any[]> } = {};
+const PROXY_CACHE_TTL = 15 * 1000; // 15 seconds
 
 export interface ActiveMarketInfo {
     conditionId: string;
@@ -539,40 +543,64 @@ class PolymarketService {
     }
 
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
+        const cacheKey = proxyAddress.toLowerCase();
+        const now = Date.now();
+        if (tradesCache[cacheKey] && (now - tradesCache[cacheKey].timestamp < PROXY_CACHE_TTL)) {
+            return tradesCache[cacheKey].data;
+        }
+
         try {
             const res = await polymarketGet("data-api.polymarket.com", "/trades", { user: proxyAddress, limit: "500" });
             const trades = Array.isArray(res.data) ? res.data : [];
-            return trades.map(t => ({ 
+            const mapped = trades.map(t => ({ 
                 ...t, 
                 asset_id: t.asset_id || t.asset,
                 market: t.conditionId 
             }));
+            tradesCache[cacheKey] = { data: mapped, timestamp: now };
+            console.log(`[Trades] Fetched ${mapped.length} trades from Data API for wallet ${proxyAddress}`);
+            return mapped;
         } catch (e: any) {
             try {
                 const res = await polymarketGet("gamma-api.polymarket.com", "/trades", { user: proxyAddress, limit: "500" });
                 const trades = Array.isArray(res.data) ? res.data : [];
-                return trades.map(t => ({ 
+                const mapped = trades.map(t => ({ 
                     ...t, 
                     asset_id: t.asset_id || t.asset,
                     market: t.conditionId 
                 }));
+                tradesCache[cacheKey] = { data: mapped, timestamp: now };
+                console.log(`[Trades] Fetched ${mapped.length} trades from Gamma API fallback for wallet ${proxyAddress}`);
+                return mapped;
             } catch (e2: any) {
-                console.log("[Polymarket] Both trade APIs failed. Data API Error:", e.message, "| Gamma API Error:", e2.message);
+                console.log(`[Trades] Failed to fetch trades for ${proxyAddress}. Data API: ${e.message} | Gamma API: ${e2.message}`);
                 return [];
             }
         }
     }
 
     async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
+        const cacheKey = proxyAddress.toLowerCase();
+        const now = Date.now();
+        if (positionsCache[cacheKey] && (now - positionsCache[cacheKey].timestamp < PROXY_CACHE_TTL)) {
+            return positionsCache[cacheKey].data;
+        }
+
         try {
             const res = await polymarketGet("data-api.polymarket.com", "/positions", { user: proxyAddress, sizeThreshold: "0.01" });
-            return Array.isArray(res.data) ? res.data : [];
+            const data = Array.isArray(res.data) ? res.data : [];
+            positionsCache[cacheKey] = { data, timestamp: now };
+            console.log(`[Positions] Fetched ${data.length} positions from Data API for wallet ${proxyAddress}`);
+            return data;
         } catch (e: any) {
             try {
                 const res = await polymarketGet("gamma-api.polymarket.com", "/positions", { user: proxyAddress });
-                return Array.isArray(res.data) ? res.data : [];
+                const data = Array.isArray(res.data) ? res.data : [];
+                positionsCache[cacheKey] = { data, timestamp: now };
+                console.log(`[Positions] Fetched ${data.length} positions from Gamma API fallback for wallet ${proxyAddress}`);
+                return data;
             } catch (e2: any) {
-                console.log("[Polymarket] Both position APIs failed:", e2.message);
+                console.log(`[Positions] Failed to fetch positions for ${proxyAddress}. Data API: ${e.message} | Gamma API: ${e2.message}`);
                 return [];
             }
         }
