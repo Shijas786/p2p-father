@@ -2505,7 +2505,10 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const yesTokenIdLc = market.yesTokenId.toLowerCase();
             const noTokenIdLc = market.noTokenId.toLowerCase();
 
-            for (const trade of (tradesRes || [])) {
+            let activeRealizedPnl = 0;
+            const sortedTrades = [...(tradesRes || [])].reverse(); // Oldest first for accurate avg price calculation
+
+            for (const trade of sortedTrades) {
                 const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
                 const isUp = tradeAssetLc === yesTokenIdLc;
                 const isDown = tradeAssetLc === noTokenIdLc;
@@ -2527,8 +2530,10 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
 
                 if (isSell) {
+                    const avgEntryPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
+                    activeRealizedPnl += (price - avgEntryPrice) * qty;
                     positionMap[key].qty -= qty;
-                    positionMap[key].totalCost -= qty * price;
+                    positionMap[key].totalCost -= avgEntryPrice * qty;
                 } else {
                     positionMap[key].qty += qty;
                     positionMap[key].totalCost += qty * price;
@@ -2561,7 +2566,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             // The Data API removes redeemed positions entirely, so we compute from trades:
             // Group BUY trades by conditionId → for resolved conditions not in active positions,
             // profit = shares * payoutFraction - cost  (payoutFraction = payoutNumerator/denominator)
-            let realizedPnl = 0;
+            let realizedPnl = activeRealizedPnl; // Include partial sells from active market
             try {
                 // Step 1: Try Data API cashPnl first (works for recently resolved ones still in API)
                 const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`, { signal: AbortSignal.timeout(5000) });
