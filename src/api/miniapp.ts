@@ -2087,7 +2087,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
         const leaderboardEntries: any[] = [];
         
         // Single provider and contract for all users in this request
-        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
+        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
         const ctf = new ethers.Contract(
             '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
             [
@@ -2601,7 +2601,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
 
                     // Step 3: For conditions NOT in active positions (already redeemed), check on-chain
                     const { ethers } = await import('ethers');
-                    const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon.llamarpc.com');
+                    const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
                     const ctf = new ethers.Contract(
                         '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
                         [

@@ -11,7 +11,7 @@ const MIN_WRAP_AMOUNT = BigInt(1_000_000); // = 1.0 USDC.e
 /** How often the monitor scans all wallets (ms) */
 const DEFAULT_INTERVAL_MS = 30_000; // 30 seconds
 
-const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
 
 /** USDC.e on Polygon — the token the Collateral Onramp consumes */
 const USDCE_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";

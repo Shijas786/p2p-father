@@ -206,13 +206,14 @@ export function startAutoClaimJob() {
             const { polymarketService } = await import("./polymarket");
             const { bot } = await import("../bot");
 
-            const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+            const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
             const provider = new ethers.JsonRpcProvider(rpcUrl);
             const ctfContract = new ethers.Contract(
                 ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
                 [
                     "function balanceOf(address, uint256) view returns (uint256)",
-                    "function payoutDenominator(bytes32) view returns (uint256)"
+                    "function payoutDenominator(bytes32) view returns (uint256)",
+                    "function payoutNumerators(bytes32, uint256) view returns (uint256)"
                 ],
                 provider
             );
@@ -274,15 +275,31 @@ export function startAutoClaimJob() {
                         }
 
                         try {
-                            const outcomeIndex = typeof pos.outcomeIndex === 'string' ? parseInt(pos.outcomeIndex) : pos.outcomeIndex;
-                            const preferredIndexSet = outcomeIndex === 0 ? 1 : 2;
-                            const fallbackIndexSet = preferredIndexSet === 1 ? 2 : 1;
+                            const denom = await ctfContract.payoutDenominator(pos.conditionId);
+                            if (denom === 0n) {
+                                console.log(`[AutoClaim] Condition ${pos.conditionId} has 0 denominator (not resolved yet)`);
+                                continue;
+                            }
+
+                            const payout0 = await ctfContract.payoutNumerators(pos.conditionId, 0);
+                            const payout1 = await ctfContract.payoutNumerators(pos.conditionId, 1);
+                            
+                            let winningIndexSet = null;
+                            if (payout0 > 0n) winningIndexSet = 1;
+                            else if (payout1 > 0n) winningIndexSet = 2;
+
+                            if (!winningIndexSet) {
+                                console.log(`[AutoClaim] Condition ${pos.conditionId} resolved but neither index 0 nor 1 won. Skipping.`);
+                                continue;
+                            }
 
                             redeemAttempts.set(attemptKey, Date.now());
 
                             let success = false;
                             let actualRedeemedHash = null;
-                            for (const indexSet of [preferredIndexSet, fallbackIndexSet]) {
+                            const indexSetToTry = [winningIndexSet]; // Only try the winning one!
+
+                            for (const indexSet of indexSetToTry) {
                                 try {
                                     console.log(`[AutoClaim] Attempting redeem for ${pos.conditionId} (user: ${user.wallet_index}, indexSet: ${indexSet})...`);
                                     const txHash = await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);

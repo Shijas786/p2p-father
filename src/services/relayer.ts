@@ -32,7 +32,7 @@ export const SUPPORTED_NETWORKS: Record<string, { name: string, token: string }>
     "42161": { name: "Arbitrum", token: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" }, // USDC
 };
 
-const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
 
 // ─── ABIs ────────────────────────────────────────────────────────
 

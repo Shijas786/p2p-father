@@ -118,7 +118,7 @@ class PolymarketService {
             // pUSD — Polymarket's native ERC-20 collateral (replaces USDC.e as of April 2026)
             const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
 
-            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com");
+            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || "https://polygon-rpc.com");
             const contract = new ethers.Contract(pusdAddress, [
                 "function balanceOf(address) view returns (uint256)",
                 "function decimals() view returns (uint8)"
@@ -155,7 +155,7 @@ class PolymarketService {
         const derived = walletService.deriveWallet(userWalletIndex);
         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
         
-        const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+        const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
         const provider = new ethers.JsonRpcProvider(rpcUrl);
 
         const { polymarketRelayerService } = await import("./relayer");
@@ -414,6 +414,10 @@ class PolymarketService {
             return priceCache[tokenId].data;
         }
 
+        if ((this as any).deadMarkets?.has(tokenId)) {
+            throw new Error("This market is closed or dead. Try a different market.");
+        }
+
         try {
             const res = await polymarketGet("clob.polymarket.com", "/book", {
                 params: { token_id: tokenId },
@@ -447,16 +451,17 @@ class PolymarketService {
             priceCache[tokenId] = { data: result, timestamp: now };
             return result;
         } catch (err: any) {
+            if (err.response?.status === 400 || err.message?.includes('status code 400')) {
+                if (!(this as any).deadMarkets) (this as any).deadMarkets = new Set();
+                (this as any).deadMarkets.add(tokenId);
+            }
+            
             if (err.message?.includes('no liquidity')) {
                 console.log(`[SYNC] Skipping illiquid market ${tokenId}`);
             } else {
                 console.error(`[Polymarket] CLOB book fetch error for ${tokenId}:`, err.message);
             }
-            // Instead of returning 0.50, return a more obvious fallback or throw
-            // Since UI depends on it, returning a price that is 1 - other price might be better, 
-            // but we don't have the other price here. Let's just return a placeholder that makes it obvious it failed.
-            // Wait, if it's the YES token that failed, returning 0.5 is what caused the bug.
-            // Let's throw the error so the API returns 500 and the frontend retries.
+            
             throw new Error(`Failed to fetch price: ${err.message}`);
         }
     }
