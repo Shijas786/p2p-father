@@ -18,7 +18,7 @@ interface DepositModalProps {
 
 interface WalletAsset {
     id: string;
-    token: 'USDT' | 'USDC';
+    token: 'USDT' | 'USDC' | 'pUSD';
     chain: 'Polygon' | 'BSC';
     balance: number;
     icon: React.ComponentType<any>;
