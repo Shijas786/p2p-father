@@ -2545,22 +2545,41 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
                 const activePos = positionsRes.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
                 
+                console.log("[DEBUG] activePos fields:", JSON.stringify({
+                    key,
+                    size: activePos?.size,
+                    initialValue: activePos?.initialValue,
+                    price: activePos?.price,
+                    redeemable: activePos?.redeemable,
+                    allKeys: activePos ? Object.keys(activePos) : null
+                }));
+
                 // If avgPrice was calculated, keep it. But override qty.
                 if (positionMap[key].qty > 0) {
                     positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
                 }
 
                 if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
-                    positionMap[key].qty = parseFloat(activePos.size);
+                    const syncedQty = parseFloat(activePos.size);
                     
-                    // Use exact entry cost directly from Polymarket API if available!
                     if (activePos.initialValue !== undefined) {
-                        positionMap[key].avgPrice = parseFloat(activePos.initialValue) / positionMap[key].qty;
-                    } else if (activePos.price !== undefined) {
-                        positionMap[key].avgPrice = parseFloat(activePos.price);
+                        // Polymarket gives us ground-truth cost basis — use it
+                        const initialValue = parseFloat(activePos.initialValue);
+                        positionMap[key].qty = syncedQty;
+                        positionMap[key].totalCost = initialValue;
+                        positionMap[key].avgPrice = initialValue / syncedQty;
+                    } else {
+                        // No initialValue — trust our trade-loop totalCost, only sync qty
+                        // Adjust totalCost proportionally if qty changed (e.g. redemption reduced shares)
+                        const oldQty = positionMap[key].qty;
+                        if (oldQty > 0 && syncedQty !== oldQty) {
+                            positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                        }
+                        positionMap[key].qty = syncedQty;
+                        positionMap[key].avgPrice = positionMap[key].qty > 0
+                            ? positionMap[key].totalCost / positionMap[key].qty
+                            : 0;
                     }
-                    
-                    positionMap[key].totalCost = positionMap[key].qty * positionMap[key].avgPrice;
                 } else if (activePos && activePos.redeemable) {
                     positionMap[key].qty = 0;
                 } else if (!activePos) {
