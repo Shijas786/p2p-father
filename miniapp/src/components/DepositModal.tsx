@@ -164,12 +164,23 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
 
     const handlePreviewWithdraw = async () => {
         haptic('medium');
-        setStep('processing');
         setErrorMsg('');
-        try {
-            const destChainId = '137';
-            const destTokenAddress = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
 
+        // For native Polygon pUSD withdrawals, no bridge fee — skip quote call and go directly to confirm
+        const destChainId = '137';
+        const destTokenAddress = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB'; // pUSD on Polygon
+
+        if (destChainId === '137') {
+            // Native withdrawal: estimated output equals input amount (1:1, no bridge fee)
+            setBridgeQuote({ estimatedOutput: amount, fee: '0', feeToken: 'pUSD' });
+            setStep('confirm');
+            haptic('success');
+            return;
+        }
+
+        // Cross-chain withdrawal: fetch bridge quote
+        setStep('processing');
+        try {
             const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.success) {
                 setBridgeQuote(r.quote);

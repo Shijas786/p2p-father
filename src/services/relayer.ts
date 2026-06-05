@@ -116,17 +116,22 @@ const CTF_ABI = [
 // ─── Service ─────────────────────────────────────────────────────
 
 class PolymarketRelayerService {
-    private isDemoMode = false;
+    private hasCredentials = false;
 
     constructor() {
-        const hasCredentials = (env as any).POLYMARKET_PRIVATE_KEY &&
-                               (env as any).POLYMARKET_BUILDER_API_KEY &&
-                               (env as any).POLYMARKET_BUILDER_SECRET &&
-                               (env as any).POLYMARKET_BUILDER_PASSPHRASE;
+        this.hasCredentials = !!((env as any).POLYMARKET_PRIVATE_KEY &&
+                                 (env as any).POLYMARKET_BUILDER_API_KEY &&
+                                 (env as any).POLYMARKET_BUILDER_SECRET &&
+                                 (env as any).POLYMARKET_BUILDER_PASSPHRASE);
 
-        if (!hasCredentials) {
-            console.warn("⚠️ Polymarket Builder credentials missing. Relayer operating in DEMO mode.");
-            this.isDemoMode = true;
+        if (!this.hasCredentials) {
+            console.error("❌ CRITICAL: Polymarket Builder credentials missing from environment variables. Predictions functionality will throw errors.");
+        }
+    }
+
+    private checkCredentials() {
+        if (!this.hasCredentials) {
+            throw new Error("Polymarket operations are disabled: Builder credentials are not configured.");
         }
     }
 
@@ -134,7 +139,7 @@ class PolymarketRelayerService {
      * Helper to construct a RelayClient authenticated specifically for a user EOA
      */
     private getUserRelayClient(userWalletIndex: number): RelayClient | null {
-        if (this.isDemoMode) return null;
+        this.checkCredentials();
 
         try {
             const derived = walletService.deriveWallet(userWalletIndex);
@@ -174,18 +179,11 @@ class PolymarketRelayerService {
      */
     async resolveDepositWallet(userWalletIndex: number, cachedAddress?: string | null): Promise<string> {
         // Return cached address immediately if available — avoids slow relayer call
-        if (cachedAddress && cachedAddress !== '' && !cachedAddress.includes('Demo')) {
+        if (cachedAddress && cachedAddress !== '') {
             return cachedAddress;
         }
 
-        if (this.isDemoMode) {
-            try {
-                const derived = walletService.deriveWallet(userWalletIndex);
-                return derived.address;
-            } catch (e) {
-                return "0x00000000000000000000000000000000000Demo";
-            }
-        }
+        this.checkCredentials();
         try {
             const client = this.getUserRelayClient(userWalletIndex);
             if (!client) throw new Error("Failed to construct relayer client");
@@ -326,10 +324,7 @@ class PolymarketRelayerService {
     }
 
     async redeemPositions(userWalletIndex: number, conditionId: string, indexSet: number): Promise<string> {
-        if (this.isDemoMode) {
-            console.log(`[Relayer] DEMO MODE: Skipping auto-redeem for ${conditionId}`);
-            return "demo-tx-hash";
-        }
+        this.checkCredentials();
 
         const client = this.getUserRelayClient(userWalletIndex);
         if (!client) throw new Error("Could not instantiate RelayClient");
@@ -487,11 +482,7 @@ class PolymarketRelayerService {
      * Deposit funds into Polymarket using the Bridge API (for multi-chain) or Native Onramp (for Polygon USDC.e).
      */
     async depositGasless(userWalletIndex: number, amount: bigint, chainStr: string = 'polygon', tokenStr: string = 'USDC'): Promise<{txHash: string, bridgeAddress?: string}> {
-        if (this.isDemoMode) {
-            console.log(`[Relayer-Demo] Simulating deposit of ${amount} units (${tokenStr} on ${chainStr})`);
-            await new Promise(r => setTimeout(r, 1500));
-            return { txHash: "0x_simulated_deposit_tx_hash" };
-        }
+        this.checkCredentials();
 
         const derived = walletService.deriveWallet(userWalletIndex);
         const depositWallet = await this.resolveDepositWallet(userWalletIndex);
@@ -691,11 +682,7 @@ class PolymarketRelayerService {
      * Uses the RelayClient to execute a gasless batch call from the deposit wallet.
      */
     async withdrawGasless(userWalletIndex: number, recipientAddress: string, amount: bigint): Promise<string> {
-        if (this.isDemoMode) {
-            console.log(`[Relayer-Demo] Simulating gasless pUSD withdrawal of ${amount} units to ${recipientAddress}`);
-            await new Promise(r => setTimeout(r, 1500));
-            return "0x_simulated_pusd_withdrawal_tx_hash";
-        }
+        this.checkCredentials();
 
         const client = this.getUserRelayClient(userWalletIndex);
         if (!client) throw new Error("Failed to construct relayer client");
@@ -761,11 +748,7 @@ class PolymarketRelayerService {
      * Withdraw pUSD cross-chain using Polymarket Bridge API and Relayer natively.
      */
     async withdrawCrossChain(userWalletIndex: number, destChainId: string, destCurrencyAddress: string, recipientAddress: string, amount: bigint): Promise<string> {
-        if (this.isDemoMode) {
-            console.log(`[Relayer-Demo] Simulating cross-chain withdrawal to ${recipientAddress} on chain ${destChainId}`);
-            await new Promise(r => setTimeout(r, 1500));
-            return "0x_simulated_cross_chain_withdrawal_tx_hash";
-        }
+        this.checkCredentials();
 
         const depositWallet = await this.resolveDepositWallet(userWalletIndex);
 

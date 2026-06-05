@@ -63,7 +63,6 @@ export function Predict({ user }: Props) {
     const [cashBalance, setCashBalance] = useState('0.00');
     const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
-    const [aiData, setAiData]         = useState<any>(null);
     const [loading, setLoading]       = useState(false);
 
     // Positions & trades
@@ -99,12 +98,7 @@ export function Predict({ user }: Props) {
     // ── Load all data ───────────────────────────────────────────────────────
     const loadData = useCallback(async () => {
         setLoading(true);
-        
-        // Fire slow background calls independently so they don't block the UI
-        api.predictions.getAIAnalysis()
-            .then(aiRes => setAiData(aiRes))
-            .catch(console.error);
-            
+                // Fire background trade fetches independently so they don't block the UI
         api.predictions.getTrades('?all=true')
             .then(res => setTrades(res.trades ?? []))
             .catch(console.error);

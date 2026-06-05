@@ -220,20 +220,6 @@ export const api = {
 
     // ---- Predictions ----
     predictions: {
-        getAIAnalysis: async () => {
-            await new Promise(r => setTimeout(r, 600)); // smooth network delay
-            const baseProb = 50 + (Math.random() * 20 - 10);
-            return {
-                analyzed_epochs: 12453,
-                pattern_window_size: 60,
-                top_matches_found: 14,
-                up_wins: 8,
-                down_wins: 6,
-                ai_up_prob: Math.round(baseProb),
-                ai_down_prob: Math.round(100 - baseProb),
-                message: "Market sentiment analysis active."
-            };
-        },
         getLeaderboard: () => request<{ leaderboard: any[] }>('/predictions/leaderboard'),
         getCopyTraders: () => request<{ traders: any[] }>('/predictions/copy-traders'),
         getHistory: () => request<{ history: any[] }>(`/predictions/history?_t=${Date.now()}`),

@@ -177,9 +177,16 @@ router.get("/predictions/orderbook", async (req: Request, res: Response) => {
             return res.status(503).json({ error: "No active market" });
         }
 
+        const CLOB_HEADERS = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Origin": "https://polymarket.com",
+            "Referer": "https://polymarket.com/"
+        };
+
         const [resY, resN] = await Promise.all([
-            fetch(`https://clob.polymarket.com/book?token_id=${market.yesTokenId}`),
-            fetch(`https://clob.polymarket.com/book?token_id=${market.noTokenId}`)
+            fetch(`https://clob.polymarket.com/book?token_id=${market.yesTokenId}`, { headers: CLOB_HEADERS }),
+            fetch(`https://clob.polymarket.com/book?token_id=${market.noTokenId}`, { headers: CLOB_HEADERS })
         ]);
 
         const [bookY, bookN] = await Promise.all([resY.json(), resN.json()]);
@@ -2047,80 +2054,7 @@ router.get("/predictions/debug-history", async (req: Request, res: Response) => 
     }
 });
 
-router.get("/predictions/ai", async (req: Request, res: Response) => {
-    try {
-        let history: string[] = [];
-        let fetchedCount = 0;
-        
-        try {
-            // Fetch 1000 historical 5m candles to simulate 1000 past Polymarket BTC 5m rounds
-            const binanceRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=1000");
-            const data = await binanceRes.json();
-            
-            if (Array.isArray(data) && data.length >= 50) {
-                fetchedCount = data.length;
-                // Convert to Polymarket resolutions: UP if Close > Open, else DOWN
-                history = data.map((d: any) => parseFloat(d[4]) > parseFloat(d[1]) ? "UP" : "DOWN");
-            }
-        } catch (e) {
-            console.warn("Binance fetch failed for AI, using fallback simulation...", e);
-            fetchedCount = 1000;
-            history = Array.from({ length: 1000 }, () => Math.random() > 0.5 ? "UP" : "DOWN");
-        }
 
-        // We want to analyze the exact sequence of the most recent rounds and see what usually follows it
-        const sequenceLength = 4; // Look at the last 4 rounds
-        
-        if (history.length < sequenceLength + 2) {
-             return res.json({
-                 ai_up_prob: 50, ai_down_prob: 50, message: "Not enough historical data."
-             });
-        }
-        
-        // The most recent sequence of outcomes
-        const currentSequence = history.slice(-sequenceLength - 1, -1);
-        const currentSeqStr = currentSequence.join(",");
-        
-        let upFollows = 0;
-        let downFollows = 0;
-        
-        // Search the historical dataset for this exact sequence
-        for (let i = 0; i < history.length - sequenceLength - 1; i++) {
-            const pastSeq = history.slice(i, i + sequenceLength).join(",");
-            if (pastSeq === currentSeqStr) {
-                // What happened immediately after this sequence?
-                const nextOutcome = history[i + sequenceLength];
-                if (nextOutcome === "UP") upFollows++;
-                else downFollows++;
-            }
-        }
-        
-        const totalMatches = upFollows + downFollows;
-        let upProbability = 50;
-        
-        if (totalMatches > 0) {
-            upProbability = Math.round((upFollows / totalMatches) * 100);
-        } else {
-            // Slight noise if no exact matches (unlikely in 1000 rounds for length 4)
-            upProbability = 50 + Math.floor(Math.random() * 6) - 3;
-        }
-
-        res.json({
-            analyzed_epochs: fetchedCount,
-            pattern_window_size: sequenceLength,
-            top_matches_found: totalMatches || 14,
-            up_wins: upFollows,
-            down_wins: downFollows,
-            ai_up_prob: upProbability,
-            ai_down_prob: 100 - upProbability,
-            message: `Analyzed ${fetchedCount} past Polymarket 5m rounds. Found ${totalMatches} similar sequence patterns.`
-        });
-        
-    } catch (err: any) {
-        console.error("[MINIAPP] AI Prediction Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 const conditionResolutionCache = new Map<string, { denominator: number, num0: number, num1: number }>();
 let leaderboardCache: { data: any[]; ts: number } | null = null;
@@ -2176,7 +2110,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
 
                     // Resolve the deposit wallet (proxy) address
                     const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
-                    if (!proxyAddress || proxyAddress.toLowerCase().includes('demo')) return null;
+                    if (!proxyAddress) return null;
 
                         // Fetch trades using the service (which has fallbacks)
                         const trades = await polymarketService.getTradesForProxy(proxyAddress);
@@ -2429,7 +2363,7 @@ router.post("/predictions/deposit/check", async (req: Request, res: Response) =>
         }
         
         // Force check the user's derived wallet for USDC.e and wrap it if found
-        const wrapped = await depositMonitor.forceCheckUser(user.wallet_index, null);
+        const wrapped = await depositMonitor.forceCheckUser(user.wallet_index, (user as any).deposit_wallet_address);
         
         res.json({ success: true, wrapped });
     } catch (err: any) {
@@ -2450,11 +2384,16 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Minimum deposit is 1 USDC (receives pUSD 1:1)" });
         }
 
+        // Enforce higher minimum for cross-chain bridges to prevent stuck deposits
+        const isNonPolygon = (chain || 'polygon').toLowerCase() !== 'polygon';
+        if (isNonPolygon && parseFloat(amount) < 3) {
+            return res.status(400).json({ error: "Minimum deposit is 3 USDC for bridge transfers (Base/BSC) to avoid stuck funds" });
+        }
+
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
         const { txHash, bridgeAddress } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
         // Track cross-chain bridge deposits so we can notify the user when pUSD arrives (or if it's stuck)
-        const isNonPolygon = chain !== 'polygon';
         if (isNonPolygon && txHash) {
             bridgeMonitor.trackDeposit({
                 telegramId: Number(user.telegram_id),
@@ -2540,7 +2479,7 @@ router.get("/predictions/balance", async (req: Request, res: Response) => {
 });
 
 router.get("/predictions/positions", async (req: Request, res: Response) => {
-    console.log(`[DEBUG-POS] HIT /predictions/positions endpoint! TelegramUser:`, req.telegramUser?.id);
+    console.log(`[Positions] Fetching positions for user ${req.telegramUser?.id}`);
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
@@ -2551,8 +2490,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         try {
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
             console.log("[DEBUG] Fetching positions for deposit wallet:", proxyAddress);
-            if (!proxyAddress || proxyAddress.includes("Demo")) {
-                return res.json({ positions: [] }); // skip fetch entirely in demo/error mode
+            if (!proxyAddress) {
+                return res.json({ positions: [] });
             }
             // Fetch both trades and positions
             const [tradesRes, positionsRes] = await Promise.all([
@@ -2560,9 +2499,6 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 polymarketService.getPositionsForProxy(proxyAddress).catch(() => [])
             ]);
 
-            console.log("[DEBUG-POS] positionsRes:", JSON.stringify(positionsRes, null, 2));
-            console.log("[DEBUG-POS] tradesRes sample:", JSON.stringify((tradesRes || []).slice(0, 3), null, 2));
-            
             // Auto-claim background check using Data API positions
             for (const p of positionsRes) {
                 if (p.redeemable && p.size > 0 && p.conditionId) {
@@ -2634,14 +2570,6 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 const tokenIdLc = all ? key : (key === "UP" ? yesTokenIdLc : noTokenIdLc);
                 const activePos = positionsRes.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
                 
-                console.log("[DEBUG] activePos fields:", JSON.stringify({
-                    key,
-                    size: activePos?.size,
-                    initialValue: activePos?.initialValue,
-                    price: activePos?.price,
-                    redeemable: activePos?.redeemable,
-                    allKeys: activePos ? Object.keys(activePos) : null
-                }));
 
                 // If avgPrice was calculated, keep it. But override qty.
                 if (positionMap[key].qty > 0) {
@@ -2750,9 +2678,6 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 console.warn('[MINIAPP] Realized PNL calculation error:', e.message);
             }
 
-            console.log("[DEBUG-POS] final positionMap:", JSON.stringify(positionMap, null, 2));
-            console.log("[DEBUG-POS] activeRealizedPnl:", activeRealizedPnl);
-
             // Build final positions list
             const positions = Object.values(positionMap)
                 .filter(p => all || p.qty > 0.001)
@@ -2792,11 +2717,11 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
         try {
-            const client = await polymarketService.getUserClobClient(user.wallet_index);
-            if (!client) {
+            // Get proxy address from DB cache — no need to call relayer API or getUserClobClient
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+            if (!proxyAddress) {
                 return res.json({ trades: [] });
             }
-            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index);
             const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
             const market = await polymarketService.getActiveBtcMarket();
             // Allow frontend to request all trades or filter by specific market
@@ -2904,7 +2829,7 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
                 }
             }
             if (!indexSet) {
-                indexSet = 1; // Default fallback to YES
+                return res.status(400).json({ error: "Cannot determine indexSet for claim. Please provide outcomeIndex or conditionId with known positions." });
             }
             uniqueConditions.set(req.body.conditionId, indexSet);
         } else {

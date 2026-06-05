@@ -94,13 +94,13 @@ class DepositMonitor {
 
     private async scanAll(): Promise<void> {
         // Fetch all users that have a wallet_index assigned
-        let users: { wallet_index: number; wallet_address: string | null }[] = [];
+        let users: { wallet_index: number; deposit_wallet_address: string | null }[] = [];
 
         try {
             const dbClient = (db as any).getClient();
             const { data, error } = await dbClient
                 .from("users")
-                .select("wallet_index, wallet_address")
+                .select("wallet_index, deposit_wallet_address")
                 .not("wallet_index", "is", null)
                 .order("wallet_index", { ascending: true });
 
@@ -120,7 +120,7 @@ class DepositMonitor {
             if (this.shouldStop) break;
             const batch = users.slice(i, i + BATCH_SIZE);
             await Promise.allSettled(
-                batch.map(u => this.forceCheckUser(u.wallet_index, u.wallet_address))
+                batch.map(u => this.forceCheckUser(u.wallet_index, u.deposit_wallet_address))
             );
             // Wait 1000ms between each wallet check (max 1 RPS)
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -128,12 +128,14 @@ class DepositMonitor {
     }
 
     public async forceCheckUser(walletIndex: number, knownAddress: string | null = null): Promise<boolean> {
-        // Derive the deterministic wallet address for this user
+        // Resolve the deterministic proxy wallet address for this user
         let address: string;
         try {
-            address = knownAddress || walletService.deriveWallet(walletIndex).address;
+            address = knownAddress && knownAddress !== ""
+                ? knownAddress
+                : await polymarketRelayerService.resolveDepositWallet(walletIndex);
         } catch {
-            return false; // Can't derive — skip
+            return false; // Can't resolve — skip
         }
 
         // Skip if a wrap is already in progress for this wallet
@@ -157,7 +159,7 @@ class DepositMonitor {
             this.inProgress.add(address);
 
             // 3. Trigger the wrap: approve Collateral Onramp + call wrap()
-            const txHash = await polymarketRelayerService.depositGasless(walletIndex, usdceBalance);
+            const { txHash } = await polymarketRelayerService.depositGasless(walletIndex, usdceBalance);
             this.wrapCount++;
 
             console.log(`[DepositMonitor] ✅ Wrap successful for wallet #${walletIndex}! ${amountFormatted} USDC.e → pUSD | TX: ${txHash}`);
