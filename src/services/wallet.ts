@@ -89,7 +89,7 @@ class WalletService {
         // Polygon - Native POL and pUSD
         const polProvider = this.getProvider('polygon');
         const polBal = await polProvider.getBalance(address);
-        const pusdAddress = "0xC011a7E40C6dc91F7C5135dB02A8812c6a029583";
+        const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
         const pusdBal = await this.getTokenBalance(address, pusdAddress, 'polygon');
 
         // Vault Balances

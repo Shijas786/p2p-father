@@ -168,7 +168,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setErrorMsg('');
         try {
             const destChainId = '137';
-            const destTokenAddress = '0xC011a7E40C6dc91F7C5135dB02A8812c6a029583';
+            const destTokenAddress = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
 
             const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.success) {
@@ -192,7 +192,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setErrorMsg('');
         try {
             const destChainId = '137';
-            const destTokenAddress = '0xC011a7E40C6dc91F7C5135dB02A8812c6a029583';
+            const destTokenAddress = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
 
             const r = await api.predictions.withdrawGasless(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.txHash) {
