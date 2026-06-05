@@ -1081,3 +1081,29 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
 }
+
+.pm-simple-timer {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 4px;
+}
+.pm-simple-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.pm-simple-timer-val {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ef4444;
+    line-height: 1;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: 1px;
+}
+.pm-simple-timer-lbl {
+    font-size: 13px;
+    font-weight: 600;
+    color: #848e9c;
+    margin-top: 6px;
+}

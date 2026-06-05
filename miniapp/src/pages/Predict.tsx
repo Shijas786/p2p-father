@@ -9,7 +9,6 @@ import { useToast } from '../components/Toast';
 import { PredictChart } from '../components/PredictChart';
 import { TradePanel } from '../components/TradePanel';
 import { DepositModal } from '../components/DepositModal';
-import { FlipClock } from '../components/FlipClock';
 import './Predict.css';
 
 interface Props { user: any; }
@@ -742,9 +741,22 @@ export function Predict({ user }: Props) {
                     <div className="pm-timer-block">
                         {selectedRound === -1 ? (
                             <div className="pm-timer" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px'}}>
-                                <div style={{fontSize: '12px', color: '#848e9c'}}>Time Left</div>
-                                <div style={{display: 'flex', alignItems: 'flex-start', gap: '4px'}}>
-                                    <FlipClock mins={timeLeft.mins} secs={timeLeft.secs} />
+                                <div className="pm-simple-timer">
+                                    <div className="pm-simple-timer-unit">
+                                        <div className="pm-simple-timer-val">{timeLeft.mins}</div>
+                                        <div className="pm-simple-timer-lbl">MIN</div>
+                                    </div>
+                                    <div className="pm-simple-timer-unit">
+                                        <div className="pm-simple-timer-val">
+                                            <span key={`s0-${timeLeft.secs[0]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
+                                                {timeLeft.secs[0]}
+                                            </span>
+                                            <span key={`s1-${timeLeft.secs[1]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
+                                                {timeLeft.secs[1]}
+                                            </span>
+                                        </div>
+                                        <div className="pm-simple-timer-lbl">SECS</div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
