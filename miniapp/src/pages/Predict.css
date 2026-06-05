@@ -272,7 +272,7 @@
 .pm-timer       { display: flex; align-items: flex-start; gap: 6px; }
 .pm-timer-unit  { display: flex; flex-direction: column; align-items: center; }
 .pm-timer-digit {
-    font-size: 26px; font-weight: 900; color: var(--pm-red);
+    font-size: 20px; font-weight: 900; color: var(--pm-red);
     font-family: 'SF Mono', 'Courier New', monospace;
     line-height: 1; letter-spacing: 0.02em;
 }

@@ -646,7 +646,7 @@ export function Predict({ user }: Props) {
                                     <div style={{ color: '#848e9c', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Hot Wallet Address</div>
                                     <div style={{ fontFamily: 'SF Mono, monospace', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         {depositAddress ? `${depositAddress.slice(0, 6)}...${depositAddress.slice(-4)}` : '0x...'}
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#848e9c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#848e9c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); if (depositAddress) { haptic('light'); navigator.clipboard.writeText(depositAddress); showToast('Address copied!', 'success'); } }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     </div>
                                 </div>
                                 <div className="pm-notif-list">
@@ -688,13 +688,13 @@ export function Predict({ user }: Props) {
                 {/* Price metrics + timer */}
                 <div className="pm-price-row">
                     <div className="pm-price-block">
-                        <span className="pm-price-label" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '12px'}}>Price to Beat</span>
-                        <span className="pm-price-val" style={{fontSize: '22px'}}>${displayPtb.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        <span className="pm-price-label" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '10px'}}>Price to Beat</span>
+                        <span className="pm-price-val" style={{fontSize: '18px'}}>${displayPtb.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                     </div>
-                    <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '20px', marginLeft: '10px'}}>
-                        <span className="pm-price-label pm-price-label-current" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '12px'}}>Current Price</span>
+                    <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px', marginLeft: '6px'}}>
+                        <span className="pm-price-label pm-price-label-current" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '10px'}}>Current Price</span>
                         <div className="pm-price-current-row">
-                            <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '22px'}}>
+                            <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '18px'}}>
                                 ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
                             </span>
                             {displayPtb > 0 && (
