@@ -160,9 +160,59 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
 }
 
 // Public Routes
+
+// ── Orderbook proxy: server-side cache so mobile clients never hit clob.polymarket.com ──
+let _obCache: { data: any; ts: number } | null = null;
+const OB_CACHE_MS = 2500; // refresh every 2.5s server-side
+
+router.get("/predictions/orderbook", async (req: Request, res: Response) => {
+    try {
+        const now = Date.now();
+        if (_obCache && now - _obCache.ts < OB_CACHE_MS) {
+            return res.json(_obCache.data);
+        }
+
+        const market = await polymarketService.getActiveBtcMarket();
+        if (!market?.yesTokenId || !market?.noTokenId) {
+            return res.status(503).json({ error: "No active market" });
+        }
+
+        const [resY, resN] = await Promise.all([
+            fetch(`https://clob.polymarket.com/book?token_id=${market.yesTokenId}`),
+            fetch(`https://clob.polymarket.com/book?token_id=${market.noTokenId}`)
+        ]);
+
+        const [bookY, bookN] = await Promise.all([resY.json(), resN.json()]);
+
+        const bestBidY = bookY.bids?.length ? Math.max(...bookY.bids.map((b: any) => parseFloat(b.price))) : null;
+        const bestAskY = bookY.asks?.length ? Math.min(...bookY.asks.map((a: any) => parseFloat(a.price))) : null;
+        const bestBidN = bookN.bids?.length ? Math.max(...bookN.bids.map((b: any) => parseFloat(b.price))) : null;
+        const bestAskN = bookN.asks?.length ? Math.min(...bookN.asks.map((a: any) => parseFloat(a.price))) : null;
+
+        const result = {
+            yes: {
+                buyPrice:  bestAskY ?? (bestAskN !== null ? 1 - bestAskN : 0.5),
+                sellPrice: bestBidY ?? (bestBidN !== null ? 1 - bestBidN : 0.5),
+            },
+            no: {
+                buyPrice:  bestAskN ?? (bestAskY !== null ? 1 - bestAskY : 0.5),
+                sellPrice: bestBidN ?? (bestBidY !== null ? 1 - bestBidY : 0.5),
+            }
+        };
+
+        _obCache = { data: result, ts: now };
+        res.json(result);
+    } catch (err: any) {
+        // Return cached data on error if available
+        if (_obCache) return res.json(_obCache.data);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/predictions/market", async (req: Request, res: Response) => {
     try {
         const market = await polymarketService.getActiveBtcMarket();
+
         
         const safeGetPrice = async (tokenId: string, side: boolean) => {
             try {

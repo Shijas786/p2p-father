@@ -311,83 +311,43 @@ export function Predict({ user }: Props) {
         };
     }, []);
 
-    // ── Live odds from Polymarket CLOB (HTTP Polling) ──────
+    // ── Live odds via our Railway proxy (mobile-safe, cached 2.5s server-side) ──
     useEffect(() => {
         let activeBtcMarket: any = null;
         let intervalId: any;
 
         const fetchPoly = async () => {
             try {
-                const now = Date.now();
-                const windowStartSeconds = Math.floor(now / 300000) * 300;
-                const slug = routeSlug || `btc-updown-5m-${windowStartSeconds}`;
-                
-                // Invalidate cache if the slug has changed
-                if (activeBtcMarket && activeBtcMarket.slug !== slug) {
-                    activeBtcMarket = null;
+                // Use our backend proxy — never hits clob.polymarket.com from the browser
+                // This works on all mobile networks (Jio/Airtel/etc.)
+                const res = await fetch('/api/miniapp/predictions/orderbook');
+                if (!res.ok) return;
+                const book = await res.json();
+
+                if (book.yes && book.no) {
+                    setYesPrice({ buyPrice: book.yes.buyPrice, sellPrice: book.yes.sellPrice });
+                    setNoPrice({ buyPrice: book.no.buyPrice, sellPrice: book.no.sellPrice });
                 }
 
+                // Also keep activeBtcMarket in sync for other uses
                 if (!activeBtcMarket) {
                     try {
                         const r = await api.predictions.getMarket();
-                        if (r && r.market) {
-                            activeBtcMarket = {
-                                yesTokenId: r.market.yesTokenId,
-                                noTokenId: r.market.noTokenId,
-                                endDate: new Date(r.market.endsAt).getTime(),
-                                slug: r.market.slug || slug
-                            };
-                            if (isHistorical) {
-                                setLiveEndMs(activeBtcMarket.endDate);
-                            }
+                        if (r?.market) {
+                            activeBtcMarket = r.market;
+                            if (isHistorical) setLiveEndMs(new Date(r.market.endsAt).getTime());
                         }
-                    } catch (e) {
-                        console.warn("Failed to fetch market from backend API", e);
-                    }
-                }
-
-                // If we have an active market, poll the order book via HTTP
-                if (activeBtcMarket) {
-                    const [resY, resN] = await Promise.all([
-                        window.fetch(`https://clob.polymarket.com/book?token_id=${activeBtcMarket.yesTokenId}`),
-                        window.fetch(`https://clob.polymarket.com/book?token_id=${activeBtcMarket.noTokenId}`)
-                    ]);
-                    
-                    const bookY = await resY.json();
-                    const bookN = await resN.json();
-
-                    if (bookY && bookN) {
-                        let bestBidY = bookY.bids?.length ? Math.max(...bookY.bids.map((b: any) => parseFloat(b.price))) : null;
-                        let bestAskY = bookY.asks?.length ? Math.min(...bookY.asks.map((a: any) => parseFloat(a.price))) : null;
-                        let bestBidN = bookN.bids?.length ? Math.max(...bookN.bids.map((b: any) => parseFloat(b.price))) : null;
-                        let bestAskN = bookN.asks?.length ? Math.min(...bookN.asks.map((a: any) => parseFloat(a.price))) : null;
-
-                        if (bestAskY === null && bestAskN !== null) bestAskY = 1 - bestAskN;
-                        if (bestAskN === null && bestAskY !== null) bestAskN = 1 - bestAskY;
-                        if (bestBidY === null && bestBidN !== null) bestBidY = 1 - bestBidN;
-                        if (bestBidN === null && bestBidY !== null) bestBidN = 1 - bestBidY;
-
-                        setYesPrice(prev => ({ 
-                            buyPrice: bestAskY !== null ? bestAskY : prev.buyPrice, 
-                            sellPrice: bestBidY !== null ? bestBidY : prev.sellPrice 
-                        }));
-                        setNoPrice(prev => ({ 
-                            buyPrice: bestAskN !== null ? bestAskN : prev.buyPrice, 
-                            sellPrice: bestBidN !== null ? bestBidN : prev.sellPrice 
-                        }));
-                    }
+                    } catch {}
                 }
             } catch (e) {
-                console.warn('Frontend Polymarket fetch failed:', e);
+                console.warn('[Orderbook] proxy fetch failed:', e);
             }
         };
+
         fetchPoly();
-        // Poll every 1 second for highly responsive odds
-        intervalId = setInterval(fetchPoly, 1000);
-        
-        return () => {
-            clearInterval(intervalId);
-        };
+        intervalId = setInterval(fetchPoly, 3000); // 3s — server already caches at 2.5s
+
+        return () => clearInterval(intervalId);
     }, []);
 
     // ── Static Strike Price (Price to Beat) ──────────────
