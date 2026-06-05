@@ -13,18 +13,14 @@ const POLYMARKET_IPS: Record<string, string> = {
 };
 
 async function polymarketGet(hostname: string, path: string, params?: any, extraOptions?: any) {
-    const ip = POLYMARKET_IPS[hostname] || "104.18.34.205";
-    return axios.get(`https://${ip}${path}`, {
+    return axios.get(`https://${hostname}${path}`, {
         params,
         timeout: 8000,
         headers: {
-            "Host": hostname,
+            "User-Agent": "Mozilla/5.0 (compatible; P2PFather/1.0)",
+            "Accept": "application/json",
             ...(extraOptions?.headers || {})
         },
-        httpsAgent: new https.Agent({
-            servername: hostname, // ← critical for SNI
-            checkServerIdentity: (host, cert) => undefined
-        }),
         ...extraOptions
     });
 }

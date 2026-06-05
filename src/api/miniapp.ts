@@ -2074,6 +2074,8 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             .select("id, first_name, username, wallet_index, telegram_id, deposit_wallet_address, polymarket_api_key")
             .not("wallet_index", "is", null)
             .gte("wallet_index", 0)
+            .not("polymarket_api_key", "is", null)
+            .not("deposit_wallet_address", "is", null)
             .limit(100);
 
         if (!usersWithWallets || usersWithWallets.length === 0) {
