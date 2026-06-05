@@ -1085,8 +1085,8 @@
 .pm-simple-timer {
     display: flex;
     align-items: flex-start;
-    gap: 16px;
-    margin-top: 4px;
+    gap: 10px;
+    margin-top: 2px;
 }
 .pm-simple-timer-unit {
     display: flex;
@@ -1094,18 +1094,18 @@
     align-items: center;
 }
 .pm-simple-timer-val {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 700;
     color: #ef4444;
-    line-height: 1;
+    line-height: 1.1;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 .pm-simple-timer-lbl {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     color: #848e9c;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 @keyframes pm-flash-bg-up {

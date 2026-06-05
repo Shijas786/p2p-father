@@ -142,6 +142,7 @@ export function PredictChart({ livePrice, priceToBeat, startTimeMs, endTimeMs }:
     const height = 230;
     const ptbY = priceToBeat > 0 && maxP > 0 ? height - 40 - ((priceToBeat - minP) / (maxP - minP)) * (height - 40 * 1.5) : -100;
     const ptbPercent = Math.max(0, Math.min(100, (ptbY / height) * 100));
+    const chartColor = lastPoint && lastPoint.y < ptbY ? '#00C2FF' : '#FF4D4D';
 
     const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
         if (!getX || data.length === 0) return;
@@ -173,16 +174,12 @@ export function PredictChart({ livePrice, priceToBeat, startTimeMs, endTimeMs }:
             <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ backgroundColor: 'transparent' }}>
                 <defs>
                     <linearGradient id="neonGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#00C2FF" />
-                        <stop offset={`${ptbPercent}%`} stopColor="#00C2FF" />
-                        <stop offset={`${ptbPercent}%`} stopColor="#FF4D4D" />
-                        <stop offset="100%" stopColor="#FF4D4D" />
+                        <stop offset="0%" stopColor={chartColor} />
+                        <stop offset="100%" stopColor={chartColor} />
                     </linearGradient>
                     <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#00C2FF" stopOpacity="0.4" />
-                        <stop offset={`${ptbPercent}%`} stopColor="#00C2FF" stopOpacity="0.1" />
-                        <stop offset={`${ptbPercent}%`} stopColor="#FF4D4D" stopOpacity="0.1" />
-                        <stop offset="100%" stopColor="#FF4D4D" stopOpacity="0.4" />
+                        <stop offset="0%" stopColor={chartColor} stopOpacity="0.3" />
+                        <stop offset="100%" stopColor={chartColor} stopOpacity="0.0" />
                     </linearGradient>
                     <filter id="glow">
                         <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
