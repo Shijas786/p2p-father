@@ -444,9 +444,13 @@ class PolymarketRelayerService {
                 value: "0",
                 data: encodedData
             }], depositWallet, deadline.toString());
-            await tx.wait();
+            
+            console.log("[Relayer] Raw response:", JSON.stringify(tx));
+            const result = await tx.wait();
+            console.log("[Relayer] Wait result:", JSON.stringify(result));
+            
             console.log(`[Relayer] Successfully redeemed condition ${conditionId}!`);
-            return tx.hash;
+            return result?.transactionHash || tx.transactionHash || tx.hash;
         } catch (e: any) {
             console.error(`[Relayer] Failed to redeem positions for ${conditionId}:`, e.message);
             throw e;
