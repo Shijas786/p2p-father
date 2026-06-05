@@ -2122,18 +2122,6 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                         let losses = 0;
                         let totalPnl = 0;
 
-                        // Calculate cashPnl (unrealized) and track open conditions
-                        const openConditionIds = new Set<string>();
-                        try {
-                            const positions = await polymarketService.getPositionsForProxy(proxyAddress);
-                            if (Array.isArray(positions)) {
-                                totalPnl += positions.reduce((s: number, p: any) => {
-                                    openConditionIds.add(p.conditionId);
-                                    return s + (parseFloat(p.cashPnl ?? '0') || 0);
-                                }, 0);
-                            }
-                        } catch { /* ignore */ }
-
                         // Group trades by condition to compute realized PNL and wins/losses
                         const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
                         for (const t of trades) {
@@ -2151,12 +2139,10 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                             }
                         }
 
-                        // For conditions NOT in active positions, check resolution using cache or on-chain
+                        const resolvedCids = new Set<string>();
 
+                        // 1. Process all conditions from trades for Realized PnL / Wins / Losses
                         for (const [cid, data] of Object.entries(conditionMap)) {
-                            if (openConditionIds.has(cid)) continue; 
-                            if (data.shares <= 0.001) continue; 
-                            
                             let resolution = conditionResolutionCache.get(cid);
                             if (!resolution) {
                                 try {
@@ -2167,21 +2153,34 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                                         resolution = { denominator: Number(denominator), num0: Number(num0), num1: Number(num1) };
                                         conditionResolutionCache.set(cid, resolution);
                                     }
-                                } catch (e) {
-                                    // ignore
-                                }
+                                } catch (e) { /* ignore */ }
                             }
 
                             if (resolution) {
+                                resolvedCids.add(cid);
                                 const num = data.outcomeIndex === 0 ? resolution.num0 : resolution.num1;
                                 const payoutFraction = num / resolution.denominator;
                                 const profit = (data.shares * payoutFraction) - data.cost;
                                 totalPnl += profit;
 
-                                if (payoutFraction > 0.5) wins++;
-                                else losses++;
+                                if (data.shares > 0.001) {
+                                    if (payoutFraction > 0.5) wins++;
+                                    else losses++;
+                                }
                             }
                         }
+
+                        // 2. Add Unrealized PnL from active positions
+                        try {
+                            const positions = await polymarketService.getPositionsForProxy(proxyAddress);
+                            if (Array.isArray(positions)) {
+                                for (const p of positions) {
+                                    if (!resolvedCids.has(p.conditionId)) {
+                                        totalPnl += (parseFloat(p.cashPnl ?? '0') || 0);
+                                    }
+                                }
+                            }
+                        } catch { /* ignore */ }
 
                         const winRatio = (wins + losses) > 0 ? ((wins / (wins + losses)) * 100).toFixed(0) + '%' : '0%';
 
