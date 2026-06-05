@@ -144,6 +144,14 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             balance: parseFloat(hotBalances?.bsc_usdt || '0'),
             icon: IconTokenUSDT,
             chainIcon: IconChainBsc
+        },
+        {
+            id: 'poly_pusd',
+            token: 'pUSD',
+            chain: 'Polygon',
+            balance: parseFloat(hotBalances?.pusd || '0'),
+            icon: IconTokenUSDC, // using USDC icon for pUSD
+            chainIcon: IconChainPolygon
         }
     ];
 
@@ -159,25 +167,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setStep('processing');
         setErrorMsg('');
         try {
-            const destChainId = withdrawChain === 'Polygon' ? '137' : withdrawChain === 'BSC' ? '56' : withdrawChain === 'Ethereum' ? '1' : '42161';
-            let destTokenAddress = '';
-            if (destChainId === '137') destTokenAddress = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
-            else if (destChainId === '56') destTokenAddress = '0x55d398326f99059fF775485246999027B3197955';
-            else if (destChainId === '1') destTokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-            else if (destChainId === '42161') destTokenAddress = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
-
-            // Fetch minimum checkout amount dynamically
-            if (destChainId !== '137') {
-                const suppRes = await fetch("https://bridge.polymarket.com/supported-assets");
-                const suppData = await suppRes.json();
-                const asset = suppData.supportedAssets?.find(
-                    (a: any) => a.chainId.toString() === destChainId && a.token.address.toLowerCase() === destTokenAddress.toLowerCase()
-                );
-                const minimum = asset?.minCheckoutUsd ?? 1;
-                if (parseFloat(amount) < minimum) {
-                    throw new Error(`Minimum withdrawal to this chain is $${minimum}`);
-                }
-            }
+            const destChainId = '137';
+            const destTokenAddress = '0xC011a7E40C6dc91F7C5135dB02A8812c6a029583';
 
             const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.success) {
@@ -200,12 +191,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setStep('processing');
         setErrorMsg('');
         try {
-            const destChainId = withdrawChain === 'Polygon' ? '137' : withdrawChain === 'BSC' ? '56' : withdrawChain === 'Ethereum' ? '1' : '42161';
-            let destTokenAddress = '';
-            if (destChainId === '137') destTokenAddress = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
-            else if (destChainId === '56') destTokenAddress = '0x55d398326f99059fF775485246999027B3197955';
-            else if (destChainId === '1') destTokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-            else if (destChainId === '42161') destTokenAddress = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+            const destChainId = '137';
+            const destTokenAddress = '0xC011a7E40C6dc91F7C5135dB02A8812c6a029583';
 
             const r = await api.predictions.withdrawGasless(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.txHash) {
@@ -594,21 +581,8 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                             <div className="mf-label" style={{marginBottom: '4px'}}>Amount (pUSD)</div>
                             <input type="number" className="pm-big-amount" style={{fontSize: '24px', textAlign: 'left', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px'}} value={amount} placeholder="0.00" onChange={e => setAmount(e.target.value)} />
                         </div>
-                        <div>
-                            <div className="mf-label" style={{marginBottom: '4px'}}>Destination Chain</div>
-                            <select style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff'}} value={withdrawChain} onChange={e => setWithdrawChain(e.target.value as any)}>
-                                <option value="Polygon">Polygon</option>
-                                <option value="BSC">BSC</option>
-                                <option value="Ethereum">Ethereum</option>
-                                <option value="Arbitrum">Arbitrum</option>
-                            </select>
-                        </div>
-                        <div>
-                            <div className="mf-label" style={{marginBottom: '4px'}}>Receive Token</div>
-                            <select style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff'}} value={withdrawToken} onChange={e => setWithdrawToken(e.target.value as any)}>
-                                <option value="USDC">USDC</option>
-                                {withdrawChain === 'BSC' && <option value="USDT">USDT</option>}
-                            </select>
+                        <div style={{color: '#848e9c', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '-4px'}}>
+                            <IconChainPolygon size={14} /> Withdraws on Polygon network
                         </div>
                         <div>
                             <div className="mf-label" style={{marginBottom: '4px'}}>Destination Address</div>

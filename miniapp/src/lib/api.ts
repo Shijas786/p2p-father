@@ -64,6 +64,8 @@ export const api = {
             bnb: string;
             bsc_usdc: string;
             bsc_usdt: string;
+            pol?: string;
+            pusd?: string;
             address: string;
             vault_base_usdc?: string;
             vault_bsc_usdc?: string;
@@ -88,6 +90,8 @@ export const api = {
             bnb: string;
             bsc_usdc: string;
             bsc_usdt: string;
+            pol?: string;
+            pusd?: string;
             address: string;
             wallet_type?: string;
         }>('/wallet/bot-balances'),

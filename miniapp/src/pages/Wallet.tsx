@@ -406,6 +406,13 @@ export function Wallet({ user }: Props) {
         { symbol: 'USDT', name: 'Tether', chain: 'BSC', balance: balances?.bsc_usdt || '0.00', icon: 'USDT', price: 1 },
     ];
 
+    if (balances?.pol && parseFloat(balances.pol) > 0) {
+        assets.push({ symbol: 'POL', name: 'Polygon', chain: 'Polygon', balance: balances.pol, icon: 'ETH', price: 0.5 });
+    }
+    if (balances?.pusd && parseFloat(balances.pusd) > 0) {
+        assets.push({ symbol: 'pUSD', name: 'Polymarket USD', chain: 'Polygon', balance: balances.pusd, icon: 'USDC', price: 1 });
+    }
+
     // Calculate Total Balance (Approx)
     let totalValue = 0;
     assets.forEach(a => {

@@ -17,18 +17,19 @@ const ESCROW_ABI = [
     "function balances(address user, address token) view returns (uint256)"
 ];
 
-type Chain = 'base' | 'bsc';
+type Chain = 'base' | 'bsc' | 'polygon';
 
 class WalletService {
     private providers: Record<string, ethers.JsonRpcProvider | null> = {
         base: null,
-        bsc: null
+        bsc: null,
+        polygon: null
     };
     private masterNode: ethers.HDNodeWallet | null = null;
 
     private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
         if (!this.providers[chain]) {
-            const url = chain === 'base' ? env.BASE_RPC_URL : env.BSC_RPC_URL;
+            const url = chain === 'base' ? env.BASE_RPC_URL : chain === 'bsc' ? env.BSC_RPC_URL : "https://polygon-rpc.com";
             this.providers[chain] = new ethers.JsonRpcProvider(url);
         }
         return this.providers[chain]!;
@@ -85,6 +86,12 @@ class WalletService {
         const bscUsdcBal = await this.getTokenBalance(address, bscUsdc, 'bsc');
         const bscUsdtBal = await this.getTokenBalance(address, bscUsdt, 'bsc');
 
+        // Polygon - Native POL and pUSD
+        const polProvider = this.getProvider('polygon');
+        const polBal = await polProvider.getBalance(address);
+        const pusdAddress = "0xC011a7E40C6dc91F7C5135dB02A8812c6a029583";
+        const pusdBal = await this.getTokenBalance(address, pusdAddress, 'polygon');
+
         // Vault Balances
         const vaultBaseUsdc = await this.getVaultBalance(address, env.USDC_ADDRESS, 'base');
         const vaultBaseUsdt = await this.getVaultBalance(address, env.USDT_ADDRESS, 'base');
@@ -100,6 +107,8 @@ class WalletService {
             bnb: ethers.formatEther(bnbBal),
             bsc_usdc: bscUsdcBal,
             bsc_usdt: bscUsdtBal,
+            pol: ethers.formatEther(polBal),
+            pusd: pusdBal,
             vault_usdc: vaultBaseUsdc,
             vault_usdt: vaultBaseUsdt,
             vault_bnb: vaultBscBnb,
