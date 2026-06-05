@@ -9,6 +9,7 @@ import { useToast } from '../components/Toast';
 import { PredictChart } from '../components/PredictChart';
 import { TradePanel } from '../components/TradePanel';
 import { DepositModal } from '../components/DepositModal';
+import { FlipClock } from '../components/FlipClock';
 import './Predict.css';
 
 interface Props { user: any; }
@@ -743,22 +744,7 @@ export function Predict({ user }: Props) {
                             <div className="pm-timer" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px'}}>
                                 <div style={{fontSize: '12px', color: '#848e9c'}}>Time Left</div>
                                 <div style={{display: 'flex', alignItems: 'flex-start', gap: '4px'}}>
-                                    <div className="pm-timer-unit">
-                                        <span className="pm-timer-digit">{timeLeft.mins}</span>
-                                        <span className="pm-timer-label">MINS</span>
-                                    </div>
-                                    <span className="pm-timer-digit" style={{opacity: 0.5, animation: 'pmFlicker 1s infinite'}}>:</span>
-                                    <div className="pm-timer-unit">
-                                        <span className="pm-timer-digit">
-                                            <span key={`s0-${timeLeft.secs[0]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
-                                                {timeLeft.secs[0]}
-                                            </span>
-                                            <span key={`s1-${timeLeft.secs[1]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
-                                                {timeLeft.secs[1]}
-                                            </span>
-                                        </span>
-                                        <span className="pm-timer-label">SECS</span>
-                                    </div>
+                                    <FlipClock mins={timeLeft.mins} secs={timeLeft.secs} />
                                 </div>
                             </div>
                         ) : (
