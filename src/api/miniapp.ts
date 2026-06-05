@@ -2475,6 +2475,9 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 polymarketService.getTradesForProxy(proxyAddress),
                 polymarketService.getPositionsForProxy(proxyAddress).catch(() => [])
             ]);
+
+            console.log("[DEBUG] positionsRes RAW:", JSON.stringify(positionsRes, null, 2));
+            console.log("[DEBUG] tradesRes RAW (first 5):", JSON.stringify((tradesRes || []).slice(0, 5), null, 2));
             
             // Auto-claim background check using Data API positions
             for (const p of positionsRes) {
@@ -2660,6 +2663,9 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             } catch (e: any) {
                 console.warn('[MINIAPP] Realized PNL calculation error:', e.message);
             }
+
+            console.log("[DEBUG] final positionMap:", JSON.stringify(positionMap, null, 2));
+            console.log("[DEBUG] activeRealizedPnl:", activeRealizedPnl);
 
             // Build final positions list
             const positions = Object.values(positionMap)
