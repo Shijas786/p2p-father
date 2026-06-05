@@ -482,6 +482,24 @@ class PolymarketRelayerService {
         const chain = chainStr.toLowerCase().trim();
         const token = tokenStr.toUpperCase().trim();
 
+        // If native Polygon pUSD, just transfer directly to the deposit wallet (proxy)
+        if (chain === 'polygon' && token === 'PUSD') {
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+            const signer = new ethers.Wallet(derived.privateKey, provider);
+            const pusdContract = new ethers.Contract(pusdAddress, ERC20_ABI as any, signer);
+            
+            const hotBal = await pusdContract.balanceOf(signer.address);
+            if (hotBal < amount) {
+                throw new Error(`Insufficient PUSD balance on POLYGON. Have: ${ethers.formatUnits(hotBal, 6)}, Need: ${ethers.formatUnits(amount, 6)}`);
+            }
+            
+            console.log(`[Relayer] Transferring ${ethers.formatUnits(amount, 6)} pUSD directly to Polymarket Proxy ${depositWallet}...`);
+            const tx = await pusdContract.transfer(depositWallet, amount);
+            const receipt = await tx.wait();
+            return { txHash: receipt?.hash || tx.hash };
+        }
+
         // If native Polygon USDC, we can still use the instant onramp to save bridge time
         if (chain === 'polygon' && token === 'USDC') {
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
