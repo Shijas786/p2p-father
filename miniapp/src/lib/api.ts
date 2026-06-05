@@ -358,6 +358,9 @@ export const api = {
                         const currentAvg = positionMap[key].qty > 0 ? (positionMap[key].totalCost / positionMap[key].qty) : 0;
                         positionMap[key].qty -= qty;
                         positionMap[key].totalCost -= qty * currentAvg; // Deduct cost proportionally based on acquisition cost
+                        
+                        // Calculate realized PNL for this sell: (Sale Price - Avg Cost) * Qty Sold
+                        realizedPnl += (price - currentAvg) * qty;
                     } else {
                         positionMap[key].qty += qty;
                         positionMap[key].totalCost += qty * price;
@@ -392,7 +395,10 @@ export const api = {
                     } else if (activePos && activePos.redeemable) {
                         positionMap[key].qty = 0;
                     } else if (!activePos) {
-                        // Keep trade qty!
+                        // Position is not in positionsRes (likely closed or 0 size).
+                        // Do not trust tradesRes quantity because trades are truncated at limit=500.
+                        // Relying on tradesRes creates permanent ghost positions.
+                        positionMap[key].qty = 0;
                     } else {
                         positionMap[key].qty = 0;
                     }
