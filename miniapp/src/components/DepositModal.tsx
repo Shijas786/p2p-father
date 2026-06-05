@@ -30,9 +30,10 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [step, setStep] = useState<'options' | 'assets' | 'amount' | 'confirm' | 'processing' | 'success' | 'manual'>('options');
     const [selectedAsset, setSelectedAsset] = useState<WalletAsset | null>(null);
     const [amount, setAmount] = useState('');
-    const [withdrawChain, setWithdrawChain] = useState<'Polygon'|'BSC'>('Polygon');
+    const [withdrawChain, setWithdrawChain] = useState<'Polygon'|'BSC'|'Ethereum'|'Arbitrum'>('Polygon');
     const [withdrawToken, setWithdrawToken] = useState<'USDC'|'USDT'>('USDC');
     const [withdrawAddress, setWithdrawAddress] = useState('');
+    const [estimatedOutput, setEstimatedOutput] = useState<string>('');
     const [txHash, setTxHash] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [hotBalances, setHotBalances] = useState<any>(null);
@@ -153,30 +154,57 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         }
     };
 
-    
+    const handlePreviewWithdraw = async () => {
+        haptic('medium');
+        setStep('processing');
+        setErrorMsg('');
+        try {
+            const destChainId = withdrawChain === 'Polygon' ? '137' : withdrawChain === 'BSC' ? '56' : withdrawChain === 'Ethereum' ? '1' : '42161';
+            let destTokenAddress = '';
+            if (destChainId === '137') destTokenAddress = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+            else if (destChainId === '56') destTokenAddress = '0x55d398326f99059fF775485246999027B3197955';
+            else if (destChainId === '1') destTokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+            else if (destChainId === '42161') destTokenAddress = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+
+            const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
+            if (r && r.success) {
+                setEstimatedOutput(r.estimatedOutput);
+                setStep('confirm');
+                haptic('success');
+            } else {
+                throw new Error("Failed to get quote");
+            }
+        } catch (err: any) {
+            console.error("Withdraw quote failed:", err);
+            setErrorMsg(err.message || "Failed to estimate withdrawal fees.");
+            setStep('amount');
+            haptic('error');
+        }
+    };
+
     const handleConfirmWithdraw = async () => {
         haptic('medium');
         setStep('processing');
         setErrorMsg('');
         try {
-            const destChainId = withdrawChain === 'Polygon' ? 137 : 56;
+            const destChainId = withdrawChain === 'Polygon' ? '137' : withdrawChain === 'BSC' ? '56' : withdrawChain === 'Ethereum' ? '1' : '42161';
             let destTokenAddress = '';
-            if (destChainId === 137) {
-                destTokenAddress = withdrawToken === 'USDC' ? '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' : '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // USDC.e / USDT
-            } else if (destChainId === 56) {
-                destTokenAddress = withdrawToken === 'USDC' ? '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d' : '0x55d398326f99059fF775485246999027B3197955';
-            }
-            
-            // Note amount should be in base units (6 decimals) sent to backend, but backend expects BigInt string or number. Let backend handle the * 1e6.
-            // Actually, wait! Backend expects base units or whole units?
-            // depositGasless sends whole number? Let's check depositGasless. Yes. We'll send base units to withdraw.
-            const baseAmount = Math.floor(parseFloat(amount) * 1e6).toString();
+            if (destChainId === '137') destTokenAddress = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+            else if (destChainId === '56') destTokenAddress = '0x55d398326f99059fF775485246999027B3197955';
+            else if (destChainId === '1') destTokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+            else if (destChainId === '42161') destTokenAddress = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
 
             const r = await api.predictions.withdrawGasless(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.txHash) {
-                setTxHash(r.txHash);
+                if (r.isCrossChain) {
+                    setTxHash(r.txHash); // bridgeAddress returned as txHash for cross-chain
+                    setBridgePending(true);
+                    setStep('success'); // or a new 'bridging' step
+                } else {
+                    setTxHash(r.txHash);
+                    setStep('success');
+                }
                 haptic('success');
-                setStep('success');
                 loadBalances();
             } else {
                 throw new Error(r?.error || "Invalid response from server");
@@ -184,7 +212,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         } catch (err: any) {
             console.error("Withdrawal failed:", err);
             setErrorMsg(err.message || "Withdraw transaction failed.");
-            setStep('confirm');
+            setStep('amount');
             haptic('error');
         }
     };
@@ -558,13 +586,15 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                             <select style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff'}} value={withdrawChain} onChange={e => setWithdrawChain(e.target.value as any)}>
                                 <option value="Polygon">Polygon</option>
                                 <option value="BSC">BSC</option>
+                                <option value="Ethereum">Ethereum</option>
+                                <option value="Arbitrum">Arbitrum</option>
                             </select>
                         </div>
                         <div>
                             <div className="mf-label" style={{marginBottom: '4px'}}>Receive Token</div>
                             <select style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff'}} value={withdrawToken} onChange={e => setWithdrawToken(e.target.value as any)}>
                                 <option value="USDC">USDC</option>
-                                <option value="USDT">USDT</option>
+                                {withdrawChain === 'BSC' && <option value="USDT">USDT</option>}
                             </select>
                         </div>
                         <div>
@@ -575,7 +605,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
 
                     <button className="pm-btn-continue" 
                         disabled={!amount || parseFloat(amount) <= 0 || !withdrawAddress}
-                        onClick={() => { haptic('selection'); setStep('confirm'); }}>
+                        onClick={handlePreviewWithdraw}>
                         Continue
                     </button>
                 </div>
@@ -777,15 +807,21 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         </div>
                         <div className="pm-breakdown-row">
                             <span>Destination</span>
-                            <span className="pm-breakdown-val">${withdrawAddress.slice(0, 6)}...${withdrawAddress.slice(-4)}</span>
+                            <span className="pm-breakdown-val">{withdrawAddress.slice(0, 6)}...{withdrawAddress.slice(-4)} ({withdrawChain})</span>
                         </div>
                         <div className="pm-breakdown-row">
                             <span>Receive</span>
-                            <span className="pm-breakdown-val" style={{color: '#4ade80'}}>${amount} ${withdrawToken} (${withdrawChain})</span>
+                            <span className="pm-breakdown-val" style={{color: '#4ade80'}}>{estimatedOutput || amount} {withdrawToken}</span>
                         </div>
+                        {withdrawChain !== 'Polygon' && (
+                            <div className="pm-breakdown-row" style={{fontSize: '11px'}}>
+                                <span>Bridge Fee</span>
+                                <span className="pm-breakdown-val" style={{color: '#ef4444'}}>-{(parseFloat(amount) - parseFloat(estimatedOutput || amount)).toFixed(2)} pUSD</span>
+                            </div>
+                        )}
                         <div className="pm-breakdown-row">
                             <span>Estimated Time</span>
-                            <span className="pm-breakdown-val">Instant</span>
+                            <span className="pm-breakdown-val">{withdrawChain === 'Polygon' ? 'Instant' : '~2 mins'}</span>
                         </div>
                     </div>
 
@@ -812,49 +848,48 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 </div>
             )}
 
-            {/* STEP 5: SUCCESS */}
+            {/* STEP 5: SUCCESS / BRIDGING */}
             {step === 'success' && (
                 <div className="pm-dep-content" style={{justifyContent: 'center', alignItems: 'center', gap: '16px'}}>
-                    <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'rgba(14,203,129,0.15)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#0ecb81', fontSize: '32px'
-                    }}>
-                        ✓
-                    </div>
-                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>Transfer Sent!</div>
-
-                    {/* Bridge pending banner */}
-                    {bridgePending ? (
-                        <div style={{ background: 'rgba(251,188,4,0.1)', border: '1px solid rgba(251,188,4,0.3)', borderRadius: 12, padding: '12px 16px', width: '100%', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                <div className="pm-spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(251,188,4,0.3)', borderTopColor: '#fbbe04' }}/>
-                                <span style={{ color: '#fbbe04', fontWeight: 700, fontSize: 13 }}>Bridge Processing…</span>
-                                <span style={{ color: '#848e9c', fontSize: 11, marginLeft: 'auto' }}>{Math.floor(elapsedSecs / 60)}:{String(elapsedSecs % 60).padStart(2, '0')}</span>
+                    {!bridgePending ? (
+                        <>
+                            <div style={{
+                                width: '64px', height: '64px', borderRadius: '50%',
+                                background: 'rgba(14,203,129,0.15)',
+                                color: '#0ecb81', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
                             </div>
-                            <div style={{ color: '#848e9c', fontSize: 12 }}>Your {selectedAsset?.token} is being bridged to Polygon and converted to pUSD (1:1). This typically takes 5–20 minutes. Your balance will auto-update when complete.</div>
-                        </div>
+                            <div style={{fontSize: '20px', fontWeight: 'bold', color: '#fff'}}>
+                                {mode === 'deposit' ? 'Deposit Successful!' : 'Withdrawal Complete!'}
+                            </div>
+                            <div style={{color: '#848e9c', fontSize: '13px', textAlign: 'center'}}>
+                                {mode === 'deposit' 
+                                    ? `Your pUSD balance has been updated. You are ready to predict.`
+                                    : `The funds have been sent to your destination address.`
+                                }
+                            </div>
+                            {txHash && (
+                                <div style={{background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}
+                                    onClick={() => { navigator.clipboard.writeText(txHash); haptic('light'); }}>
+                                    <span style={{color: '#848e9c'}}>TX:</span>
+                                    <span style={{color: '#007aff'}}>{txHash.slice(0, 10)}...{txHash.slice(-8)}</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </div>
+                            )}
+                        </>
                     ) : (
-                        <div style={{ background: 'rgba(14,203,129,0.1)', border: '1px solid rgba(14,203,129,0.3)', borderRadius: 12, padding: '12px 16px', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
-                            <div style={{ color: '#0ecb81', fontWeight: 700, fontSize: 14 }}>✓ Balance Updated!</div>
-                            <div style={{ color: '#848e9c', fontSize: 12, marginTop: 4 }}>Your pUSD balance has been credited.</div>
-                        </div>
+                        <>
+                            <div className="pm-spinner pm-spinner-lg" style={{width: 50, height: 50, borderWidth: '3px', borderColor: 'rgba(0,122,255,0.2)', borderTopColor: '#007aff'}}></div>
+                            <div style={{fontSize: '18px', fontWeight: 'bold', color: '#fff'}}>Bridging Funds...</div>
+                            <div style={{color: '#848e9c', fontSize: '13px', textAlign: 'center'}}>
+                                Your withdrawal has been initiated via Polymarket Bridge. Waiting for completion on {withdrawChain}...
+                            </div>
+                            <div style={{fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace', color: '#4ade80'}}>{elapsedSecs}s</div>
+                        </>
                     )}
-
-                    {txHash && (
-                        <a
-                            href={selectedAsset?.chain === 'BSC'
-                                ? `https://bscscan.com/tx/${txHash}`
-                                : `https://polygonscan.com/tx/${txHash}`}
-                            target="_blank" rel="noreferrer"
-                            style={{ fontSize: 11, color: '#007aff', fontFamily: 'monospace', textDecoration: 'none' }}
-                        >
-                            TX: {txHash.slice(0, 12)}...{txHash.slice(-6)} ↗
-                        </a>
-                    )}
-                    <button className="pm-btn-continue" onClick={onClose}>
-                        {bridgePending ? 'Close (Bridge Running in Background)' : 'Close'}
+                    <button className="pm-btn-continue" style={{background: bridgePending ? '#333' : '#007aff', color: '#fff', marginTop: '16px'}} onClick={onClose} disabled={bridgePending}>
+                        {bridgePending ? 'Please wait...' : 'Close'}
                     </button>
                 </div>
             )}

@@ -2391,23 +2391,58 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
     }
 });
 
+router.post("/predictions/withdraw/quote", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { amount, destChainId, destTokenAddress, recipientAddress } = req.body;
+        if (!amount || !destChainId || !destTokenAddress) return res.status(400).json({ error: "Missing parameters" });
+
+        const toAddress = recipientAddress || user.wallet_address;
+        
+        const quote = await polymarketRelayerService.getCrossChainWithdrawalQuote(parseFloat(amount), destChainId.toString(), destTokenAddress, toAddress);
+        res.json({ success: true, ...quote });
+    } catch (err: any) {
+        console.error("[MINIAPP] Withdraw quote error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.post("/predictions/withdraw", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        const { amount, recipientAddress } = req.body;
+        const { amount, recipientAddress, destChainId, destTokenAddress } = req.body;
         if (!amount) return res.status(400).json({ error: "Missing amount" });
 
         const toAddress = recipientAddress || user.wallet_address;
         if (!toAddress) return res.status(400).json({ error: "Recipient address not found" });
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-        const txHash = await polymarketRelayerService.withdrawGasless(user.wallet_index, toAddress, amountBigInt);
+        
+        let txHashOrBridgeAddress;
+        if (destChainId && destChainId.toString() !== "137" && destTokenAddress) {
+            txHashOrBridgeAddress = await polymarketRelayerService.withdrawCrossChain(user.wallet_index, destChainId.toString(), destTokenAddress, toAddress, amountBigInt);
+        } else {
+            txHashOrBridgeAddress = await polymarketRelayerService.withdrawGasless(user.wallet_index, toAddress, amountBigInt);
+        }
 
-        res.json({ success: true, txHash });
+        res.json({ success: true, txHash: txHashOrBridgeAddress, isCrossChain: destChainId && destChainId.toString() !== "137" });
     } catch (err: any) {
         console.error("[MINIAPP] Gasless withdraw error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/withdraw/status/:bridgeAddress", async (req: Request, res: Response) => {
+    try {
+        const { bridgeAddress } = req.params;
+        const { data } = await axios.get(`https://bridge.polymarket.com/status/${bridgeAddress}`);
+        res.json({ success: true, status: data });
+    } catch (err: any) {
+        console.error("[MINIAPP] Bridge status error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

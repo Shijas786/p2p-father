@@ -247,10 +247,17 @@ export const api = {
             request<{ success: boolean; wrapped: boolean }>('/predictions/deposit/check', {
                 method: 'POST'
             }),
-        withdrawGasless: (amount: number, destChainId: number, destTokenAddress: string, recipient: string) => 
-            request<{ success: boolean; txHash?: string, error?: string }>('/predictions/withdraw', {
+        getWithdrawQuote: (amount: number, destChainId: string, destTokenAddress: string, recipient: string) =>
+            request<{ success: boolean; estimatedOutput: string }>('/predictions/withdraw/quote', {
                 method: 'POST',
-                body: JSON.stringify({ amount, recipientAddress: recipient })
+                body: JSON.stringify({ amount, destChainId, destTokenAddress, recipientAddress: recipient })
+            }),
+        getBridgeStatus: (bridgeAddress: string) =>
+            request<{ success: boolean; status: any }>(`/predictions/withdraw/status/${bridgeAddress}`),
+        withdrawGasless: (amount: number, destChainId: string, destTokenAddress: string, recipient: string) => 
+            request<{ success: boolean; txHash?: string, isCrossChain?: boolean, error?: string }>('/predictions/withdraw', {
+                method: 'POST',
+                body: JSON.stringify({ amount, destChainId, destTokenAddress, recipientAddress: recipient })
             }),
         getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),

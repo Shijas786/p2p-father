@@ -25,6 +25,13 @@ const COLLATERAL_ONRAMP_ADDRESS = "0x93070a847efef7f70739046a929d47a521f5b8ee";
 /** PermissionedRamp: wraps native USDC → pUSD (1:1) */
 const PERMISSIONED_RAMP_ADDRESS = "0xebc2459ec962869ca4c0bd1e06368272732bcb08";
 
+export const SUPPORTED_NETWORKS: Record<string, { name: string, token: string }> = {
+    "137":   { name: "Polygon",  token: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174" }, // USDC.e
+    "1":     { name: "Ethereum", token: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }, // USDC
+    "56":    { name: "BSC",      token: "0x55d398326f99059fF775485246999027B3197955" }, // USDT
+    "42161": { name: "Arbitrum", token: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" }, // USDC
+};
+
 const POLYGON_RPC = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
 
 // ─── ABIs ────────────────────────────────────────────────────────
@@ -638,10 +645,88 @@ class PolymarketRelayerService {
     }
 
     /**
-     * Withdraw pUSD cross-chain using Relay SDK and Polymarket Biconomy Relayer natively.
+     * Get a cross-chain withdrawal quote from the Polymarket Bridge API.
      */
-    async withdrawCrossChain(userWalletIndex: number, destChainId: number, destCurrencyAddress: string, recipientAddress: string, amount: bigint): Promise<string> {
-        throw new Error("Cross-chain withdrawals require native gas and are currently disabled. Please use Polygon pUSD withdrawals.");
+    async getCrossChainWithdrawalQuote(amount: number, toChainId: string, toTokenAddress: string, recipientAddr: string) {
+        if (toChainId === "137") {
+            // Polygon doesn't need bridge, estimate is exactly the amount (no bridge fee)
+            return { estimatedOutput: amount.toString() };
+        }
+        
+        try {
+            const { data } = await axios.post("https://bridge.polymarket.com/quote", {
+                fromAmountBaseUnit: Math.floor(amount * 1e6).toString(),
+                fromChainId: "137", // always Polygon
+                fromTokenAddress: PUSD_ADDRESS,
+                toChainId,
+                toTokenAddress,
+                recipientAddress: recipientAddr
+            });
+            return { estimatedOutput: (parseFloat(data.estimatedOutput) / 1e6).toFixed(2) };
+        } catch (err: any) {
+            console.error("[Relayer] Failed to fetch cross-chain quote:", err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || "Failed to fetch bridge quote");
+        }
+    }
+
+    /**
+     * Withdraw pUSD cross-chain using Polymarket Bridge API and Relayer natively.
+     */
+    async withdrawCrossChain(userWalletIndex: number, destChainId: string, destCurrencyAddress: string, recipientAddress: string, amount: bigint): Promise<string> {
+        if (this.isDemoMode) {
+            console.log(`[Relayer-Demo] Simulating cross-chain withdrawal to ${recipientAddress} on chain ${destChainId}`);
+            await new Promise(r => setTimeout(r, 1500));
+            return "0x_simulated_cross_chain_withdrawal_tx_hash";
+        }
+
+        const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+
+        console.log(`[Relayer] Initiating cross-chain withdraw for ${depositWallet} -> ${recipientAddress} (Chain ${destChainId})`);
+
+        // Step 1 - Generate bridge address
+        let bridgeAddress: string;
+        try {
+            const { data } = await axios.post("https://bridge.polymarket.com/withdraw", {
+                address: depositWallet,
+                toChainId: destChainId,
+                toTokenAddress: destCurrencyAddress,
+                recipientAddr: recipientAddress
+            });
+            bridgeAddress = data.address.evm;
+        } catch (err: any) {
+            console.error("[Relayer] Failed to generate bridge address:", err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || "Failed to initialize bridge withdrawal");
+        }
+
+        console.log(`[Relayer] Polymarket Bridge generated address: ${bridgeAddress}`);
+
+        const client = this.getUserRelayClient(userWalletIndex);
+        if (!client) throw new Error("Failed to construct relayer client");
+
+        // Step 2 - Transfer pUSD from deposit wallet to bridge address (gasless via relayer)
+        const callData = encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [bridgeAddress as `0x${string}`, amount]
+        });
+
+        const withdrawCall = {
+            target: PUSD_ADDRESS, 
+            value: "0",
+            data: callData
+        };
+
+        const deadline = Math.floor(Date.now() / 1000 + 3600).toString();
+
+        try {
+            console.log(`[Relayer] Submitting gasless transfer to bridge: ${bridgeAddress}`);
+            const response = await client.executeDepositWalletBatch([withdrawCall], depositWallet, deadline);
+            const result = await response.wait();
+            return bridgeAddress; // Return bridge address so we can poll status
+        } catch (err: any) {
+            console.error("[Relayer] Bridge transfer failed:", err.message);
+            throw new Error(`Gasless transfer to bridge failed: ${err.message}`);
+        }
     }
 }
 
