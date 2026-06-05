@@ -276,7 +276,7 @@ class PolymarketRelayerService {
             const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
             
             const CTF_EXCHANGE_V2 = "0xE111180000d2663C0091e4f400237545B87B996B";
-            const CONDITIONAL_TOKENS = "0x4D97DCd97eC945f40cF65F87097CAe4764c2cECE";
+            const CONDITIONAL_TOKENS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
             
             const erc1155Abi = [
                 "function isApprovedForAll(address owner, address operator) view returns (bool)",
