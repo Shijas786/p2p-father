@@ -370,29 +370,14 @@ class PolymarketRelayerService {
             const collectionId = await ctfContract.getCollectionId(parentCollectionId, conditionId, BigInt(indexSet));
             
             const tokenIdPUSD = await ctfContract.getPositionId(PUSD_ADDRESS, collectionId);
-            const tokenIdUSDCE = await ctfContract.getPositionId(USDCE_ADDRESS, collectionId);
 
             const balPUSD = await ctfContract.balanceOf(depositWallet, tokenIdPUSD);
-            const balUSDCE = await ctfContract.balanceOf(depositWallet, tokenIdUSDCE);
-
+            
             let collateralToken = PUSD_ADDRESS;
-            let balance = 0n;
-
-            if (balUSDCE > 0n) {
-                collateralToken = USDCE_ADDRESS;
-                balance = balUSDCE;
-                // Use whitelisted V2 adapter for standard USDC.e markets
-                CTF_ADAPTER = isNegRisk 
-                    ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab" // fallback to NegRisk
-                    : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // Correct whitelisted V2 adapter
-            } else {
-                collateralToken = PUSD_ADDRESS;
-                balance = balPUSD;
-                // Use V2 adapter for pUSD
-                CTF_ADAPTER = isNegRisk 
-                    ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
-                    : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
-            }
+            let balance = balPUSD;
+            let CTF_ADAPTER = isNegRisk 
+                ? "0xadA2005600Dec949baf300f4C6120000bDB6eAab"  // NegRiskCtfCollateralAdapter
+                : "0xAdA100Db00Ca00073811820692005400218FcE1f"; // CtfCollateralAdapter
 
             if (balance === 0n) {
                 console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed.`);
