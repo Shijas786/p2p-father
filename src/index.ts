@@ -56,12 +56,14 @@ async function main() {
     if (env.NODE_ENV !== 'test') {
         const { startExpiryJob, startLiquiditySyncJob, startAutoClaimJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
+        const { bridgeMonitor } = await import("./services/bridge-monitor");
         // 🚀 Deposit Monitor disabled globally - now runs on-demand via API
         
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
         startAutoClaimJob();
+        bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
 

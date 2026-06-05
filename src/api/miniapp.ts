@@ -18,6 +18,7 @@ import axios from "axios";
 
 import { polymarketRelayerService } from "../services/relayer";
 import { depositMonitor } from "../services/deposit-monitor";
+import { bridgeMonitor } from "../services/bridge-monitor";
 import { attemptedRedeems } from "../services/jobs";
 import { bot } from "../bot";
 
@@ -2382,9 +2383,21 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-        const { txHash } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
+        const { txHash, bridgeAddress } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
-        res.json({ success: true, txHash });
+        // Track cross-chain bridge deposits so we can notify the user when pUSD arrives (or if it's stuck)
+        const isNonPolygon = chain !== 'polygon';
+        if (isNonPolygon && txHash) {
+            bridgeMonitor.trackDeposit({
+                telegramId: Number(user.telegram_id),
+                walletIndex: user.wallet_index,
+                txHash,
+                sourceChain: chain,
+                amountUsdc: parseFloat(amount),
+            }).catch(() => {}); // fire-and-forget
+        }
+
+        res.json({ success: true, txHash, bridgeAddress });
     } catch (err: any) {
         console.error("[MINIAPP] Gasless deposit error:", err);
         res.status(500).json({ error: err.message });
@@ -2459,6 +2472,7 @@ router.get("/predictions/balance", async (req: Request, res: Response) => {
 });
 
 router.get("/predictions/positions", async (req: Request, res: Response) => {
+    console.log(`[DEBUG-POS] HIT /predictions/positions endpoint! TelegramUser:`, req.telegramUser?.id);
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
