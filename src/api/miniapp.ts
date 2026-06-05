@@ -2423,23 +2423,11 @@ router.post("/predictions/withdraw", async (req: Request, res: Response) => {
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
         
-        let txHashOrBridgeAddress;
-        if (destChainId && destTokenAddress) {
-            // Always use the Bridge API if dest parameters are provided, even for Polygon, 
-            // so the Bridge can automatically swap pUSD -> USDC.
-            txHashOrBridgeAddress = await polymarketRelayerService.withdrawCrossChain(
-                user.wallet_index, 
-                destChainId.toString(), 
-                destTokenAddress, 
-                toAddress, 
-                amountBigInt
-            );
-        } else {
-            // Fallback to raw pUSD transfer ONLY if no destination chain/token is specified
-            txHashOrBridgeAddress = await polymarketRelayerService.withdrawGasless(user.wallet_index, toAddress, amountBigInt);
-        }
+        // The user specifically requested to remove cross-chain bridge logic 
+        // and just withdraw native pUSD directly to the recipient wallet.
+        const txHash = await polymarketRelayerService.withdrawGasless(user.wallet_index, toAddress, amountBigInt);
 
-        res.json({ success: true, txHash: txHashOrBridgeAddress, isCrossChain: !!(destChainId && destTokenAddress) });
+        res.json({ success: true, txHash, isCrossChain: false });
     } catch (err: any) {
         console.error("[MINIAPP] Gasless withdraw error:", err);
         res.status(500).json({ error: err.message });
