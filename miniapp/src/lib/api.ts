@@ -248,9 +248,9 @@ export const api = {
                 method: 'POST'
             }),
         withdrawGasless: (amount: number, destChainId: number, destTokenAddress: string, recipient: string) => 
-            request<{ success: boolean; txHash?: string, error?: string }>('/miniapp/withdraw', {
+            request<{ success: boolean; txHash?: string, error?: string }>('/predictions/withdraw', {
                 method: 'POST',
-                body: JSON.stringify({ amount, destChainId, destTokenAddress, recipient })
+                body: JSON.stringify({ amount, recipientAddress: recipient })
             }),
         getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),

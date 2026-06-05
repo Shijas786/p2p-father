@@ -156,9 +156,6 @@ class WalletService {
         const signer = this.getUserSigner(userIndex, chain);
         const isBsc = chain === 'bsc';
         const txOptions: any = {};
-        if (isBsc) {
-            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-        }
 
         const tx = await signer.sendTransaction({
             to,
@@ -176,9 +173,6 @@ class WalletService {
         const decimals = await contract.decimals();
         const isBsc = chain === 'bsc';
         const txOptions: any = {};
-        if (isBsc) {
-            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-        }
 
         const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals), txOptions);
         await tx.wait();
@@ -212,10 +206,6 @@ class WalletService {
                 console.log(`[WALLET] Insufficient allowance (${ethers.formatUnits(currentAllowance, decimals)}). Approving ${amount} ${tokenAddress}...`);
 
                 const approveOptions: any = {};
-                if (chain === 'bsc') {
-                    approveOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-                    approveOptions.gasLimit = 100000;
-                }
 
                 const approveTx = await tokenContract.approve(contractAddress, amountUnits, approveOptions);
                 await approveTx.wait();
@@ -235,10 +225,6 @@ class WalletService {
                 const txOptions: any = {
                     value: isNative ? amountUnits : 0
                 };
-                if (chain === 'bsc') {
-                    txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-                    txOptions.gasLimit = 500000;
-                }
 
                 const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, txOptions);
                 await depositTx.wait();
@@ -280,10 +266,6 @@ class WalletService {
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         const txOptions: any = {};
-        if (chain === 'bsc') {
-            txOptions.gasPrice = ethers.parseUnits("0.1", "gwei");
-            txOptions.gasLimit = 500000;
-        }
 
         const tx = await escrowContract.withdraw(tokenAddress, amountUnits, txOptions);
         await tx.wait();
