@@ -306,9 +306,52 @@ async function main() {
         res.sendFile(path.join(process.cwd(), "public", "index.html"));
     });
 
-    app.listen(port, () => {
+    const http = await import("http");
+    const { WebSocketServer } = await import("ws");
+    const WebSocket = (await import("ws")).default;
+
+    const server = http.createServer(app);
+
+    // ── BTC Price WebSocket Proxy ───────────────────────────────────
+    // Mobile carriers (Jio/Airtel) block direct connections to Binance.
+    // We proxy through Railway so the miniapp always gets live price.
+    const wss = new WebSocketServer({ server, path: "/ws/btcprice" });
+
+    let binanceWs: any = null;
+    let lastPrice: string | null = null;
+    const clients = new Set<any>();
+
+    const connectBinance = () => {
+        binanceWs = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
+        binanceWs.on("message", (data: any) => {
+            try {
+                const parsed = JSON.parse(data.toString());
+                if (parsed.p) {
+                    lastPrice = parsed.p;
+                    const msg = JSON.stringify({ p: parsed.p, t: parsed.T });
+                    for (const client of clients) {
+                        if (client.readyState === 1) client.send(msg);
+                    }
+                }
+            } catch {}
+        });
+        binanceWs.on("close", () => setTimeout(connectBinance, 3000));
+        binanceWs.on("error", () => binanceWs?.terminate());
+    };
+    connectBinance();
+
+    wss.on("connection", (client) => {
+        clients.add(client);
+        // Send last known price immediately so UI isn't blank
+        if (lastPrice) client.send(JSON.stringify({ p: lastPrice }));
+        client.on("close", () => clients.delete(client));
+        client.on("error", () => clients.delete(client));
+    });
+
+    server.listen(port, () => {
         console.log(`  🔗 Website & Health server live on port ${port}`);
         console.log(`  🌍 Visit http://localhost:${port} to see the landing page`);
+        console.log(`  📡 BTC price WebSocket proxy live at ws://…/ws/btcprice`);
     });
 
     // Ensure no old webhooks are blocking long polling

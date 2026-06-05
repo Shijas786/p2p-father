@@ -246,43 +246,61 @@ export function Predict({ user }: Props) {
         };
     }, [loadData]);
 
-    // ── Live price from Binance WebSocket (Fastest, ~50ms lag) ──────
+    // ── Live price from our Railway WS proxy (works on mobile data) ──
     useEffect(() => {
         let prev = 0;
         let ws: WebSocket | null = null;
         let timeoutId: any;
+        let fallbackWs: WebSocket | null = null;
+        let usingFallback = false;
 
-        const connectWs = () => {
-            ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
-            
-            ws.onmessage = (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    const p = parseFloat(data.p);
-                    if (p > 0) {
-                        if (prev > 0 && p !== prev) {
-                            setPriceFlash(p > prev ? 'up' : 'down');
-                            clearTimeout(timeoutId);
-                            timeoutId = setTimeout(() => setPriceFlash(null), 600);
-                        }
-                        prev = p;
-                        setLivePrice(p);
-                        // Guarantee PTB is never 0 so odds always fluctuate
-                        setPriceToBeat(ptb => ptb === 0 ? p : ptb); 
-                    }
-                } catch (err) {
-                    console.warn('Binance WS parse error', err);
+        // Build the proxy URL from the current page host
+        const host = window.location.host;
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const proxyUrl = `${proto}//${host}/ws/btcprice`;
+
+        const handleMsg = (priceStr: string) => {
+            const p = parseFloat(priceStr);
+            if (p > 0) {
+                if (prev > 0 && p !== prev) {
+                    setPriceFlash(p > prev ? 'up' : 'down');
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => setPriceFlash(null), 600);
                 }
-            };
-
-            ws.onerror = (e) => console.warn('Binance WS error', e);
-            ws.onclose = () => {
-                console.warn('Binance WS closed, reconnecting in 3s...');
-                setTimeout(connectWs, 3000);
-            };
+                prev = p;
+                setLivePrice(p);
+                setPriceToBeat(ptb => ptb === 0 ? p : ptb);
+            }
         };
 
-        connectWs();
+        const connectFallback = () => {
+            if (usingFallback) return;
+            usingFallback = true;
+            console.warn('[Price WS] Proxy failed, falling back to Binance direct');
+            fallbackWs = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+            fallbackWs.onmessage = (e) => {
+                try { handleMsg(JSON.parse(e.data).p); } catch {}
+            };
+            fallbackWs.onclose = () => setTimeout(connectFallback, 3000);
+        };
+
+        // Try proxy first (always works on mobile data via Railway)
+        ws = new WebSocket(proxyUrl);
+        const proxyTimeout = setTimeout(connectFallback, 5000); // if proxy doesn't connect in 5s, use fallback
+
+        ws.onopen = () => clearTimeout(proxyTimeout);
+        ws.onmessage = (e) => {
+            try { handleMsg(JSON.parse(e.data).p); } catch {}
+        };
+        ws.onerror = () => connectFallback();
+        ws.onclose = () => {
+            if (!usingFallback) {
+                console.warn('[Price WS] Proxy closed, reconnecting...');
+                setTimeout(() => {
+                    ws = new WebSocket(proxyUrl);
+                }, 3000);
+            }
+        };
 
         return () => {
             if (ws) {
