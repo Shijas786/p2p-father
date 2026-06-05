@@ -615,6 +615,11 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                             <input type="text" style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', boxSizing: 'border-box'}} value={withdrawAddress} placeholder="0x..." onChange={e => setWithdrawAddress(e.target.value)} />
                         </div>
                     </div>
+                    {errorMsg && (
+                        <div style={{color: '#ff4d4f', fontSize: '13px', textAlign: 'center', marginTop: '8px', marginBottom: '8px'}}>
+                            {errorMsg}
+                        </div>
+                    )}
 
                     <button className="pm-btn-continue" 
                         disabled={!amount || parseFloat(amount) <= 0 || !withdrawAddress}
