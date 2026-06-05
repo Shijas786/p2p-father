@@ -76,8 +76,8 @@ export function PredictProfile({ user }: Props) {
                             <p>Positions</p>
                         </div>
                         <div className="pm-prof-stat">
-                            <h3 className={totalPnl >= 0 ? 'green' : 'red'}>{totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}</h3>
-                            <p>Active PNL</p>
+                            <h3 className={realizedPnl >= 0 ? 'green' : 'red'}>{realizedPnl >= 0 ? '+$' : '-$'}{Math.abs(realizedPnl).toFixed(2)}</h3>
+                            <p>Realized PNL</p>
                         </div>
                         <div className="pm-prof-stat">
                             <h3>{predictionsCount}</h3>
@@ -89,21 +89,15 @@ export function PredictProfile({ user }: Props) {
 
                     <div className="pm-prof-chart-header">
                         <div className="pm-prof-chart-left">
-                            <span className="pm-prof-pnl-label"><span className="pm-prof-pnl-dot"/> Profit/Loss</span>
-                            <div className={`pm-prof-pnl-amount ${totalPnl >= 0 ? 'green' : 'red'}`}>
-                                {totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}
-                                {totalPnl >= 0 ? (
+                            <span className="pm-prof-pnl-label"><span className="pm-prof-pnl-dot"/> Realized Profit/Loss</span>
+                            <div className={`pm-prof-pnl-amount ${realizedPnl >= 0 ? 'green' : 'red'}`}>
+                                {realizedPnl >= 0 ? '+$' : '-$'}{Math.abs(realizedPnl).toFixed(2)}
+                                {realizedPnl >= 0 ? (
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 ) : (
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
                                 )}
                             </div>
-                            {realizedPnl !== 0 && (
-                                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                                    Realized: <span style={{ color: realizedPnl >= 0 ? '#10b981' : '#ef4444' }}>{realizedPnl >= 0 ? '+' : ''}${realizedPnl.toFixed(2)}</span>
-                                    {unrealizedPnl !== 0 && <> · Open: <span style={{ color: unrealizedPnl >= 0 ? '#10b981' : '#ef4444' }}>{unrealizedPnl >= 0 ? '+' : ''}${unrealizedPnl.toFixed(2)}</span></>}
-                                </div>
-                            )}
                             <span className="pm-prof-pnl-time">All Time</span>
                         </div>
                         <div className="pm-prof-chart-right">
