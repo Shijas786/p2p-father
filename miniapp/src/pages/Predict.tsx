@@ -368,7 +368,7 @@ export function Predict({ user }: Props) {
                     setSelectedRound(idx);
                 } else if (targetMs > 0) {
                     // Fetch historical round from Binance
-                    fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${targetMs}&limit=1`)
+                    fetch(`/api/miniapp/predictions/klines?symbol=BTCUSDT&interval=5m&startTime=${targetMs}&limit=1`)
                         .then(res => res.json())
                         .then(data => {
                             if (data && data.length > 0) {

@@ -209,6 +209,24 @@ router.get("/predictions/orderbook", async (req: Request, res: Response) => {
     }
 });
 
+router.get("/predictions/klines", async (req: Request, res: Response) => {
+    try {
+        const { symbol, interval, startTime, limit, ui } = req.query;
+        const apiPath = ui === 'true' ? 'uiKlines' : 'klines';
+        
+        let url = `https://api.binance.com/api/v3/${apiPath}?symbol=${symbol || 'BTCUSDT'}&interval=${interval || '5m'}`;
+        if (startTime) url += `&startTime=${startTime}`;
+        if (limit) url += `&limit=${limit}`;
+
+        const binanceRes = await fetch(url);
+        const data = await binanceRes.json();
+        res.json(data);
+    } catch (err: any) {
+        console.error("[MINIAPP] Binance klines proxy error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/predictions/market", async (req: Request, res: Response) => {
     try {
         const market = await polymarketService.getActiveBtcMarket();

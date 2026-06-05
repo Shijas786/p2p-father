@@ -21,7 +21,7 @@ export function PredictChart({ livePrice, priceToBeat, startTimeMs, endTimeMs }:
         const fetchInitial = async () => {
             try {
                 const fetchStart = Date.now() - 300000;
-                const url = `https://api.binance.com/api/v3/uiKlines?symbol=BTCUSDT&interval=1s&startTime=${fetchStart}&limit=300`;
+                const url = `/api/miniapp/predictions/klines?symbol=BTCUSDT&interval=1s&startTime=${fetchStart}&limit=300&ui=true`;
                 const res = await fetch(url);
                 const json = await res.json();
                 const points = json.map((k: any) => ({
