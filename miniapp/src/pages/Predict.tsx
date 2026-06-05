@@ -747,7 +747,7 @@ export function Predict({ user }: Props) {
                                         <span className="pm-timer-digit">{timeLeft.mins}</span>
                                         <span className="pm-timer-label">MINS</span>
                                     </div>
-                                    <span className="pm-timer-digit" style={{opacity: 0.5}}>:</span>
+                                    <span className="pm-timer-digit" style={{opacity: 0.5, animation: 'pmFlicker 1s infinite'}}>:</span>
                                     <div className="pm-timer-unit">
                                         <span className="pm-timer-digit">
                                             <span key={`s0-${timeLeft.secs[0]}`} style={{ display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out' }}>
@@ -896,7 +896,7 @@ export function Predict({ user }: Props) {
                                         </span>
                                     </div>
                                     <span className="pm-mono">{typeof pos.qty === 'number' ? pos.qty.toFixed(2) : pos.qty}</span>
-                                    <span className="pm-mono">{(pos.avg * 100).toFixed(0)}¢</span>
+                                    <span className="pm-mono">{(pos.avg * 100).toFixed(2)}¢</span>
                                     <div className="pm-pos-col-value">
                                         <span className="pm-pos-value-main pm-mono">${(pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)).toFixed(2)}</span>
                                         <span className="pm-pos-cost-sub">Cost ${pos.cost.toFixed(2)}</span>

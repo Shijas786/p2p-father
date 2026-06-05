@@ -1072,6 +1072,12 @@
 }
 
 @keyframes pmTimerTick {
-    0% { transform: translateY(-4px); opacity: 0.5; }
-    100% { transform: translateY(0); opacity: 1; }
+    0% { opacity: 0.1; text-shadow: 0 0 10px #fff; }
+    40% { opacity: 1; text-shadow: 0 0 0px transparent; }
+    100% { opacity: 1; }
+}
+
+@keyframes pmFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
 }
