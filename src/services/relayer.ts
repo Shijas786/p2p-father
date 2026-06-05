@@ -264,6 +264,49 @@ class PolymarketRelayerService {
         }
     }
 
+    /**
+     * Approves the CTF Exchange to spend the proxy wallet's ERC1155 conditional tokens (needed for SELL orders).
+     */
+    async approveConditionalTokens(userWalletIndex: number): Promise<void> {
+        try {
+            const client = this.getUserRelayClient(userWalletIndex);
+            if (!client) throw new Error("Could not instantiate RelayClient");
+
+            const depositWallet = await this.resolveDepositWallet(userWalletIndex);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            
+            const CTF_EXCHANGE_V2 = "0xE111180000d2663C0091e4f400237545B87B996B";
+            const CONDITIONAL_TOKENS = "0x4D97DCd97eC945f40cF65F87097CAe4764c2cECE";
+            
+            const erc1155Abi = [
+                "function isApprovedForAll(address owner, address operator) view returns (bool)",
+                "function setApprovalForAll(address operator, bool approved)"
+            ];
+            const tokenContract = new ethers.Contract(CONDITIONAL_TOKENS, erc1155Abi, provider);
+            
+            const isApproved = await tokenContract.isApprovedForAll(depositWallet, CTF_EXCHANGE_V2);
+            if (isApproved) {
+                return; // Already approved
+            }
+
+            console.log(`[Relayer] Approving ERC1155 Conditional Tokens for CTF Exchange...`);
+            const tx = await tokenContract.setApprovalForAll.populateTransaction(CTF_EXCHANGE_V2, true);
+            
+            const deadline = Math.floor(Date.now() / 1000) + 600;
+            const batchTx = await client.executeDepositWalletBatch([{
+                target: CONDITIONAL_TOKENS,
+                value: "0",
+                data: tx.data
+            }], depositWallet, deadline.toString());
+            
+            await batchTx.wait();
+            console.log(`[Relayer] Successfully approved ERC1155 tokens!`);
+        } catch (e: any) {
+            console.error("[Relayer] Failed to approve ERC1155 tokens:", e.message);
+            throw e;
+        }
+    }
+
     async redeemPositions(userWalletIndex: number, conditionId: string, indexSet: number): Promise<string> {
         if (this.isDemoMode) {
             console.log(`[Relayer] DEMO MODE: Skipping auto-redeem for ${conditionId}`);

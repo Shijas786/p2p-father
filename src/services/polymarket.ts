@@ -487,6 +487,11 @@ class PolymarketService {
         try {
             const client = await this.getBuilderClobClient(userWalletIndex);
 
+            if (side === "SELL") {
+                const { polymarketRelayerService } = await import("./relayer");
+                await polymarketRelayerService.approveConditionalTokens(userWalletIndex);
+            }
+
             if (orderType === "MARKET") {
                 if (amountUsdc < 1) {
                     throw new Error("Polymarket requires a minimum of $1 for market orders.");
