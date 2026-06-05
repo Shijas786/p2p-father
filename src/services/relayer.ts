@@ -370,14 +370,24 @@ class PolymarketRelayerService {
             const collectionId = await ctfContract.getCollectionId(parentCollectionId, conditionId, BigInt(indexSet));
             
             const tokenIdPUSD = await ctfContract.getPositionId(PUSD_ADDRESS, collectionId);
+            const tokenIdUSDCE = await ctfContract.getPositionId(USDCE_ADDRESS, collectionId);
 
             const balPUSD = await ctfContract.balanceOf(depositWallet, tokenIdPUSD);
+            const balUSDCE = await ctfContract.balanceOf(depositWallet, tokenIdUSDCE);
             
             let collateralToken = PUSD_ADDRESS;
-            let balance = balPUSD;
+            let balance = 0n;
+
+            if (balPUSD > 0n) {
+                collateralToken = PUSD_ADDRESS;
+                balance = balPUSD;
+            } else if (balUSDCE > 0n) {
+                collateralToken = USDCE_ADDRESS;
+                balance = balUSDCE;
+            }
 
             if (balance === 0n) {
-                console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed.`);
+                console.log(`[Relayer] Skipping condition ${conditionId} for indexSet ${indexSet} — zero balance, already redeemed or user holds the losing outcome.`);
                 return "skipped-zero-balance";
             }
 
