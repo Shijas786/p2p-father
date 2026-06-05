@@ -33,7 +33,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [withdrawChain, setWithdrawChain] = useState<'Polygon'|'BSC'|'Ethereum'|'Arbitrum'>('Polygon');
     const [withdrawToken, setWithdrawToken] = useState<'USDC'|'USDT'>('USDC');
     const [withdrawAddress, setWithdrawAddress] = useState('');
-    const [estimatedOutput, setEstimatedOutput] = useState<string>('');
+    const [bridgeQuote, setBridgeQuote] = useState<any>(null);
     const [txHash, setTxHash] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [hotBalances, setHotBalances] = useState<any>(null);
@@ -166,9 +166,22 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             else if (destChainId === '1') destTokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
             else if (destChainId === '42161') destTokenAddress = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
 
+            // Fetch minimum checkout amount dynamically
+            if (destChainId !== '137') {
+                const suppRes = await fetch("https://bridge.polymarket.com/supported-assets");
+                const suppData = await suppRes.json();
+                const asset = suppData.supportedAssets?.find(
+                    (a: any) => a.chainId.toString() === destChainId && a.token.address.toLowerCase() === destTokenAddress.toLowerCase()
+                );
+                const minimum = asset?.minCheckoutUsd ?? 1;
+                if (parseFloat(amount) < minimum) {
+                    throw new Error(`Minimum withdrawal to this chain is $${minimum}`);
+                }
+            }
+
             const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
             if (r && r.success) {
-                setEstimatedOutput(r.estimatedOutput);
+                setBridgeQuote(r.quote);
                 setStep('confirm');
                 haptic('success');
             } else {
@@ -811,12 +824,16 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         </div>
                         <div className="pm-breakdown-row">
                             <span>Receive</span>
-                            <span className="pm-breakdown-val" style={{color: '#4ade80'}}>{estimatedOutput || amount} {withdrawToken}</span>
+                            <span className="pm-breakdown-val" style={{color: '#4ade80'}}>
+                                {withdrawChain === 'Polygon' ? `${amount} ${withdrawToken}` : (bridgeQuote?.estOutputUsd != null ? `${bridgeQuote.estOutputUsd} ${withdrawToken}` : '—')}
+                            </span>
                         </div>
                         {withdrawChain !== 'Polygon' && (
                             <div className="pm-breakdown-row" style={{fontSize: '11px'}}>
                                 <span>Bridge Fee</span>
-                                <span className="pm-breakdown-val" style={{color: '#ef4444'}}>-{(parseFloat(amount) - parseFloat(estimatedOutput || amount)).toFixed(2)} pUSD</span>
+                                <span className="pm-breakdown-val" style={{color: '#ef4444'}}>
+                                    {bridgeQuote?.estFeeBreakdown?.gasUsd != null ? `-${bridgeQuote.estFeeBreakdown.gasUsd} pUSD` : '—'}
+                                </span>
                             </div>
                         )}
                         <div className="pm-breakdown-row">

@@ -248,7 +248,7 @@ export const api = {
                 method: 'POST'
             }),
         getWithdrawQuote: (amount: number, destChainId: string, destTokenAddress: string, recipient: string) =>
-            request<{ success: boolean; estimatedOutput: string }>('/predictions/withdraw/quote', {
+            request<{ success: boolean; quote?: any }>('/predictions/withdraw/quote', {
                 method: 'POST',
                 body: JSON.stringify({ amount, destChainId, destTokenAddress, recipientAddress: recipient })
             }),

@@ -662,7 +662,7 @@ class PolymarketRelayerService {
                 toTokenAddress,
                 recipientAddress: recipientAddr
             });
-            return { estimatedOutput: (parseFloat(data.estimatedOutput) / 1e6).toFixed(2) };
+            return { quote: data };
         } catch (err: any) {
             console.error("[Relayer] Failed to fetch cross-chain quote:", err.response?.data || err.message);
             throw new Error(err.response?.data?.message || "Failed to fetch bridge quote");
