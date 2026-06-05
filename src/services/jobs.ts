@@ -304,10 +304,15 @@ export function startAutoClaimJob() {
                                 failedRedeemCounts.delete(attemptKey);
                                 
                                 // Only Notify Telegram Bot if it was an ACTUAL on-chain redemption of a WINNING position
-                                if (actualRedeemedHash && pos.redeemable > 0 && user.telegram_id) {
+                                const isPosRedeemableValid = typeof pos.redeemable === 'number' ? pos.redeemable > 0 : (pos.redeemable === true || parseFloat(pos.redeemable) > 0);
+                                if (actualRedeemedHash && isPosRedeemableValid && user.telegram_id) {
                                     try {
+                                        let payoutAmount = typeof pos.redeemable === 'number' ? pos.redeemable : parseFloat(pos.redeemable);
+                                        if (isNaN(payoutAmount) || typeof pos.redeemable === 'boolean') {
+                                            payoutAmount = parseFloat(pos.size || "0");
+                                        }
                                         await bot.api.sendMessage(user.telegram_id,
-                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${parseFloat(pos.redeemable).toFixed(2)} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${payoutAmount.toFixed(2)} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
                                             { parse_mode: "Markdown" }
                                         );
                                     } catch (botErr) {
