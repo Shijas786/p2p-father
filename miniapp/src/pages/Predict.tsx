@@ -726,16 +726,18 @@ export function Predict({ user }: Props) {
                         <span className="pm-price-val" style={{fontSize: '18px'}}>${displayPtb.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                     </div>
                     <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px', marginLeft: '6px', borderRadius: '4px'}}>
-                        <span className="pm-price-label pm-price-label-current" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '10px'}}>Current Price</span>
-                        <div className="pm-price-current-row">
-                            <span key={`price-${livePrice}`} className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '18px', display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out'}}>
-                                ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
-                            </span>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
+                            <span className={isUp ? 'pm-green' : 'pm-red'} style={{textTransform: 'none', fontWeight: 500, fontSize: '11px'}}>Current Price</span>
                             {displayPtb > 0 && (
-                                <span className={`pm-delta ${isUp ? 'pm-delta-up' : 'pm-delta-down'}`} style={{padding: '2px 6px', fontSize: '10px', borderRadius: '4px'}}>
-                                    {isUp ? '↑' : '↓'} {((deltaAbs / displayPtb) * 100).toFixed(2)}%
+                                <span className={isUp ? 'pm-green' : 'pm-red'} style={{fontSize: '11px', fontWeight: 600}}>
+                                    {isUp ? '▲' : '▼'} ${deltaAbs.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}
                                 </span>
                             )}
+                        </div>
+                        <div className="pm-price-current-row">
+                            <span key={`price-${livePrice}`} className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '20px', display: 'inline-block', animation: 'pmTimerTick 0.15s ease-out'}}>
+                                ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                            </span>
                         </div>
                     </div>
                     <div className="pm-timer-block">
