@@ -183,11 +183,16 @@ export const attemptedRedeems = new Set<string>();
 export const redeemAttempts = new Map<string, number>();
 export const failedRedeemCounts = new Map<string, number>();
 export const resolvedConditionsCache = new Set<string>();
+const unresolvedConditionsCheckTime = new Map<string, number>(); // conditionId -> timestamp
 
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
 
+    let isRunning = false;
     setInterval(async () => {
+        if (isRunning) return;
+        isRunning = true;
+
         try {
             const client = (db as any).getClient();
             const { data: users, error } = await client
@@ -201,52 +206,56 @@ export function startAutoClaimJob() {
             const { polymarketService } = await import("./polymarket");
             const { bot } = await import("../bot");
 
-            for (const user of users) {
-                try {
-                    const positions = await polymarketService.getPositionsForProxy(user.deposit_wallet_address);
-                    // Check positions that API marks as redeemable, OR positions that have size > 0 (might be resolved but API is slow)
-                    const potentialClaims = positions.filter((p: any) => p.redeemable > 0 || parseFloat(p.size) > 0.001);
+            const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
+            const provider = new ethers.JsonRpcProvider(rpcUrl);
+            const ctfContract = new ethers.Contract(
+                ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
+                [
+                    "function balanceOf(address, uint256) view returns (uint256)",
+                    "function payoutDenominator(bytes32) view returns (uint256)"
+                ],
+                provider
+            );
 
-                    for (const pos of potentialClaims) {
-                        const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
-                        if (attemptedRedeems.has(attemptKey)) continue;
+            // Process users in chunks to speed up position fetching while preventing rate limits
+            const CHUNK_SIZE = 5;
+            for (let i = 0; i < users.length; i += CHUNK_SIZE) {
+                const chunk = users.slice(i, i + CHUNK_SIZE);
+                await Promise.allSettled(chunk.map(async (user: any) => {
+                    try {
+                        const positions = await polymarketService.getPositionsForProxy(user.deposit_wallet_address);
+                        const potentialClaims = positions.filter((p: any) => p.redeemable > 0 || parseFloat(p.size) > 0.001);
 
-                        const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
-                        if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
+                        for (const pos of potentialClaims) {
+                            const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
+                            if (attemptedRedeems.has(attemptKey)) continue;
 
-                        // Check on-chain balance and resolution before redeeming
-                        let isResolved = false;
-                        if (pos.redeemable > 0) {
-                            isResolved = true;
-                        }
+                            const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
+                            if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
 
-                        if (pos.asset) {
-                            try {
-                                const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com";
-                                const provider = new ethers.JsonRpcProvider(rpcUrl);
-                                const ctfContract = new ethers.Contract(
-                                    ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
-                                    [
-                                        "function balanceOf(address, uint256) view returns (uint256)",
-                                        "function payoutDenominator(bytes32) view returns (uint256)"
-                                    ],
-                                    provider
-                                );
-                                
-                                // 1. Check if the market is actually resolved if API didn't say so
-                                if (!isResolved) {
-                                    if (resolvedConditionsCache.has(pos.conditionId)) {
-                                        isResolved = true;
-                                    } else {
-                                        const denom = await ctfContract.payoutDenominator(pos.conditionId);
-                                        if (denom > 0n) {
+                            let isResolved = pos.redeemable > 0;
+
+                            if (pos.asset) {
+                                try {
+                                    // 1. Check if the market is actually resolved if API didn't say so
+                                    if (!isResolved) {
+                                        if (resolvedConditionsCache.has(pos.conditionId)) {
                                             isResolved = true;
-                                            resolvedConditionsCache.add(pos.conditionId);
+                                        } else {
+                                            // Only check on-chain resolution once per minute across all users
+                                            const lastChecked = unresolvedConditionsCheckTime.get(pos.conditionId) || 0;
+                                            if (Date.now() - lastChecked > 60 * 1000) {
+                                                const denom = await ctfContract.payoutDenominator(pos.conditionId);
+                                                unresolvedConditionsCheckTime.set(pos.conditionId, Date.now());
+                                                if (denom > 0n) {
+                                                    isResolved = true;
+                                                    resolvedConditionsCache.add(pos.conditionId);
+                                                }
+                                            }
                                         }
                                     }
-                                }
 
-                                if (!isResolved) continue; // Skip if not resolved yet
+                                    if (!isResolved) continue;
 
                                 // 2. Check if user actually has balance
                                 const balance = await ctfContract.balanceOf(user.deposit_wallet_address, BigInt(pos.asset));
@@ -315,9 +324,12 @@ export function startAutoClaimJob() {
                 } catch (e: any) {
                     console.error(`[AutoClaim] Failed for user ${user.wallet_index}:`, e.message);
                 }
+            }));
             }
         } catch (e) {
             console.error("[JOB] Auto claim error:", e);
+        } finally {
+            isRunning = false;
         }
     }, 60 * 1000); // every 60 seconds
 }

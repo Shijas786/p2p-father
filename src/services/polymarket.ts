@@ -20,9 +20,13 @@ async function resolveDoH(hostname: string): Promise<string> {
         });
         const data = await res.json();
         if (data.Answer && data.Answer.length > 0) {
-            const ip = data.Answer[0].data;
-            dnsCache[hostname] = { ip, expires: now + 300000 }; // 5 min cache
-            return ip;
+            // Find the first A record (type 1)
+            const aRecord = data.Answer.find((r: any) => r.type === 1);
+            if (aRecord && aRecord.data) {
+                const ip = aRecord.data;
+                dnsCache[hostname] = { ip, expires: now + 300000 }; // 5 min cache
+                return ip;
+            }
         }
     } catch (e) {
         console.warn(`[DoH] Failed to resolve ${hostname} via Cloudflare DoH`);
