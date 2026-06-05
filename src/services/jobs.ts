@@ -281,12 +281,18 @@ export function startAutoClaimJob() {
                             redeemAttempts.set(attemptKey, Date.now());
 
                             let success = false;
+                            let actualRedeemedHash = null;
                             for (const indexSet of [preferredIndexSet, fallbackIndexSet]) {
                                 try {
                                     console.log(`[AutoClaim] Attempting redeem for ${pos.conditionId} (user: ${user.wallet_index}, indexSet: ${indexSet})...`);
-                                    await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
+                                    const txHash = await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
                                     success = true;
-                                    console.log(`[AutoClaim] Redeemed indexSet ${indexSet} successfully for user ${user.wallet_index}`);
+                                    if (txHash && txHash.startsWith("0x")) {
+                                        actualRedeemedHash = txHash;
+                                        console.log(`[AutoClaim] Redeemed indexSet ${indexSet} successfully for user ${user.wallet_index} (tx: ${txHash})`);
+                                    } else {
+                                        console.log(`[AutoClaim] Skipped indexSet ${indexSet} for user ${user.wallet_index} (${txHash})`);
+                                    }
                                     break;
                                 } catch (redeemErr: any) {
                                     console.warn(`[AutoClaim] Redeem failed for indexSet ${indexSet} (user: ${user.wallet_index}):`, redeemErr.message);
@@ -297,11 +303,11 @@ export function startAutoClaimJob() {
                                 attemptedRedeems.add(attemptKey);
                                 failedRedeemCounts.delete(attemptKey);
                                 
-                                // Notify Telegram Bot
-                                if (user.telegram_id) {
+                                // Only Notify Telegram Bot if it was an ACTUAL on-chain redemption of a WINNING position
+                                if (actualRedeemedHash && pos.redeemable > 0 && user.telegram_id) {
                                     try {
                                         await bot.api.sendMessage(user.telegram_id,
-                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${pos.redeemable || "Unknown"} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${parseFloat(pos.redeemable).toFixed(2)} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
                                             { parse_mode: "Markdown" }
                                         );
                                     } catch (botErr) {
