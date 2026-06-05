@@ -627,6 +627,15 @@ class PolymarketRelayerService {
                 tokenAddr = "0x55d398326f99059fF775485246999027B3197955";
                 decimals = 18; // BSC USDT uses 18 decimals
             }
+        } else if (chain === 'base') {
+            rpcUrl = env.BASE_RPC_URL;
+            if (token === 'USDC') {
+                tokenAddr = env.USDC_ADDRESS;
+                decimals = 6;
+            } else if (token === 'USDT') {
+                tokenAddr = env.USDT_ADDRESS;
+                decimals = 6;
+            }
         } else if (chain === 'polygon' && token === 'USDT') {
             tokenAddr = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
             decimals = 6;
