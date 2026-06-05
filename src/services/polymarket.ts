@@ -1,5 +1,50 @@
 import { Chain, ClobClient, OrderType, Side } from "@polymarket/clob-client-v2";
-import { createWalletClient, http } from "viem";
+import { encodePacked, keccak256, createWalletClient, http } from "viem";
+import https from "https";
+
+// ==========================================
+// Custom DNS over HTTPS (DoH) Resolver for Axios
+// Bypasses ISP and Cloud provider DNS blocking of Polymarket APIs
+// ==========================================
+const dnsCache: Record<string, { ip: string; expires: number }> = {};
+
+async function resolveDoH(hostname: string): Promise<string> {
+    const now = Date.now();
+    if (dnsCache[hostname] && dnsCache[hostname].expires > now) {
+        return dnsCache[hostname].ip;
+    }
+
+    try {
+        const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${hostname}&type=A`, {
+            headers: { 'accept': 'application/dns-json' }
+        });
+        const data = await res.json();
+        if (data.Answer && data.Answer.length > 0) {
+            const ip = data.Answer[0].data;
+            dnsCache[hostname] = { ip, expires: now + 300000 }; // 5 min cache
+            return ip;
+        }
+    } catch (e) {
+        console.warn(`[DoH] Failed to resolve ${hostname} via Cloudflare DoH`);
+    }
+    throw new Error("DoH resolution failed");
+}
+
+const customLookup = async (hostname: string, options: any, callback: any) => {
+    try {
+        if (hostname.includes('polymarket.com')) {
+            const ip = await resolveDoH(hostname);
+            callback(null, ip, 4);
+            return;
+        }
+        import('dns').then(dns => dns.lookup(hostname, options, callback));
+    } catch (e) {
+        import('dns').then(dns => dns.lookup(hostname, options, callback));
+    }
+};
+
+const customHttpsAgent = new https.Agent({ lookup: customLookup as any });
+// ==========================================
 import { privateKeyToAccount } from "viem/accounts";
 import axios from "axios";
 import { ethers } from "ethers";
@@ -482,7 +527,7 @@ class PolymarketService {
 
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000 });
+            const res = await axios.get(`https://data-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
             const trades = Array.isArray(res.data) ? res.data : [];
             return trades.map(t => ({ 
                 ...t, 
@@ -491,7 +536,7 @@ class PolymarketService {
             }));
         } catch (e: any) {
             try {
-                const res = await axios.get(`https://gamma-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000 });
+                const res = await axios.get(`https://gamma-api.polymarket.com/trades?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
                 const trades = Array.isArray(res.data) ? res.data : [];
                 return trades.map(t => ({ 
                     ...t, 
@@ -507,11 +552,11 @@ class PolymarketService {
 
     async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
         try {
-            const res = await axios.get(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0.01`, { timeout: 5000 });
+            const res = await axios.get(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0.01`, { timeout: 5000, httpsAgent: customHttpsAgent });
             return Array.isArray(res.data) ? res.data : [];
         } catch (e: any) {
             try {
-                const res = await axios.get(`https://gamma-api.polymarket.com/positions?user=${proxyAddress}`, { timeout: 5000 });
+                const res = await axios.get(`https://gamma-api.polymarket.com/positions?user=${proxyAddress}`, { timeout: 5000, httpsAgent: customHttpsAgent });
                 return Array.isArray(res.data) ? res.data : [];
             } catch (e2: any) {
                 console.log("[Polymarket] Both position APIs failed:", e2.message);

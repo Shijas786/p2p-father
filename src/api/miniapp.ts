@@ -2086,11 +2086,12 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
             provider
         );
 
-        const BATCH_SIZE = 5;
-        for (let i = 0; i < usersWithWallets.length; i += BATCH_SIZE) {
-            const batch = usersWithWallets.slice(i, i + BATCH_SIZE);
+        // Process in chunks to prevent RPC rate limiting and socket exhaustion
+        const CHUNK_SIZE = 5;
+        for (let i = 0; i < usersWithWallets.length; i += CHUNK_SIZE) {
+            const chunk = usersWithWallets.slice(i, i + CHUNK_SIZE);
             const results = await Promise.allSettled(
-                batch.map(async (u: any) => {
+                chunk.map(async (u: any) => {
                     try {
                         // Resolve the deposit wallet (proxy) address
                         const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
