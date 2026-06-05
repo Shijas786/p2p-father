@@ -101,7 +101,7 @@ export function Wallet({ user }: Props) {
     }
 
     async function copyAddress() {
-        const addr = balances?.address || wagmiAddress;
+        const addr = balances?.address || user?.wallet_address || wagmiAddress;
         if (!addr) return;
         const success = await copyToClipboard(addr);
         if (success) {
@@ -435,19 +435,19 @@ export function Wallet({ user }: Props) {
                 </div>
 
                 {/* Address + Action */}
-                {(balances?.address || wagmiAddress) && (
+                {(balances?.address || user?.wallet_address || wagmiAddress) && (
                     <div className="flex justify-between items-end mt-4">
                         <div className="wallet-address-row" onClick={copyAddress}>
                             <IconCopy size={14} color="#94a3b8" />
                             <span className="wallet-addr-text">
-                                {(balances?.address || wagmiAddress as string).slice(0, 6)}...{(balances?.address || wagmiAddress as string).slice(-4)}
+                                {((balances?.address || user?.wallet_address || wagmiAddress) as string).slice(0, 6)}...{((balances?.address || user?.wallet_address || wagmiAddress) as string).slice(-4)}
                             </span>
                         </div>
                         <div className="flex gap-2">
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowReceive(true)}>
-                                <IconQr size={16} /> <span className="ml-1">{balances?.address ? 'Deposit' : 'Receive'}</span>
+                                <IconQr size={16} /> <span className="ml-1">{(balances?.address || user?.wallet_address) ? 'Deposit' : 'Receive'}</span>
                             </button>
-                            {balances?.address && (
+                            {(balances?.address || user?.wallet_address) && (
                                 <button className="btn btn-sm btn-primary" onClick={() => setShowSend(true)}>
                                     <IconSend size={16} /> <span className="ml-1">Send</span>
                                 </button>
@@ -567,13 +567,13 @@ export function Wallet({ user }: Props) {
             {showReceive && (
                 <div className="modal-overlay" onClick={() => setShowReceive(false)}>
                     <div className="modal-content qr-modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>{balances?.address ? 'Deposit Crypto' : 'Receive Crypto'}</h3>
+                        <h3>{(balances?.address || user?.wallet_address) ? 'Deposit Crypto' : 'Receive Crypto'}</h3>
                         <p className="text-sm text-muted mb-2">Scan or copy address to receive funds</p>
                         <div className="qr-code-box">
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address || wagmiAddress}`} alt="QR" width={150} height={150} />
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address || user?.wallet_address || wagmiAddress}`} alt="QR" width={150} height={150} />
                         </div>
                         <div className="p-2 bg-secondary rounded mb-4 break-all mono text-sm select-all">
-                            {balances?.address || wagmiAddress}
+                            {balances?.address || user?.wallet_address || wagmiAddress}
                         </div>
                         <button className="btn btn-primary btn-block" onClick={copyAddress}>
                             Copy Address
