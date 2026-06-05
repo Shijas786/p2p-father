@@ -164,10 +164,20 @@ export function Predict({ user }: Props) {
 
                     const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
                     if (idx >= 0) {
-                        basePositions[idx].qty += wsPos.size;
-                        basePositions[idx].cost += wsPos.size * wsPos.price;
+                        const oldQty = basePositions[idx].qty;
+                        basePositions[idx].qty += wsPos.size; // wsPos.size is negative on sell
+                        
+                        if (wsPos.size < 0 && oldQty > 0) {
+                            // On sell, deduct cost proportionally
+                            const avgCost = basePositions[idx].cost / oldQty;
+                            basePositions[idx].cost -= Math.abs(wsPos.size) * avgCost;
+                        } else {
+                            // On buy, add cost at execution price
+                            basePositions[idx].cost += wsPos.size * wsPos.price;
+                        }
+
                         basePositions[idx].value += wsPos.size * basePositions[idx].currentPrice;
-                        basePositions[idx].avg = basePositions[idx].cost / basePositions[idx].qty;
+                        basePositions[idx].avg = basePositions[idx].qty > 0 ? basePositions[idx].cost / basePositions[idx].qty : 0;
                     } else {
                         basePositions.push({
                             outcome: mappedOutcome,

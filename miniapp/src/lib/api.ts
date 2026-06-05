@@ -308,7 +308,7 @@ export const api = {
                 
                 const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
 
-                for (const trade of (Array.isArray(tradesRes) ? tradesRes : [])) {
+                for (const trade of (Array.isArray(tradesRes) ? tradesRes.slice().reverse() : [])) {
                     // Collect condition data for realizedPnl
                     const cid = trade.conditionId;
                     if (cid) {
