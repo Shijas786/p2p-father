@@ -1072,8 +1072,7 @@
 }
 
 @keyframes pmTimerTick {
-    0% { opacity: 0.1; text-shadow: 0 0 10px #fff; }
-    40% { opacity: 1; text-shadow: 0 0 0px transparent; }
+    0% { opacity: 0.3; }
     100% { opacity: 1; }
 }
 
@@ -1106,4 +1105,24 @@
     font-weight: 600;
     color: #848e9c;
     margin-top: 6px;
+}
+
+@keyframes pm-flash-bg-up {
+    0% { background-color: rgba(16, 185, 129, 0); }
+    20% { background-color: rgba(16, 185, 129, 0.3); }
+    100% { background-color: rgba(16, 185, 129, 0); }
+}
+
+@keyframes pm-flash-bg-down {
+    0% { background-color: rgba(239, 68, 68, 0); }
+    20% { background-color: rgba(239, 68, 68, 0.3); }
+    100% { background-color: rgba(239, 68, 68, 0); }
+}
+
+.pm-flash-bg-up {
+    animation: pm-flash-bg-up 0.5s ease-out;
+}
+
+.pm-flash-bg-down {
+    animation: pm-flash-bg-down 0.5s ease-out;
 }

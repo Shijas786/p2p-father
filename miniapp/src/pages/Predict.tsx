@@ -725,7 +725,7 @@ export function Predict({ user }: Props) {
                         <span className="pm-price-label" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '10px'}}>Price to Beat</span>
                         <span className="pm-price-val" style={{fontSize: '18px'}}>${displayPtb.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                     </div>
-                    <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px', marginLeft: '6px'}}>
+                    <div className={`pm-price-block pm-price-block-current ${priceFlash ? `pm-flash-bg-${priceFlash}` : ''}`} style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px', marginLeft: '6px', borderRadius: '4px'}}>
                         <span className="pm-price-label pm-price-label-current" style={{textTransform: 'none', color: '#848e9c', fontWeight: 500, fontSize: '10px'}}>Current Price</span>
                         <div className="pm-price-current-row">
                             <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '18px'}}>
