@@ -2509,7 +2509,29 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                     console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
                     const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
                     const indexSet = outcomeIndex === 0 ? 1 : 2;
-                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).catch(e => console.error("[AutoClaim] redeemPositions error:", e));
+                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
+                        attemptedRedeems.add(attemptKey);
+                    }).catch(async (e: any) => {
+                        const msg: string = e?.message || '';
+                        if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
+                            // Persist as losing skip so future job runs don't hammer it
+                            const supabase = (db as any).getClient();
+                            try {
+                                await supabase.from('autoclaim_skips').upsert({
+                                    skip_key: attemptKey,
+                                    condition_id: p.conditionId,
+                                    wallet_index: user.wallet_index,
+                                    status: 'losing_skip',
+                                    reason: `inline: ${msg.slice(0, 80)}`,
+                                    created_at: new Date().toISOString(),
+                                }, { onConflict: 'skip_key' });
+                            } catch (_) {}
+                            attemptedRedeems.add(attemptKey);
+                            console.log(`[AutoClaim] Marked losing condition ${p.conditionId} (user: ${user.wallet_index}) — won't retry.`);
+                        } else {
+                            console.error('[AutoClaim] redeemPositions error:', msg);
+                        }
+                    });
                 }
             }
 

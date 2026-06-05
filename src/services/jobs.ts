@@ -179,11 +179,52 @@ export function startLiquiditySyncJob(escrowService: any) {
     }, 5 * 60 * 1000); // 5 minutes
 }
 
+
 export const attemptedRedeems = new Set<string>();
 export const redeemAttempts = new Map<string, number>();
 export const failedRedeemCounts = new Map<string, number>();
 export const resolvedConditionsCache = new Set<string>();
 const unresolvedConditionsCheckTime = new Map<string, number>(); // conditionId -> timestamp
+
+// Persistent skip set — loaded from Supabase on each job run, survives server restarts
+const persistentSkips = new Set<string>(); // "walletIndex-conditionId" keys
+
+async function loadPersistentSkips(client: any): Promise<void> {
+    try {
+        const { data, error } = await client
+            .from('autoclaim_skips')
+            .select('skip_key')
+            .eq('status', 'losing_skip');
+        if (error || !data) return;
+        for (const row of data) {
+            persistentSkips.add(row.skip_key);
+            attemptedRedeems.add(row.skip_key); // also populate in-memory set
+        }
+    } catch (e) {
+        // Table may not exist yet — safe to ignore, will be created on first skip
+    }
+}
+
+async function persistLosingSkip(client: any, skipKey: string, conditionId: string, walletIndex: number, reason: string): Promise<void> {
+    try {
+        await client
+            .from('autoclaim_skips')
+            .upsert({
+                skip_key: skipKey,
+                condition_id: conditionId,
+                wallet_index: walletIndex,
+                status: 'losing_skip',
+                reason,
+                created_at: new Date().toISOString(),
+            }, { onConflict: 'skip_key' });
+        persistentSkips.add(skipKey);
+        attemptedRedeems.add(skipKey);
+        console.log(`[AutoClaim] 💾 Persisted losing skip for ${skipKey}: ${reason}`);
+    } catch (e: any) {
+        // Ignore if table doesn't exist yet
+        console.warn(`[AutoClaim] Could not persist skip for ${skipKey}: ${e.message}`);
+    }
+}
 
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
@@ -195,6 +236,10 @@ export function startAutoClaimJob() {
 
         try {
             const client = (db as any).getClient();
+
+            // ── Load persisted losing skips from DB (survives restarts) ──────
+            await loadPersistentSkips(client);
+
             const { data: users, error } = await client
                 .from("users")
                 .select("id, wallet_index, deposit_wallet_address, telegram_id")
@@ -229,7 +274,9 @@ export function startAutoClaimJob() {
 
                         for (const pos of potentialClaims) {
                             const attemptKey = `${user.wallet_index}-${pos.conditionId}`;
-                            if (attemptedRedeems.has(attemptKey)) continue;
+
+                            // ── Skip if already marked as losing (persisted or in-memory) ──
+                            if (attemptedRedeems.has(attemptKey) || persistentSkips.has(attemptKey)) continue;
 
                             const lastAttempt = redeemAttempts.get(attemptKey) ?? 0;
                             if (Date.now() - lastAttempt < 5 * 60 * 1000) continue; // 5 min cooldown
@@ -258,101 +305,103 @@ export function startAutoClaimJob() {
 
                                     if (!isResolved) continue;
 
-                                // 2. Check if user actually has balance
-                                const balance = await ctfContract.balanceOf(user.deposit_wallet_address, BigInt(pos.asset));
-                                if (balance === 0n) {
-                                    console.log(`[AutoClaim] User ${user.wallet_index} (${user.deposit_wallet_address}) has 0 balance on-chain for asset ${pos.asset}. Skipping and caching.`);
-                                    attemptedRedeems.add(attemptKey); // already claimed or nothing to claim, cache to avoid querying again
+                                    // 2. Check if user actually has balance
+                                    const balance = await ctfContract.balanceOf(user.deposit_wallet_address, BigInt(pos.asset));
+                                    if (balance === 0n) {
+                                        console.log(`[AutoClaim] User ${user.wallet_index} has 0 balance for asset ${pos.asset}. Persisting skip.`);
+                                        await persistLosingSkip(client, attemptKey, pos.conditionId, user.wallet_index, 'zero_balance');
+                                        continue;
+                                    }
+                                } catch (balanceErr: any) {
+                                    console.warn(`[AutoClaim] Failed to verify balance/resolution for condition ${pos.conditionId}:`, balanceErr.message);
+                                    if (!isResolved) continue;
+                                }
+                            } else if (!isResolved) {
+                                continue;
+                            }
+
+                            try {
+                                const denom = await ctfContract.payoutDenominator(pos.conditionId);
+                                if (denom === 0n) {
+                                    console.log(`[AutoClaim] Condition ${pos.conditionId} not resolved yet.`);
                                     continue;
                                 }
-                            } catch (balanceErr: any) {
-                                console.warn(`[AutoClaim] Failed to verify balance/resolution for condition ${pos.conditionId}:`, balanceErr.message);
-                                // If the RPC/check fails and we don't know it's resolved, skip to be safe.
-                                if (!isResolved) continue;
-                            }
-                        } else if (!isResolved) {
-                            continue;
-                        }
 
-                        try {
-                            const denom = await ctfContract.payoutDenominator(pos.conditionId);
-                            if (denom === 0n) {
-                                console.log(`[AutoClaim] Condition ${pos.conditionId} has 0 denominator (not resolved yet)`);
-                                continue;
-                            }
+                                const payout0 = await ctfContract.payoutNumerators(pos.conditionId, 0);
+                                const payout1 = await ctfContract.payoutNumerators(pos.conditionId, 1);
 
-                            const payout0 = await ctfContract.payoutNumerators(pos.conditionId, 0);
-                            const payout1 = await ctfContract.payoutNumerators(pos.conditionId, 1);
-                            
-                            let winningIndexSet = null;
-                            if (payout0 > 0n) winningIndexSet = 1;
-                            else if (payout1 > 0n) winningIndexSet = 2;
+                                let winningIndexSet = null;
+                                if (payout0 > 0n) winningIndexSet = 1;
+                                else if (payout1 > 0n) winningIndexSet = 2;
 
-                            if (!winningIndexSet) {
-                                console.log(`[AutoClaim] Condition ${pos.conditionId} resolved but neither index 0 nor 1 won. Skipping.`);
-                                continue;
-                            }
+                                if (!winningIndexSet) {
+                                    // ── Losing outcome confirmed — persist skip permanently ──────
+                                    console.log(`[AutoClaim] Condition ${pos.conditionId} resolved but no winning payout. Persisting losing skip.`);
+                                    await persistLosingSkip(client, attemptKey, pos.conditionId, user.wallet_index, 'no_winning_payout');
+                                    continue;
+                                }
 
-                            redeemAttempts.set(attemptKey, Date.now());
+                                redeemAttempts.set(attemptKey, Date.now());
 
-                            let success = false;
-                            let actualRedeemedHash = null;
-                            const indexSetToTry = [winningIndexSet]; // Only try the winning one!
+                                let success = false;
+                                let actualRedeemedHash = null;
 
-                            for (const indexSet of indexSetToTry) {
                                 try {
-                                    console.log(`[AutoClaim] Attempting redeem for ${pos.conditionId} (user: ${user.wallet_index}, indexSet: ${indexSet})...`);
-                                    const txHash = await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, indexSet);
+                                    console.log(`[AutoClaim] Redeeming condition ${pos.conditionId} (user: ${user.wallet_index}, indexSet: ${winningIndexSet})...`);
+                                    const txHash = await polymarketRelayerService.redeemPositions(user.wallet_index, pos.conditionId, winningIndexSet);
                                     success = true;
                                     if (txHash && txHash.startsWith("0x")) {
                                         actualRedeemedHash = txHash;
-                                        console.log(`[AutoClaim] Redeemed indexSet ${indexSet} successfully for user ${user.wallet_index} (tx: ${txHash})`);
+                                        console.log(`[AutoClaim] ✅ Redeemed indexSet ${winningIndexSet} for user ${user.wallet_index} (tx: ${txHash})`);
                                     } else {
-                                        console.log(`[AutoClaim] Skipped indexSet ${indexSet} for user ${user.wallet_index} (${txHash})`);
+                                        console.log(`[AutoClaim] Skipped indexSet ${winningIndexSet} for user ${user.wallet_index}: ${txHash}`);
                                     }
-                                    break;
                                 } catch (redeemErr: any) {
-                                    console.warn(`[AutoClaim] Redeem failed for indexSet ${indexSet} (user: ${user.wallet_index}):`, redeemErr.message);
-                                }
-                            }
-
-                            if (success) {
-                                attemptedRedeems.add(attemptKey);
-                                failedRedeemCounts.delete(attemptKey);
-                                
-                                // Only Notify Telegram Bot if it was an ACTUAL on-chain redemption of a WINNING position
-                                const isPosRedeemableValid = typeof pos.redeemable === 'number' ? pos.redeemable > 0 : (pos.redeemable === true || parseFloat(pos.redeemable) > 0);
-                                if (actualRedeemedHash && isPosRedeemableValid && user.telegram_id) {
-                                    try {
-                                        let payoutAmount = typeof pos.redeemable === 'number' ? pos.redeemable : parseFloat(pos.redeemable);
-                                        if (isNaN(payoutAmount) || typeof pos.redeemable === 'boolean') {
-                                            payoutAmount = parseFloat(pos.size || "0");
+                                    const msg: string = redeemErr.message || '';
+                                    // ── Permanent losing outcome error — persist skip ─────────
+                                    if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
+                                        console.warn(`[AutoClaim] Losing outcome confirmed for ${pos.conditionId} (user: ${user.wallet_index}). Persisting skip.`);
+                                        await persistLosingSkip(client, attemptKey, pos.conditionId, user.wallet_index, `redeem_error: ${msg.slice(0, 80)}`);
+                                    } else {
+                                        console.warn(`[AutoClaim] Redeem failed for indexSet ${winningIndexSet} (user: ${user.wallet_index}):`, msg);
+                                        const fails = (failedRedeemCounts.get(attemptKey) ?? 0) + 1;
+                                        failedRedeemCounts.set(attemptKey, fails);
+                                        if (fails >= 3) {
+                                            console.warn(`[AutoClaim] Condition ${pos.conditionId} failed ${fails} times. Blacklisting.`);
+                                            attemptedRedeems.add(attemptKey);
                                         }
-                                        await bot.api.sendMessage(user.telegram_id,
-                                            `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${payoutAmount.toFixed(2)} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
-                                            { parse_mode: "Markdown" }
-                                        );
-                                    } catch (botErr) {
-                                        console.error(`[AutoClaim] Failed to send telegram message to ${user.telegram_id}:`, botErr);
                                     }
                                 }
-                            } else {
-                                console.error(`[AutoClaim] Both indexSets failed to redeem for ${pos.conditionId} (user: ${user.wallet_index})`);
-                                const fails = (failedRedeemCounts.get(attemptKey) ?? 0) + 1;
-                                failedRedeemCounts.set(attemptKey, fails);
-                                if (fails >= 3) {
-                                    console.warn(`[AutoClaim] Condition ${pos.conditionId} failed 3 times. Blacklisting to prevent log spam.`);
+
+                                if (success) {
                                     attemptedRedeems.add(attemptKey);
+                                    failedRedeemCounts.delete(attemptKey);
+
+                                    // Notify via Telegram only for actual on-chain wins
+                                    const isPosRedeemableValid = typeof pos.redeemable === 'number' ? pos.redeemable > 0 : (pos.redeemable === true || parseFloat(pos.redeemable) > 0);
+                                    if (actualRedeemedHash && isPosRedeemableValid && user.telegram_id) {
+                                        try {
+                                            let payoutAmount = typeof pos.redeemable === 'number' ? pos.redeemable : parseFloat(pos.redeemable);
+                                            if (isNaN(payoutAmount) || typeof pos.redeemable === 'boolean') {
+                                                payoutAmount = parseFloat(pos.size || "0");
+                                            }
+                                            await bot.api.sendMessage(user.telegram_id,
+                                                `🏆 *Market Resolved!*\n\nYour winning position has been automatically claimed.\n\n💰 *+$${payoutAmount.toFixed(2)} pUSD* added to your wallet.\n\nOpen the app to see your updated balance.`,
+                                                { parse_mode: "Markdown" }
+                                            );
+                                        } catch (botErr) {
+                                            console.error(`[AutoClaim] Failed to send Telegram message to ${user.telegram_id}:`, botErr);
+                                        }
+                                    }
                                 }
+                            } catch (posErr: any) {
+                                console.error(`[AutoClaim] Loop error for ${pos.conditionId} (user: ${user.wallet_index}):`, posErr.message);
                             }
-                        } catch (posErr: any) {
-                            console.error(`[AutoClaim] Loop error for ${pos.conditionId} (user: ${user.wallet_index}):`, posErr.message);
                         }
+                    } catch (e: any) {
+                        console.error(`[AutoClaim] Failed for user ${user.wallet_index}:`, e.message);
                     }
-                } catch (e: any) {
-                    console.error(`[AutoClaim] Failed for user ${user.wallet_index}:`, e.message);
-                }
-            }));
+                }));
             }
         } catch (e) {
             console.error("[JOB] Auto claim error:", e);
