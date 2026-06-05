@@ -16,28 +16,33 @@ async function resolveWithDoH(hostname: string): Promise<string> {
     });
 
     const answers = res.data?.Answer ?? [];
+    const aRecords = answers.filter((a: any) => a.type === 1);
     
-    // Filter only A records (type 1) — skip CNAME (type 5)
-    const aRecord = answers.find((a: any) => a.type === 1);
-    
-    if (!aRecord) throw new Error(`No A record found for ${hostname}`);
-    return aRecord.data; // actual IPv4
+    if (!aRecords.length) {
+        // Try Google fallback
+        const gRes = await axios.get(`https://dns.google/resolve`, {
+            params: { name: hostname, type: "A" },
+        });
+        const gAnswers = gRes.data?.Answer ?? [];
+        const gARecords = gAnswers.filter((a: any) => a.type === 1);
+        if (!gARecords.length) throw new Error(`No A record for ${hostname}`);
+        return gARecords[gARecords.length - 1].data;
+    }
+
+    return aRecords[aRecords.length - 1].data; // last A record
 }
 
-const customLookup = async (hostname: string, options: any, callback: any) => {
-    try {
+const customHttpsAgent = new https.Agent({
+    lookup: (hostname, _options, callback) => {
         if (hostname.includes('polymarket.com')) {
-            const ip = await resolveWithDoH(hostname);
-            callback(null, ip, 4);
-            return;
+            resolveWithDoH(hostname)
+                .then(ip => callback(null, ip, 4))
+                .catch(err => callback(err, "", 4));
+        } else {
+            import('dns').then(dns => dns.lookup(hostname, _options, callback));
         }
-        import('dns').then(dns => dns.lookup(hostname, options, callback));
-    } catch (e) {
-        import('dns').then(dns => dns.lookup(hostname, options, callback));
     }
-};
-
-const customHttpsAgent = new https.Agent({ lookup: customLookup as any });
+});
 // ==========================================
 import { privateKeyToAccount } from "viem/accounts";
 import axios from "axios";
