@@ -2504,6 +2504,59 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             console.warn("[MINIAPP] Failed to record trade for leaderboard (table might not exist yet):", dbErr.message);
         }
 
+        // Record the trade in the prediction_trades table immediately
+        try {
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+            if (proxyAddress) {
+                polymarketService.clearUserCache(proxyAddress);
+                const rawTrades = await polymarketService.getTradesForProxy(proxyAddress).catch(() => []);
+                if (rawTrades && rawTrades.length > 0) {
+                    const yesLc = market?.yesTokenId?.toLowerCase() ?? '';
+                    const noLc = market?.noTokenId?.toLowerCase() ?? '';
+
+                    const rows = rawTrades.map((t: any) => {
+                        const assetLc = (t.asset_id || '').toLowerCase();
+                        const outcome = assetLc === yesLc ? 'UP' : assetLc === noLc ? 'DOWN' : 'UP';
+                        const side = (t.side || 'BUY').toUpperCase();
+                        const price = parseFloat(t.price ?? '0');
+                        const shares = parseFloat(t.size ?? '0');
+                        const cost = shares * price;
+
+                        let tradedAt = new Date().toISOString();
+                        if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
+                        else if (t.timestamp) {
+                            const raw = t.timestamp.toString();
+                            tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
+                        }
+
+                        return {
+                            user_id: user.id,
+                            telegram_id: user.telegram_id,
+                            username: user.username,
+                            proxy_address: proxyAddress,
+                            clob_trade_id: t.id ?? t.trade_id ?? null,
+                            condition_id: t.market ?? t.conditionId ?? '',
+                            token_id: assetLc,
+                            outcome,
+                            side,
+                            price,
+                            shares,
+                            cost_usdc: cost,
+                            traded_at: tradedAt,
+                        };
+                    }).filter((r: any) => r.condition_id && r.shares > 0);
+
+                    if (rows.length > 0) {
+                        await db.getClient()
+                            .from('prediction_trades')
+                            .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
+                    }
+                }
+            }
+        } catch (syncErr: any) {
+            console.warn("[MINIAPP] Failed to record prediction_trades immediately after bet:", syncErr.message);
+        }
+
         // Clear cached positions and trades so next fetch gets new state
         try {
             const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
@@ -3393,8 +3446,22 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
         let claimedCount = 0;
         for (const [conditionId, indexSet] of uniqueConditions.entries()) {
             try {
-                await polymarketRelayerService.redeemPositions(user.wallet_index, conditionId, indexSet);
+                const txHash = await polymarketRelayerService.redeemPositions(user.wallet_index, conditionId, indexSet);
                 claimedCount++;
+                
+                // Update trade claim state in DB
+                try {
+                    await db.getClient()
+                        .from('prediction_trades')
+                        .update({
+                            claimed: true,
+                            claim_tx_hash: txHash || null
+                        })
+                        .eq('user_id', user.id)
+                        .eq('condition_id', conditionId);
+                } catch (dbErr: any) {
+                    console.warn(`[AutoClaim] DB update failed for claimed condition ${conditionId}:`, dbErr.message);
+                }
             } catch (e: any) {
                 // Expected if already claimed, or lost, or market not resolved yet
                 console.error("[AutoClaim] Manual redeem failed for condition", conditionId, ":", e.message);
@@ -3404,6 +3471,41 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
         res.json({ success: true, claimed: claimedCount });
     } catch (err: any) {
         console.error('[AutoClaim] Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/my-stats", async (req: Request, res: Response) => {
+    try {
+        const telegramUser = (req as any).telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const { data, error } = await db.getClient()
+            .from("prediction_user_stats")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.json({
+                total_trades: 0,
+                total_wins: 0,
+                total_losses: 0,
+                total_wagered: 0,
+                total_payout: 0,
+                realized_pnl: 0,
+                pending_claims: 0
+            });
+        }
+
+        return res.json(data);
+    } catch (err: any) {
+        console.error("[MINIAPP] Error in my-stats:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

@@ -444,3 +444,45 @@ export function startAutoClaimJob() {
         }
     }, 15 * 60 * 1000); // every 15 minutes
 }
+
+export function startPredictionSyncJob() {
+    console.log("⏰ Starting Prediction Trades Sync Job...");
+    
+    // Run sync immediately on startup
+    import("../jobs/syncPredictionTrades").then(({ syncPredictionTrades }) => {
+        syncPredictionTrades().catch(err => {
+            console.error("[JOB] Prediction trades initial sync error:", err);
+        });
+    });
+
+    // Run every 24 hours
+    setInterval(async () => {
+        try {
+            const { syncPredictionTrades } = await import("../jobs/syncPredictionTrades");
+            await syncPredictionTrades();
+        } catch (err) {
+            console.error("[JOB] Prediction trades sync cron error:", err);
+        }
+    }, 24 * 60 * 60 * 1000);
+}
+
+export function startPredictionResolutionJob() {
+    console.log("⏰ Starting Prediction Trades Resolution Job...");
+
+    // Run resolution checker immediately on startup
+    import("../jobs/resolvePredictionTrades").then(({ resolvePredictionTrades }) => {
+        resolvePredictionTrades().catch(err => {
+            console.error("[JOB] Prediction trades initial resolution check error:", err);
+        });
+    });
+
+    // Run every 10 minutes
+    setInterval(async () => {
+        try {
+            const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
+            await resolvePredictionTrades();
+        } catch (err) {
+            console.error("[JOB] Prediction trades resolution cron error:", err);
+        }
+    }, 10 * 60 * 1000);
+}
