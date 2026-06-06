@@ -111,6 +111,14 @@ export async function resolvePredictionTrades() {
             } catch (e: any) {
                 console.warn('[ResolveTrades] Stats RPC exception:', e.message);
             }
+
+            // Clear predictions cache so the new resolved status is instantly loaded
+            try {
+                const { polymarketService } = await import('../services/polymarket');
+                await polymarketService.clearUserPredictionsCache(trade.telegram_id);
+            } catch (cacheErr: any) {
+                console.warn('[ResolveTrades] Failed to clear user cache:', cacheErr.message);
+            }
         }
     }
 

@@ -3194,8 +3194,26 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
             }
         }
 
-        const { data, error } = await query.limit(100);
+        let { data, error } = await query.limit(100);
         if (error) throw error;
+
+        // On-demand resolution check if there are unresolved trades for this user
+        const hasUnresolved = (data || []).some((t: any) => !t.resolved && t.side === 'BUY');
+        if (hasUnresolved) {
+            try {
+                console.log(`[MINIAPP] Unresolved trades detected for user ${user.id}. Running on-demand resolution...`);
+                const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
+                await resolvePredictionTrades();
+                
+                // Re-fetch to get updated resolved state
+                const refetch = await query.limit(100);
+                if (!refetch.error && refetch.data) {
+                    data = refetch.data;
+                }
+            } catch (err: any) {
+                console.warn("[MINIAPP] On-demand resolution check failed:", err.message);
+            }
+        }
 
         const mappedTrades = (data || []).map((t: any) => ({
             id: t.id,
