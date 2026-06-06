@@ -563,7 +563,7 @@ class PolymarketService {
         }
 
         try {
-            const res = await polymarketGet("data-api.polymarket.com", "/trades", { user: proxyAddress, limit: "500" });
+            const res = await polymarketGet("data-api.polymarket.com", "/trades", { user_address: proxyAddress, limit: "500" });
             const trades = Array.isArray(res.data) ? res.data : [];
             const mapped = trades.map(t => ({ 
                 ...t, 
@@ -600,7 +600,7 @@ class PolymarketService {
         }
 
         try {
-            const res = await polymarketGet("data-api.polymarket.com", "/positions", { user: proxyAddress, sizeThreshold: "0.01" });
+            const res = await polymarketGet("data-api.polymarket.com", "/positions", { user_address: proxyAddress, size_threshold: "0.01" });
             const data = Array.isArray(res.data) ? res.data : [];
             positionsCache[cacheKey] = { data, timestamp: now };
             console.log(`[Positions] Fetched ${data.length} positions from Data API for wallet ${proxyAddress}`);

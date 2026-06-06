@@ -2640,7 +2640,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             let realizedPnl = activeRealizedPnl; // Include partial sells from active market
             try {
                 // Step 1: Try Data API cashPnl first (works for recently resolved ones still in API)
-                const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user=${proxyAddress}&sizeThreshold=0`, { signal: AbortSignal.timeout(5000) });
+                const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user_address=${proxyAddress}&size_threshold=0`, { signal: AbortSignal.timeout(5000) });
                 const allPositions: any[] = await allPositionsRes.json().catch(() => []);
                 const openConditionIds = new Set<string>();
                 if (Array.isArray(allPositions) && allPositions.length > 0) {
@@ -2651,7 +2651,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
 
                 // Step 2: Fetch all trade history to find closed/redeemed positions
-                const allTradesRes = await fetch(`https://data-api.polymarket.com/trades?user=${proxyAddress}&limit=500`, { signal: AbortSignal.timeout(8000) });
+                const allTradesRes = await fetch(`https://data-api.polymarket.com/trades?user_address=${proxyAddress}&limit=500`, { signal: AbortSignal.timeout(8000) });
                 const allTrades: any[] = await allTradesRes.json().catch(() => []);
                 if (Array.isArray(allTrades) && allTrades.length > 0) {
                     // Group by conditionId → track net buy cost and shares
