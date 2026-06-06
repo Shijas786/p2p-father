@@ -565,6 +565,44 @@ export function Predict({ user }: Props) {
         loadData();
     };
 
+    const handleGoToLiveMarket = async () => {
+        haptic('medium');
+        showToast("Refreshing live market...", "info");
+        try {
+            const snap = await api.predictions.getSnapshot();
+            if (snap.market) {
+                const currentMarket = activeMarketRef.current;
+                if (currentMarket && snap.market.slug !== currentMarket.slug) {
+                    // Switch to the new market
+                    activeMarketRef.current = snap.market;
+                    nextMarketRef.current = null;
+                    setActiveMarket(snap.market);
+                    if (snap.market.yesPrice && snap.market.noPrice) {
+                        setYesPrice(snap.market.yesPrice);
+                        setNoPrice(snap.market.noPrice);
+                    }
+                    setNextMarket(null);
+                    // Clear all stale states
+                    setPositions([]);
+                    polymarketWs.clearPositions();
+                    showToast("Switched to live round!", "success");
+                } else {
+                    const endsAt = new Date(snap.market.endsAt).getTime();
+                    if (Date.now() >= endsAt) {
+                        showToast("Next round is starting, please wait a few seconds...", "info");
+                    } else {
+                        showToast("Market refreshed!", "success");
+                    }
+                }
+            }
+            // Reload all data
+            await loadData();
+        } catch (e) {
+            console.error(e);
+            showToast("Failed to refresh live market", "error");
+        }
+    };
+
     const isLiveEnded = selectedRound === -1 && (timeLeft.mins === '00' && timeLeft.secs === '00' || !!nextMarket);
 
     const currentRoundTrades = (() => {
@@ -911,6 +949,10 @@ export function Predict({ user }: Props) {
                         ) : isLiveEnded && nextMarket ? (
                             <button className="pm-go-live-btn" onClick={handleGoToNextMarket} style={{ background: 'var(--pm-green)', color: '#000', border: 'none', boxShadow: '0 0 10px rgba(14,203,129,0.3)' }}>
                                 <span className="pm-live-dot" style={{ backgroundColor: '#000', animation: 'none' }}/> Next Market &gt;
+                            </button>
+                        ) : isLiveEnded ? (
+                            <button className="pm-go-live-btn" onClick={handleGoToLiveMarket} style={{ background: 'var(--pm-green)', color: '#000', border: 'none', boxShadow: '0 0 10px rgba(14,203,129,0.3)' }}>
+                                <span className="pm-live-dot" style={{ backgroundColor: '#000', animation: 'none' }}/> Go to Live Market &gt;
                             </button>
                         ) : (
                             <div className="pm-timer" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px'}}>
