@@ -252,6 +252,16 @@ export const api = {
         getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
         getBalance: () => request<{ balance: string }>('/predictions/balance'),
+        getSnapshot: () => request<{
+            balance: string;
+            positions: any[];
+            trades: any[];
+            recentTrades: any[];
+            depositAddress: string;
+            market: any;
+            history: any[];
+            realizedPnl: number;
+        }>('/predictions/snapshot'),
         getMarket: () => request<{
             market: any;
             yesPrice: { buyPrice: number; sellPrice: number };

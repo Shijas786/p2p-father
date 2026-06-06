@@ -99,44 +99,48 @@ export function Predict({ user }: Props) {
     // ── Load all data ───────────────────────────────────────────────────────
     const loadData = useCallback(async () => {
         setLoading(true);
-                // Fire background trade fetches independently so they don't block the UI
-        api.predictions.getTrades('?all=true')
-            .then(res => setTrades(res.trades ?? []))
-            .catch(console.error);
-            
-        api.predictions.getTrades()
-            .then(res => setRecentTrades(res.trades ?? []))
-            .catch(console.error);
-
         try {
-            // Await only the critical fast calls
-            const [histRes, balRes, posRes, depRes, marketRes] = await Promise.allSettled([
-                api.predictions.getHistory(),
-                api.predictions.getBalance(),
-                api.predictions.getPositions(),
-                api.predictions.getDepositWallet(),
-                api.predictions.getMarket(),
-            ]);
-
-            if (histRes.status === 'fulfilled' && histRes.value?.history) {
-                const parsed: Round[] = histRes.value.history.map((h: any) => ({
+            const snap = await api.predictions.getSnapshot();
+            
+            // Set balance
+            if (snap.balance !== undefined) {
+                setCashBalance(snap.balance);
+            }
+            // Set deposit address
+            if (snap.depositAddress !== undefined) {
+                setDepositAddress(snap.depositAddress);
+            }
+            // Set trades
+            if (snap.trades !== undefined) {
+                setTrades(snap.trades);
+            }
+            // Set recent trades
+            if (snap.recentTrades !== undefined) {
+                setRecentTrades(snap.recentTrades);
+            }
+            // Set initial outcome prices from snapshot
+            if (snap.market && snap.market.yesPrice && snap.market.noPrice) {
+                setYesPrice(snap.market.yesPrice);
+                setNoPrice(snap.market.noPrice);
+            }
+            // Set history
+            if (snap.history !== undefined) {
+                const parsed: Round[] = snap.history.map((h: any) => ({
                     time: h.time, open: h.open, close: h.close,
                     outcome: h.outcome, timestamp: h.timestamp,
                 }));
                 setHistory(parsed);
-                if (parsed.length > 0) setPriceToBeat(parsed[parsed.length - 1].open || 0);
+                if (parsed.length > 0) {
+                    setPriceToBeat(parsed[parsed.length - 1].open || 0);
+                }
             }
-            if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
-            if (posRes.status === 'fulfilled') setPositions(posRes.value.positions ?? []);
-            if (depRes.status === 'fulfilled') setDepositAddress(depRes.value.address ?? '');
-            
+
             // Sync WebSocket with backend positions to remove duplicates
-            if (posRes.status === 'fulfilled' && posRes.value?.positions) {
-                // Remove ws positions that are now in data API
-                const activeBtcMarket = marketRes.status === 'fulfilled' ? marketRes.value.market : null;
+            if (snap.positions) {
+                const activeBtcMarket = snap.market;
                 if (activeBtcMarket) {
                     const syncedAssets: string[] = [];
-                    for (const p of posRes.value.positions) {
+                    for (const p of snap.positions) {
                         if (p.outcome === 'UP') syncedAssets.push(activeBtcMarket.yesTokenId);
                         if (p.outcome === 'DOWN') syncedAssets.push(activeBtcMarket.noTokenId);
                     }
@@ -144,8 +148,12 @@ export function Predict({ user }: Props) {
                 }
                 
                 // Merge WS positions into data API positions
-                const basePositions = posRes.value.positions;
+                const basePositions = [...snap.positions];
                 const wsPositions = polymarketWs.getPositions();
+                
+                const yesPriceObj = activeBtcMarket?.yesPrice || { buyPrice: 0.5 };
+                const noPriceObj = activeBtcMarket?.noPrice || { buyPrice: 0.5 };
+
                 for (const wsPos of wsPositions) {
                     if (!activeBtcMarket) continue;
                     
@@ -153,48 +161,48 @@ export function Predict({ user }: Props) {
                     const isYes = assetLc === activeBtcMarket.yesTokenId.toLowerCase();
                     const isNo = assetLc === activeBtcMarket.noTokenId.toLowerCase();
                     
-                    if (!isYes && !isNo) continue; // Skip stale positions from old markets
+                    if (!isYes && !isNo) continue;
 
                     const mappedOutcome = isYes ? 'UP' : 'DOWN';
 
                     const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
                     if (idx >= 0) {
                         const oldQty = basePositions[idx].qty;
-                        basePositions[idx].qty += wsPos.size; // wsPos.size is negative on sell
+                        basePositions[idx].qty += wsPos.size;
                         
                         if (wsPos.size < 0 && oldQty > 0) {
-                            // On sell, deduct cost proportionally
                             const avgCost = basePositions[idx].cost / oldQty;
                             basePositions[idx].cost -= Math.abs(wsPos.size) * avgCost;
                         } else {
-                            // On buy, add cost at execution price
                             basePositions[idx].cost += wsPos.size * wsPos.price;
                         }
 
                         basePositions[idx].value += wsPos.size * basePositions[idx].currentPrice;
                         basePositions[idx].avg = basePositions[idx].qty > 0 ? basePositions[idx].cost / basePositions[idx].qty : 0;
                     } else {
+                        const execPrice = wsPos.price;
+                        const outcomePrice = mappedOutcome === 'UP' ? yesPriceObj.buyPrice : noPriceObj.buyPrice;
                         basePositions.push({
                             outcome: mappedOutcome,
                             qty: wsPos.size,
-                            avg: wsPos.price,
-                            currentPrice: wsPos.price,
-                            cost: wsPos.size * wsPos.price,
-                            value: wsPos.size * (mappedOutcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice),
+                            avg: execPrice,
+                            currentPrice: execPrice,
+                            cost: wsPos.size * execPrice,
+                            value: wsPos.size * outcomePrice,
                             returnAmt: 0,
                             returnPct: 0
                         });
                     }
                 }
                 
-                // Filter out any positions that have been fully sold (qty <= 0)
-                posRes.value.positions = basePositions.filter(p => p.qty > 0.001);
-
-                setPositions(posRes.value.positions);
+                const finalPositions = basePositions.filter(p => p.qty > 0.001);
+                setPositions(finalPositions);
             }
-
-        } catch (e) { console.error('[Predict] loadData fatal error:', e); }
-        finally { setLoading(false); }
+        } catch (e) {
+            console.error('[Predict] loadData fatal error:', e);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     // ── WebSocket Initialization ─────────────────────────────────────────────
@@ -430,17 +438,7 @@ export function Predict({ user }: Props) {
         return () => clearInterval(iv);
     }, [loadData]);
 
-    // ── Poll balance every 6s ────────────────────────────────────────
-    useEffect(() => {
-        const poll = async () => {
-            try {
-                const b = await api.predictions.getBalance();
-                if (b && b.balance) setCashBalance(b.balance);
-            } catch {}
-        };
-        const iv = setInterval(poll, 6000);
-        return () => clearInterval(iv);
-    }, []);
+
 
     useEffect(() => { loadData(); }, [loadData]);
 
@@ -554,6 +552,23 @@ export function Predict({ user }: Props) {
     };
 
     const displayedRounds = history.slice(0, 4);
+
+    if (loading && cashBalance === '0.00') {
+        return (
+            <div className="pm-page">
+                <header className="pm-topbar">
+                    <div className="pm-topbar-metrics">
+                        <div className="pm-skeleton-metric" />
+                        <div className="pm-skeleton-metric" />
+                    </div>
+                </header>
+                <div className="pm-skeleton-body">
+                    <div className="pm-skeleton-chart" />
+                    <div className="pm-skeleton-panel" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="pm-page">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
@@ -29,22 +29,37 @@ export function PredictProfile({ user }: Props) {
     const [claiming, setClaiming] = useState(false);
     const [realizedPnl, setRealizedPnl] = useState(0);
     
-    const loadData = () => {
-        api.predictions.getPositions(true).then((res: any) => {
-            if (res && res.positions) {
-                setPositions(res.positions);
-            }
-            if (typeof res?.realizedPnl === 'number') setRealizedPnl(res.realizedPnl);
-        }).catch((e: any) => console.error(e));
+    const loadData = useCallback(async () => {
+        try {
+            const [posRes, tradeRes] = await Promise.allSettled([
+                api.predictions.getPositions(true),
+                api.predictions.getTrades('?all=true')
+            ]);
 
-        api.predictions.getTrades('?all=true').then((res: any) => {
-            if (res && res.trades) setTrades(res.trades);
-        }).catch((e: any) => console.error(e));
-    };
+            if (posRes.status === 'fulfilled' && posRes.value) {
+                const res = posRes.value;
+                if (res.positions) {
+                    setPositions(res.positions);
+                }
+                if (typeof res.realizedPnl === 'number') {
+                    setRealizedPnl(res.realizedPnl);
+                }
+            }
+
+            if (tradeRes.status === 'fulfilled' && tradeRes.value) {
+                const res = tradeRes.value;
+                if (res.trades) {
+                    setTrades(res.trades);
+                }
+            }
+        } catch (e) {
+            console.error("[Profile] Error loading predictions data:", e);
+        }
+    }, []);
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [loadData]);
 
     const displayPositions = positions.filter((p: any) => subTab === 'active' ? p.qty > 0 : p.qty <= 0);
     const totalPositionsValue = displayPositions.reduce((acc, pos: any) => acc + (pos.value || 0), 0);

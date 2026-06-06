@@ -83,6 +83,7 @@ import { ethers } from "ethers";
 import { wallet as walletService } from "./wallet";
 import { env } from "../config/env";
 import { db } from "../db/client";
+import { redis } from "./redis";
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_API = "https://clob.polymarket.com";
@@ -291,6 +292,19 @@ class PolymarketService {
         const windowStartSeconds = Math.floor(now / 300000) * 300;
         const slug = `btc-updown-5m-${windowStartSeconds}`;
 
+        const cacheKey = "btc:active_market";
+        const staleCacheKey = "btc:active_market:stale";
+
+        // Try Redis cache first
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (cacheErr: any) {
+            console.warn("[Polymarket] Redis cache read error:", cacheErr.message);
+        }
+
         if (marketCache[slug] && now - marketCache[slug].timestamp < 5000) {
             try {
                 await this.getOutcomePrice(marketCache[slug].data.yesTokenId);
@@ -301,6 +315,8 @@ class PolymarketService {
                 return await this.getActiveBtcMarket();
             }
         }
+
+        let result: ActiveMarketInfo | null = null;
 
         try {
 
@@ -323,7 +339,7 @@ class PolymarketService {
                         try {
                             const tokens = typeof market.clobTokenIds === 'string' ? JSON.parse(market.clobTokenIds) : market.clobTokenIds;
                             if (Array.isArray(tokens) && tokens.length >= 2) {
-                                const result = {
+                                result = {
                                     conditionId: market.conditionId,
                                     yesTokenId: tokens[0], // YES (Up) outcome token ID
                                     noTokenId: tokens[1],  // NO (Down) outcome token ID
@@ -331,8 +347,6 @@ class PolymarketService {
                                     slug: market.slug,
                                     endsAt: market.endDate || new Date(Date.now() + 86400000).toISOString(),
                                 };
-                                marketCache[slug] = { data: result, timestamp: now };
-                                return result;
                             }
                         } catch (parseErr) {}
                     }
@@ -342,74 +356,98 @@ class PolymarketService {
             console.error("[Polymarket] Gamma active market fetch error:", err.message);
         }
 
-        // Try CLOB API as a secondary fallback if Gamma is blocked by Cloudflare (or deprecated)
-        try {
-            console.log(`[Polymarket] Trying CLOB /markets endpoint for slug: ${slug}...`);
-            const res = await polymarketGet("clob.polymarket.com", "/markets", {
-                params: { market_slug: slug },
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                    "Origin": "https://polymarket.com",
-                    "Referer": "https://polymarket.com/"
-                },
-                timeout: 5000,
-            });
-            const markets = res.data?.data || res.data || [];
-            const targetMarket = markets.find((m: any) => m.market_slug === slug);
-            
-            if (targetMarket && targetMarket.tokens && targetMarket.tokens.length >= 2) {
-                console.log("[Polymarket] Found active 5m BTC market via CLOB API!");
-                const result = {
-                    conditionId: targetMarket.condition_id,
-                    yesTokenId: targetMarket.tokens[0].token_id,
-                    noTokenId: targetMarket.tokens[1].token_id,
-                    question: targetMarket.question,
-                    slug: targetMarket.market_slug,
-                    endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
-                };
-                marketCache[slug] = { data: result, timestamp: Date.now() };
-                return result;
+        if (!result) {
+            // Try CLOB API as a secondary fallback if Gamma is blocked by Cloudflare (or deprecated)
+            try {
+                console.log(`[Polymarket] Trying CLOB /markets endpoint for slug: ${slug}...`);
+                const res = await polymarketGet("clob.polymarket.com", "/markets", {
+                    params: { market_slug: slug },
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                        "Accept": "application/json",
+                        "Origin": "https://polymarket.com",
+                        "Referer": "https://polymarket.com/"
+                    },
+                    timeout: 5000,
+                });
+                const markets = res.data?.data || res.data || [];
+                const targetMarket = markets.find((m: any) => m.market_slug === slug);
+                
+                if (targetMarket && targetMarket.tokens && targetMarket.tokens.length >= 2) {
+                    console.log("[Polymarket] Found active 5m BTC market via CLOB API!");
+                    result = {
+                        conditionId: targetMarket.condition_id,
+                        yesTokenId: targetMarket.tokens[0].token_id,
+                        noTokenId: targetMarket.tokens[1].token_id,
+                        question: targetMarket.question,
+                        slug: targetMarket.market_slug,
+                        endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
+                    };
+                }
+            } catch (err: any) {
+                console.error("[Polymarket] CLOB markets fetch error:", err.message);
             }
-        } catch (err: any) {
-            console.error("[Polymarket] CLOB markets fetch error:", err.message);
         }
 
-        // Fallback: Try searching CLOB API by tag or series if slug format changed
-        try {
-            console.log(`[Polymarket] Fallback: Searching CLOB API for active BTC markets...`);
-            const res = await polymarketGet("clob.polymarket.com", "/markets", {
-                params: { active: true },
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                },
-                timeout: 5000,
-            });
-            const markets = res.data?.data || res.data || [];
-            const targetMarket = markets.find((m: any) => 
-                m.active && 
-                !m.closed && 
-                m.tokens && 
-                m.tokens.length >= 2 && 
-                m.market_slug && m.market_slug.includes("btc-updown-5m")
-            );
+        if (!result) {
+            // Fallback: Try searching CLOB API by tag or series if slug format changed
+            try {
+                console.log(`[Polymarket] Fallback: Searching CLOB API for active BTC markets...`);
+                const res = await polymarketGet("clob.polymarket.com", "/markets", {
+                    params: { active: true },
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                        "Accept": "application/json",
+                    },
+                    timeout: 5000,
+                });
+                const markets = res.data?.data || res.data || [];
+                const targetMarket = markets.find((m: any) => 
+                    m.active && 
+                    !m.closed && 
+                    m.tokens && 
+                    m.tokens.length >= 2 && 
+                    m.market_slug && m.market_slug.includes("btc-updown-5m")
+                );
 
-            if (targetMarket) {
-                console.log("[Polymarket] Found active BTC market via fallback search!");
-                const result = {
-                    conditionId: targetMarket.condition_id,
-                    yesTokenId: targetMarket.tokens[0].token_id,
-                    noTokenId: targetMarket.tokens[1].token_id,
-                    question: targetMarket.question,
-                    slug: targetMarket.market_slug,
-                    endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
-                };
-                marketCache[slug] = { data: result, timestamp: Date.now() };
-                return result;
+                if (targetMarket) {
+                    console.log("[Polymarket] Found active BTC market via fallback search!");
+                    result = {
+                        conditionId: targetMarket.condition_id,
+                        yesTokenId: targetMarket.tokens[0].token_id,
+                        noTokenId: targetMarket.tokens[1].token_id,
+                        question: targetMarket.question,
+                        slug: targetMarket.market_slug,
+                        endsAt: targetMarket.end_date_iso || new Date(Date.now() + 86400000).toISOString(),
+                    };
+                }
+            } catch (err: any) {
+                console.error("[Polymarket] Fallback search error:", err.message);
             }
-        } catch (err: any) {
-            console.error("[Polymarket] Fallback search error:", err.message);
+        }
+
+        if (result) {
+            marketCache[slug] = { data: result, timestamp: Date.now() };
+            // Save to Redis
+            try {
+                const str = JSON.stringify(result);
+                await redis.setex(cacheKey, 60, str); // 60s TTL
+                await redis.setex(staleCacheKey, 86400, str); // 24h stale fallback
+            } catch (cacheErr: any) {
+                console.warn("[Polymarket] Redis cache write error:", cacheErr.message);
+            }
+            return result;
+        }
+
+        // All API fetches failed. Try stale fallback.
+        try {
+            const stale = await redis.get(staleCacheKey);
+            if (stale) {
+                console.log("[Polymarket] APIs unreachable. Serving stale cached active market.");
+                return JSON.parse(stale);
+            }
+        } catch (staleErr: any) {
+            console.warn("[Polymarket] Redis stale cache read error:", staleErr.message);
         }
 
         throw new Error("Polymarket active market lookup failed. Market APIs are currently unreachable.");

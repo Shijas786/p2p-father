@@ -2498,10 +2498,11 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             if (!proxyAddress) {
                 return res.json({ positions: [] });
             }
-            // Fetch both trades and positions
-            const [tradesRes, positionsRes] = await Promise.all([
+            // Fetch trades, positions, and active market in parallel
+            const [tradesRes, positionsRes, market] = await Promise.all([
                 polymarketService.getTradesForProxy(proxyAddress),
-                polymarketService.getPositionsForProxy(proxyAddress).catch(() => [])
+                polymarketService.getPositionsForProxy(proxyAddress).catch(() => []),
+                polymarketService.getActiveBtcMarket()
             ]);
 
             // Auto-claim background check using Data API positions
@@ -2540,8 +2541,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
             }
 
-            // Get current market to know token IDs
-            const market = await polymarketService.getActiveBtcMarket();
+            // Get outcome prices in parallel
             const priceResults = await Promise.allSettled([
                 polymarketService.getOutcomePrice(market.yesTokenId, false),
                 polymarketService.getOutcomePrice(market.noTokenId, true),
@@ -2735,6 +2735,305 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         }
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions positions error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/snapshot", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+        if (!proxyAddress) {
+            return res.json({
+                balance: "0.00",
+                positions: [],
+                trades: [],
+                recentTrades: [],
+                depositAddress: "",
+                market: null,
+                history: [],
+                realizedPnl: 0
+            });
+        }
+
+        // Fetch everything in parallel
+        const [balanceRes, marketRes, tradesRes, positionsRes, historyRes] = await Promise.allSettled([
+            polymarketRelayerService.getPusdBalance(user.wallet_index),
+            polymarketService.getActiveBtcMarket(),
+            polymarketService.getTradesForProxy(proxyAddress),
+            polymarketService.getPositionsForProxy(proxyAddress).catch(() => []),
+            fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => [])
+        ]);
+
+        const balance = balanceRes.status === 'fulfilled' ? balanceRes.value : "0.00";
+        const market = marketRes.status === 'fulfilled' ? marketRes.value : null;
+        const rawTrades = tradesRes.status === 'fulfilled' ? tradesRes.value : [];
+        const positionsData = positionsRes.status === 'fulfilled' ? positionsRes.value : [];
+        const klines = historyRes.status === 'fulfilled' ? historyRes.value : [];
+
+        // Compute YES and NO prices if active market exists
+        let yesPrice = { buyPrice: 0.5, sellPrice: 0.5 };
+        let noPrice = { buyPrice: 0.5, sellPrice: 0.5 };
+        if (market) {
+            const priceResults = await Promise.allSettled([
+                polymarketService.getOutcomePrice(market.yesTokenId, false),
+                polymarketService.getOutcomePrice(market.noTokenId, true),
+            ]);
+            if (priceResults[0].status === 'fulfilled') yesPrice = priceResults[0].value;
+            if (priceResults[1].status === 'fulfilled') noPrice = priceResults[1].value;
+        }
+
+        // Auto-claim background check
+        for (const p of positionsData) {
+            if (p.redeemable && p.size > 0 && p.conditionId) {
+                const attemptKey = `${user.wallet_index}-${p.conditionId}`;
+                if (!attemptedRedeems.has(attemptKey)) {
+                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
+                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
+                    const indexSet = outcomeIndex === 0 ? 1 : 2;
+                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
+                        attemptedRedeems.add(attemptKey);
+                    }).catch(async (e: any) => {
+                        const msg: string = e?.message || '';
+                        if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
+                            const supabase = (db as any).getClient();
+                            try {
+                                await supabase.from('autoclaim_skips').upsert({
+                                    skip_key: attemptKey,
+                                    condition_id: p.conditionId,
+                                    wallet_index: user.wallet_index,
+                                    status: 'losing_skip',
+                                    reason: `inline: ${msg.slice(0, 80)}`,
+                                    created_at: new Date().toISOString(),
+                                }, { onConflict: 'skip_key' });
+                            } catch (_) {}
+                            attemptedRedeems.add(attemptKey);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Process positions & trades
+        const yesTokenIdLc = market ? market.yesTokenId.toLowerCase() : "";
+        const noTokenIdLc = market ? market.noTokenId.toLowerCase() : "";
+
+        const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
+        let activeRealizedPnl = 0;
+        const sortedTrades = [...(rawTrades || [])].reverse();
+
+        for (const trade of sortedTrades) {
+            const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
+            const isUp = market ? tradeAssetLc === yesTokenIdLc : false;
+            const isDown = market ? tradeAssetLc === noTokenIdLc : false;
+            if (!isUp && !isDown) continue;
+
+            const key = isUp ? "UP" : "DOWN";
+            const qty = parseFloat(trade.size ?? "0");
+            const price = parseFloat(trade.price ?? "0");
+            const isSell = trade.side === "SELL";
+
+            if (!positionMap[key]) {
+                positionMap[key] = {
+                    outcome: isUp ? 'UP' : 'DOWN',
+                    asset: tradeAssetLc,
+                    title: trade.title,
+                    qty: 0,
+                    totalCost: 0,
+                    avgPrice: 0,
+                    currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
+                };
+            }
+
+            if (isSell) {
+                const avgEntryPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
+                activeRealizedPnl += (price - avgEntryPrice) * qty;
+                positionMap[key].qty -= qty;
+                positionMap[key].totalCost -= avgEntryPrice * qty;
+            } else {
+                positionMap[key].qty += qty;
+                positionMap[key].totalCost += qty * price;
+            }
+        }
+
+        // Sync qty with Data API
+        for (const key of Object.keys(positionMap)) {
+            if (!market) continue;
+            const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
+            const activePos = positionsData.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
+
+            if (positionMap[key].qty > 0) {
+                positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
+            }
+
+            if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
+                const syncedQty = parseFloat(activePos.size);
+                if (activePos.initialValue !== undefined) {
+                    const initialValue = parseFloat(activePos.initialValue);
+                    positionMap[key].qty = syncedQty;
+                    positionMap[key].totalCost = initialValue;
+                    positionMap[key].avgPrice = initialValue / syncedQty;
+                } else {
+                    const oldQty = positionMap[key].qty;
+                    if (oldQty > 0 && syncedQty !== oldQty) {
+                        positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                    }
+                    positionMap[key].qty = syncedQty;
+                    positionMap[key].avgPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
+                }
+            } else if (activePos && activePos.redeemable) {
+                positionMap[key].qty = 0;
+            } else if (!activePos) {
+                // Keep trade loop values
+            } else {
+                positionMap[key].qty = 0;
+            }
+        }
+
+        // Realized PNL
+        let realizedPnl = activeRealizedPnl;
+        try {
+            const openConditionIds = new Set<string>();
+            for (const p of positionsData) {
+                realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
+                openConditionIds.add(p.conditionId);
+            }
+
+            const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
+            for (const t of rawTrades) {
+                const cid = t.conditionId;
+                if (!cid) continue;
+                const size = parseFloat(t.size ?? '0');
+                const price = parseFloat(t.price ?? '0');
+                if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: t.outcomeIndex ?? 1 };
+                if (t.side === 'BUY') {
+                    conditionMap[cid].cost += size * price;
+                    conditionMap[cid].shares += size;
+                } else if (t.side === 'SELL') {
+                    conditionMap[cid].cost -= size * price;
+                    conditionMap[cid].shares -= size;
+                }
+            }
+
+            const { ethers } = await import('ethers');
+            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
+            const ctf = new ethers.Contract(
+                '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+                [
+                    'function payoutDenominator(bytes32) view returns (uint256)',
+                    'function payoutNumerators(bytes32, uint256) view returns (uint256)'
+                ],
+                provider
+            );
+
+            for (const [cid, data] of Object.entries(conditionMap)) {
+                if (openConditionIds.has(cid)) continue;
+                if (data.shares <= 0.001) continue;
+                try {
+                    const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
+                    if (denominator === 0n) continue;
+                    const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
+                    const payoutNum = await ctf.payoutNumerators(cid as `0x${string}`, pnIndex);
+                    const payoutFraction = Number(payoutNum) / Number(denominator);
+                    realizedPnl += data.shares * payoutFraction - data.cost;
+                } catch {}
+            }
+        } catch (e: any) {
+            console.warn('[MINIAPP] Snapshot realized PNL error:', e.message);
+        }
+
+        const positions = Object.values(positionMap)
+            .filter(p => p.qty > 0.001)
+            .map(p => {
+                const effectivePrice = p.currentPrice ?? p.avgPrice;
+                const value = p.qty * effectivePrice;
+                const cost = p.qty * p.avgPrice;
+                const returnAmt = value - cost;
+                const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
+                return {
+                    outcome: p.outcome,
+                    qty: parseFloat(p.qty.toFixed(2)),
+                    avg: parseFloat(p.avgPrice.toFixed(2)),
+                    currentPrice: parseFloat(effectivePrice.toFixed(2)),
+                    value: parseFloat(value.toFixed(2)),
+                    cost: parseFloat(cost.toFixed(2)),
+                    returnAmt: parseFloat(returnAmt.toFixed(2)),
+                    returnPct: parseFloat(returnPct.toFixed(2)),
+                    title: p.title,
+                };
+            });
+
+        const mappedTrades = [];
+        for (const t of rawTrades) {
+            const assetLc = (t.asset_id || "").toLowerCase();
+            const yesLc = yesTokenIdLc;
+            const noLc = noTokenIdLc;
+            const outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
+
+            const ti = t as any;
+            let ts = Date.now();
+            if (ti.create_time) ts = new Date(ti.create_time).getTime();
+            else if (ti.timestamp || ti.matched_time) {
+                const raw = (ti.timestamp || ti.matched_time).toString();
+                if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
+                else {
+                    const p = parseInt(raw);
+                    if (p > 0 && p < 2000000000) ts = p * 1000;
+                    else if (p > 0) ts = p;
+                }
+            }
+
+            mappedTrades.push({
+                id: ti.id ?? ti.trade_id,
+                side: ti.side,
+                outcome,
+                conditionId: ti.market,
+                qty: parseFloat(ti.size ?? "0"),
+                price: parseFloat(ti.price ?? "0"),
+                cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
+                timestamp: ts,
+            });
+        }
+        mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
+
+        const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
+        
+        let parsedHistory: any[] = [];
+        if (Array.isArray(klines)) {
+            parsedHistory = klines.map((d: any) => {
+                const openTime = d[0];
+                const openPrice = parseFloat(d[1]);
+                const closePrice = parseFloat(d[4]);
+                const isUp = closePrice > openPrice;
+                const timeStr = new Date(openTime).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).replace(' ', '');
+                return {
+                    time: timeStr,
+                    open: openPrice,
+                    close: closePrice,
+                    outcome: isUp ? 'UP' : 'DOWN',
+                    timestamp: openTime,
+                };
+            }).reverse();
+        }
+
+        res.json({
+            balance,
+            positions,
+            trades: mappedTrades.slice(0, 50),
+            recentTrades: recentTrades.slice(0, 10),
+            depositAddress: proxyAddress,
+            market: market ? {
+                ...market,
+                yesPrice,
+                noPrice
+            } : null,
+            history: parsedHistory,
+            realizedPnl: parseFloat(realizedPnl.toFixed(2))
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Snapshot endpoint error:", err);
         res.status(500).json({ error: err.message });
     }
 });
