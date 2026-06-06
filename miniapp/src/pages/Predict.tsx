@@ -898,7 +898,15 @@ export function Predict({ user }: Props) {
                         </div>
                     </div>
                     <div className="pm-timer-block">
-                        {selectedRound === -1 ? (
+                        {selectedRound !== -1 ? (
+                            <button className="pm-go-live-btn" onClick={() => { haptic('selection'); navigate('/predict'); setSelectedRound(-1); }}>
+                                <span className="pm-live-dot"/> Go to live market &gt;
+                            </button>
+                        ) : isLiveEnded && nextMarket ? (
+                            <button className="pm-go-live-btn" onClick={handleGoToNextMarket} style={{ background: 'var(--pm-green)', color: '#000', border: 'none', boxShadow: '0 0 10px rgba(14,203,129,0.3)' }}>
+                                <span className="pm-live-dot" style={{ backgroundColor: '#000', animation: 'none' }}/> Next Market &gt;
+                            </button>
+                        ) : (
                             <div className="pm-timer" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0px'}}>
                                 <div className="pm-simple-timer">
                                     <div className="pm-simple-timer-unit">
@@ -918,10 +926,6 @@ export function Predict({ user }: Props) {
                                     </div>
                                 </div>
                             </div>
-                        ) : (
-                            <button className="pm-go-live-btn" onClick={() => { haptic('selection'); navigate('/predict'); setSelectedRound(-1); }}>
-                                <span className="pm-live-dot"/> Go to live market &gt;
-                            </button>
                         )}
                     </div>
                 </div>
