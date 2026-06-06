@@ -54,13 +54,22 @@ async function resolveWithDoH(hostname: string): Promise<string> {
 
 const customHttpsAgent = new https.Agent({
     lookup: (hostname, _options, callback) => {
-        if (hostname.includes('polymarket.com')) {
-            resolveWithDoH(hostname)
-                .then(ip => callback(null, ip, 4))
-                .catch(err => callback(err, "", 4));
-        } else {
-            import('dns').then(dns => dns.lookup(hostname, _options, callback));
-        }
+        import('dns').then(dns => {
+            dns.lookup(hostname, _options, (err, address, family) => {
+                if (!err && address) {
+                    callback(null, address, family);
+                } else if (hostname.includes('polymarket.com')) {
+                    // System DNS failed (likely blocked by local ISP). Use hardcoded Cloudflare IP fallback.
+                    const hardcodedIp = POLYMARKET_IPS[hostname] || POLYMARKET_IPS["data-api.polymarket.com"] || "104.18.34.205";
+                    console.log(`[DNS] System DNS lookup failed for ${hostname}. Using hardcoded fallback IP: ${hardcodedIp}`);
+                    callback(null, hardcodedIp, 4);
+                } else {
+                    callback(err, address || "", family || 4);
+                }
+            });
+        }).catch(err => {
+            callback(err, "", 4);
+        });
     }
 });
 // ==========================================
