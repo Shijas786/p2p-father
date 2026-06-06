@@ -240,10 +240,29 @@ export function startAutoClaimJob() {
             // ── Load persisted losing skips from DB (survives restarts) ──────
             await loadPersistentSkips(client);
 
-            const { data: users, error } = await client
+            // Filter users to only those who have actually placed a bet in Predict feature
+            let targetTelegramIds: number[] | null = null;
+            try {
+                const { data: activeTrades } = await client
+                    .from("miniapp_trades")
+                    .select("telegram_id");
+                if (activeTrades && activeTrades.length > 0) {
+                    targetTelegramIds = Array.from(new Set(activeTrades.map((t: any) => t.telegram_id)));
+                }
+            } catch (tradeErr: any) {
+                console.warn("[AutoClaim] Failed to query miniapp_trades for optimization (falling back to all users):", tradeErr.message);
+            }
+
+            let query = client
                 .from("users")
                 .select("id, wallet_index, deposit_wallet_address, telegram_id")
                 .not("deposit_wallet_address", "is", null);
+
+            if (targetTelegramIds && targetTelegramIds.length > 0) {
+                query = query.in("telegram_id", targetTelegramIds);
+            }
+
+            const { data: users, error } = await query;
 
             if (error || !users) return;
 
@@ -408,5 +427,5 @@ export function startAutoClaimJob() {
         } finally {
             isRunning = false;
         }
-    }, 60 * 1000); // every 60 seconds
+    }, 15 * 60 * 1000); // every 15 minutes
 }
