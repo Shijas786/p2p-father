@@ -86,11 +86,90 @@ export function PredictProfile({ user }: Props) {
         loadData();
     }, [loadData]);
 
+    const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '1Y' | 'ALL'>('ALL');
+
     const displayPositions = positions.filter((p: any) => subTab === 'active' ? p.qty > 0 : p.qty <= 0);
     const totalPositionsValue = displayPositions.reduce((acc, pos: any) => acc + (pos.value || 0), 0);
-    const predictionsCount = trades.length;
     const unrealizedPnl = positions.reduce((sum, p) => sum + (p.returnAmt || 0), 0);
-    const totalPnl = unrealizedPnl + realizedPnl;
+
+    // Timeframe filtering
+    const now = Date.now();
+    let cutoff = 0;
+    if (timeframe === '1D') cutoff = now - 24 * 60 * 60 * 1000;
+    else if (timeframe === '1W') cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    else if (timeframe === '1M') cutoff = now - 30 * 24 * 60 * 60 * 1000;
+    else if (timeframe === '1Y') cutoff = now - 365 * 24 * 60 * 60 * 1000;
+
+    const filteredTrades = trades.filter((t: any) => timeframe === 'ALL' || t.timestamp >= cutoff);
+    const predictionsCount = filteredTrades.length;
+
+    // Filter resolved trades for cumulative PnL chart
+    const resolvedTradesInTimeframe = [...filteredTrades]
+        .filter((t: any) => t.resolved)
+        .sort((a: any, b: any) => a.timestamp - b.timestamp);
+
+    // Calculate cumulative PnL points
+    let cumulative = 0;
+    const chartPoints = resolvedTradesInTimeframe.map((t: any) => {
+        cumulative += t.pnlUsdc;
+        return { x: t.timestamp, y: cumulative };
+    });
+
+    const realizedPnlForTimeframe = cumulative;
+
+    // Add starting point
+    if (chartPoints.length > 0) {
+        chartPoints.unshift({ x: resolvedTradesInTimeframe[0].timestamp - 60000, y: 0 });
+    } else {
+        const start = cutoff > 0 ? cutoff : now - 3600000;
+        chartPoints.push({ x: start, y: 0 });
+        chartPoints.push({ x: now, y: 0 });
+    }
+
+    const xCoords = chartPoints.map(p => p.x);
+    const yCoords = chartPoints.map(p => p.y);
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    let minY = Math.min(...yCoords);
+    let maxY = Math.max(...yCoords);
+
+    if (minY === maxY) {
+        minY = minY - 1;
+        maxY = maxY + 1;
+    } else {
+        const diff = maxY - minY;
+        minY = minY - diff * 0.1;
+        maxY = maxY + diff * 0.1;
+    }
+
+    const spanX = maxX - minX || 1;
+    const spanY = maxY - minY || 2;
+
+    const svgWidth = 400;
+    const svgHeight = 60;
+    const normalizedPoints = chartPoints.map(p => {
+        const x = ((p.x - minX) / spanX) * svgWidth;
+        const y = svgHeight - (((p.y - minY) / spanY) * (svgHeight - 10) + 5);
+        return { x, y };
+    });
+
+    let pathD = '';
+    let fillD = '';
+    if (normalizedPoints.length > 0) {
+        pathD = `M ${normalizedPoints[0].x.toFixed(1)} ${normalizedPoints[0].y.toFixed(1)}`;
+        for (let i = 1; i < normalizedPoints.length; i++) {
+            pathD += ` L ${normalizedPoints[i].x.toFixed(1)} ${normalizedPoints[i].y.toFixed(1)}`;
+        }
+        fillD = `${pathD} L ${normalizedPoints[normalizedPoints.length - 1].x.toFixed(1)} ${svgHeight} L ${normalizedPoints[0].x.toFixed(1)} ${svgHeight} Z`;
+    }
+
+    const pnlTimeframeLabels = {
+        '1D': 'Past 24 Hours',
+        '1W': 'Past 7 Days',
+        '1M': 'Past 30 Days',
+        '1Y': 'Past Year',
+        'ALL': 'All Time',
+    };
 
     return (
         <div className="pm-prof-page">
@@ -116,7 +195,9 @@ export function PredictProfile({ user }: Props) {
                             <p>Positions</p>
                         </div>
                         <div className="pm-prof-stat">
-                            <h3 className={realizedPnl >= 0 ? 'green' : 'red'}>{realizedPnl >= 0 ? '+$' : '-$'}{Math.abs(realizedPnl).toFixed(2)}</h3>
+                            <h3 className={realizedPnlForTimeframe >= 0 ? 'green' : 'red'}>
+                                {realizedPnlForTimeframe >= 0 ? '+$' : '-$'}{Math.abs(realizedPnlForTimeframe).toFixed(2)}
+                            </h3>
                             <p>Realized PNL</p>
                         </div>
                         <div className="pm-prof-stat">
@@ -130,33 +211,38 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-chart-header">
                         <div className="pm-prof-chart-left">
                             <span className="pm-prof-pnl-label"><span className="pm-prof-pnl-dot"/> Realized Profit/Loss</span>
-                            <div className={`pm-prof-pnl-amount ${realizedPnl >= 0 ? 'green' : 'red'}`}>
-                                {realizedPnl >= 0 ? '+$' : '-$'}{Math.abs(realizedPnl).toFixed(2)}
-                                {realizedPnl >= 0 ? (
+                            <div className={`pm-prof-pnl-amount ${realizedPnlForTimeframe >= 0 ? 'green' : 'red'}`}>
+                                {realizedPnlForTimeframe >= 0 ? '+$' : '-$'}{Math.abs(realizedPnlForTimeframe).toFixed(2)}
+                                {realizedPnlForTimeframe >= 0 ? (
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 ) : (
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
                                 )}
                             </div>
-                            <span className="pm-prof-pnl-time">All Time</span>
+                            <span className="pm-prof-pnl-time">{pnlTimeframeLabels[timeframe]}</span>
                         </div>
                         <div className="pm-prof-chart-right">
                             <div className="pm-prof-timeframes">
-                                {['1D', '1W', '1M', '1Y', 'ALL'].map(tf => (
-                                    <button key={tf} className={`pm-prof-tf-btn ${tf === '1D' ? 'active' : ''}`}>{tf}</button>
+                                {(['1D', '1W', '1M', '1Y', 'ALL'] as const).map(tf => (
+                                    <button 
+                                        key={tf} 
+                                        onClick={() => { haptic('light'); setTimeframe(tf); }} 
+                                        className={`pm-prof-tf-btn ${tf === timeframe ? 'active' : ''}`}
+                                    >
+                                        {tf}
+                                    </button>
                                 ))}
                             </div>
                         </div>
                     </div>
                     <div className="pm-prof-chart-area">
-                        {/* Mock SVG Chart line */}
-                        <svg width="100%" height="60" viewBox="0 0 400 80" preserveAspectRatio="none">
-                            <path d="M0,50 C20,40 30,30 50,30 C70,30 80,60 100,60 L280,60 C300,60 320,50 340,40 C360,30 380,10 400,0" fill="none" stroke="#6028ff" strokeWidth="2" />
+                        <svg width="100%" height="60" viewBox="0 0 400 60" preserveAspectRatio="none">
+                            {pathD && <path d={pathD} fill="none" stroke="#6028ff" strokeWidth="2" />}
                             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#6028ff" stopOpacity="0.2" />
                                 <stop offset="100%" stopColor="#6028ff" stopOpacity="0" />
                             </linearGradient>
-                            <path d="M0,50 C20,40 30,30 50,30 C70,30 80,60 100,60 L280,60 C300,60 320,50 340,40 C360,30 380,10 400,0 L400,80 L0,80 Z" fill="url(#chartGradient)" />
+                            {fillD && <path d={fillD} fill="url(#chartGradient)" />}
                         </svg>
                     </div>
 

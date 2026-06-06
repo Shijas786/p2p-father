@@ -3289,6 +3289,18 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
             }
         }
         
+        if (claimedCount > 0) {
+            try {
+                await polymarketService.clearUserPredictionsCache(user.telegram_id);
+                const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address).catch(() => null);
+                if (proxyAddress) {
+                    polymarketService.clearUserCache(proxyAddress);
+                }
+            } catch (cacheErr: any) {
+                console.warn("[AutoClaim] Failed to clear caches:", cacheErr.message);
+            }
+        }
+        
         res.json({ success: true, claimed: claimedCount });
     } catch (err: any) {
         console.error('[AutoClaim] Error:', err.message);
