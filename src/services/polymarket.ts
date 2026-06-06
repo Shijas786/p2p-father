@@ -56,7 +56,7 @@ async function resolveWithDoH(hostname: string): Promise<string> {
     return aRecords[aRecords.length - 1].data; // last A record
 }
 
-const customHttpsAgent = new https.Agent({
+export const customHttpsAgent = new https.Agent({
     lookup: (hostname, _options, callback) => {
         import('dns').then(dns => {
             dns.lookup(hostname, _options, (err, address, family) => {

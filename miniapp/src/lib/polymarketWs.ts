@@ -33,7 +33,10 @@ class PolymarketWsClient {
         }
 
         this.credentials = { apiKey, secret, passphrase };
-        this.ws = new WebSocket('wss://ws-subscriptions-clob.polymarket.com/ws/user');
+        const host = window.location.host;
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${proto}//${host}/ws/polymarket-user`;
+        this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
             console.log('[Polymarket WS] Connected to user channel');

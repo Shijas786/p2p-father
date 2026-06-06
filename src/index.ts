@@ -7,6 +7,7 @@ import path from "path";
 import axios from "axios";
 
 import { miniappRouter } from "./api/miniapp";
+import { customHttpsAgent } from "./services/polymarket";
 
 async function main() {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -346,6 +347,95 @@ async function main() {
         if (lastPrice) client.send(JSON.stringify({ p: lastPrice }));
         client.on("close", () => clients.delete(client));
         client.on("error", () => clients.delete(client));
+    });
+
+    // ── Polymarket User WebSocket Proxy ─────────────────────────────
+    // Indian ISPs block ws-subscriptions-clob.polymarket.com.
+    // We proxy/tunnel user WebSocket subscriptions through our Railway server.
+    const userWss = new WebSocketServer({ server, path: "/ws/polymarket-user" });
+
+    userWss.on("connection", (clientWs) => {
+        console.log("[User WS Proxy] Client connected");
+
+        let polyWs: any = null;
+        let isClosed = false;
+
+        const closeConnections = () => {
+            if (isClosed) return;
+            isClosed = true;
+            console.log("[User WS Proxy] Closing connections");
+            try {
+                clientWs.close();
+            } catch {}
+            if (polyWs) {
+                try {
+                    polyWs.close();
+                } catch {}
+            }
+        };
+
+        try {
+            polyWs = new WebSocket("wss://ws-subscriptions-clob.polymarket.com/ws/user", {
+                agent: customHttpsAgent
+            });
+        } catch (err: any) {
+            console.error("[User WS Proxy] Error creating Polymarket WS connection:", err.message);
+            closeConnections();
+            return;
+        }
+
+        polyWs.on("open", () => {
+            console.log("[User WS Proxy] Connected to Polymarket");
+        });
+
+        polyWs.on("message", (data: any) => {
+            if (isClosed) return;
+            try {
+                if (clientWs.readyState === WebSocket.OPEN) {
+                    clientWs.send(data.toString());
+                }
+            } catch (err: any) {
+                console.error("[User WS Proxy] Error sending data to client:", err.message);
+            }
+        });
+
+        polyWs.on("close", () => {
+            console.log("[User WS Proxy] Polymarket connection closed");
+            closeConnections();
+        });
+
+        polyWs.on("error", (err: any) => {
+            console.error("[User WS Proxy] Polymarket connection error:", err.message);
+            closeConnections();
+        });
+
+        clientWs.on("message", (data: any) => {
+            if (isClosed) return;
+            const messageStr = data.toString();
+
+            const sendToPoly = () => {
+                if (polyWs && polyWs.readyState === WebSocket.OPEN) {
+                    polyWs.send(messageStr);
+                } else if (polyWs && polyWs.readyState === WebSocket.CONNECTING) {
+                    polyWs.once("open", () => {
+                        if (!isClosed && polyWs.readyState === WebSocket.OPEN) {
+                            polyWs.send(messageStr);
+                        }
+                    });
+                }
+            };
+            sendToPoly();
+        });
+
+        clientWs.on("close", () => {
+            console.log("[User WS Proxy] Client connection closed");
+            closeConnections();
+        });
+
+        clientWs.on("error", (err: any) => {
+            console.error("[User WS Proxy] Client connection error:", err.message);
+            closeConnections();
+        });
     });
 
     server.listen(port, () => {
