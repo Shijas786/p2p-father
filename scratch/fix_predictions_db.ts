@@ -1,42 +1,30 @@
-/**
- * syncPredictionTrades.ts
- * Backfills prediction_trades from Polymarket CLOB for all users who have a proxy.
- * Run once on deploy, then daily via cron.
- */
 import crypto from 'crypto';
-import { db } from '../db/client';
-import { polymarketService } from '../services/polymarket';
-import { polymarketRelayerService } from '../services/relayer';
+import { db } from "../src/db/client";
+import { polymarketService } from "../src/services/polymarket";
+import { polymarketRelayerService } from "../src/services/relayer";
+import { resolvePredictionTrades } from "../src/jobs/resolvePredictionTrades";
 
-export async function syncPredictionTrades() {
-    console.log('[SyncTrades] Starting backfill...');
-
+async function main() {
     const supabase = db.getClient();
 
-    // Optimize: Fetch only users who have active prediction stats (placed at least 1 trade)
-    const { data: activeStats } = await supabase
-        .from('prediction_user_stats')
-        .select('user_id');
+    console.log("🧹 Clearing existing trade tables...");
+    await supabase.from("prediction_trades").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("prediction_user_stats").delete().neq("user_id", "00000000-0000-0000-0000-000000000000");
 
-    const activeUserIds = (activeStats || []).map(s => s.user_id);
-    if (activeUserIds.length === 0) {
-        console.log('[SyncTrades] No active prediction users to sync.');
-        return;
-    }
-
-    // Fetch details for active users only
+    console.log("🔄 Fetching all active proxy users...");
     const { data: users } = await supabase
         .from('users')
         .select('id, telegram_id, username, wallet_index, deposit_wallet_address')
-        .in('id', activeUserIds)
         .not('wallet_index', 'is', null)
-        .not('deposit_wallet_address', 'is', null);
+        .not('deposit_wallet_address', 'is', null)
+        .not('polymarket_api_key', 'is', null);
 
     if (!users || users.length === 0) {
-        console.log('[SyncTrades] No active users matched proxy details.');
+        console.log("No active users with Polymarket API keys to sync.");
         return;
     }
 
+    console.log(`🔄 Syncing trades for ${users.length} users with correct outcomes...`);
     let totalInserted = 0;
     for (const user of users) {
         try {
@@ -88,18 +76,19 @@ export async function syncPredictionTrades() {
                 .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
 
             if (error) {
-                console.warn(`[SyncTrades] Upsert error for user ${user.telegram_id}:`, error.message);
+                console.warn(`Upsert error for user ${user.telegram_id}:`, error.message);
             } else {
                 totalInserted += rows.length;
-                console.log(`[SyncTrades] User ${user.telegram_id}: synced ${rows.length} trades`);
+                console.log(`User ${user.telegram_id}: synced ${rows.length} trades`);
             }
-
-            // Rate-limit: don't hammer the CLOB API
-            await new Promise(r => setTimeout(r, 300));
         } catch (e: any) {
-            console.warn(`[SyncTrades] Failed for user ${user.telegram_id}:`, e.message);
+            console.warn(`Failed for user ${user.telegram_id}:`, e.message);
         }
     }
 
-    console.log(`[SyncTrades] Done. Inserted/updated ${totalInserted} trades across ${users.length} users.`);
+    console.log(`Synced ${totalInserted} trades. Running resolution...`);
+    await resolvePredictionTrades();
+    console.log("✅ Reset and re-sync fully completed!");
 }
+
+main().catch(console.error);

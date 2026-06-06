@@ -2420,7 +2420,7 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
                             telegram_id: user.telegram_id,
                             username: user.username,
                             proxy_address: proxyAddress,
-                            clob_trade_id: t.id ?? t.trade_id ?? null,
+                            clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
                             condition_id: t.market ?? t.conditionId ?? '',
                             token_id: assetLc,
                             outcome,
