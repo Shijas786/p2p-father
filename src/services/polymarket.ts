@@ -13,16 +13,20 @@ const POLYMARKET_IPS: Record<string, string> = {
 };
 
 async function polymarketGet(hostname: string, path: string, params?: any, extraOptions?: any) {
+    const isConfig = params && (params.params || params.headers || params.timeout);
+    const actualParams = isConfig ? params.params : params;
+    const actualOptions = isConfig ? { ...params, ...extraOptions } : extraOptions;
+
     return axios.get(`https://${hostname}${path}`, {
-        params,
-        timeout: 8000,
+        params: actualParams,
+        timeout: actualOptions?.timeout || 8000,
         headers: {
             "User-Agent": "Mozilla/5.0 (compatible; P2PFather/1.0)",
             "Accept": "application/json",
-            ...(extraOptions?.headers || {})
+            ...(actualOptions?.headers || {})
         },
         httpsAgent: customHttpsAgent,
-        ...extraOptions
+        ...actualOptions
     });
 }
 // ==========================================
