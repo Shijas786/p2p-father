@@ -64,6 +64,7 @@ export function Predict({ user }: Props) {
     const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [loading, setLoading]       = useState(false);
+    const [activeMarket, setActiveMarket] = useState<any>(null);
 
     // Positions & trades
     const [positions, setPositions]   = useState<Position[]>([]);
@@ -122,6 +123,9 @@ export function Predict({ user }: Props) {
             if (snap.market && snap.market.yesPrice && snap.market.noPrice) {
                 setYesPrice(snap.market.yesPrice);
                 setNoPrice(snap.market.noPrice);
+            }
+            if (snap.market) {
+                setActiveMarket(snap.market);
             }
             // Set history
             if (snap.history !== undefined) {
@@ -410,11 +414,15 @@ export function Predict({ user }: Props) {
             
             // If the 5-minute round has rolled over
             if (lastNextTime !== 0 && nextTime > lastNextTime) {
-                setTimeout(async () => {
-                    await loadData(); // Wait 1s for backend to settle the round before fetching
-                    // Shift their historical view if they are viewing a past round, otherwise stay on live
-                    setSelectedRound(prev => prev >= 1 ? prev + 1 : prev);
-                }, 1000); 
+                // Immediate refresh for countdown/slug updates
+                setTimeout(loadData, 1500);
+                // 15 seconds later, update to fetch settled position outcome
+                setTimeout(loadData, 15000);
+                // 30 seconds later, final settlement update
+                setTimeout(loadData, 30000);
+                
+                // Shift historical view if viewing a past round
+                setSelectedRound(prev => prev >= 1 ? prev + 1 : prev);
             }
             lastNextTime = nextTime;
             setLiveEndMs(nextTime);
@@ -493,6 +501,21 @@ export function Predict({ user }: Props) {
                     const receivedUsdc = parseFloat(betAmount) * price;
                     setCashBalance(prev => (parseFloat(prev || '0') + receivedUsdc).toFixed(2));
                 }
+
+                // Construct optimistic trade and prepend to history lists instantly
+                const shareQty = tradeType === 'buy' ? (parseFloat(betAmount) / price) : parseFloat(betAmount);
+                const cashCost = tradeType === 'buy' ? parseFloat(betAmount) : (parseFloat(betAmount) * price);
+                const tempTrade: Trade = {
+                    id: `temp-${Date.now()}`,
+                    side: tradeType.toUpperCase(),
+                    outcome: betType,
+                    qty: shareQty,
+                    price: price,
+                    cost: cashCost,
+                    timestamp: Date.now()
+                };
+                setRecentTrades(prev => [tempTrade, ...prev]);
+                setTrades(prev => [tempTrade, ...prev]);
 
                 setBetAmount(''); 
                 
