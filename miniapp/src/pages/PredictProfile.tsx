@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
+import { useToast } from '../components/Toast';
 import './PredictProfile.css';
 
 function timeAgo(ms: number) {
@@ -28,6 +29,30 @@ export function PredictProfile({ user }: Props) {
     const [trades, setTrades] = useState<any[]>([]);
     const [claiming, setClaiming] = useState(false);
     const [realizedPnl, setRealizedPnl] = useState(0);
+    const { showToast } = useToast();
+    
+    const handleClaim = async (e: React.MouseEvent, conditionId: string) => {
+        e.stopPropagation();
+        if (claiming) return;
+
+        haptic('light');
+        setClaiming(true);
+        showToast("Claiming position...", "info");
+        try {
+            const res = await api.predictions.autoClaim(conditionId);
+            if (res.success && res.claimed > 0) {
+                showToast("Claimed successfully!", "success");
+                loadData();
+            } else {
+                showToast("No winning position to claim or already claimed.", "warning");
+            }
+        } catch (err: any) {
+            console.error("[Claim] Error claiming position:", err);
+            showToast(err.message || "Failed to claim position.", "error");
+        } finally {
+            setClaiming(false);
+        }
+    };
     
     const loadData = useCallback(async () => {
         try {
@@ -254,6 +279,31 @@ export function PredictProfile({ user }: Props) {
                                                 {trade.outcome === 'UP' ? 'Up' : 'Down'} {(trade.price * 100).toFixed(0)}¢
                                             </span>
                                             <span className="pm-prof-bet-shares" style={{ color: '#888', fontSize: '12px' }}>{trade.qty.toFixed(1)} shares</span>
+                                            {trade.resolved && trade.resolution === 'WIN' && !trade.claimed && (
+                                                <button 
+                                                    className="pm-prof-claim-btn"
+                                                    onClick={(e) => handleClaim(e, trade.conditionId)}
+                                                    style={{
+                                                        padding: '2px 8px',
+                                                        fontSize: '11px',
+                                                        fontWeight: 600,
+                                                        borderRadius: '4px',
+                                                        backgroundColor: '#10b981',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        marginLeft: '6px',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                                     }}
+                                                >
+                                                    {claiming ? 'Claiming...' : 'Claim Win'}
+                                                </button>
+                                            )}
+                                            {trade.resolved && trade.resolution === 'WIN' && trade.claimed && (
+                                                <span style={{ fontSize: '11px', color: '#10b981', marginLeft: '6px', fontWeight: 500 }}>
+                                                    ✓ Claimed
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

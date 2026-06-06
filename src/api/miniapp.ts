@@ -3290,112 +3290,47 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-        // Try reading from cache first
-        const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
-        if (cached && cached.trades) {
-            const targetConditionId = req.query.conditionId as string;
-            const wantAll = req.query.all === 'true';
-            
-            let filtered = cached.trades;
-            if (targetConditionId) {
-                filtered = filtered.filter((t: any) => t.conditionId === targetConditionId);
-            } else if (!wantAll) {
-                const market = await polymarketService.getActiveBtcMarket().catch(() => null);
-                if (market) {
-                    filtered = filtered.filter((t: any) => t.conditionId === market.conditionId);
-                }
+        const targetConditionId = req.query.conditionId as string;
+        const wantAll = req.query.all === 'true';
+
+        let query = db.getClient()
+            .from("prediction_trades")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("traded_at", { ascending: false });
+
+        if (targetConditionId) {
+            query = query.eq("condition_id", targetConditionId);
+        } else if (!wantAll) {
+            const market = await polymarketService.getActiveBtcMarket().catch(() => null);
+            if (market) {
+                query = query.eq("condition_id", market.conditionId);
             }
-            return res.json({ trades: filtered.slice(0, 30) });
         }
 
-        try {
-            // Get proxy address from DB cache — no need to call relayer API or getUserClobClient
-            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
-            if (!proxyAddress) {
-                return res.json({ trades: [] });
-            }
-            const tradesRes = await polymarketService.getTradesForProxy(proxyAddress);
-            const market = await polymarketService.getActiveBtcMarket();
-            // Allow frontend to request all trades or filter by specific market
-            const targetConditionId = req.query.conditionId as string;
-            const wantAll = req.query.all === 'true';
-            
-            // Build trade list, mapping UP/DOWN
-            const rawTrades = tradesRes || [];
-            const mappedTrades = [];
-            
-            for (const t of rawTrades) {
-                if (targetConditionId && t.market !== targetConditionId) {
-                    continue;
-                }
-                if (!wantAll && !targetConditionId && t.market !== market.conditionId) {
-                    continue;
-                }
-                const assetLc = (t.asset_id || "").toLowerCase();
-                const yesLc = market.yesTokenId.toLowerCase();
-                const noLc = market.noTokenId.toLowerCase();
-                
-                let outcome = "UNKNOWN";
-                const rawOutcome = (t.outcome || "").toUpperCase();
-                if (rawOutcome === "YES" || rawOutcome === "UP" || t.outcomeIndex === 0) {
-                    outcome = "UP";
-                } else if (rawOutcome === "NO" || rawOutcome === "DOWN" || t.outcomeIndex === 1) {
-                    outcome = "DOWN";
-                } else {
-                    outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
-                    if (outcome === "UNKNOWN" && t.market) {
-                        try {
-                            const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`, {
-                                headers: {
-                                    "User-Agent": "Mozilla/5.0",
-                                    "Accept": "application/json"
-                                }
-                            });
-                            const mData = await mRes.json();
-                            if (mData && mData.tokens && mData.tokens.length >= 2) {
-                                if (assetLc === (mData.tokens[0].token_id || "").toLowerCase()) outcome = "UP";
-                                else if (assetLc === (mData.tokens[1].token_id || "").toLowerCase()) outcome = "DOWN";
-                            }
-                        } catch (e) {
-                            // ignore fetch error
-                        }
-                    }
-                }
-                
-                const ti = t as any;
-                let ts = Date.now();
-                if (ti.create_time) ts = new Date(ti.create_time).getTime();
-                else if (ti.timestamp || ti.matched_time) {
-                    const raw = (ti.timestamp || ti.matched_time).toString();
-                    if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
-                    else {
-                        const p = parseInt(raw);
-                        if (p > 0 && p < 2000000000) ts = p * 1000;
-                        else if (p > 0) ts = p;
-                    }
-                }
+        const { data, error } = await query.limit(100);
+        if (error) throw error;
 
-                mappedTrades.push({
-                    id: ti.id ?? ti.trade_id,
-                    side: ti.side,
-                    outcome,
-                    conditionId: ti.market,
-                    qty: parseFloat(ti.size ?? "0"),
-                    price: parseFloat(ti.price ?? "0"),
-                    cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
-                    timestamp: ts,
-                });
-            }
-            
-            // Sort by latest first
-            mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
-            
-            return res.json({ trades: mappedTrades.slice(0, 30) });
-        } catch (e: any) {
-            console.warn("[MINIAPP] Real trades fetch failed:", e.message);
-            return res.json({ trades: [] });
-        }
+        const mappedTrades = (data || []).map((t: any) => ({
+            id: t.id,
+            side: t.side,
+            outcome: t.outcome,
+            price: parseFloat(t.price),
+            qty: parseFloat(t.shares),
+            cost: parseFloat(t.cost_usdc),
+            timestamp: new Date(t.traded_at).getTime(),
+            conditionId: t.condition_id,
+            resolved: t.resolved,
+            resolution: t.resolution,
+            claimed: t.claimed,
+            claimTxHash: t.claim_tx_hash,
+            payoutUsdc: t.payout_usdc ? parseFloat(t.payout_usdc) : 0,
+            pnlUsdc: t.pnl_usdc ? parseFloat(t.pnl_usdc) : 0,
+        }));
+
+        return res.json({ trades: mappedTrades });
     } catch (err: any) {
+        console.error("[MINIAPP] Error in predictions/trades:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
