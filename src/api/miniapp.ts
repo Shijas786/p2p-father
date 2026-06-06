@@ -2683,22 +2683,26 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         provider
                     );
 
-                    for (const [cid, data] of Object.entries(conditionMap)) {
-                        if (openConditionIds.has(cid)) continue; // Already accounted for by cashPnl above
-                        if (data.shares <= 0.001) continue; // No net position
+                    const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
+                        if (openConditionIds.has(cid)) return 0;
+                        if (data.shares <= 0.001) return 0;
                         try {
-                            const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
-                            if (denominator === 0n) continue; // Not resolved
-                            // outcomeIndex 0 = YES (indexSet 1), outcomeIndex 1 = NO (indexSet 2)
-                            const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
-                            const payoutNum = await ctf.payoutNumerators(cid as `0x${string}`, pnIndex);
+                            const [denominator, payoutNum] = await Promise.all([
+                                ctf.payoutDenominator(cid as `0x${string}`).catch(() => 0n),
+                                ctf.payoutNumerators(cid as `0x${string}`, data.outcomeIndex === 0 ? 0n : 1n).catch(() => 0n)
+                            ]);
+                            if (denominator === 0n) return 0;
                             const payoutFraction = Number(payoutNum) / Number(denominator);
                             const profit = data.shares * payoutFraction - data.cost;
                             console.log(`[PNL] Resolved condition ${cid.slice(0,12)}: shares=${data.shares.toFixed(3)}, cost=$${data.cost.toFixed(3)}, payout=${payoutFraction}, profit=$${profit.toFixed(3)}`);
-                            realizedPnl += profit;
+                            return profit;
                         } catch {
-                            // Ignore per-condition errors
+                            return 0;
                         }
+                    });
+                    const resolvedPnls = await Promise.all(pnlPromises);
+                    for (const profit of resolvedPnls) {
+                        realizedPnl += profit;
                     }
                 }
             } catch (e: any) {
@@ -2758,32 +2762,25 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             });
         }
 
-        // Fetch everything in parallel
-        const [balanceRes, marketRes, tradesRes, positionsRes, historyRes] = await Promise.allSettled([
+        // Resolve active market first (almost instant < 5ms due to cache)
+        const market = await polymarketService.getActiveBtcMarket().catch(() => null);
+
+        // Fetch all details (including prices) in parallel in one block
+        const [balanceRes, tradesRes, positionsRes, historyRes, yesPriceRes, noPriceRes] = await Promise.allSettled([
             polymarketRelayerService.getPusdBalance(user.wallet_index),
-            polymarketService.getActiveBtcMarket(),
             polymarketService.getTradesForProxy(proxyAddress),
             polymarketService.getPositionsForProxy(proxyAddress).catch(() => []),
-            fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => [])
+            fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => []),
+            market ? polymarketService.getOutcomePrice(market.yesTokenId, false) : Promise.resolve({ buyPrice: 0.5, sellPrice: 0.5 }),
+            market ? polymarketService.getOutcomePrice(market.noTokenId, true) : Promise.resolve({ buyPrice: 0.5, sellPrice: 0.5 })
         ]);
 
         const balance = balanceRes.status === 'fulfilled' ? balanceRes.value : "0.00";
-        const market = marketRes.status === 'fulfilled' ? marketRes.value : null;
         const rawTrades = tradesRes.status === 'fulfilled' ? tradesRes.value : [];
         const positionsData = positionsRes.status === 'fulfilled' ? positionsRes.value : [];
         const klines = historyRes.status === 'fulfilled' ? historyRes.value : [];
-
-        // Compute YES and NO prices if active market exists
-        let yesPrice = { buyPrice: 0.5, sellPrice: 0.5 };
-        let noPrice = { buyPrice: 0.5, sellPrice: 0.5 };
-        if (market) {
-            const priceResults = await Promise.allSettled([
-                polymarketService.getOutcomePrice(market.yesTokenId, false),
-                polymarketService.getOutcomePrice(market.noTokenId, true),
-            ]);
-            if (priceResults[0].status === 'fulfilled') yesPrice = priceResults[0].value;
-            if (priceResults[1].status === 'fulfilled') noPrice = priceResults[1].value;
-        }
+        const yesPrice = yesPriceRes.status === 'fulfilled' ? yesPriceRes.value : { buyPrice: 0.5, sellPrice: 0.5 };
+        const noPrice = noPriceRes.status === 'fulfilled' ? noPriceRes.value : { buyPrice: 0.5, sellPrice: 0.5 };
 
         // Auto-claim background check
         for (const p of positionsData) {
@@ -2928,17 +2925,24 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 provider
             );
 
-            for (const [cid, data] of Object.entries(conditionMap)) {
-                if (openConditionIds.has(cid)) continue;
-                if (data.shares <= 0.001) continue;
+            const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
+                if (openConditionIds.has(cid)) return 0;
+                if (data.shares <= 0.001) return 0;
                 try {
-                    const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
-                    if (denominator === 0n) continue;
-                    const pnIndex = data.outcomeIndex === 0 ? 0n : 1n;
-                    const payoutNum = await ctf.payoutNumerators(cid as `0x${string}`, pnIndex);
+                    const [denominator, payoutNum] = await Promise.all([
+                        ctf.payoutDenominator(cid as `0x${string}`).catch(() => 0n),
+                        ctf.payoutNumerators(cid as `0x${string}`, data.outcomeIndex === 0 ? 0n : 1n).catch(() => 0n)
+                    ]);
+                    if (denominator === 0n) return 0;
                     const payoutFraction = Number(payoutNum) / Number(denominator);
-                    realizedPnl += data.shares * payoutFraction - data.cost;
-                } catch {}
+                    return data.shares * payoutFraction - data.cost;
+                } catch {
+                    return 0;
+                }
+            });
+            const resolvedPnls = await Promise.all(pnlPromises);
+            for (const profit of resolvedPnls) {
+                realizedPnl += profit;
             }
         } catch (e: any) {
             console.warn('[MINIAPP] Snapshot realized PNL error:', e.message);
