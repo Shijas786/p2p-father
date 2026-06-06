@@ -662,6 +662,13 @@ class PolymarketService {
         delete positionsCache[cacheKey];
         console.log(`[Cache] Cleared positions cache for ${cacheKey}`);
     }
+
+    clearUserCache(proxyAddress: string) {
+        const cacheKey = proxyAddress.toLowerCase();
+        delete positionsCache[cacheKey];
+        delete tradesCache[cacheKey];
+        console.log(`[Cache] Cleared positions and trades cache for ${cacheKey}`);
+    }
 }
 
 export const polymarketService = new PolymarketService();

@@ -21,6 +21,7 @@ import { depositMonitor } from "../services/deposit-monitor";
 import { bridgeMonitor } from "../services/bridge-monitor";
 import { attemptedRedeems } from "../services/jobs";
 import { bot } from "../bot";
+import { redis } from "../services/redis";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -2056,7 +2057,68 @@ router.get("/predictions/debug-history", async (req: Request, res: Response) => 
 
 
 
+const polygonProvider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com', 137, { staticNetwork: true });
+
+const ctfContractShared = new ethers.Contract(
+    '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
+    [
+        'function payoutDenominator(bytes32) view returns (uint256)',
+        'function payoutNumerators(bytes32, uint256) view returns (uint256)'
+    ],
+    polygonProvider
+);
+
 const conditionResolutionCache = new Map<string, { denominator: number, num0: number, num1: number }>();
+
+async function getConditionResolution(cid: string): Promise<{ denominator: number, num0: number, num1: number } | null> {
+    const cacheKey = cid.toLowerCase();
+    
+    // 1. Check in-memory cache
+    let resolution = conditionResolutionCache.get(cacheKey);
+    if (resolution) return resolution;
+
+    // 2. Check Redis cache
+    try {
+        const cached = await redis.get(`resolution:${cacheKey}`);
+        if (cached) {
+            resolution = JSON.parse(cached);
+            if (resolution) {
+                conditionResolutionCache.set(cacheKey, resolution);
+                return resolution;
+            }
+        }
+    } catch (err: any) {
+        console.warn("[MINIAPP] Redis get resolution error:", err.message);
+    }
+
+    // 3. Fallback to on-chain query
+    try {
+        const denominator = await ctfContractShared.payoutDenominator(cid as `0x${string}`).catch(() => 0n);
+        if (denominator > 0n) {
+            const [num0, num1] = await Promise.all([
+                ctfContractShared.payoutNumerators(cid as `0x${string}`, 0n).catch(() => 0n),
+                ctfContractShared.payoutNumerators(cid as `0x${string}`, 1n).catch(() => 0n)
+            ]);
+            resolution = {
+                denominator: Number(denominator),
+                num0: Number(num0),
+                num1: Number(num1)
+            };
+            conditionResolutionCache.set(cacheKey, resolution);
+            
+            // Save to Redis (cache forever)
+            try {
+                await redis.set(`resolution:${cacheKey}`, JSON.stringify(resolution));
+            } catch (redisErr: any) {
+                console.warn("[MINIAPP] Redis set resolution error:", redisErr.message);
+            }
+            return resolution;
+        }
+    } catch (e: any) {
+        console.warn(`[MINIAPP] On-chain resolution query failed for ${cid}:`, e.message);
+    }
+    return null;
+}
 let leaderboardCache: { data: any[]; ts: number } | null = null;
 const LEADERBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -2348,9 +2410,9 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             console.warn("[MINIAPP] Failed to record trade for leaderboard (table might not exist yet):", dbErr.message);
         }
 
-        // Clear cached positions so next fetch gets new state
+        // Clear cached positions and trades so next fetch gets new state
         if (user.deposit_wallet_address) {
-            polymarketService.clearPositionsCache(user.deposit_wallet_address);
+            polymarketService.clearUserCache(user.deposit_wallet_address);
         }
 
         res.json({ success: true, result });
@@ -2633,6 +2695,31 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 }
             }
 
+            // Fallback: Ensure any active positions from Polymarket positionsRes are added even if not present in positionMap
+            for (const p of positionsRes) {
+                const assetLc = (p.asset || "").toLowerCase();
+                const isYes = assetLc === yesTokenIdLc;
+                const isNo = assetLc === noTokenIdLc;
+                if (!all && !isYes && !isNo) continue;
+
+                const key = all ? assetLc : (isYes ? "UP" : "DOWN");
+                const syncedQty = parseFloat(p.size || "0");
+                if (syncedQty > 0.001 && !p.redeemable) {
+                    if (!positionMap[key]) {
+                        const initialValue = p.initialValue !== undefined ? parseFloat(p.initialValue) : 0;
+                        positionMap[key] = {
+                            outcome: all ? (p.outcomeIndex === 0 ? 'UP' : 'DOWN') : (isYes ? 'UP' : 'DOWN'),
+                            asset: assetLc,
+                            title: p.title || (isYes ? "Bitcoin Price > Strike" : "Bitcoin Price <= Strike"),
+                            qty: syncedQty,
+                            totalCost: initialValue,
+                            avgPrice: syncedQty > 0 ? initialValue / syncedQty : 0,
+                            currentPrice: isYes ? yesPrice?.buyPrice ?? null : (isNo ? noPrice?.buyPrice ?? null : null),
+                        };
+                    }
+                }
+            }
+
             // Calculate realized PNL using trade history + on-chain resolution
             // The Data API removes redeemed positions entirely, so we compute from trades:
             // Group BUY trades by conditionId → for resolved conditions not in active positions,
@@ -2671,28 +2758,15 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         }
                     }
 
-                    // Step 3: For conditions NOT in active positions (already redeemed), check on-chain
-                    const { ethers } = await import('ethers');
-                    const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
-                    const ctf = new ethers.Contract(
-                        '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-                        [
-                            'function payoutDenominator(bytes32) view returns (uint256)',
-                            'function payoutNumerators(bytes32, uint256) view returns (uint256)'
-                        ],
-                        provider
-                    );
-
+                    // Step 3: For conditions NOT in active positions (already redeemed), check cached/on-chain resolution
                     const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
                         if (openConditionIds.has(cid)) return 0;
                         if (data.shares <= 0.001) return 0;
                         try {
-                            const [denominator, payoutNum] = await Promise.all([
-                                ctf.payoutDenominator(cid as `0x${string}`).catch(() => 0n),
-                                ctf.payoutNumerators(cid as `0x${string}`, data.outcomeIndex === 0 ? 0n : 1n).catch(() => 0n)
-                            ]);
-                            if (denominator === 0n) return 0;
-                            const payoutFraction = Number(payoutNum) / Number(denominator);
+                            const res = await getConditionResolution(cid);
+                            if (!res) return 0;
+                            const num = data.outcomeIndex === 0 ? res.num0 : res.num1;
+                            const payoutFraction = num / res.denominator;
                             const profit = data.shares * payoutFraction - data.cost;
                             console.log(`[PNL] Resolved condition ${cid.slice(0,12)}: shares=${data.shares.toFixed(3)}, cost=$${data.cost.toFixed(3)}, payout=${payoutFraction}, profit=$${profit.toFixed(3)}`);
                             return profit;
@@ -2889,6 +2963,32 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             }
         }
 
+        // Fallback: Ensure any active positions from Polymarket positionsData are added even if not present in positionMap
+        for (const p of positionsData) {
+            if (!market) continue;
+            const assetLc = (p.asset || "").toLowerCase();
+            const isYes = assetLc === yesTokenIdLc;
+            const isNo = assetLc === noTokenIdLc;
+            if (!isYes && !isNo) continue;
+
+            const key = isYes ? "UP" : "DOWN";
+            const syncedQty = parseFloat(p.size || "0");
+            if (syncedQty > 0.001 && !p.redeemable) {
+                if (!positionMap[key]) {
+                    const initialValue = p.initialValue !== undefined ? parseFloat(p.initialValue) : 0;
+                    positionMap[key] = {
+                        outcome: isYes ? 'UP' : 'DOWN',
+                        asset: assetLc,
+                        title: p.title || (isYes ? "Bitcoin Price > Strike" : "Bitcoin Price <= Strike"),
+                        qty: syncedQty,
+                        totalCost: initialValue,
+                        avgPrice: syncedQty > 0 ? initialValue / syncedQty : 0,
+                        currentPrice: isYes ? yesPrice?.buyPrice ?? null : (isNo ? noPrice?.buyPrice ?? null : null),
+                    };
+                }
+            }
+        }
+
         // Realized PNL
         let realizedPnl = activeRealizedPnl;
         try {
@@ -2914,27 +3014,15 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 }
             }
 
-            const { ethers } = await import('ethers');
-            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
-            const ctf = new ethers.Contract(
-                '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-                [
-                    'function payoutDenominator(bytes32) view returns (uint256)',
-                    'function payoutNumerators(bytes32, uint256) view returns (uint256)'
-                ],
-                provider
-            );
-
+            // For conditions NOT in active positions (already redeemed), check cached/on-chain resolution
             const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
                 if (openConditionIds.has(cid)) return 0;
                 if (data.shares <= 0.001) return 0;
                 try {
-                    const [denominator, payoutNum] = await Promise.all([
-                        ctf.payoutDenominator(cid as `0x${string}`).catch(() => 0n),
-                        ctf.payoutNumerators(cid as `0x${string}`, data.outcomeIndex === 0 ? 0n : 1n).catch(() => 0n)
-                    ]);
-                    if (denominator === 0n) return 0;
-                    const payoutFraction = Number(payoutNum) / Number(denominator);
+                    const res = await getConditionResolution(cid);
+                    if (!res) return 0;
+                    const num = data.outcomeIndex === 0 ? res.num0 : res.num1;
+                    const payoutFraction = num / res.denominator;
                     return data.shares * payoutFraction - data.cost;
                 } catch {
                     return 0;
