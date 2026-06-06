@@ -2396,7 +2396,54 @@ router.get("/predictions/deposit-wallet", async (req: Request, res: Response) =>
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
         const address = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
-        res.json({ address });
+        
+        // Try to read from cache first
+        const cacheKey = `evm_bridge_address:${address.toLowerCase()}`;
+        let evmBridgeAddress = "";
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                evmBridgeAddress = cached;
+            }
+        } catch (e: any) {
+            console.warn("[MINIAPP] Redis read error for bridge address:", e.message);
+        }
+
+        // Fetch from Polymarket Bridge API if not cached
+        if (!evmBridgeAddress) {
+            try {
+                console.log(`[MINIAPP] Fetching EVM bridge address for proxy ${address}...`);
+                const depositRes = await fetch("https://bridge.polymarket.com/deposit", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Builder-Code": (process.env as any).POLYMARKET_BUILDER_CODE || ""
+                    },
+                    body: JSON.stringify({ address })
+                });
+                
+                if (depositRes.ok) {
+                    const data: any = await depositRes.json();
+                    evmBridgeAddress = data.address?.evm ?? data.evm ?? data.evmAddress ?? "";
+                    
+                    if (evmBridgeAddress) {
+                        // Cache it for 30 days
+                        try {
+                            await redis.setex(cacheKey, 30 * 24 * 3600, evmBridgeAddress);
+                        } catch (e: any) {
+                            console.warn("[MINIAPP] Redis write error for bridge address:", e.message);
+                        }
+                    }
+                } else {
+                    const errText = await depositRes.text();
+                    console.error(`[MINIAPP] Polymarket Bridge API error (${depositRes.status}):`, errText);
+                }
+            } catch (e: any) {
+                console.error("[MINIAPP] Failed to fetch bridge address:", e.message);
+            }
+        }
+
+        res.json({ address, evmBridgeAddress });
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions deposit wallet error:", err);
         res.status(500).json({ error: err.message });
@@ -2615,7 +2662,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         // Try reading user snapshot from predictions_cache (Supabase / Redis)
         const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
         if (cached && cached.positions) {
-            return res.json({ positions: cached.positions });
+            // ✅ Include realizedPnl from cache — previously missing, causing frontend to show $0.00
+            return res.json({ positions: cached.positions, realizedPnl: cached.realizedPnl ?? 0 });
         }
 
         const all = req.query.all === 'true';
@@ -2839,8 +2887,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             return res.json({ positions, realizedPnl: parseFloat(realizedPnl.toFixed(2)) });
         } catch (innerErr: any) {
             console.warn("[MINIAPP] Real positions fetch failed, returning empty:", innerErr.message);
-            // Return empty positions for demo/dev
-            return res.json({ positions: [] });
+            // Return empty positions — include realizedPnl: 0 so frontend doesn't stay at undefined
+            return res.json({ positions: [], realizedPnl: 0 });
         }
     } catch (err: any) {
         console.error("[MINIAPP] Get predictions positions error:", err);

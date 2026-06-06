@@ -249,7 +249,7 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount, destChainId, destTokenAddress, recipientAddress: recipient })
             }),
-        getDepositWallet: () => request<{ address: string }>('/predictions/deposit-wallet'),
+        getDepositWallet: () => request<{ address: string; evmBridgeAddress?: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
         getBalance: () => request<{ balance: string }>('/predictions/balance'),
         getSnapshot: () => request<{

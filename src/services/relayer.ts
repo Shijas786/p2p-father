@@ -73,6 +73,13 @@ const ERC20_ABI = [
       { name: "amount", type: "uint256" }
     ],
     outputs: [{ name: "", type: "bool" }]
+  },
+  {
+    name: "decimals",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }]
   }
 ] as const;
 
@@ -625,42 +632,62 @@ class PolymarketRelayerService {
         // Configure RPC and Token Address based on the source chain
         let rpcUrl = POLYGON_RPC;
         let tokenAddr = USDCE_ADDRESS;
-        let decimals = 6;
 
         if (chain === 'bsc') {
             rpcUrl = "https://bsc-dataseed.binance.org";
             if (token === 'USDC') {
                 tokenAddr = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-                decimals = 18;
             } else if (token === 'USDT') {
                 tokenAddr = "0x55d398326f99059fF775485246999027B3197955";
-                decimals = 18; // BSC USDT uses 18 decimals
             }
         } else if (chain === 'base') {
             rpcUrl = env.BASE_RPC_URL;
             if (token === 'USDC') {
-                tokenAddr = env.USDC_ADDRESS;
-                decimals = 6;
-            } else if (token === 'USDT') {
-                tokenAddr = env.USDT_ADDRESS;
-                decimals = 6;
+                tokenAddr = env.USDC_ADDRESS; // 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+            } else {
+                throw new Error('Only USDC is supported for Base chain deposits. Please use USDC or switch to a different chain for USDT.');
             }
         } else if (chain === 'polygon' && token === 'USDT') {
             tokenAddr = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
-            decimals = 6;
-        }
-
-        // Adjust amount for decimals if it differs from the default 6
-        let actualAmount = amount;
-        if (decimals === 18) {
-            // The input amount is assuming 6 decimals (from miniapp.ts BigInt math)
-            // Multiply by 10^12 to scale 6 decimals to 18 decimals
-            actualAmount = amount * 1_000_000_000_000n;
+        } else if (chain === 'arbitrum') {
+            rpcUrl = "https://arb1.arbitrum.io/rpc";
+            if (token === 'USDC') {
+                tokenAddr = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+            } else if (token === 'USDT') {
+                tokenAddr = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
+            }
+        } else if (chain === 'ethereum') {
+            rpcUrl = "https://eth.llamarpc.com";
+            if (token === 'USDC') {
+                tokenAddr = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+            } else if (token === 'USDT') {
+                tokenAddr = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+            }
+        } else if (chain === 'optimism') {
+            rpcUrl = "https://mainnet.optimism.io";
+            if (token === 'USDC') {
+                tokenAddr = "0x0b2C639c4761c1372b651427b193C79dADA6f271";
+            } else if (token === 'USDT') {
+                tokenAddr = "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58";
+            }
+        } else {
+            throw new Error(`Unsupported chain for gasless deposit: ${chain}`);
         }
 
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const signer = new ethers.Wallet(derived.privateKey, provider);
         const sourceToken = new ethers.Contract(tokenAddr, ERC20_ABI as any, signer);
+
+        // Fetch decimals dynamically from token contract
+        const decimals = Number(await sourceToken.decimals());
+
+        // Adjust amount for decimals if it differs from the default 6 (input is always 6 decimals)
+        let actualAmount = amount;
+        if (decimals > 6) {
+            actualAmount = amount * (10n ** BigInt(decimals - 6));
+        } else if (decimals < 6) {
+            actualAmount = amount / (10n ** BigInt(6 - decimals));
+        }
 
         // Check user balance on source chain
         const balance = await sourceToken.balanceOf(signer.address);

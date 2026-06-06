@@ -8,9 +8,9 @@ import { api } from '../lib/api';
 
 interface DepositModalProps {
     onClose: () => void;
-    balances: any;
+    balances: { usdt: string; address: string; evmBridgeAddress?: string };
     loadBalances: () => void;
-    copyAddress: () => void;
+    copyAddress: (addr?: string) => void;
     haptic: (type: "light" | "medium" | "heavy" | "error" | "success" | "warning" | "selection") => void;
     onWithdraw?: () => void;
     initialMode?: "deposit" | "withdraw";
@@ -32,7 +32,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [amount, setAmount] = useState('');
     const [withdrawChain, setWithdrawChain] = useState<'Polygon'|'BSC'|'Ethereum'|'Arbitrum'>('Polygon');
     const [withdrawToken, setWithdrawToken] = useState<'USDC'|'USDT'>('USDC');
-    const [withdrawAddress, setWithdrawAddress] = useState('');
+    const [withdrawRecipient, setWithdrawRecipient] = useState('');
     const [bridgeQuote, setBridgeQuote] = useState<any>(null);
     const [txHash, setTxHash] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -42,6 +42,15 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
     const [bridgePending, setBridgePending] = useState(false);
     const [balanceBefore, setBalanceBefore] = useState<number>(0);
     const [elapsedSecs, setElapsedSecs] = useState(0);
+    const [manualChainCategory, setManualChainCategory] = useState<'polygon' | 'others'>('polygon');
+    
+    const initialBalRef = React.useRef<string | null>(null);
+
+    useEffect(() => {
+        if (initialBalRef.current === null && balances?.usdt !== undefined) {
+            initialBalRef.current = balances.usdt;
+        }
+    }, [balances]);
 
     // Poll while manual step is open
     useEffect(() => {
@@ -50,7 +59,11 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             timer = setInterval(async () => {
                 try {
                     const res = await api.predictions.checkDeposit();
-                    if (res.wrapped) {
+                    const b = await api.predictions.getBalance();
+                    const latestBal = parseFloat(b.balance || '0');
+                    const initialBal = initialBalRef.current ? parseFloat(initialBalRef.current) : 0;
+                    
+                    if (res.wrapped || latestBal > initialBal) {
                         loadBalances();
                         setStep('success');
                         haptic('success');
@@ -86,7 +99,11 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         setIsCheckingDeposit(true);
         try {
             const res = await api.predictions.checkDeposit();
-            if (res.wrapped) {
+            const b = await api.predictions.getBalance();
+            const latestBal = parseFloat(b.balance || '0');
+            const initialBal = initialBalRef.current ? parseFloat(initialBalRef.current) : 0;
+
+            if (res.wrapped || latestBal > initialBal) {
                 loadBalances();
                 setStep('success');
                 haptic('success');
@@ -129,14 +146,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             icon: IconTokenUSDC,
             chainIcon: IconChainBsc
         },
-        {
-            id: 'base_usdt',
-            token: 'USDT',
-            chain: 'Base',
-            balance: parseFloat(hotBalances?.usdt || '0'),
-            icon: IconTokenUSDT,
-            chainIcon: IconChainBase
-        },
+
         {
             id: 'bsc_usdt',
             token: 'USDT',
@@ -181,7 +191,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
         // Cross-chain withdrawal: fetch bridge quote
         setStep('processing');
         try {
-            const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
+            const r = await api.predictions.getWithdrawQuote(parseFloat(amount), destChainId, destTokenAddress, withdrawRecipient);
             if (r && r.success) {
                 setBridgeQuote(r.quote);
                 setStep('confirm');
@@ -205,7 +215,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             const destChainId = '137';
             const destTokenAddress = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
 
-            const r = await api.predictions.withdrawGasless(parseFloat(amount), destChainId, destTokenAddress, withdrawAddress);
+            const r = await api.predictions.withdrawGasless(parseFloat(amount), destChainId, destTokenAddress, withdrawRecipient);
             if (r && r.txHash) {
                 if (r.isCrossChain) {
                     setTxHash(r.txHash); // bridgeAddress returned as txHash for cross-chain
@@ -597,7 +607,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         </div>
                         <div>
                             <div className="mf-label" style={{marginBottom: '4px'}}>Destination Address</div>
-                            <input type="text" style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', boxSizing: 'border-box'}} value={withdrawAddress} placeholder="0x..." onChange={e => setWithdrawAddress(e.target.value)} />
+                            <input type="text" style={{width: '100%', padding: '12px', background: '#161920', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', boxSizing: 'border-box'}} value={withdrawRecipient} placeholder="0x..." onChange={e => setWithdrawRecipient(e.target.value)} />
                         </div>
                     </div>
                     {errorMsg && (
@@ -607,7 +617,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     )}
 
                     <button className="pm-btn-continue" 
-                        disabled={!amount || parseFloat(amount) <= 0 || !withdrawAddress}
+                        disabled={!amount || parseFloat(amount) <= 0 || !withdrawRecipient}
                         onClick={handlePreviewWithdraw}>
                         Continue
                     </button>
@@ -810,7 +820,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                         </div>
                         <div className="pm-breakdown-row">
                             <span>Destination</span>
-                            <span className="pm-breakdown-val">{withdrawAddress.slice(0, 6)}...{withdrawAddress.slice(-4)} ({withdrawChain})</span>
+                            <span className="pm-breakdown-val">{withdrawRecipient.slice(0, 6)}...{withdrawRecipient.slice(-4)} ({withdrawChain})</span>
                         </div>
                         <div className="pm-breakdown-row">
                             <span>Receive</span>
@@ -909,27 +919,89 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     </div>
 
                     <div className="mf-card">
-                        <h3>Smart Routing Address</h3>
-                        
-                        <div className="mf-label">SUPPORTED ASSETS</div>
-                        <div className="mf-pills" style={{marginBottom: 12}}>
-                            <div className="mf-pill mf-pill-active"><IconTokenUSDT size={16}/> USDT</div>
-                            <div className="mf-pill mf-pill-active"><IconTokenUSDC size={16}/> USDC</div>
+                        <div className="pm-manual-chain-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            <button 
+                                className={`pm-manual-tab ${manualChainCategory === 'polygon' ? 'active' : ''}`}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: manualChainCategory === 'polygon' ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
+                                    color: manualChainCategory === 'polygon' ? '#000000' : '#ffffff',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => { haptic('light'); setManualChainCategory('polygon'); }}
+                            >
+                                Polygon Network
+                            </button>
+                            <button 
+                                className={`pm-manual-tab ${manualChainCategory === 'others' ? 'active' : ''}`}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: manualChainCategory === 'others' ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
+                                    color: manualChainCategory === 'others' ? '#000000' : '#ffffff',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: balances?.evmBridgeAddress ? 'pointer' : 'not-allowed',
+                                    opacity: balances?.evmBridgeAddress ? 1 : 0.4
+                                }}
+                                onClick={() => { 
+                                    if (balances?.evmBridgeAddress) {
+                                        haptic('light'); 
+                                        setManualChainCategory('others'); 
+                                    }
+                                }}
+                                disabled={!balances?.evmBridgeAddress}
+                            >
+                                Other Chains (Bridge)
+                            </button>
                         </div>
 
-                        <div className="mf-label">SUPPORTED CHAINS</div>
-                        <div className="mf-pills mf-pills-wrap" style={{marginBottom: 12}}>
-                            <div className="mf-pill mf-pill-active"><IconChainEth size={14}/> ETH</div>
-                            <div className="mf-pill mf-pill-active"><IconChainBase size={14}/> Base</div>
-                            <div className="mf-pill mf-pill-active"><IconChainPolygon size={14}/> Poly</div>
-                            <div className="mf-pill mf-pill-active"><IconChainArbitrum size={14}/> Arb</div>
-                            <div className="mf-pill mf-pill-active"><IconChainOptimism size={14}/> OP</div>
-                        </div>
+                        {manualChainCategory === 'polygon' ? (
+                            <>
+                                <div className="mf-label">SUPPORTED ASSET</div>
+                                <div className="mf-pills" style={{marginBottom: 12}}>
+                                    <div className="mf-pill mf-pill-active"><IconTokenUSDC size={16}/> USDC.e</div>
+                                </div>
+                                <p style={{ fontSize: '11px', color: '#848e9c', margin: '4px 0 12px', lineHeight: '1.4' }}>
+                                    Send **Polygon USDC.e** directly to your proxy address. It will be auto-wrapped to pUSD.
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="mf-label">SUPPORTED ASSETS</div>
+                                <div className="mf-pills" style={{marginBottom: 12}}>
+                                    <div className="mf-pill mf-pill-active"><IconTokenUSDC size={16}/> USDC</div>
+                                    <div className="mf-pill mf-pill-active"><IconTokenUSDT size={16}/> USDT</div>
+                                </div>
+                                <div className="mf-label">SUPPORTED CHAINS</div>
+                                <div className="mf-pills mf-pills-wrap" style={{marginBottom: 12, gap: '6px'}}>
+                                    <div className="mf-pill mf-pill-active"><IconChainEth size={14}/> ETH</div>
+                                    <div className="mf-pill mf-pill-active"><IconChainBase size={14}/> Base</div>
+                                    <div className="mf-pill mf-pill-active"><IconChainArbitrum size={14}/> Arb</div>
+                                    <div className="mf-pill mf-pill-active"><IconChainOptimism size={14}/> OP</div>
+                                    <div className="mf-pill mf-pill-active"><IconChainBsc size={14}/> BSC</div>
+                                </div>
+                                <p style={{ fontSize: '11px', color: '#848e9c', margin: '4px 0 12px', lineHeight: '1.4' }}>
+                                    Send USDC/USDT on any supported chain to the routing address. Socket/Relay will bridge it to Polygon.
+                                </p>
+                                <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px', marginBottom: '12px', fontSize: '11px', color: '#f87171', lineHeight: '1.4' }}>
+                                    ⚠️ <strong>DO NOT</strong> send BSC/Base/Arb/OP/ETH assets to your Polygon proxy address. You must send them to the routing address above, or they will be permanently lost.
+                                </div>
+                            </>
+                        )}
 
+                        <div className="mf-label">Smart Routing Address</div>
                         <div className="mf-address-box">
-                            <div className="mf-address-text" style={{paddingLeft: '12px'}}>{balances?.address || 'Loading...'}</div>
+                            <div className="mf-address-text" style={{paddingLeft: '12px', wordBreak: 'break-all'}}>{manualChainCategory === 'polygon' ? (balances?.address || 'Loading...') : (balances?.evmBridgeAddress || 'Loading...')}</div>
                             <button className="mf-btn-icon" onClick={() => haptic('light')}><IconQr size={16}/></button>
-                            <button className="mf-btn-copy" onClick={copyAddress}>
+                            <button className="mf-btn-copy" onClick={() => copyAddress(manualChainCategory === 'polygon' ? balances?.address : balances?.evmBridgeAddress)}>
                                 <IconCopy size={14} color="black"/> Copy
                             </button>
                         </div>

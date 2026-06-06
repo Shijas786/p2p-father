@@ -78,6 +78,7 @@ export function Predict({ user }: Props) {
     const [betAmount, setBetAmount]   = useState('');
     const [sellPercentage, setSellPercentage] = useState<number>(0);
     const [placingBet, setPlacingBet] = useState(false);
+    const [betSlowMsg, setBetSlowMsg] = useState('');
     const [isClaiming, setIsClaiming] = useState(false);
     
     // Notifications
@@ -89,6 +90,7 @@ export function Predict({ user }: Props) {
     const [depositModalMode, setDepositModalMode]     = useState<'deposit'|'withdraw'>('deposit');
     const [showWithdrawModal, setShowWithdrawModal]   = useState(false);
     const [depositAddress, setDepositAddress]         = useState('');
+    const [evmBridgeAddress, setEvmBridgeAddress]     = useState('');
     const [depositWalletLoading, setDepositWalletLoading] = useState(false);
     const [withdrawAmount, setWithdrawAmount]         = useState('');
     const [withdrawRecipient, setWithdrawRecipient]   = useState('');
@@ -654,6 +656,9 @@ export function Predict({ user }: Props) {
         }
         
         setPlacingBet(true);
+        setBetSlowMsg('');
+        // After 3s show a hint that proxy wallet setup is happening (first bet only)
+        const slowTimer = setTimeout(() => setBetSlowMsg('Setting up wallet…'), 3000);
         try {
             const price = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
             const res = await api.predictions.placeBet(
@@ -661,6 +666,7 @@ export function Predict({ user }: Props) {
                 price,
                 tradeType.toUpperCase() as 'BUY'|'SELL'
             );
+            clearTimeout(slowTimer);
             if (res.success) { 
                 showToast('Prediction placed!', 'success');
 
@@ -704,15 +710,21 @@ export function Predict({ user }: Props) {
                 setTimeout(loadData, 3000);
             }
             else showToast('Failed to place prediction', 'error');
-        } catch (e: any) { showToast(e.message || 'Order failed', 'error'); }
-        finally { setPlacingBet(false); }
+        } catch (e: any) { clearTimeout(slowTimer); showToast(e.message || 'Order failed', 'error'); }
+        finally { setPlacingBet(false); setBetSlowMsg(''); }
     };
 
     const handleOpenDeposit = async () => {
         haptic('selection'); setDepositModalMode('deposit'); setShowDepositModal(true);
-        if (!depositAddress) {
+        if (!depositAddress || !evmBridgeAddress) {
             setDepositWalletLoading(true);
-            try { const r = await api.predictions.getDepositWallet(); setDepositAddress(r.address); }
+            try { 
+                const r = await api.predictions.getDepositWallet(); 
+                if (r) {
+                    if (r.address) setDepositAddress(r.address);
+                    if (r.evmBridgeAddress) setEvmBridgeAddress(r.evmBridgeAddress);
+                }
+            }
             catch { showToast('Failed to get deposit address', 'error'); }
             finally { setDepositWalletLoading(false); }
         }
@@ -1165,6 +1177,7 @@ export function Predict({ user }: Props) {
                     activeMarket={activeMarket}
                     onPlacePrediction={handlePlacePrediction}
                     placingBet={placingBet}
+                    betSlowMsg={betSlowMsg}
                 />
 
             </div>
@@ -1199,20 +1212,24 @@ export function Predict({ user }: Props) {
                 <DepositModal 
                     initialMode={depositModalMode}
                     onClose={() => setShowDepositModal(false)}
-                    balances={{ usdt: cashBalance, address: depositAddress }}
+                    balances={{ usdt: cashBalance, address: depositAddress, evmBridgeAddress: evmBridgeAddress }}
                     loadBalances={async () => {
                         setDepositWalletLoading(true);
                         try {
                             const b = await api.predictions.getBalance();
                             if (b && b.balance) setCashBalance(b.balance);
                             const r = await api.predictions.getDepositWallet();
-                            if (r && r.address) setDepositAddress(r.address);
+                            if (r) {
+                                if (r.address) setDepositAddress(r.address);
+                                if (r.evmBridgeAddress) setEvmBridgeAddress(r.evmBridgeAddress);
+                            }
                         } catch(e) {}
                         setDepositWalletLoading(false);
                     }}
-                    copyAddress={() => { 
-                        if (depositAddress) { 
-                            navigator.clipboard.writeText(depositAddress); 
+                    copyAddress={(addr?: string) => { 
+                        const toCopy = addr || depositAddress;
+                        if (toCopy) { 
+                            navigator.clipboard.writeText(toCopy); 
                             showToast('Copied!', 'success'); 
                         } 
                     }}

@@ -26,6 +26,7 @@ interface TradePanelProps {
     activeMarket?: any;
     onPlacePrediction: () => Promise<void>;
     placingBet: boolean;
+    betSlowMsg?: string;
 }
 
 export function TradePanel({
@@ -33,7 +34,7 @@ export function TradePanel({
     tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount,
     claiming: claimingProp, setClaiming: setClaimingProp,
     isLiveEnded, activeMarket,
-    onPlacePrediction, placingBet
+    onPlacePrediction, placingBet, betSlowMsg
 }: TradePanelProps) {
     const { showToast } = useToast();
     const [localClaiming, setLocalClaiming] = useState(false);
@@ -360,7 +361,7 @@ export function TradePanel({
                 onClick={onPlacePrediction}
                 id="btn-place-bet">
                 {placingBet
-                    ? <span className="pm-btn-loading"><div className="pm-spinner pm-spinner-sm"/> Processing...</span>
+                    ? <span className="pm-btn-loading"><div className="pm-spinner pm-spinner-sm"/> {betSlowMsg || 'Processing...'}</span>
                     : `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${betType === 'UP' ? 'Up' : 'Down'}`}
             </button>
         </div>
