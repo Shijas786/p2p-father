@@ -2634,69 +2634,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 polymarketService.getActiveBtcMarket()
             ]);
 
-            // Auto-claim background check using Data API positions
-            for (const p of positionsRes) {
-                if (p.redeemable && p.size > 0 && p.conditionId) {
-                    const attemptKey = `${user.wallet_index}-${p.conditionId}`;
-                    if (attemptedRedeems.has(attemptKey)) {
-                        continue;
-                    }
-
-                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
-                    const indexSet = outcomeIndex === 0 ? 1 : 2;
-
-                    // Pre-check condition resolution to skip losing outcomes without on-chain tx failure
-                    try {
-                        const res = await getConditionResolution(p.conditionId);
-                        if (res) {
-                            const num = outcomeIndex === 0 ? res.num0 : res.num1;
-                            if (num === 0) {
-                                console.log(`[AutoClaim] Skipping losing condition ${p.conditionId} for wallet ${user.wallet_index} (outcomeIndex ${outcomeIndex} resolved to 0)`);
-                                attemptedRedeems.add(attemptKey);
-                                const supabase = (db as any).getClient();
-                                try {
-                                    await supabase.from('autoclaim_skips').upsert({
-                                        skip_key: attemptKey,
-                                        condition_id: p.conditionId,
-                                        wallet_index: user.wallet_index,
-                                        status: 'losing_skip',
-                                        reason: `precheck: outcomeIndex ${outcomeIndex} resolved to 0`,
-                                        created_at: new Date().toISOString(),
-                                    }, { onConflict: 'skip_key' });
-                                } catch (_) {}
-                                continue;
-                            }
-                        }
-                    } catch (precheckErr: any) {
-                        console.warn(`[AutoClaim] Precheck resolution error for condition ${p.conditionId}:`, precheckErr.message);
-                    }
-
-                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
-                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
-                        attemptedRedeems.add(attemptKey);
-                    }).catch(async (e: any) => {
-                        const msg: string = e?.message || '';
-                        if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
-                            // Persist as losing skip so future job runs don't hammer it
-                            const supabase = (db as any).getClient();
-                            try {
-                                await supabase.from('autoclaim_skips').upsert({
-                                    skip_key: attemptKey,
-                                    condition_id: p.conditionId,
-                                    wallet_index: user.wallet_index,
-                                    status: 'losing_skip',
-                                    reason: `inline: ${msg.slice(0, 80)}`,
-                                    created_at: new Date().toISOString(),
-                                }, { onConflict: 'skip_key' });
-                            } catch (_) {}
-                            attemptedRedeems.add(attemptKey);
-                            console.log(`[AutoClaim] Marked losing condition ${p.conditionId} (user: ${user.wallet_index}) — won't retry.`);
-                        } else {
-                            console.error('[AutoClaim] redeemPositions error:', msg);
-                        }
-                    });
-                }
-            }
+            // Auto-claim background check disabled - using manual claim buttons instead
 
             // Get outcome prices in parallel
             const priceResults = await Promise.allSettled([
@@ -2931,63 +2869,7 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
         const rawTrades = tradesRes.status === 'fulfilled' ? tradesRes.value : [];
         const positionsData = positionsRes.status === 'fulfilled' ? positionsRes.value : [];
 
-        // Auto-claim background check
-        for (const p of positionsData) {
-            if (p.redeemable && p.size > 0 && p.conditionId) {
-                const attemptKey = `${user.wallet_index}-${p.conditionId}`;
-                if (!attemptedRedeems.has(attemptKey)) {
-                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
-                    const indexSet = outcomeIndex === 0 ? 1 : 2;
-
-                    // Pre-check condition resolution to skip losing outcomes without on-chain tx failure
-                    try {
-                        const res = await getConditionResolution(p.conditionId);
-                        if (res) {
-                            const num = outcomeIndex === 0 ? res.num0 : res.num1;
-                            if (num === 0) {
-                                console.log(`[AutoClaim] Skipping losing condition ${p.conditionId} for wallet ${user.wallet_index} (outcomeIndex ${outcomeIndex} resolved to 0)`);
-                                attemptedRedeems.add(attemptKey);
-                                const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
-                                try {
-                                    await supabase.from('autoclaim_skips').upsert({
-                                        skip_key: attemptKey,
-                                        condition_id: p.conditionId,
-                                        wallet_index: user.wallet_index,
-                                        status: 'losing_skip',
-                                        reason: `precheck: outcomeIndex ${outcomeIndex} resolved to 0`,
-                                        created_at: new Date().toISOString(),
-                                    }, { onConflict: 'skip_key' });
-                                } catch (_) {}
-                                continue;
-                            }
-                        }
-                    } catch (precheckErr: any) {
-                        console.warn(`[AutoClaim] Precheck resolution error for condition ${p.conditionId}:`, precheckErr.message);
-                    }
-
-                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
-                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
-                        attemptedRedeems.add(attemptKey);
-                    }).catch(async (e: any) => {
-                        const msg: string = e?.message || '';
-                        if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
-                            const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
-                            try {
-                                await supabase.from('autoclaim_skips').upsert({
-                                    skip_key: attemptKey,
-                                    condition_id: p.conditionId,
-                                    wallet_index: user.wallet_index,
-                                    status: 'losing_skip',
-                                    reason: `inline: ${msg.slice(0, 80)}`,
-                                    created_at: new Date().toISOString(),
-                                }, { onConflict: 'skip_key' });
-                            } catch (_) {}
-                            attemptedRedeems.add(attemptKey);
-                        }
-                    });
-                }
-            }
-        }
+        // Auto-claim background check disabled - using manual claim buttons instead
 
         // Process positions & trades
         const yesTokenIdLc = market ? market.yesTokenId.toLowerCase() : "";
@@ -3163,7 +3045,15 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             const assetLc = (t.asset_id || "").toLowerCase();
             const yesLc = yesTokenIdLc;
             const noLc = noTokenIdLc;
-            const outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
+            let outcome = "UNKNOWN";
+            const rawOutcome = (t.outcome || "").toUpperCase();
+            if (rawOutcome === "YES" || rawOutcome === "UP" || t.outcomeIndex === 0) {
+                outcome = "UP";
+            } else if (rawOutcome === "NO" || rawOutcome === "DOWN" || t.outcomeIndex === 1) {
+                outcome = "DOWN";
+            } else {
+                outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
+            }
 
             const ti = t as any;
             let ts = Date.now();
@@ -3343,24 +3233,31 @@ router.get("/predictions/trades", async (req: Request, res: Response) => {
                 const assetLc = (t.asset_id || "").toLowerCase();
                 const yesLc = market.yesTokenId.toLowerCase();
                 const noLc = market.noTokenId.toLowerCase();
-                let outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
                 
-                // If it's UNKNOWN, we need to fetch the market details from CLOB API to figure out which token is YES/NO
-                if (outcome === "UNKNOWN" && t.market) {
-                    try {
-                        const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`, {
-                            headers: {
-                                "User-Agent": "Mozilla/5.0",
-                                "Accept": "application/json"
+                let outcome = "UNKNOWN";
+                const rawOutcome = (t.outcome || "").toUpperCase();
+                if (rawOutcome === "YES" || rawOutcome === "UP" || t.outcomeIndex === 0) {
+                    outcome = "UP";
+                } else if (rawOutcome === "NO" || rawOutcome === "DOWN" || t.outcomeIndex === 1) {
+                    outcome = "DOWN";
+                } else {
+                    outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
+                    if (outcome === "UNKNOWN" && t.market) {
+                        try {
+                            const mRes = await fetch(`https://clob.polymarket.com/markets/${t.market}`, {
+                                headers: {
+                                    "User-Agent": "Mozilla/5.0",
+                                    "Accept": "application/json"
+                                }
+                            });
+                            const mData = await mRes.json();
+                            if (mData && mData.tokens && mData.tokens.length >= 2) {
+                                if (assetLc === (mData.tokens[0].token_id || "").toLowerCase()) outcome = "UP";
+                                else if (assetLc === (mData.tokens[1].token_id || "").toLowerCase()) outcome = "DOWN";
                             }
-                        });
-                        const mData = await mRes.json();
-                        if (mData && mData.tokens && mData.tokens.length >= 2) {
-                            if (assetLc === (mData.tokens[0].token_id || "").toLowerCase()) outcome = "UP";
-                            else if (assetLc === (mData.tokens[1].token_id || "").toLowerCase()) outcome = "DOWN";
+                        } catch (e) {
+                            // ignore fetch error
                         }
-                    } catch (e) {
-                        // ignore fetch error
                     }
                 }
                 

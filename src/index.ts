@@ -63,7 +63,7 @@ async function main() {
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
-        startAutoClaimJob();
+        // startAutoClaimJob(); // Disabled background auto-claim service, using manual claim button instead
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 

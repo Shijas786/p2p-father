@@ -113,7 +113,7 @@ export function TradePanel({
             setClaiming(true);
             try {
                 const targetConditionId = roundTrades[0]?.conditionId || round.conditionId;
-                if (!targetConditionId) throw new Error("No condition ID found for this round. Please wait for the system to auto-claim.");
+                if (!targetConditionId) throw new Error("No condition ID found for this round. Please try again in a few moments.");
                 
                 const res = await api.predictions.autoClaim(targetConditionId);
                 if (res.claimed > 0) {
