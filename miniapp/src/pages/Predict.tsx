@@ -123,7 +123,7 @@ export function Predict({ user }: Props) {
                     outcome: h.outcome, timestamp: h.timestamp,
                 }));
                 setHistory(parsed);
-                if (parsed.length > 0) setPriceToBeat(parsed[0].close || parsed[0].open || 0);
+                if (parsed.length > 0) setPriceToBeat(parsed[parsed.length - 1].open || 0);
             }
             if (balRes.status === 'fulfilled') setCashBalance(balRes.value.balance);
             if (posRes.status === 'fulfilled') setPositions(posRes.value.positions ?? []);
