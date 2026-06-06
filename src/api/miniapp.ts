@@ -2641,9 +2641,37 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                     if (attemptedRedeems.has(attemptKey)) {
                         continue;
                     }
-                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
+
                     const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
                     const indexSet = outcomeIndex === 0 ? 1 : 2;
+
+                    // Pre-check condition resolution to skip losing outcomes without on-chain tx failure
+                    try {
+                        const res = await getConditionResolution(p.conditionId);
+                        if (res) {
+                            const num = outcomeIndex === 0 ? res.num0 : res.num1;
+                            if (num === 0) {
+                                console.log(`[AutoClaim] Skipping losing condition ${p.conditionId} for wallet ${user.wallet_index} (outcomeIndex ${outcomeIndex} resolved to 0)`);
+                                attemptedRedeems.add(attemptKey);
+                                const supabase = (db as any).getClient();
+                                try {
+                                    await supabase.from('autoclaim_skips').upsert({
+                                        skip_key: attemptKey,
+                                        condition_id: p.conditionId,
+                                        wallet_index: user.wallet_index,
+                                        status: 'losing_skip',
+                                        reason: `precheck: outcomeIndex ${outcomeIndex} resolved to 0`,
+                                        created_at: new Date().toISOString(),
+                                    }, { onConflict: 'skip_key' });
+                                } catch (_) {}
+                                continue;
+                            }
+                        }
+                    } catch (precheckErr: any) {
+                        console.warn(`[AutoClaim] Precheck resolution error for condition ${p.conditionId}:`, precheckErr.message);
+                    }
+
+                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
                     polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
                         attemptedRedeems.add(attemptKey);
                     }).catch(async (e: any) => {
@@ -2793,9 +2821,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             // profit = shares * payoutFraction - cost  (payoutFraction = payoutNumerator/denominator)
             let realizedPnl = activeRealizedPnl; // Include partial sells from active market
             try {
-                // Step 1: Try Data API cashPnl first (works for recently resolved ones still in API)
-                const allPositionsRes = await fetch(`https://data-api.polymarket.com/positions?user=${proxyAddress.toLowerCase()}&sizeThreshold=0`, { signal: AbortSignal.timeout(5000) });
-                const allPositions: any[] = await allPositionsRes.json().catch(() => []);
+                // Step 1: Use cached getPositionsForProxy with threshold "0"
+                const allPositions = await polymarketService.getPositionsForProxy(proxyAddress, "0").catch(() => []);
                 const openConditionIds = new Set<string>();
                 if (Array.isArray(allPositions) && allPositions.length > 0) {
                     for (const p of allPositions) {
@@ -2804,9 +2831,8 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                     }
                 }
 
-                // Step 2: Fetch all trade history to find closed/redeemed positions
-                const allTradesRes = await fetch(`https://data-api.polymarket.com/trades?user=${proxyAddress.toLowerCase()}&limit=500`, { signal: AbortSignal.timeout(8000) });
-                const allTrades: any[] = await allTradesRes.json().catch(() => []);
+                // Step 2: Use already fetched/cached trades to avoid duplicate network call
+                const allTrades = tradesRes || [];
                 if (Array.isArray(allTrades) && allTrades.length > 0) {
                     // Group by conditionId → track net buy cost and shares
                     const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
@@ -2910,9 +2936,36 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             if (p.redeemable && p.size > 0 && p.conditionId) {
                 const attemptKey = `${user.wallet_index}-${p.conditionId}`;
                 if (!attemptedRedeems.has(attemptKey)) {
-                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
                     const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
                     const indexSet = outcomeIndex === 0 ? 1 : 2;
+
+                    // Pre-check condition resolution to skip losing outcomes without on-chain tx failure
+                    try {
+                        const res = await getConditionResolution(p.conditionId);
+                        if (res) {
+                            const num = outcomeIndex === 0 ? res.num0 : res.num1;
+                            if (num === 0) {
+                                console.log(`[AutoClaim] Skipping losing condition ${p.conditionId} for wallet ${user.wallet_index} (outcomeIndex ${outcomeIndex} resolved to 0)`);
+                                attemptedRedeems.add(attemptKey);
+                                const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
+                                try {
+                                    await supabase.from('autoclaim_skips').upsert({
+                                        skip_key: attemptKey,
+                                        condition_id: p.conditionId,
+                                        wallet_index: user.wallet_index,
+                                        status: 'losing_skip',
+                                        reason: `precheck: outcomeIndex ${outcomeIndex} resolved to 0`,
+                                        created_at: new Date().toISOString(),
+                                    }, { onConflict: 'skip_key' });
+                                } catch (_) {}
+                                continue;
+                            }
+                        }
+                    } catch (precheckErr: any) {
+                        console.warn(`[AutoClaim] Precheck resolution error for condition ${p.conditionId}:`, precheckErr.message);
+                    }
+
+                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
                     polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
                         attemptedRedeems.add(attemptKey);
                     }).catch(async (e: any) => {
@@ -3146,7 +3199,8 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             trades: mappedTrades.slice(0, 50),
             recentTrades: recentTrades.slice(0, 10),
             realizedPnl: parseFloat(realizedPnl.toFixed(2)),
-            depositAddress: proxyAddress
+            depositAddress: proxyAddress,
+            timestamp: Date.now() // Add timestamp for throttling updates
         };
 
         await polymarketService.saveUserPredictionsCache(user.telegram_id, snapshotCache);
@@ -3177,7 +3231,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
         }
 
         // Try reading user snapshot from predictions_cache (Supabase / Redis)
-        const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
+        const forceRefresh = req.query.refresh === 'true';
+        const cached = forceRefresh ? null : await polymarketService.getUserPredictionsCache(user.telegram_id);
 
         // Resolve active market first (almost instant < 5ms due to cache)
         const market = await polymarketService.getActiveBtcMarket().catch(() => null);
@@ -3192,8 +3247,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
         ]);
 
         if (cached) {
-            // Serve cached predictions instantly, trigger background refresh
-            refreshUserSnapshotCache(user, proxyAddress).catch(() => {});
+            // Serve cached predictions instantly, trigger background refresh only if cache is older than 15 seconds
+            const cacheAge = Date.now() - (cached.timestamp || 0);
+            if (cacheAge > 15000) {
+                console.log(`[Cache] Cache age is ${cacheAge}ms (> 15s). Triggering background refresh for user ${user.telegram_id}`);
+                refreshUserSnapshotCache(user, proxyAddress).catch(() => {});
+            } else {
+                console.log(`[Cache] Cache age is ${cacheAge}ms (<= 15s). Skipping background refresh for user ${user.telegram_id}`);
+            }
 
             return res.json({
                 balance: cached.balance,

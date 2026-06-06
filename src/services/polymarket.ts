@@ -635,18 +635,18 @@ class PolymarketService {
         }
     }
 
-    async getPositionsForProxy(proxyAddress: string): Promise<any[]> {
-        const cacheKey = proxyAddress.toLowerCase();
+    async getPositionsForProxy(proxyAddress: string, sizeThreshold = "0.01"): Promise<any[]> {
+        const cacheKey = `${proxyAddress.toLowerCase()}:${sizeThreshold}`;
         const now = Date.now();
         if (positionsCache[cacheKey] && (now - positionsCache[cacheKey].timestamp < PROXY_CACHE_TTL)) {
             return positionsCache[cacheKey].data;
         }
 
         try {
-            const res = await polymarketGet("data-api.polymarket.com", "/positions", { user: proxyAddress.toLowerCase(), sizeThreshold: "0.01" });
+            const res = await polymarketGet("data-api.polymarket.com", "/positions", { user: proxyAddress.toLowerCase(), sizeThreshold });
             const data = Array.isArray(res.data) ? res.data : [];
             positionsCache[cacheKey] = { data, timestamp: now };
-            console.log(`[Positions] Fetched ${data.length} positions from Data API for wallet ${proxyAddress}`);
+            console.log(`[Positions] Fetched ${data.length} positions (threshold: ${sizeThreshold}) from Data API for wallet ${proxyAddress}`);
             return data;
         } catch (e: any) {
             try {
@@ -663,16 +663,24 @@ class PolymarketService {
     }
 
     clearPositionsCache(proxyAddress: string) {
-        const cacheKey = proxyAddress.toLowerCase();
-        delete positionsCache[cacheKey];
-        console.log(`[Cache] Cleared positions cache for ${cacheKey}`);
+        const prefix = proxyAddress.toLowerCase();
+        for (const key of Object.keys(positionsCache)) {
+            if (key.startsWith(prefix)) {
+                delete positionsCache[key];
+            }
+        }
+        console.log(`[Cache] Cleared positions cache for ${prefix}`);
     }
 
     clearUserCache(proxyAddress: string) {
-        const cacheKey = proxyAddress.toLowerCase();
-        delete positionsCache[cacheKey];
-        delete tradesCache[cacheKey];
-        console.log(`[Cache] Cleared positions and trades cache for ${cacheKey}`);
+        const prefix = proxyAddress.toLowerCase();
+        for (const key of Object.keys(positionsCache)) {
+            if (key.startsWith(prefix)) {
+                delete positionsCache[key];
+            }
+        }
+        delete tradesCache[prefix];
+        console.log(`[Cache] Cleared positions and trades cache for ${prefix}`);
     }
 
     private isDbCacheSupported: boolean | null = null;

@@ -229,6 +229,16 @@ async function persistLosingSkip(client: any, skipKey: string, conditionId: stri
 export function startAutoClaimJob() {
     console.log("⏰ Starting Auto Claim Job...");
 
+    // ── Load persisted losing skips from DB immediately on startup (survives restarts) ──────
+    try {
+        const client = (db as any).getClient();
+        loadPersistentSkips(client).catch(err => {
+            console.error("[AutoClaim] Failed to load persistent skips on startup:", err.message || err);
+        });
+    } catch (dbErr: any) {
+        console.warn("[AutoClaim] Database client not initialized yet for startup skips load:", dbErr.message);
+    }
+
     let isRunning = false;
     setInterval(async () => {
         if (isRunning) return;
