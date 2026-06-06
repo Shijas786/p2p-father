@@ -12,15 +12,27 @@ export async function syncPredictionTrades() {
 
     const supabase = db.getClient();
 
-    // Fetch all users with a proxy wallet
+    // Optimize: Fetch only users who have active prediction stats (placed at least 1 trade)
+    const { data: activeStats } = await supabase
+        .from('prediction_user_stats')
+        .select('user_id');
+
+    const activeUserIds = (activeStats || []).map(s => s.user_id);
+    if (activeUserIds.length === 0) {
+        console.log('[SyncTrades] No active prediction users to sync.');
+        return;
+    }
+
+    // Fetch details for active users only
     const { data: users } = await supabase
         .from('users')
         .select('id, telegram_id, username, wallet_index, deposit_wallet_address')
+        .in('id', activeUserIds)
         .not('wallet_index', 'is', null)
         .not('deposit_wallet_address', 'is', null);
 
     if (!users || users.length === 0) {
-        console.log('[SyncTrades] No users to sync.');
+        console.log('[SyncTrades] No active users matched proxy details.');
         return;
     }
 
