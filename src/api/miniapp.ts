@@ -226,8 +226,29 @@ router.get("/predictions/klines", async (req: Request, res: Response) => {
         if (startTime) url += `&startTime=${startTime}`;
         if (limit) url += `&limit=${limit}`;
 
-        const binanceRes = await fetch(url);
+        const cacheKey = `binance_klines:${crypto.createHash("md5").update(url).digest("hex")}`;
+        
+        // Try reading from Redis cache
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                return res.json(JSON.parse(cached));
+            }
+        } catch (redisErr: any) {
+            console.warn("[KlinesCache] Redis get error:", redisErr.message);
+        }
+
+        const binanceRes = await fetch(url, { signal: AbortSignal.timeout(5000) });
         const data = await binanceRes.json();
+
+        // Save to Redis: cache historical data (with startTime) for 1 hour, live data for 3 seconds
+        const ttl = startTime ? 3600 : 3;
+        try {
+            await redis.setex(cacheKey, ttl, JSON.stringify(data));
+        } catch (redisErr: any) {
+            console.warn("[KlinesCache] Redis set error:", redisErr.message);
+        }
+
         res.json(data);
     } catch (err: any) {
         console.error("[MINIAPP] Binance klines proxy error:", err.message);
@@ -2305,13 +2326,23 @@ router.get("/predictions/copy-traders", async (req: Request, res: Response) => {
     }
 });
 
-router.get("/predictions/history", async (req: Request, res: Response) => {
+async function getCachedBitcoinHistory(): Promise<any[]> {
+    const cacheKey = "btc_price_history_cache";
     try {
-        const binanceRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100");
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+    } catch (err: any) {
+        console.warn("[History] Redis get error:", err.message);
+    }
+
+    try {
+        const binanceRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100", { signal: AbortSignal.timeout(5000) });
         const data = await binanceRes.json();
         
         if (!Array.isArray(data)) {
-            return res.status(500).json({ error: "Insufficient historical data" });
+            throw new Error("Invalid klines data from Binance");
         }
 
         const history = data.map((d: any) => {
@@ -2332,6 +2363,22 @@ router.get("/predictions/history", async (req: Request, res: Response) => {
             };
         }).reverse();
 
+        try {
+            await redis.setex(cacheKey, 30, JSON.stringify(history));
+        } catch (redisErr: any) {
+            console.warn("[History] Redis set error:", redisErr.message);
+        }
+
+        return history;
+    } catch (err: any) {
+        console.error("[History] Fetch failed, returning empty:", err.message);
+        return [];
+    }
+}
+
+router.get("/predictions/history", async (req: Request, res: Response) => {
+    try {
+        const history = await getCachedBitcoinHistory();
         res.json({ history });
     } catch (err: any) {
         console.error("[MINIAPP] History Error:", err);
@@ -3135,32 +3182,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
         // Resolve active market first (almost instant < 5ms due to cache)
         const market = await polymarketService.getActiveBtcMarket().catch(() => null);
 
-        // Fetch Binance historical klines in parallel (fast ~100ms)
-        const historyRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => []);
-
-        // Fetch outcome prices from CLOB in parallel (fast ~500ms, or cached)
-        const [yesPrice, noPrice] = await Promise.all([
-            market ? polymarketService.getOutcomePrice(market.yesTokenId, false).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 },
-            market ? polymarketService.getOutcomePrice(market.noTokenId, true).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 }
+        // Fetch outcome prices and cached history in parallel (cached history uses Redis, <5ms)
+        const [[yesPrice, noPrice], parsedHistory] = await Promise.all([
+            Promise.all([
+                market ? polymarketService.getOutcomePrice(market.yesTokenId, false).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 },
+                market ? polymarketService.getOutcomePrice(market.noTokenId, true).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 }
+            ]),
+            getCachedBitcoinHistory()
         ]);
-
-        let parsedHistory: any[] = [];
-        if (Array.isArray(historyRes)) {
-            parsedHistory = historyRes.map((d: any) => {
-                const openTime = d[0];
-                const openPrice = parseFloat(d[1]);
-                const closePrice = parseFloat(d[4]);
-                const isUp = closePrice > openPrice;
-                const timeStr = new Date(openTime).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).replace(' ', '');
-                return {
-                    time: timeStr,
-                    open: openPrice,
-                    close: closePrice,
-                    outcome: isUp ? 'UP' : 'DOWN',
-                    timestamp: openTime,
-                };
-            }).reverse();
-        }
 
         if (cached) {
             // Serve cached predictions instantly, trigger background refresh
