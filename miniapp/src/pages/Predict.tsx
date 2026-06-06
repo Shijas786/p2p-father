@@ -96,6 +96,21 @@ export function Predict({ user }: Props) {
     const [historyPage, setHistoryPage]               = useState(0);
 
     const chartRef = useRef<HTMLDivElement>(null);
+    const activeMarketRef = useRef<any>(null);
+    const yesPriceRef = useRef(yesPrice);
+    const noPriceRef = useRef(noPrice);
+
+    useEffect(() => {
+        activeMarketRef.current = activeMarket;
+    }, [activeMarket]);
+
+    useEffect(() => {
+        yesPriceRef.current = yesPrice;
+    }, [yesPrice]);
+
+    useEffect(() => {
+        noPriceRef.current = noPrice;
+    }, [noPrice]);
 
     // ── Load all data ───────────────────────────────────────────────────────
     const loadData = useCallback(async () => {
@@ -221,25 +236,65 @@ export function Predict({ user }: Props) {
                         // Merge WS positions immediately into state
                         setPositions(prev => {
                             const newPos = [...prev];
+                            const activeBtcMarket = activeMarketRef.current;
+                            const yesPriceObj = yesPriceRef.current || { buyPrice: 0.5 };
+                            const noPriceObj = noPriceRef.current || { buyPrice: 0.5 };
+
                             for (const wsPos of wsPositions) {
-                                const idx = newPos.findIndex(p => p.outcome === wsPos.outcome);
+                                if (!activeBtcMarket) continue;
+                                
+                                const assetLc = wsPos.asset.toLowerCase();
+                                const isYes = assetLc === activeBtcMarket.yesTokenId.toLowerCase();
+                                const isNo = assetLc === activeBtcMarket.noTokenId.toLowerCase();
+                                
+                                if (!isYes && !isNo) continue;
+
+                                const mappedOutcome = isYes ? 'UP' : 'DOWN';
+                                const outcomePrice = mappedOutcome === 'UP' ? yesPriceObj.buyPrice : noPriceObj.buyPrice;
+
+                                const idx = newPos.findIndex(p => p.outcome === mappedOutcome);
                                 if (idx >= 0) {
-                                    newPos[idx].qty = wsPos.size;
-                                    newPos[idx].value = wsPos.size * newPos[idx].currentPrice;
+                                    const oldQty = newPos[idx].qty;
+                                    const newQty = wsPos.size;
+                                    
+                                    newPos[idx].qty = newQty;
+                                    
+                                    if (newQty !== oldQty) {
+                                        if (newQty <= 0) {
+                                            newPos[idx].cost = 0;
+                                            newPos[idx].avg = 0;
+                                        } else {
+                                            const delta = newQty - oldQty;
+                                            if (delta < 0 && oldQty > 0) {
+                                                const avgCost = newPos[idx].cost / oldQty;
+                                                newPos[idx].cost -= Math.abs(delta) * avgCost;
+                                            } else {
+                                                newPos[idx].cost += delta * wsPos.price;
+                                            }
+                                            newPos[idx].avg = newPos[idx].cost / newQty;
+                                        }
+                                    }
+                                    newPos[idx].currentPrice = outcomePrice;
+                                    newPos[idx].value = newQty * outcomePrice;
+                                    newPos[idx].returnAmt = newPos[idx].value - newPos[idx].cost;
+                                    newPos[idx].returnPct = newPos[idx].cost > 0 ? (newPos[idx].returnAmt / newPos[idx].cost) * 100 : 0;
                                 } else {
+                                    const execPrice = wsPos.price || outcomePrice || 0.5;
+                                    const initialCost = wsPos.size * execPrice;
+                                    const currentValue = wsPos.size * outcomePrice;
                                     newPos.push({
-                                        outcome: wsPos.outcome as 'UP'|'DOWN',
+                                        outcome: mappedOutcome,
                                         qty: wsPos.size,
-                                        avg: wsPos.price,
-                                        currentPrice: wsPos.price,
-                                        cost: wsPos.size * wsPos.price,
-                                        value: wsPos.size * wsPos.price,
-                                        returnAmt: 0,
-                                        returnPct: 0
+                                        avg: execPrice,
+                                        currentPrice: outcomePrice,
+                                        cost: initialCost,
+                                        value: currentValue,
+                                        returnAmt: currentValue - initialCost,
+                                        returnPct: initialCost > 0 ? ((currentValue - initialCost) / initialCost) * 100 : 0
                                     });
                                 }
                             }
-                            return newPos;
+                            return newPos.filter(p => p.qty > 0.001);
                         });
                     });
                 }
@@ -516,6 +571,17 @@ export function Predict({ user }: Props) {
                 };
                 setRecentTrades(prev => [tempTrade, ...prev]);
                 setTrades(prev => [tempTrade, ...prev]);
+
+                // Optimistically update positions via polymarketWs to show instantly in active positions and net position cards
+                const activeMarket = activeMarketRef.current;
+                if (activeMarket) {
+                    const tokenId = betType === 'UP' ? activeMarket.yesTokenId : activeMarket.noTokenId;
+                    if (tradeType === 'buy') {
+                        polymarketWs.optimisticBuy(tokenId, betType, shareQty, price, activeMarket.slug);
+                    } else {
+                        polymarketWs.optimisticSell(tokenId, shareQty);
+                    }
+                }
 
                 setBetAmount(''); 
                 
