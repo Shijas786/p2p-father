@@ -588,7 +588,12 @@ class PolymarketService {
                 return response;
             }
         } catch (err: any) {
-            console.error("[Polymarket] Order execution failed:", err.message);
+            console.error("[Polymarket] Order execution failed:", err.message || err);
+            const errMsg = err.message || "";
+            const errData = err.response?.data?.error || "";
+            if (errMsg.includes("market not found") || JSON.stringify(err).includes("market not found") || errData.includes("market not found")) {
+                throw new Error("This round has just started and is initializing on Polymarket. Please wait 5-10 seconds and try again.");
+            }
             throw err;
         }
     }
