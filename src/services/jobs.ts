@@ -396,6 +396,11 @@ export function startAutoClaimJob() {
                                     attemptedRedeems.add(attemptKey);
                                     failedRedeemCounts.delete(attemptKey);
 
+                                    // Clear user predictions snapshot cache so updated balance/positions show immediately
+                                    if (user.telegram_id) {
+                                        await polymarketService.clearUserPredictionsCache(user.telegram_id).catch(() => {});
+                                    }
+
                                     // Notify via Telegram only for actual on-chain wins
                                     const isPosRedeemableValid = typeof pos.redeemable === 'number' ? pos.redeemable > 0 : (pos.redeemable === true || parseFloat(pos.redeemable) > 0);
                                     if (actualRedeemedHash && isPosRedeemableValid && user.telegram_id) {
