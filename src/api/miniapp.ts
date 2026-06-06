@@ -3293,6 +3293,21 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
 
         const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
 
+        // Calculate unclaimed winnings from database
+        let unclaimedWinnings = 0;
+        try {
+            const { data: unclaimedRows } = await db.getClient()
+                .from("prediction_trades")
+                .select("shares")
+                .eq("user_id", user.id)
+                .eq("resolved", true)
+                .eq("resolution", "WIN")
+                .eq("claimed", false);
+            unclaimedWinnings = (unclaimedRows || []).reduce((acc: number, row: any) => acc + (parseFloat(row.shares) || 0), 0);
+        } catch (dbErr: any) {
+            console.warn("[MINIAPP] Failed to calculate unclaimed winnings for snapshot:", dbErr.message);
+        }
+
         const snapshotCache = {
             balance,
             positions,
@@ -3300,6 +3315,7 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             recentTrades: recentTrades.slice(0, 10),
             realizedPnl: parseFloat(realizedPnl.toFixed(2)),
             depositAddress: proxyAddress,
+            unclaimedWinnings,
             timestamp: Date.now() // Add timestamp for throttling updates
         };
 
@@ -3368,7 +3384,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                     noPrice
                 } : null,
                 history: parsedHistory,
-                realizedPnl: cached.realizedPnl || 0
+                realizedPnl: cached.realizedPnl || 0,
+                unclaimedWinnings: cached.unclaimedWinnings || 0
             });
         }
 
@@ -3386,7 +3403,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 noPrice
             } : null,
             history: parsedHistory,
-            realizedPnl: fresh.realizedPnl
+            realizedPnl: fresh.realizedPnl,
+            unclaimedWinnings: fresh.unclaimedWinnings || 0
         });
     } catch (err: any) {
         console.error("[MINIAPP] Snapshot endpoint error:", err);

@@ -64,6 +64,7 @@ export function Predict({ user }: Props) {
     const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [loading, setLoading]       = useState(false);
+    const [unclaimedWinnings, setUnclaimedWinnings] = useState(0);
     const [activeMarket, setActiveMarket] = useState<any>(null);
     const [nextMarket, setNextMarket] = useState<any>(null);
 
@@ -129,6 +130,9 @@ export function Predict({ user }: Props) {
             // Set balance
             if (snap.balance !== undefined) {
                 setCashBalance(snap.balance);
+            }
+            if ((snap as any).unclaimedWinnings !== undefined) {
+                setUnclaimedWinnings((snap as any).unclaimedWinnings);
             }
             // Set deposit address
             if (snap.depositAddress !== undefined) {
@@ -801,7 +805,7 @@ export function Predict({ user }: Props) {
                 <div className="pm-topbar-metrics">
                     <div className="pm-metric">
                         <span className="pm-metric-label">PORTFOLIO</span>
-                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${(parseFloat(cashBalance || '0') + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
+                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${(parseFloat(cashBalance || '0') + unclaimedWinnings + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
                     </div>
                     <div className="pm-metric">
                         <span className="pm-metric-label">CASH</span>

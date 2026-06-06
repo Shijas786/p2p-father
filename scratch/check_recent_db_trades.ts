@@ -1,25 +1,22 @@
-import { syncPredictionTrades } from "../src/jobs/syncPredictionTrades";
-import { resolvePredictionTrades } from "../src/jobs/resolvePredictionTrades";
 import { db } from "../src/db/client";
 
 async function main() {
-    console.log("Running manual sync...");
-    await syncPredictionTrades();
-
-    console.log("Running manual resolution...");
-    await resolvePredictionTrades();
-
+    console.log("Checking recent prediction trades in database...");
     const client = db.getClient();
-    const { data: latestTrades, error } = await client
+    const { data: trades, error } = await client
         .from("prediction_trades")
         .select("*")
-        .order("traded_at", { ascending: false })
-        .limit(3);
+        .order("created_at", { ascending: false })
+        .limit(10);
 
     if (error) {
-        console.error("Error fetching latest trades:", error.message);
-    } else {
-        console.log("Latest DB prediction trades:", JSON.stringify(latestTrades, null, 2));
+        console.error("Error fetching trades:", error);
+        return;
+    }
+
+    console.log(`Fetched ${trades?.length || 0} trades:`);
+    for (const t of trades || []) {
+        console.log(`- ID: ${t.id}, Username: ${t.username}, Side: ${t.side}, Outcome: ${t.outcome}, Price: ${t.price}, Shares: ${t.shares}, Resolved: ${t.resolved}, Resolution: ${t.resolution}, Claimed: ${t.claimed}, Traded At: ${t.traded_at}`);
     }
 }
 
