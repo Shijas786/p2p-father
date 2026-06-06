@@ -2208,8 +2208,209 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
 
 router.get("/predictions/copy-traders", async (req: Request, res: Response) => {
     try {
-        res.json({ traders: [] });
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const supabase = db.getClient();
+        
+        // Fetch all users who allow copy trading
+        const { data: statsList, error: statsErr } = await supabase
+            .from("prediction_user_stats")
+            .select("*")
+            .eq("allow_copy_trading", true);
+
+        if (statsErr) throw statsErr;
+        if (!statsList || statsList.length === 0) {
+            return res.json({ traders: [] });
+        }
+
+        const traders = await Promise.all(statsList.map(async (trader) => {
+            // Count active copiers
+            const { count, error: countErr } = await supabase
+                .from("copy_connections")
+                .select("*", { count: "exact", head: true })
+                .eq("lead_user_id", trader.user_id)
+                .eq("active", true);
+
+            const copies = count || 0;
+            const tradesCount = trader.total_trades || 0;
+            const winRate = tradesCount > 0 ? `${((trader.total_wins / tradesCount) * 100).toFixed(1)}%` : '0.0%';
+
+            return {
+                id: trader.user_id,
+                telegramId: Number(trader.telegram_id),
+                name: trader.username || `User ${trader.telegram_id}`,
+                username: trader.username || "",
+                copiersCount: copies,
+                pnl: trader.realized_pnl ? `$${parseFloat(trader.realized_pnl).toFixed(2)}` : '$0.00',
+                vol: trader.total_wagered ? `$${parseFloat(trader.total_wagered).toFixed(2)}` : '$0.00',
+                winRate,
+                ratio: `${trader.total_wins || 0}W / ${trader.total_losses || 0}L`,
+                isMe: trader.user_id === user.id
+            };
+        }));
+
+        // Sort by copiers count first, then PNL descending
+        traders.sort((a, b) => {
+            if (b.copiersCount !== a.copiersCount) return b.copiersCount - a.copiersCount;
+            const pnlA = parseFloat(a.pnl.replace('$', ''));
+            const pnlB = parseFloat(b.pnl.replace('$', ''));
+            return pnlB - pnlA;
+        });
+
+        // Assign rank dynamically
+        const rankedTraders = traders.map((t, idx) => ({ ...t, rank: idx + 1 }));
+
+        res.json({ traders: rankedTraders });
     } catch (err: any) {
+        console.error("[MINIAPP] Get copy traders error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/copy-traders/toggle-lead", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { allowCopyTrading } = req.body;
+        if (allowCopyTrading === undefined) return res.status(400).json({ error: "Missing allowCopyTrading" });
+
+        const supabase = db.getClient();
+        
+        // Ensure prediction_user_stats row exists, then update allow_copy_trading
+        const { error } = await supabase
+            .from("prediction_user_stats")
+            .upsert({
+                user_id: user.id,
+                telegram_id: user.telegram_id,
+                username: user.username,
+                allow_copy_trading: !!allowCopyTrading,
+                updated_at: new Date().toISOString()
+            }, { onConflict: "user_id" });
+
+        if (error) throw error;
+        res.json({ success: true, allowCopyTrading: !!allowCopyTrading });
+    } catch (err: any) {
+        console.error("[MINIAPP] Toggle lead status error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/copy-traders/copy", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { leadUserId, amountType, amountValue } = req.body;
+        if (!leadUserId || !amountType || amountValue === undefined) {
+            return res.status(400).json({ error: "Missing leadUserId, amountType, or amountValue" });
+        }
+
+        const supabase = db.getClient();
+
+        // 1. Get lead user info to verify existence and get telegram_id
+        const { data: leadUser, error: leadErr } = await supabase
+            .from("users")
+            .select("telegram_id, username")
+            .eq("id", leadUserId)
+            .single();
+
+        if (leadErr || !leadUser) {
+            return res.status(404).json({ error: "Lead trader user not found" });
+        }
+
+        if (leadUserId === user.id) {
+            return res.status(400).json({ error: "You cannot copy trade yourself" });
+        }
+
+        // 2. Setup the connection
+        const { error } = await supabase
+            .from("copy_connections")
+            .upsert({
+                copier_user_id: user.id,
+                copier_telegram_id: user.telegram_id,
+                lead_user_id: leadUserId,
+                lead_telegram_id: Number(leadUser.telegram_id),
+                amount_type: amountType,
+                amount_value: parseFloat(amountValue),
+                active: true,
+                updated_at: new Date().toISOString()
+            }, { onConflict: "copier_user_id,lead_user_id" });
+
+        if (error) throw error;
+
+        // Notify lead trader that someone is copying them (adds to premium feel!)
+        try {
+            const leadMsg = `👥 <b>New Copy Follower!</b>\n\n@${user.username || 'A user'} started copy trading you with a <b>${amountType}</b> configuration of <b>${amountType === 'FIXED' ? '$' : ''}${amountValue}${amountType === 'PROPORTIONAL' ? 'x' : ''}</b>. Keep up the good work!`;
+            await bot.api.sendMessage(leadUser.telegram_id, leadMsg, { parse_mode: "HTML" }).catch(() => {});
+        } catch {}
+
+        res.json({ success: true });
+    } catch (err: any) {
+        console.error("[MINIAPP] Start copy trade error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/copy-traders/stop", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { leadUserId } = req.body;
+        if (!leadUserId) return res.status(400).json({ error: "Missing leadUserId" });
+
+        const supabase = db.getClient();
+
+        const { error } = await supabase
+            .from("copy_connections")
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq("copier_user_id", user.id)
+            .eq("lead_user_id", leadUserId);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err: any) {
+        console.error("[MINIAPP] Stop copy trade error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/predictions/copy-traders/status", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const supabase = db.getClient();
+
+        // 1. Fetch user's lead settings
+        const { data: stats } = await supabase
+            .from("prediction_user_stats")
+            .select("allow_copy_trading")
+            .eq("user_id", user.id)
+            .single();
+
+        // 2. Fetch user's active copy configurations
+        const { data: connections } = await supabase
+            .from("copy_connections")
+            .select("*")
+            .eq("copier_user_id", user.id)
+            .eq("active", true);
+
+        const activeConnection = (connections && connections.length > 0) ? connections[0] : null;
+
+        res.json({
+            allowCopyTrading: stats?.allow_copy_trading || false,
+            copying: activeConnection ? {
+                leadUserId: activeConnection.lead_user_id,
+                leadTelegramId: Number(activeConnection.lead_telegram_id),
+                amountType: activeConnection.amount_type,
+                amountValue: Number(activeConnection.amount_value)
+            } : null
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Get copy status error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -2461,6 +2662,21 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
                 refreshUserSnapshotCache(user, proxyAddress).catch(() => {});
             }
         } catch {}
+
+        // Trigger copy trading replication for followers in the background
+        try {
+            const { CopyTradingService } = await import("../services/copy-trading");
+            CopyTradingService.triggerCopyTrades(
+                user.telegram_id,
+                tokenId,
+                parseFloat(amount),
+                limitPrice,
+                outcome,
+                betSide
+            ).catch((copyErr) => console.error("[Copy Trading] Replicate trigger error:", copyErr));
+        } catch (copyErr) {
+            console.error("[Copy Trading] Failed to import/execute copy trading replication:", copyErr);
+        }
 
         res.json({ success: true, result });
     } catch (err: any) {

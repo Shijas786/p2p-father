@@ -283,6 +283,19 @@ export const api = {
             method: 'POST',
             body: conditionId ? JSON.stringify({ conditionId }) : undefined
         }),
+        toggleLead: (allowCopyTrading: boolean) => request<{ success: boolean; allowCopyTrading: boolean }>('/predictions/copy-traders/toggle-lead', {
+            method: 'POST',
+            body: JSON.stringify({ allowCopyTrading })
+        }),
+        copyTrader: (leadUserId: string, amountType: 'FIXED'|'PROPORTIONAL', amountValue: number) => request<{ success: boolean }>('/predictions/copy-traders/copy', {
+            method: 'POST',
+            body: JSON.stringify({ leadUserId, amountType, amountValue })
+        }),
+        stopCopying: (leadUserId: string) => request<{ success: boolean }>('/predictions/copy-traders/stop', {
+            method: 'POST',
+            body: JSON.stringify({ leadUserId })
+        }),
+        getCopyStatus: () => request<{ allowCopyTrading: boolean; copying: { leadUserId: string; leadTelegramId: number; amountType: string; amountValue: number } | null }>('/predictions/copy-traders/status'),
     },
 
     getLeaderboard: (page = 1, timeframe = 'all') =>
