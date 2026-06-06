@@ -47,13 +47,10 @@ export async function syncPredictionTrades() {
             const rawTrades = await polymarketService.getTradesForProxy(proxyAddress).catch(() => []);
             if (!rawTrades || rawTrades.length === 0) continue;
 
-            const market = await polymarketService.getActiveBtcMarket().catch(() => null);
-            const yesLc = market?.yesTokenId?.toLowerCase() ?? '';
-            const noLc = market?.noTokenId?.toLowerCase() ?? '';
-
             const rows = rawTrades.map((t: any) => {
                 const assetLc = (t.asset_id || '').toLowerCase();
-                const outcome = assetLc === yesLc ? 'UP' : assetLc === noLc ? 'DOWN' : 'UP';
+                const rawOutcome = String(t.outcome || '').toUpperCase();
+                const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
                 const side = (t.side || 'BUY').toUpperCase();
                 const price = parseFloat(t.price ?? '0');
                 const shares = parseFloat(t.size ?? '0');

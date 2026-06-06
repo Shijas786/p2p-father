@@ -2155,162 +2155,50 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY);
         
-        // Fetch all users who have a wallet_index (old logic)
-        const { data: usersWithWallets } = await supabase
-            .from("users")
-            .select("id, first_name, username, wallet_index, telegram_id, deposit_wallet_address, polymarket_api_key")
-            .not("wallet_index", "is", null)
-            .gte("wallet_index", 0)
-            .not("polymarket_api_key", "is", null)
-            .not("deposit_wallet_address", "is", null)
+        const { data: stats, error } = await supabase
+            .from("prediction_user_stats")
+            .select(`
+                telegram_id,
+                username,
+                total_trades,
+                total_wins,
+                total_losses,
+                total_wagered,
+                realized_pnl,
+                users ( first_name )
+            `)
+            .order("total_wagered", { ascending: false })
             .limit(100);
 
-        if (!usersWithWallets || usersWithWallets.length === 0) {
-            return res.json({ leaderboard: [] });
+        if (error) {
+            console.error("[Leaderboard] Supabase query error:", error.message);
+            throw error;
         }
 
-        // Resolve proxy address for each user and fetch their Polymarket trade stats
-        const leaderboardEntries: any[] = [];
-        
-        // Single provider and contract for all users in this request
-        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
-        const ctf = new ethers.Contract(
-            '0x4d97dcd97ec945f40cf65f87097ace5ea0476045',
-            [
-                'function payoutDenominator(bytes32) view returns (uint256)',
-                'function payoutNumerators(bytes32, uint256) view returns (uint256)'
-            ],
-            provider
-        );
-
-        const pLimit = (await import('p-limit')).default;
-        const limit = pLimit(5);
-
-        const results = await Promise.allSettled(
-            usersWithWallets.map((u: any) => limit(async () => {
-                try {
-                    if (!u.deposit_wallet_address || !u.polymarket_api_key) return null;
-
-                    // Resolve the deposit wallet (proxy) address
-                    const proxyAddress = await polymarketRelayerService.resolveDepositWallet(u.wallet_index);
-                    if (!proxyAddress) return null;
-
-                        // Fetch trades using the service (which has fallbacks)
-                        const trades = await polymarketService.getTradesForProxy(proxyAddress);
-                        if (!Array.isArray(trades) || trades.length === 0) return null;
-
-                        // Compute volume and trade count
-                        const totalVolume = trades
-                            .filter((t: any) => t.side === 'BUY')
-                            .reduce((s: number, t: any) => s + (parseFloat(t.size ?? '0') * parseFloat(t.price ?? '0')), 0);
-
-                        let wins = 0;
-                        let losses = 0;
-                        let totalPnl = 0;
-
-                        // Group trades by condition to compute realized PNL and wins/losses
-                        const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
-                        for (const t of trades) {
-                            const cid = t.conditionId;
-                            if (!cid) continue;
-                            const size = parseFloat(t.size ?? '0');
-                            const price = parseFloat(t.price ?? '0');
-                            if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: typeof t.outcomeIndex === 'string' ? parseInt(t.outcomeIndex) : (t.outcomeIndex ?? 1) };
-                            if (t.side === 'BUY') {
-                                conditionMap[cid].cost += size * price;
-                                conditionMap[cid].shares += size;
-                            } else if (t.side === 'SELL') {
-                                conditionMap[cid].cost -= size * price;
-                                conditionMap[cid].shares -= size;
-                            }
-                        }
-
-                        const resolvedCids = new Set<string>();
-
-                        // 1. Process all conditions from trades for Realized PnL / Wins / Losses
-                        for (const [cid, data] of Object.entries(conditionMap)) {
-                            let resolution = conditionResolutionCache.get(cid);
-                            if (!resolution) {
-                                try {
-                                    const denominator = await ctf.payoutDenominator(cid as `0x${string}`);
-                                    if (denominator > 0n) {
-                                        const num0 = await ctf.payoutNumerators(cid as `0x${string}`, 0n);
-                                        const num1 = await ctf.payoutNumerators(cid as `0x${string}`, 1n);
-                                        resolution = { denominator: Number(denominator), num0: Number(num0), num1: Number(num1) };
-                                        conditionResolutionCache.set(cid, resolution);
-                                    }
-                                } catch (e) { /* ignore */ }
-                            }
-
-                            if (resolution) {
-                                resolvedCids.add(cid);
-                                const num = data.outcomeIndex === 0 ? resolution.num0 : resolution.num1;
-                                const payoutFraction = num / resolution.denominator;
-                                const profit = (data.shares * payoutFraction) - data.cost;
-                                totalPnl += profit;
-
-                                if (data.shares > 0.001) {
-                                    if (payoutFraction > 0.5) wins++;
-                                    else losses++;
-                                }
-                            }
-                        }
-
-                        // 2. Add Unrealized PnL from active positions
-                        try {
-                            const positions = await polymarketService.getPositionsForProxy(proxyAddress);
-                            if (Array.isArray(positions)) {
-                                for (const p of positions) {
-                                    if (!resolvedCids.has(p.conditionId)) {
-                                        totalPnl += (parseFloat(p.cashPnl ?? '0') || 0);
-                                    }
-                                }
-                            }
-                        } catch { /* ignore */ }
-
-                        const winRatio = (wins + losses) > 0 ? ((wins / (wins + losses)) * 100).toFixed(0) + '%' : '0%';
-
-                        return {
-                            user: u.first_name || u.username || 'Anonymous',
-                            telegram_id: u.telegram_id,
-                            pred: `$${totalVolume.toFixed(2)}`,
-                            pnl: `${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toFixed(2)}`,
-                            pnlRaw: totalPnl,
-                            volRaw: totalVolume,
-                            trades: trades.length,
-                            wins,
-                            losses,
-                            winRatio
-                        };
-                    } catch (e: any) {
-                        console.error(`[Leaderboard] Error processing user ${u.telegram_id}:`, e.message);
-                        return null;
-                    }
-                })
-            ));
-            for (const r of results) {
-                if (r.status === 'fulfilled' && r.value) leaderboardEntries.push(r.value);
-            }
-
-        // Sort by volume descending (most active traders first), fallback to PNL
-        leaderboardEntries.sort((a, b) => b.volRaw - a.volRaw || b.pnlRaw - a.pnlRaw);
-
         const currentUserId = req.telegramUser?.id;
-        const leaderboard = leaderboardEntries.map((e, i) => ({
-            rank: i + 1,
-            user: e.user,
-            pred: e.pred,
-            pnl: e.pnl,
-            trades: e.trades,
-            wins: e.wins,
-            losses: e.losses,
-            winRatio: e.winRatio,
-            is_me: currentUserId === e.telegram_id,
-        }));
+        const leaderboard = (stats || []).map((s: any, i: number) => {
+            const firstName = s.users?.first_name || '';
+            const displayName = firstName || s.username || 'Anonymous';
+            const totalWagered = parseFloat(s.total_wagered || '0');
+            const realizedPnl = parseFloat(s.realized_pnl || '0');
+            const wins = s.total_wins || 0;
+            const losses = s.total_losses || 0;
+            const winRatio = (wins + losses) > 0 ? ((wins / (wins + losses)) * 100).toFixed(0) + '%' : '0%';
+
+            return {
+                rank: i + 1,
+                user: displayName,
+                pred: `$${totalWagered.toFixed(2)}`,
+                pnl: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`,
+                trades: s.total_trades || 0,
+                wins,
+                losses,
+                winRatio,
+                is_me: currentUserId === s.telegram_id,
+            };
+        });
 
         leaderboardCache = { data: leaderboard, ts: Date.now() };
-
-        console.log("LEADERBOARD RESPONSE DATA:", JSON.stringify(leaderboard, null, 2));
         res.json({ leaderboard });
     } catch (err: any) {
         console.error("[MINIAPP] Predictions leaderboard error:", err);
@@ -2511,12 +2399,10 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
                 polymarketService.clearUserCache(proxyAddress);
                 const rawTrades = await polymarketService.getTradesForProxy(proxyAddress).catch(() => []);
                 if (rawTrades && rawTrades.length > 0) {
-                    const yesLc = market?.yesTokenId?.toLowerCase() ?? '';
-                    const noLc = market?.noTokenId?.toLowerCase() ?? '';
-
                     const rows = rawTrades.map((t: any) => {
                         const assetLc = (t.asset_id || '').toLowerCase();
-                        const outcome = assetLc === yesLc ? 'UP' : assetLc === noLc ? 'DOWN' : 'UP';
+                        const rawOutcome = String(t.outcome || '').toUpperCase();
+                        const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
                         const side = (t.side || 'BUY').toUpperCase();
                         const price = parseFloat(t.price ?? '0');
                         const shares = parseFloat(t.size ?? '0');
