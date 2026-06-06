@@ -67,6 +67,15 @@
     50%      { transform: scale(1.35); opacity: 1;   }
 }
 
+@keyframes pm-balance-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.pm-balance-pulsing {
+    animation: pm-balance-pulse 1s infinite ease-in-out;
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 /*  TOP BAR                                                    */
 /* ═══════════════════════════════════════════════════════════ */

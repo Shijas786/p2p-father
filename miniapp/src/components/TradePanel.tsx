@@ -20,15 +20,21 @@ interface TradePanelProps {
     setBetType: (t: 'UP' | 'DOWN') => void;
     betAmount: string;
     setBetAmount: React.Dispatch<React.SetStateAction<string>>;
+    claiming?: boolean;
+    setClaiming?: (c: boolean) => void;
 }
 
 export function TradePanel({
     isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
-    tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount
+    tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount,
+    claiming: claimingProp, setClaiming: setClaimingProp
 }: TradePanelProps) {
     const { showToast } = useToast();
     const [placingBet, setPlacingBet] = useState(false);
-    const [claiming, setClaiming] = useState(false);
+    const [localClaiming, setLocalClaiming] = useState(false);
+    
+    const claiming = claimingProp !== undefined ? claimingProp : localClaiming;
+    const setClaiming = setClaimingProp !== undefined ? setClaimingProp : setLocalClaiming;
 
     const computedYesBuy = yesPrice.buyPrice;
     const computedNoBuy = noPrice.buyPrice;

@@ -76,6 +76,7 @@ export function Predict({ user }: Props) {
     const [betAmount, setBetAmount]   = useState('');
     const [sellPercentage, setSellPercentage] = useState<number>(0);
     const [placingBet, setPlacingBet] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
     
     // Notifications
     const [showNotifications, setShowNotifications] = useState(false);
@@ -562,11 +563,11 @@ export function Predict({ user }: Props) {
                 <div className="pm-topbar-metrics">
                     <div className="pm-metric">
                         <span className="pm-metric-label">PORTFOLIO</span>
-                        <span className="pm-metric-value pm-green">${(parseFloat(cashBalance || '0') + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
+                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${(parseFloat(cashBalance || '0') + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
                     </div>
                     <div className="pm-metric">
                         <span className="pm-metric-label">CASH</span>
-                        <span className="pm-metric-value pm-green">${parseFloat(cashBalance).toFixed(2)}</span>
+                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${parseFloat(cashBalance).toFixed(2)}</span>
                     </div>
                 </div>
                 <div className="pm-topbar-actions">
@@ -921,6 +922,8 @@ export function Predict({ user }: Props) {
                     setBetType={setBetType}
                     betAmount={betAmount}
                     setBetAmount={setBetAmount}
+                    claiming={isClaiming}
+                    setClaiming={setIsClaiming}
                 />
 
             </div>
