@@ -618,6 +618,12 @@ class PolymarketService {
             }
         }
     }
+
+    clearPositionsCache(proxyAddress: string) {
+        const cacheKey = proxyAddress.toLowerCase();
+        delete positionsCache[cacheKey];
+        console.log(`[Cache] Cleared positions cache for ${cacheKey}`);
+    }
 }
 
 export const polymarketService = new PolymarketService();

@@ -2348,6 +2348,11 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             console.warn("[MINIAPP] Failed to record trade for leaderboard (table might not exist yet):", dbErr.message);
         }
 
+        // Clear cached positions so next fetch gets new state
+        if (user.deposit_wallet_address) {
+            polymarketService.clearPositionsCache(user.deposit_wallet_address);
+        }
+
         res.json({ success: true, result });
     } catch (err: any) {
         console.error("[MINIAPP] Place bet error:", err);

@@ -228,7 +228,6 @@ export function Predict({ user }: Props) {
                             }
                             return newPos;
                         });
-                        loadData();
                     });
                 }
             } catch (e) { console.warn("Failed to init CLOB keys", e); }
