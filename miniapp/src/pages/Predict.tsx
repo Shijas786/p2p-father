@@ -624,10 +624,17 @@ export function Predict({ user }: Props) {
 
     // TradingView has been removed in favor of native SVG PredictChart
 
-    // ── Computed ────────────────────────────────────────────────────────────
-    const displayPtb  = selectedRound === -1 ? priceToBeat : selectedRound === -99 ? 0 : (history[selectedRound]?.open || 0);
-    const priceDelta  = livePrice > 0 && displayPtb > 0 ? livePrice - displayPtb : 0;
-    const isUp        = priceDelta >= 0;
+    const isRoundSelected = selectedRound !== -1 && selectedRound !== -99;
+    const selectedRoundData = isRoundSelected ? history[selectedRound] : null;
+
+    const displayPtb  = selectedRound === -1 ? priceToBeat : selectedRound === -99 ? 0 : (selectedRoundData?.open || 0);
+    const closePrice  = selectedRoundData ? (selectedRoundData.close || 0) : livePrice;
+    const priceDelta  = selectedRoundData 
+        ? (closePrice > 0 && displayPtb > 0 ? closePrice - displayPtb : 0)
+        : (livePrice > 0 && displayPtb > 0 ? livePrice - displayPtb : 0);
+    const isUp        = selectedRoundData
+        ? (selectedRoundData.outcome ? selectedRoundData.outcome === 'UP' : priceDelta >= 0)
+        : (priceDelta >= 0);
     const deltaAbs    = Math.abs(priceDelta);
 
     const computedYesBuy = yesPrice.buyPrice;
@@ -930,17 +937,37 @@ export function Predict({ user }: Props) {
                     </div>
                     <div className="pm-price-block pm-price-block-current" style={{borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px', marginLeft: '6px', borderRadius: '4px'}}>
                         <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
-                            <span className={isUp ? 'pm-green' : 'pm-red'} style={{textTransform: 'none', fontWeight: 500, fontSize: '11px'}}>Current Price</span>
+                            <span className={isUp ? 'pm-green' : 'pm-red'} style={{textTransform: 'none', fontWeight: 500, fontSize: '11px'}}>
+                                {selectedRoundData ? 'Close Price' : 'Current Price'}
+                            </span>
                             {displayPtb > 0 && (
                                 <span className={isUp ? 'pm-green' : 'pm-red'} style={{fontSize: '11px', fontWeight: 600}}>
                                     {isUp ? '▲' : '▼'} ${deltaAbs.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}
                                 </span>
                             )}
                         </div>
-                        <div className="pm-price-current-row">
+                        <div className="pm-price-current-row" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                             <span className={`pm-price-val ${isUp ? 'pm-green' : 'pm-red'}`} style={{fontSize: '20px'}}>
-                                ${livePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                                ${closePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
                             </span>
+                            {selectedRoundData && (
+                                <span style={{
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    color: '#fff',
+                                    backgroundColor: isUp ? 'rgba(14,203,129,0.2)' : 'rgba(246,70,93,0.2)',
+                                    border: `1px solid ${isUp ? '#0ecb81' : '#f6465d'}`,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    height: 'fit-content'
+                                }}>
+                                    Resolved {isUp ? 'UP' : 'DOWN'}
+                                </span>
+                            )}
                         </div>
                     </div>
                     <div className="pm-timer-block">
@@ -1026,10 +1053,24 @@ export function Predict({ user }: Props) {
                             if (!liveEndMs) return null;
                             const targetMs = liveEndMs + (offset * 300000);
                             const historyIndex = Math.abs(offset);
+                            const h = history.find(r => r.timestamp === targetMs - 300000);
+                            const outcome = h ? h.outcome : null;
                             return (
                                 <button key={`past-${offset}`} id={`round-${historyIndex}`}
                                     className={`pm-tl-pill ${selectedRound === historyIndex ? 'pm-tl-pill-active' : ''}`}
-                                    onClick={() => { haptic('selection'); setSelectedRound(historyIndex); }}>
+                                    onClick={() => { haptic('selection'); setSelectedRound(historyIndex); }}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                    {outcome && (
+                                        <span style={{ 
+                                            color: outcome === 'UP' ? '#0ecb81' : '#f6465d',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center'
+                                        }}>
+                                            {outcome === 'UP' ? '▲' : '▼'}
+                                        </span>
+                                    )}
                                     {new Date(targetMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                                 </button>
                             );
