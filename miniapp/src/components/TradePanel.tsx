@@ -22,12 +22,15 @@ interface TradePanelProps {
     setBetAmount: React.Dispatch<React.SetStateAction<string>>;
     claiming?: boolean;
     setClaiming?: (c: boolean) => void;
+    isLiveEnded?: boolean;
+    activeMarket?: any;
 }
 
 export function TradePanel({
     isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
     tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount,
-    claiming: claimingProp, setClaiming: setClaimingProp
+    claiming: claimingProp, setClaiming: setClaimingProp,
+    isLiveEnded, activeMarket
 }: TradePanelProps) {
     const { showToast } = useToast();
     const [placingBet, setPlacingBet] = useState(false);
@@ -66,8 +69,23 @@ export function TradePanel({
         finally { setPlacingBet(false); }
     };
 
-    if (selectedRound >= 0) {
-        const round = history[selectedRound];
+    const isRoundEnded = selectedRound >= 0 || isLiveEnded;
+    if (isRoundEnded) {
+        let round = selectedRound >= 0 ? history[selectedRound] : null;
+        if (!round && isLiveEnded && activeMarket) {
+            const targetMs = new Date(activeMarket.endsAt).getTime() - 300000;
+            round = history.find(h => h.timestamp === targetMs);
+            if (!round) {
+                round = {
+                    time: new Date(targetMs).toLocaleTimeString(),
+                    open: parseFloat(activeMarket.strikePrice || activeMarket.openPrice || 0),
+                    close: null,
+                    outcome: null,
+                    timestamp: targetMs,
+                    conditionId: activeMarket.conditionId
+                };
+            }
+        }
         if (!round) return null;
 
         const roundStart = new Date(round.timestamp);

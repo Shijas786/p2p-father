@@ -177,6 +177,11 @@ class PolymarketWsClient {
         if (changed) this.notifyListeners();
     }
 
+    clearPositions() {
+        this.localPositions = {};
+        this.notifyListeners();
+    }
+
     subscribe(listener: (positions: WsPositionState[]) => void) {
         this.positionListeners.add(listener);
         return () => this.positionListeners.delete(listener);

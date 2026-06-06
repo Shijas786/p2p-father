@@ -65,6 +65,7 @@ export function Predict({ user }: Props) {
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [loading, setLoading]       = useState(false);
     const [activeMarket, setActiveMarket] = useState<any>(null);
+    const [nextMarket, setNextMarket] = useState<any>(null);
 
     // Positions & trades
     const [positions, setPositions]   = useState<Position[]>([]);
@@ -97,12 +98,17 @@ export function Predict({ user }: Props) {
 
     const chartRef = useRef<HTMLDivElement>(null);
     const activeMarketRef = useRef<any>(null);
+    const nextMarketRef = useRef<any>(null);
     const yesPriceRef = useRef(yesPrice);
     const noPriceRef = useRef(noPrice);
 
     useEffect(() => {
         activeMarketRef.current = activeMarket;
     }, [activeMarket]);
+
+    useEffect(() => {
+        nextMarketRef.current = nextMarket;
+    }, [nextMarket]);
 
     useEffect(() => {
         yesPriceRef.current = yesPrice;
@@ -134,14 +140,6 @@ export function Predict({ user }: Props) {
             if (snap.recentTrades !== undefined) {
                 setRecentTrades(snap.recentTrades);
             }
-            // Set initial outcome prices from snapshot
-            if (snap.market && snap.market.yesPrice && snap.market.noPrice) {
-                setYesPrice(snap.market.yesPrice);
-                setNoPrice(snap.market.noPrice);
-            }
-            if (snap.market) {
-                setActiveMarket(snap.market);
-            }
             // Set history
             if (snap.history !== undefined) {
                 const parsed: Round[] = snap.history.map((h: any) => ({
@@ -154,68 +152,83 @@ export function Predict({ user }: Props) {
                 }
             }
 
-            // Sync WebSocket with backend positions to remove duplicates
-            if (snap.positions) {
-                const activeBtcMarket = snap.market;
-                if (activeBtcMarket) {
-                    const syncedAssets: string[] = [];
-                    for (const p of snap.positions) {
-                        if (p.outcome === 'UP') syncedAssets.push(activeBtcMarket.yesTokenId);
-                        if (p.outcome === 'DOWN') syncedAssets.push(activeBtcMarket.noTokenId);
+            if (snap.market) {
+                const currentMarket = activeMarketRef.current;
+                if (currentMarket && snap.market.slug !== currentMarket.slug) {
+                    // Backend rolled over to a new market! Keep showing current (ended) market
+                    setNextMarket(snap.market);
+                } else {
+                    // First load or same market
+                    setActiveMarket(snap.market);
+                    if (snap.market.yesPrice && snap.market.noPrice) {
+                        setYesPrice(snap.market.yesPrice);
+                        setNoPrice(snap.market.noPrice);
                     }
-                    polymarketWs.syncWithBackend(syncedAssets);
-                }
-                
-                // Merge WS positions into data API positions
-                const basePositions = [...snap.positions];
-                const wsPositions = polymarketWs.getPositions();
-                
-                const yesPriceObj = activeBtcMarket?.yesPrice || { buyPrice: 0.5 };
-                const noPriceObj = activeBtcMarket?.noPrice || { buyPrice: 0.5 };
-
-                for (const wsPos of wsPositions) {
-                    if (!activeBtcMarket) continue;
                     
-                    const assetLc = wsPos.asset.toLowerCase();
-                    const isYes = assetLc === activeBtcMarket.yesTokenId.toLowerCase();
-                    const isNo = assetLc === activeBtcMarket.noTokenId.toLowerCase();
-                    
-                    if (!isYes && !isNo) continue;
-
-                    const mappedOutcome = isYes ? 'UP' : 'DOWN';
-
-                    const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
-                    if (idx >= 0) {
-                        const oldQty = basePositions[idx].qty;
-                        basePositions[idx].qty += wsPos.size;
-                        
-                        if (wsPos.size < 0 && oldQty > 0) {
-                            const avgCost = basePositions[idx].cost / oldQty;
-                            basePositions[idx].cost -= Math.abs(wsPos.size) * avgCost;
-                        } else {
-                            basePositions[idx].cost += wsPos.size * wsPos.price;
+                    // Sync WebSocket with backend positions to remove duplicates
+                    if (snap.positions) {
+                        const activeBtcMarket = snap.market;
+                        if (activeBtcMarket) {
+                            const syncedAssets: string[] = [];
+                            for (const p of snap.positions) {
+                                if (p.outcome === 'UP') syncedAssets.push(activeBtcMarket.yesTokenId);
+                                if (p.outcome === 'DOWN') syncedAssets.push(activeBtcMarket.noTokenId);
+                            }
+                            polymarketWs.syncWithBackend(syncedAssets);
                         }
+                        
+                        // Merge WS positions into data API positions
+                        const basePositions = [...snap.positions];
+                        const wsPositions = polymarketWs.getPositions();
+                        
+                        const yesPriceObj = activeBtcMarket?.yesPrice || { buyPrice: 0.5 };
+                        const noPriceObj = activeBtcMarket?.noPrice || { buyPrice: 0.5 };
 
-                        basePositions[idx].value += wsPos.size * basePositions[idx].currentPrice;
-                        basePositions[idx].avg = basePositions[idx].qty > 0 ? basePositions[idx].cost / basePositions[idx].qty : 0;
-                    } else {
-                        const execPrice = wsPos.price;
-                        const outcomePrice = mappedOutcome === 'UP' ? yesPriceObj.buyPrice : noPriceObj.buyPrice;
-                        basePositions.push({
-                            outcome: mappedOutcome,
-                            qty: wsPos.size,
-                            avg: execPrice,
-                            currentPrice: execPrice,
-                            cost: wsPos.size * execPrice,
-                            value: wsPos.size * outcomePrice,
-                            returnAmt: 0,
-                            returnPct: 0
-                        });
+                        for (const wsPos of wsPositions) {
+                            if (!activeBtcMarket) continue;
+                            
+                            const assetLc = wsPos.asset.toLowerCase();
+                            const isYes = assetLc === activeBtcMarket.yesTokenId.toLowerCase();
+                            const isNo = assetLc === activeBtcMarket.noTokenId.toLowerCase();
+                            
+                            if (!isYes && !isNo) continue;
+
+                            const mappedOutcome = isYes ? 'UP' : 'DOWN';
+
+                            const idx = basePositions.findIndex(p => p.outcome === mappedOutcome);
+                            if (idx >= 0) {
+                                const oldQty = basePositions[idx].qty;
+                                basePositions[idx].qty += wsPos.size;
+                                
+                                if (wsPos.size < 0 && oldQty > 0) {
+                                    const avgCost = basePositions[idx].cost / oldQty;
+                                    basePositions[idx].cost -= Math.abs(wsPos.size) * avgCost;
+                                } else {
+                                    basePositions[idx].cost += wsPos.size * wsPos.price;
+                                }
+
+                                basePositions[idx].value += wsPos.size * basePositions[idx].currentPrice;
+                                basePositions[idx].avg = basePositions[idx].qty > 0 ? basePositions[idx].cost / basePositions[idx].qty : 0;
+                            } else {
+                                const execPrice = wsPos.price;
+                                const outcomePrice = mappedOutcome === 'UP' ? yesPriceObj.buyPrice : noPriceObj.buyPrice;
+                                basePositions.push({
+                                    outcome: mappedOutcome,
+                                    qty: wsPos.size,
+                                    avg: execPrice,
+                                    currentPrice: execPrice,
+                                    cost: wsPos.size * execPrice,
+                                    value: wsPos.size * outcomePrice,
+                                    returnAmt: 0,
+                                    returnPct: 0
+                                });
+                            }
+                        }
+                        
+                        const finalPositions = basePositions.filter(p => p.qty > 0.001);
+                        setPositions(finalPositions);
                     }
                 }
-                
-                const finalPositions = basePositions.filter(p => p.qty > 0.001);
-                setPositions(finalPositions);
             }
         } catch (e) {
             console.error('[Predict] loadData fatal error:', e);
@@ -378,6 +391,9 @@ export function Predict({ user }: Props) {
         let intervalId: any;
 
         const fetchPoly = async () => {
+            if (nextMarketRef.current || (activeMarketRef.current && new Date(activeMarketRef.current.endsAt).getTime() <= Date.now())) {
+                return;
+            }
             try {
                 // Use our backend proxy — never hits clob.polymarket.com from the browser
                 // This works on all mobile networks (Jio/Airtel/etc.)
@@ -465,43 +481,98 @@ export function Predict({ user }: Props) {
             const now = new Date();
             const next = new Date(Math.ceil(now.getTime() / 300000) * 300000);
             const nextTime = next.getTime();
-            const diff = nextTime - now.getTime();
             
-            // If the 5-minute round has rolled over
+            // If the 5-minute round has rolled over (clock-based for shifting historical lists)
             if (lastNextTime !== 0 && nextTime > lastNextTime) {
-                // Immediate refresh for countdown/slug updates
-                setTimeout(loadData, 1500);
-                // 15 seconds later, update to fetch settled position outcome
-                setTimeout(loadData, 15000);
-                // 30 seconds later, final settlement update
-                setTimeout(loadData, 30000);
-                
-                // Shift historical view if viewing a past round
                 setSelectedRound(prev => prev >= 1 ? prev + 1 : prev);
             }
             lastNextTime = nextTime;
-            setLiveEndMs(nextTime);
 
-            setTimeLeft({
-                mins: Math.floor(diff / 60000).toString().padStart(2, '0'),
-                secs: Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'),
-            });
+            const market = activeMarketRef.current;
+            if (!market || !market.endsAt) {
+                const diff = nextTime - now.getTime();
+                setTimeLeft({
+                    mins: Math.max(0, Math.floor(diff / 60000)).toString().padStart(2, '0'),
+                    secs: Math.max(0, Math.floor((diff % 60000) / 1000)).toString().padStart(2, '0'),
+                });
+                setLiveEndMs(nextTime);
+                
+                const start = new Date(nextTime - 300000);
+                const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(' ', '');
+                setRoundLabel(`${now.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${formatTime(start)}-${formatTime(next)}`);
+                return;
+            }
+
+            const endsAtMs = new Date(market.endsAt).getTime();
+            const diff = endsAtMs - now.getTime();
+            setLiveEndMs(endsAtMs);
+
+            if (diff <= 0) {
+                setTimeLeft({ mins: '00', secs: '00' });
+            } else {
+                setTimeLeft({
+                    mins: Math.floor(diff / 60000).toString().padStart(2, '0'),
+                    secs: Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'),
+                });
+            }
             
-            const start = new Date(next.getTime() - 300000);
+            const start = new Date(endsAtMs - 300000);
+            const end = new Date(endsAtMs);
             const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(' ', '');
-            
-            const startTimeStr = formatTime(start);
-            const endTimeStr = formatTime(next);
-            
-            setRoundLabel(`${now.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${startTimeStr}-${endTimeStr}`);
-            setLiveEndMs(next.getTime());
+            setRoundLabel(`${start.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${formatTime(start)}-${formatTime(end)}`);
         };
         tick();
         const iv = setInterval(tick, 1000);
         return () => clearInterval(iv);
-    }, [loadData]);
+    }, [isHistorical]);
 
+    // Poll for next market when countdown is 00:00 and nextMarket is not yet set
+    useEffect(() => {
+        if (isHistorical || selectedRound !== -1) return;
+        const isEnded = timeLeft.mins === '00' && timeLeft.secs === '00';
+        if (!isEnded || nextMarket) return;
 
+        const interval = setInterval(() => {
+            loadData();
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [timeLeft, nextMarket, isHistorical, selectedRound, loadData]);
+
+    const handleGoToNextMarket = () => {
+        haptic('medium');
+        if (!nextMarket) return;
+        
+        // Clear all stale states
+        setPositions([]);
+        polymarketWs.clearPositions();
+        
+        // Switch to the new market
+        setActiveMarket(nextMarket);
+        if (nextMarket.yesPrice && nextMarket.noPrice) {
+            setYesPrice(nextMarket.yesPrice);
+            setNoPrice(nextMarket.noPrice);
+        }
+        setNextMarket(null);
+        
+        // Reload fresh data for the new round
+        setTimeout(loadData, 100);
+    };
+
+    const isLiveEnded = selectedRound === -1 && (timeLeft.mins === '00' && timeLeft.secs === '00' || !!nextMarket);
+
+    const currentRoundTrades = (() => {
+        if (selectedRound !== -1) {
+            const round = history[selectedRound];
+            if (!round) return [];
+            return trades.filter(t => t.timestamp >= round.timestamp && t.timestamp < round.timestamp + 300000);
+        }
+        if (isLiveEnded && activeMarket) {
+            const targetMs = new Date(activeMarket.endsAt).getTime() - 300000;
+            return trades.filter(t => t.timestamp >= targetMs && t.timestamp < targetMs + 300000);
+        }
+        return recentTrades;
+    })();
 
     useEffect(() => { loadData(); }, [loadData]);
 
@@ -776,6 +847,16 @@ export function Predict({ user }: Props) {
                 </div>
             </header>
 
+            {nextMarket && selectedRound === -1 && (
+                <div className="pm-next-market-banner" onClick={handleGoToNextMarket}>
+                    <div className="pm-next-market-banner-content">
+                        <span className="pm-next-market-pulse-dot" />
+                        <span>New round active. Tap to switch to next market</span>
+                    </div>
+                    <span className="pm-next-market-arrow">➔</span>
+                </div>
+            )}
+
             {/* ══ MARKET CARD (chart + timeline + positions inside) ════════ */}
             <div className="pm-market-card">
 
@@ -1028,6 +1109,8 @@ export function Predict({ user }: Props) {
                     setBetAmount={setBetAmount}
                     claiming={isClaiming}
                     setClaiming={setIsClaiming}
+                    isLiveEnded={isLiveEnded}
+                    activeMarket={activeMarket}
                 />
 
             </div>
@@ -1037,10 +1120,10 @@ export function Predict({ user }: Props) {
                 <div className="pm-history-header">
                     <span className="pm-history-title">History</span>
                 </div>
-                {recentTrades.length === 0 ? (
+                {currentRoundTrades.length === 0 ? (
                     <div className="pm-history-empty">No trades yet this round</div>
                 ) : (
-                    recentTrades.map((t, idx) => (
+                    currentRoundTrades.map((t, idx) => (
                         <div key={t.id ?? idx} className="pm-history-row" id={`trade-${idx}`}>
                             <span className="pm-history-desc">
                                 {String(t.side).toUpperCase() === 'BUY' ? 'Bought' : 'Sold'}{' '}

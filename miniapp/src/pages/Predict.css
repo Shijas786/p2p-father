@@ -1172,3 +1172,75 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+/* ── Next Market Banner ─────────────────────────────────── */
+.pm-next-market-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(14, 203, 129, 0.08);
+    border: 1px solid rgba(14, 203, 129, 0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 4px 12px 8px 12px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background var(--pm-t), border-color var(--pm-t), transform var(--pm-t);
+    animation: pm-banner-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pm-next-market-banner:active {
+    transform: scale(0.98);
+    background: rgba(14, 203, 129, 0.15);
+}
+
+.pm-next-market-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0ecb81;
+}
+
+.pm-next-market-pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #0ecb81;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.7);
+    animation: pm-pulse-dot 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+.pm-next-market-arrow {
+    color: #0ecb81;
+    font-size: 14px;
+    transition: transform var(--pm-t);
+}
+
+.pm-next-market-banner:hover .pm-next-market-arrow {
+    transform: translateX(4px);
+}
+
+@keyframes pm-banner-slide-in {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pm-pulse-dot {
+    0% {
+        box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(14, 203, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(14, 203, 129, 0);
+    }
+}
