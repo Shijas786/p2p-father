@@ -2633,7 +2633,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const noPrice = priceResults[1].status === 'fulfilled' ? priceResults[1].value : null;
 
             // Aggregate open positions from recent trades
-            const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
+            const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null; conditionId?: string }> = {};
             const yesTokenIdLc = market.yesTokenId.toLowerCase();
             const noTokenIdLc = market.noTokenId.toLowerCase();
 
@@ -2660,6 +2660,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                         totalCost: 0,
                         avgPrice: 0,
                         currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
+                        conditionId: trade.conditionId || trade.market || "",
                     };
                 }
 
@@ -2709,7 +2710,13 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                 } else if (activePos && activePos.redeemable) {
                     positionMap[key].qty = 0;
                 } else if (!activePos) {
-                    // Missing from Data API (likely cache lag on recent entry). Keep trade qty!
+                    // If this belongs to a historical round, it's definitely closed, not cache lag!
+                    const posConditionId = positionMap[key].conditionId;
+                    if (posConditionId && posConditionId.toLowerCase() !== market.conditionId.toLowerCase()) {
+                        positionMap[key].qty = 0;
+                    } else {
+                        // Missing from Data API (likely cache lag on recent entry). Keep trade qty!
+                    }
                 } else {
                     positionMap[key].qty = 0;
                 }
