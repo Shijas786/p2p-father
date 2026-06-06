@@ -550,14 +550,14 @@ class PolymarketService {
                     side: side === "SELL" ? Side.SELL : Side.BUY,
                 };
 
-                console.log(`[Polymarket] Submitting FOK MARKET ${side} order to CLOB. Amount: ${amountUsdc}`);
+                console.log(`[Polymarket] Submitting FAK MARKET ${side} order to CLOB. Amount: ${amountUsdc}`);
                 const marketInfo = await client.getMarket(tokenId);
                 const negRisk = marketInfo?.neg_risk || false;
                 
                 const response = await client.createAndPostMarketOrder(
                     orderArgs,
                     { tickSize: "0.01", negRisk },
-                    OrderType.FOK
+                    OrderType.FAK
                 );
                 return response;
             } else {
