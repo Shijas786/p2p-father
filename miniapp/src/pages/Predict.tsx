@@ -903,16 +903,6 @@ export function Predict({ user }: Props) {
                 </div>
             </header>
 
-            {nextMarket && selectedRound === -1 && (
-                <div className="pm-next-market-banner" onClick={handleGoToNextMarket}>
-                    <div className="pm-next-market-banner-content">
-                        <span className="pm-next-market-pulse-dot" />
-                        <span>New round active. Tap to switch to next market</span>
-                    </div>
-                    <span className="pm-next-market-arrow">➔</span>
-                </div>
-            )}
-
             {/* ══ MARKET CARD (chart + timeline + positions inside) ════════ */}
             <div className="pm-market-card">
 
