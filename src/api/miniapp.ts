@@ -2411,9 +2411,15 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         }
 
         // Clear cached positions and trades so next fetch gets new state
-        if (user.deposit_wallet_address) {
-            polymarketService.clearUserCache(user.deposit_wallet_address);
-        }
+        try {
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+            if (proxyAddress) {
+                polymarketService.clearUserCache(proxyAddress);
+            }
+        } catch {}
+
+        // Clear predictions snapshot cache (Supabase / Redis)
+        await polymarketService.clearUserPredictionsCache(user.telegram_id);
 
         res.json({ success: true, result });
     } catch (err: any) {
@@ -2550,6 +2556,12 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        // Try reading user snapshot from predictions_cache (Supabase / Redis)
+        const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
+        if (cached && cached.positions) {
+            return res.json({ positions: cached.positions });
+        }
 
         const all = req.query.all === 'true';
 
@@ -2836,265 +2848,24 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             });
         }
 
+        // Try reading user snapshot from predictions_cache (Supabase / Redis)
+        const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
+
         // Resolve active market first (almost instant < 5ms due to cache)
         const market = await polymarketService.getActiveBtcMarket().catch(() => null);
 
-        // Fetch all details (including prices) in parallel in one block
-        const [balanceRes, tradesRes, positionsRes, historyRes, yesPriceRes, noPriceRes] = await Promise.allSettled([
-            polymarketRelayerService.getPusdBalance(user.wallet_index),
-            polymarketService.getTradesForProxy(proxyAddress),
-            polymarketService.getPositionsForProxy(proxyAddress).catch(() => []),
-            fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => []),
-            market ? polymarketService.getOutcomePrice(market.yesTokenId, false) : Promise.resolve({ buyPrice: 0.5, sellPrice: 0.5 }),
-            market ? polymarketService.getOutcomePrice(market.noTokenId, true) : Promise.resolve({ buyPrice: 0.5, sellPrice: 0.5 })
+        // Fetch Binance historical klines in parallel (fast ~100ms)
+        const historyRes = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100").then(r => r.json()).catch(() => []);
+
+        // Fetch outcome prices from CLOB in parallel (fast ~500ms, or cached)
+        const [yesPrice, noPrice] = await Promise.all([
+            market ? polymarketService.getOutcomePrice(market.yesTokenId, false).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 },
+            market ? polymarketService.getOutcomePrice(market.noTokenId, true).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 }
         ]);
 
-        const balance = balanceRes.status === 'fulfilled' ? balanceRes.value : "0.00";
-        const rawTrades = tradesRes.status === 'fulfilled' ? tradesRes.value : [];
-        const positionsData = positionsRes.status === 'fulfilled' ? positionsRes.value : [];
-        const klines = historyRes.status === 'fulfilled' ? historyRes.value : [];
-        const yesPrice = yesPriceRes.status === 'fulfilled' ? yesPriceRes.value : { buyPrice: 0.5, sellPrice: 0.5 };
-        const noPrice = noPriceRes.status === 'fulfilled' ? noPriceRes.value : { buyPrice: 0.5, sellPrice: 0.5 };
-
-        // Auto-claim background check
-        for (const p of positionsData) {
-            if (p.redeemable && p.size > 0 && p.conditionId) {
-                const attemptKey = `${user.wallet_index}-${p.conditionId}`;
-                if (!attemptedRedeems.has(attemptKey)) {
-                    console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
-                    const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
-                    const indexSet = outcomeIndex === 0 ? 1 : 2;
-                    polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
-                        attemptedRedeems.add(attemptKey);
-                    }).catch(async (e: any) => {
-                        const msg: string = e?.message || '';
-                        if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
-                            const supabase = (db as any).getClient();
-                            try {
-                                await supabase.from('autoclaim_skips').upsert({
-                                    skip_key: attemptKey,
-                                    condition_id: p.conditionId,
-                                    wallet_index: user.wallet_index,
-                                    status: 'losing_skip',
-                                    reason: `inline: ${msg.slice(0, 80)}`,
-                                    created_at: new Date().toISOString(),
-                                }, { onConflict: 'skip_key' });
-                            } catch (_) {}
-                            attemptedRedeems.add(attemptKey);
-                        }
-                    });
-                }
-            }
-        }
-
-        // Process positions & trades
-        const yesTokenIdLc = market ? market.yesTokenId.toLowerCase() : "";
-        const noTokenIdLc = market ? market.noTokenId.toLowerCase() : "";
-
-        const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
-        let activeRealizedPnl = 0;
-        const sortedTrades = [...(rawTrades || [])].reverse();
-
-        for (const trade of sortedTrades) {
-            const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
-            const isUp = market ? tradeAssetLc === yesTokenIdLc : false;
-            const isDown = market ? tradeAssetLc === noTokenIdLc : false;
-            if (!isUp && !isDown) continue;
-
-            const key = isUp ? "UP" : "DOWN";
-            const qty = parseFloat(trade.size ?? "0");
-            const price = parseFloat(trade.price ?? "0");
-            const isSell = trade.side === "SELL";
-
-            if (!positionMap[key]) {
-                positionMap[key] = {
-                    outcome: isUp ? 'UP' : 'DOWN',
-                    asset: tradeAssetLc,
-                    title: trade.title,
-                    qty: 0,
-                    totalCost: 0,
-                    avgPrice: 0,
-                    currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
-                };
-            }
-
-            if (isSell) {
-                const avgEntryPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
-                activeRealizedPnl += (price - avgEntryPrice) * qty;
-                positionMap[key].qty -= qty;
-                positionMap[key].totalCost -= avgEntryPrice * qty;
-            } else {
-                positionMap[key].qty += qty;
-                positionMap[key].totalCost += qty * price;
-            }
-        }
-
-        // Sync qty with Data API
-        for (const key of Object.keys(positionMap)) {
-            if (!market) continue;
-            const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
-            const activePos = positionsData.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
-
-            if (positionMap[key].qty > 0) {
-                positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
-            }
-
-            if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
-                const syncedQty = parseFloat(activePos.size);
-                if (activePos.initialValue !== undefined) {
-                    const initialValue = parseFloat(activePos.initialValue);
-                    positionMap[key].qty = syncedQty;
-                    positionMap[key].totalCost = initialValue;
-                    positionMap[key].avgPrice = initialValue / syncedQty;
-                } else {
-                    const oldQty = positionMap[key].qty;
-                    if (oldQty > 0 && syncedQty !== oldQty) {
-                        positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
-                    }
-                    positionMap[key].qty = syncedQty;
-                    positionMap[key].avgPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
-                }
-            } else if (activePos && activePos.redeemable) {
-                positionMap[key].qty = 0;
-            } else if (!activePos) {
-                // Keep trade loop values
-            } else {
-                positionMap[key].qty = 0;
-            }
-        }
-
-        // Fallback: Ensure any active positions from Polymarket positionsData are added even if not present in positionMap
-        for (const p of positionsData) {
-            if (!market) continue;
-            const assetLc = (p.asset || "").toLowerCase();
-            const isYes = assetLc === yesTokenIdLc;
-            const isNo = assetLc === noTokenIdLc;
-            if (!isYes && !isNo) continue;
-
-            const key = isYes ? "UP" : "DOWN";
-            const syncedQty = parseFloat(p.size || "0");
-            if (syncedQty > 0.001 && !p.redeemable) {
-                if (!positionMap[key]) {
-                    const initialValue = p.initialValue !== undefined ? parseFloat(p.initialValue) : 0;
-                    positionMap[key] = {
-                        outcome: isYes ? 'UP' : 'DOWN',
-                        asset: assetLc,
-                        title: p.title || (isYes ? "Bitcoin Price > Strike" : "Bitcoin Price <= Strike"),
-                        qty: syncedQty,
-                        totalCost: initialValue,
-                        avgPrice: syncedQty > 0 ? initialValue / syncedQty : 0,
-                        currentPrice: isYes ? yesPrice?.buyPrice ?? null : (isNo ? noPrice?.buyPrice ?? null : null),
-                    };
-                }
-            }
-        }
-
-        // Realized PNL
-        let realizedPnl = activeRealizedPnl;
-        try {
-            const openConditionIds = new Set<string>();
-            for (const p of positionsData) {
-                realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
-                openConditionIds.add(p.conditionId);
-            }
-
-            const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
-            for (const t of rawTrades) {
-                const cid = t.conditionId;
-                if (!cid) continue;
-                const size = parseFloat(t.size ?? '0');
-                const price = parseFloat(t.price ?? '0');
-                if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: t.outcomeIndex ?? 1 };
-                if (t.side === 'BUY') {
-                    conditionMap[cid].cost += size * price;
-                    conditionMap[cid].shares += size;
-                } else if (t.side === 'SELL') {
-                    conditionMap[cid].cost -= size * price;
-                    conditionMap[cid].shares -= size;
-                }
-            }
-
-            // For conditions NOT in active positions (already redeemed), check cached/on-chain resolution
-            const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
-                if (openConditionIds.has(cid)) return 0;
-                if (data.shares <= 0.001) return 0;
-                try {
-                    const res = await getConditionResolution(cid);
-                    if (!res) return 0;
-                    const num = data.outcomeIndex === 0 ? res.num0 : res.num1;
-                    const payoutFraction = num / res.denominator;
-                    return data.shares * payoutFraction - data.cost;
-                } catch {
-                    return 0;
-                }
-            });
-            const resolvedPnls = await Promise.all(pnlPromises);
-            for (const profit of resolvedPnls) {
-                realizedPnl += profit;
-            }
-        } catch (e: any) {
-            console.warn('[MINIAPP] Snapshot realized PNL error:', e.message);
-        }
-
-        const positions = Object.values(positionMap)
-            .filter(p => p.qty > 0.001)
-            .map(p => {
-                const effectivePrice = p.currentPrice ?? p.avgPrice;
-                const value = p.qty * effectivePrice;
-                const cost = p.qty * p.avgPrice;
-                const returnAmt = value - cost;
-                const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
-                return {
-                    outcome: p.outcome,
-                    qty: parseFloat(p.qty.toFixed(2)),
-                    avg: parseFloat(p.avgPrice.toFixed(2)),
-                    currentPrice: parseFloat(effectivePrice.toFixed(2)),
-                    value: parseFloat(value.toFixed(2)),
-                    cost: parseFloat(cost.toFixed(2)),
-                    returnAmt: parseFloat(returnAmt.toFixed(2)),
-                    returnPct: parseFloat(returnPct.toFixed(2)),
-                    title: p.title,
-                };
-            });
-
-        const mappedTrades = [];
-        for (const t of rawTrades) {
-            const assetLc = (t.asset_id || "").toLowerCase();
-            const yesLc = yesTokenIdLc;
-            const noLc = noTokenIdLc;
-            const outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
-
-            const ti = t as any;
-            let ts = Date.now();
-            if (ti.create_time) ts = new Date(ti.create_time).getTime();
-            else if (ti.timestamp || ti.matched_time) {
-                const raw = (ti.timestamp || ti.matched_time).toString();
-                if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
-                else {
-                    const p = parseInt(raw);
-                    if (p > 0 && p < 2000000000) ts = p * 1000;
-                    else if (p > 0) ts = p;
-                }
-            }
-
-            mappedTrades.push({
-                id: ti.id ?? ti.trade_id,
-                side: ti.side,
-                outcome,
-                conditionId: ti.market,
-                qty: parseFloat(ti.size ?? "0"),
-                price: parseFloat(ti.price ?? "0"),
-                cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
-                timestamp: ts,
-            });
-        }
-        mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
-
-        const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
-        
         let parsedHistory: any[] = [];
-        if (Array.isArray(klines)) {
-            parsedHistory = klines.map((d: any) => {
+        if (Array.isArray(historyRes)) {
+            parsedHistory = historyRes.map((d: any) => {
                 const openTime = d[0];
                 const openPrice = parseFloat(d[1]);
                 const closePrice = parseFloat(d[4]);
@@ -3110,19 +2881,306 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             }).reverse();
         }
 
+        const refreshSnapshot = async () => {
+            try {
+                // Fetch fresh values from Polymarket APIs
+                const [balanceRes, tradesRes, positionsRes] = await Promise.allSettled([
+                    polymarketRelayerService.getPusdBalance(user.wallet_index),
+                    polymarketService.getTradesForProxy(proxyAddress),
+                    polymarketService.getPositionsForProxy(proxyAddress).catch(() => [])
+                ]);
+
+                const balance = balanceRes.status === 'fulfilled' ? balanceRes.value : "0.00";
+                const rawTrades = tradesRes.status === 'fulfilled' ? tradesRes.value : [];
+                const positionsData = positionsRes.status === 'fulfilled' ? positionsRes.value : [];
+
+                // Auto-claim background check
+                for (const p of positionsData) {
+                    if (p.redeemable && p.size > 0 && p.conditionId) {
+                        const attemptKey = `${user.wallet_index}-${p.conditionId}`;
+                        if (!attemptedRedeems.has(attemptKey)) {
+                            console.log(`[AutoClaim] Background triggering auto-claim for wallet ${user.wallet_index} condition ${p.conditionId}`);
+                            const outcomeIndex = typeof p.outcomeIndex === 'string' ? parseInt(p.outcomeIndex) : p.outcomeIndex;
+                            const indexSet = outcomeIndex === 0 ? 1 : 2;
+                            polymarketRelayerService.redeemPositions(user.wallet_index, p.conditionId, indexSet).then(() => {
+                                attemptedRedeems.add(attemptKey);
+                            }).catch(async (e: any) => {
+                                const msg: string = e?.message || '';
+                                if (msg.includes('not a winning outcome') || msg.includes('payout is 0')) {
+                                    const supabase = (db as any).getClient();
+                                    try {
+                                        await supabase.from('autoclaim_skips').upsert({
+                                            skip_key: attemptKey,
+                                            condition_id: p.conditionId,
+                                            wallet_index: user.wallet_index,
+                                            status: 'losing_skip',
+                                            reason: `inline: ${msg.slice(0, 80)}`,
+                                            created_at: new Date().toISOString(),
+                                        }, { onConflict: 'skip_key' });
+                                    } catch (_) {}
+                                    attemptedRedeems.add(attemptKey);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Process positions & trades
+                const yesTokenIdLc = market ? market.yesTokenId.toLowerCase() : "";
+                const noTokenIdLc = market ? market.noTokenId.toLowerCase() : "";
+
+                const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
+                let activeRealizedPnl = 0;
+                const sortedTrades = [...(rawTrades || [])].reverse();
+
+                for (const trade of sortedTrades) {
+                    const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
+                    const isUp = market ? tradeAssetLc === yesTokenIdLc : false;
+                    const isDown = market ? tradeAssetLc === noTokenIdLc : false;
+                    if (!isUp && !isDown) continue;
+
+                    const key = isUp ? "UP" : "DOWN";
+                    const qty = parseFloat(trade.size ?? "0");
+                    const price = parseFloat(trade.price ?? "0");
+                    const isSell = trade.side === "SELL";
+
+                    if (!positionMap[key]) {
+                        positionMap[key] = {
+                            outcome: isUp ? 'UP' : 'DOWN',
+                            asset: tradeAssetLc,
+                            title: trade.title,
+                            qty: 0,
+                            totalCost: 0,
+                            avgPrice: 0,
+                            currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
+                        };
+                    }
+
+                    if (isSell) {
+                        const avgEntryPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
+                        activeRealizedPnl += (price - avgEntryPrice) * qty;
+                        positionMap[key].qty -= qty;
+                        positionMap[key].totalCost -= avgEntryPrice * qty;
+                    } else {
+                        positionMap[key].qty += qty;
+                        positionMap[key].totalCost += qty * price;
+                    }
+                }
+
+                // Sync qty with Data API
+                for (const key of Object.keys(positionMap)) {
+                    if (!market) continue;
+                    const tokenIdLc = key === "UP" ? yesTokenIdLc : noTokenIdLc;
+                    const activePos = positionsData.find((p: any) => (p.asset || "").toLowerCase() === tokenIdLc);
+
+                    if (positionMap[key].qty > 0) {
+                        positionMap[key].avgPrice = positionMap[key].totalCost / positionMap[key].qty;
+                    }
+
+                    if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
+                        const syncedQty = parseFloat(activePos.size);
+                        if (activePos.initialValue !== undefined) {
+                            const initialValue = parseFloat(activePos.initialValue);
+                            positionMap[key].qty = syncedQty;
+                            positionMap[key].totalCost = initialValue;
+                            positionMap[key].avgPrice = initialValue / syncedQty;
+                        } else {
+                            const oldQty = positionMap[key].qty;
+                            if (oldQty > 0 && syncedQty !== oldQty) {
+                                positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                            }
+                            positionMap[key].qty = syncedQty;
+                            positionMap[key].avgPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
+                        }
+                    } else if (activePos && activePos.redeemable) {
+                        positionMap[key].qty = 0;
+                    } else if (!activePos) {
+                        // Keep trade loop values
+                    } else {
+                        positionMap[key].qty = 0;
+                    }
+                }
+
+                // Fallback: Ensure any active positions from Polymarket positionsData are added even if not present in positionMap
+                for (const p of positionsData) {
+                    if (!market) continue;
+                    const assetLc = (p.asset || "").toLowerCase();
+                    const isYes = assetLc === yesTokenIdLc;
+                    const isNo = assetLc === noTokenIdLc;
+                    if (!isYes && !isNo) continue;
+
+                    const key = isYes ? "UP" : "DOWN";
+                    const syncedQty = parseFloat(p.size || "0");
+                    if (syncedQty > 0.001 && !p.redeemable) {
+                        if (!positionMap[key]) {
+                            const initialValue = p.initialValue !== undefined ? parseFloat(p.initialValue) : 0;
+                            positionMap[key] = {
+                                outcome: isYes ? 'UP' : 'DOWN',
+                                asset: assetLc,
+                                title: p.title || (isYes ? "Bitcoin Price > Strike" : "Bitcoin Price <= Strike"),
+                                qty: syncedQty,
+                                totalCost: initialValue,
+                                avgPrice: syncedQty > 0 ? initialValue / syncedQty : 0,
+                                currentPrice: isYes ? yesPrice?.buyPrice ?? null : (isNo ? noPrice?.buyPrice ?? null : null),
+                            };
+                        }
+                    }
+                }
+
+                // Realized PNL
+                let realizedPnl = activeRealizedPnl;
+                try {
+                    const openConditionIds = new Set<string>();
+                    for (const p of positionsData) {
+                        realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
+                        openConditionIds.add(p.conditionId);
+                    }
+
+                    const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
+                    for (const t of rawTrades) {
+                        const cid = t.conditionId;
+                        if (!cid) continue;
+                        const size = parseFloat(t.size ?? '0');
+                        const price = parseFloat(t.price ?? '0');
+                        if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: t.outcomeIndex ?? 1 };
+                        if (t.side === 'BUY') {
+                            conditionMap[cid].cost += size * price;
+                            conditionMap[cid].shares += size;
+                        } else if (t.side === 'SELL') {
+                            conditionMap[cid].cost -= size * price;
+                            conditionMap[cid].shares -= size;
+                        }
+                    }
+
+                    const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
+                        if (openConditionIds.has(cid)) return 0;
+                        if (data.shares <= 0.001) return 0;
+                        try {
+                            const res = await getConditionResolution(cid);
+                            if (!res) return 0;
+                            const num = data.outcomeIndex === 0 ? res.num0 : res.num1;
+                            const payoutFraction = num / res.denominator;
+                            return data.shares * payoutFraction - data.cost;
+                        } catch {
+                            return 0;
+                        }
+                    });
+                    const resolvedPnls = await Promise.all(pnlPromises);
+                    for (const profit of resolvedPnls) {
+                        realizedPnl += profit;
+                    }
+                } catch (e: any) {
+                    console.warn('[MINIAPP] Snapshot realized PNL error:', e.message);
+                }
+
+                const positions = Object.values(positionMap)
+                    .filter(p => p.qty > 0.001)
+                    .map(p => {
+                        const effectivePrice = p.currentPrice ?? p.avgPrice;
+                        const value = p.qty * effectivePrice;
+                        const cost = p.qty * p.avgPrice;
+                        const returnAmt = value - cost;
+                        const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
+                        return {
+                            outcome: p.outcome,
+                            qty: parseFloat(p.qty.toFixed(2)),
+                            avg: parseFloat(p.avgPrice.toFixed(2)),
+                            currentPrice: parseFloat(effectivePrice.toFixed(2)),
+                            value: parseFloat(value.toFixed(2)),
+                            cost: parseFloat(cost.toFixed(2)),
+                            returnAmt: parseFloat(returnAmt.toFixed(2)),
+                            returnPct: parseFloat(returnPct.toFixed(2)),
+                            title: p.title,
+                        };
+                    });
+
+                const mappedTrades = [];
+                for (const t of rawTrades) {
+                    const assetLc = (t.asset_id || "").toLowerCase();
+                    const yesLc = yesTokenIdLc;
+                    const noLc = noTokenIdLc;
+                    const outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
+
+                    const ti = t as any;
+                    let ts = Date.now();
+                    if (ti.create_time) ts = new Date(ti.create_time).getTime();
+                    else if (ti.timestamp || ti.matched_time) {
+                        const raw = (ti.timestamp || ti.matched_time).toString();
+                        if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
+                        else {
+                            const p = parseInt(raw);
+                            if (p > 0 && p < 2000000000) ts = p * 1000;
+                            else if (p > 0) ts = p;
+                        }
+                    }
+
+                    mappedTrades.push({
+                        id: ti.id ?? ti.trade_id,
+                        side: ti.side,
+                        outcome,
+                        conditionId: ti.market,
+                        qty: parseFloat(ti.size ?? "0"),
+                        price: parseFloat(ti.price ?? "0"),
+                        cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
+                        timestamp: ts,
+                    });
+                }
+                mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
+
+                const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
+
+                const snapshotCache = {
+                    balance,
+                    positions,
+                    trades: mappedTrades.slice(0, 50),
+                    recentTrades: recentTrades.slice(0, 10),
+                    realizedPnl: parseFloat(realizedPnl.toFixed(2)),
+                    depositAddress: proxyAddress
+                };
+
+                await polymarketService.saveUserPredictionsCache(user.telegram_id, snapshotCache);
+                return snapshotCache;
+            } catch (err: any) {
+                console.error("[Cache] Failed to refresh snapshot:", err.message);
+                throw err;
+            }
+        };
+
+        if (cached) {
+            // Serve cached predictions instantly, trigger background refresh
+            refreshSnapshot().catch(() => {});
+
+            return res.json({
+                balance: cached.balance,
+                positions: cached.positions || [],
+                trades: cached.trades || [],
+                recentTrades: cached.recentTrades || [],
+                depositAddress: cached.depositAddress || proxyAddress,
+                market: market ? {
+                    ...market,
+                    yesPrice,
+                    noPrice
+                } : null,
+                history: parsedHistory,
+                realizedPnl: cached.realizedPnl || 0
+            });
+        }
+
+        // No cache: fetch and process synchronously so they get correct data on first load
+        const fresh = await refreshSnapshot();
         res.json({
-            balance,
-            positions,
-            trades: mappedTrades.slice(0, 50),
-            recentTrades: recentTrades.slice(0, 10),
-            depositAddress: proxyAddress,
+            balance: fresh.balance,
+            positions: fresh.positions,
+            trades: fresh.trades,
+            recentTrades: fresh.recentTrades,
+            depositAddress: fresh.depositAddress,
             market: market ? {
                 ...market,
                 yesPrice,
                 noPrice
             } : null,
             history: parsedHistory,
-            realizedPnl: parseFloat(realizedPnl.toFixed(2))
+            realizedPnl: fresh.realizedPnl
         });
     } catch (err: any) {
         console.error("[MINIAPP] Snapshot endpoint error:", err);

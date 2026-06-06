@@ -156,9 +156,11 @@ export function Predict({ user }: Props) {
                 const currentMarket = activeMarketRef.current;
                 if (currentMarket && snap.market.slug !== currentMarket.slug) {
                     // Backend rolled over to a new market! Keep showing current (ended) market
+                    nextMarketRef.current = snap.market;
                     setNextMarket(snap.market);
                 } else {
                     // First load or same market
+                    activeMarketRef.current = snap.market;
                     setActiveMarket(snap.market);
                     if (snap.market.yesPrice && snap.market.noPrice) {
                         setYesPrice(snap.market.yesPrice);
@@ -212,15 +214,17 @@ export function Predict({ user }: Props) {
                             } else {
                                 const execPrice = wsPos.price;
                                 const outcomePrice = mappedOutcome === 'UP' ? yesPriceObj.buyPrice : noPriceObj.buyPrice;
+                                const initialCost = wsPos.size * execPrice;
+                                const currentValue = wsPos.size * outcomePrice;
                                 basePositions.push({
                                     outcome: mappedOutcome,
                                     qty: wsPos.size,
                                     avg: execPrice,
-                                    currentPrice: execPrice,
-                                    cost: wsPos.size * execPrice,
-                                    value: wsPos.size * outcomePrice,
-                                    returnAmt: 0,
-                                    returnPct: 0
+                                    currentPrice: outcomePrice,
+                                    cost: initialCost,
+                                    value: currentValue,
+                                    returnAmt: currentValue - initialCost,
+                                    returnPct: initialCost > 0 ? ((currentValue - initialCost) / initialCost) * 100 : 0
                                 });
                             }
                         }
@@ -548,6 +552,8 @@ export function Predict({ user }: Props) {
         polymarketWs.clearPositions();
         
         // Switch to the new market
+        activeMarketRef.current = nextMarket;
+        nextMarketRef.current = null;
         setActiveMarket(nextMarket);
         if (nextMarket.yesPrice && nextMarket.noPrice) {
             setYesPrice(nextMarket.yesPrice);
@@ -555,8 +561,8 @@ export function Predict({ user }: Props) {
         }
         setNextMarket(null);
         
-        // Reload fresh data for the new round
-        setTimeout(loadData, 100);
+        // Reload fresh data for the new round synchronously
+        loadData();
     };
 
     const isLiveEnded = selectedRound === -1 && (timeLeft.mins === '00' && timeLeft.secs === '00' || !!nextMarket);
@@ -1115,6 +1121,8 @@ export function Predict({ user }: Props) {
                     setClaiming={setIsClaiming}
                     isLiveEnded={isLiveEnded}
                     activeMarket={activeMarket}
+                    onPlacePrediction={handlePlacePrediction}
+                    placingBet={placingBet}
                 />
 
             </div>

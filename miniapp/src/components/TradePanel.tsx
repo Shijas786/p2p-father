@@ -24,16 +24,18 @@ interface TradePanelProps {
     setClaiming?: (c: boolean) => void;
     isLiveEnded?: boolean;
     activeMarket?: any;
+    onPlacePrediction: () => Promise<void>;
+    placingBet: boolean;
 }
 
 export function TradePanel({
     isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
     tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount,
     claiming: claimingProp, setClaiming: setClaimingProp,
-    isLiveEnded, activeMarket
+    isLiveEnded, activeMarket,
+    onPlacePrediction, placingBet
 }: TradePanelProps) {
     const { showToast } = useToast();
-    const [placingBet, setPlacingBet] = useState(false);
     const [localClaiming, setLocalClaiming] = useState(false);
     
     const claiming = claimingProp !== undefined ? claimingProp : localClaiming;
@@ -50,23 +52,6 @@ export function TradePanel({
         haptic('light');
         if (v === 'Max') { setBetAmount(parseFloat(cashBalance).toFixed(2)); return; }
         setBetAmount(prev => (parseFloat(prev || '0') + parseFloat(v)).toFixed(2));
-    };
-
-    const handlePlacePrediction = async () => {
-        haptic('medium');
-        if (!betAmount || parseFloat(betAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
-        if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
-        setPlacingBet(true);
-        try {
-            const res = await api.predictions.placeBet(
-                parseFloat(betAmount), betType,
-                betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice,
-                tradeType.toUpperCase() as 'BUY'|'SELL'
-            );
-            if (res.success) { showToast('Prediction placed!', 'success'); setBetAmount(''); loadData(); }
-            else showToast('Failed to place prediction', 'error');
-        } catch (e: any) { showToast(e.message || 'Order failed', 'error'); }
-        finally { setPlacingBet(false); }
     };
 
     const isRoundEnded = selectedRound >= 0 || isLiveEnded;
@@ -372,7 +357,7 @@ export function TradePanel({
             <button
                 className={`pm-exec-btn ${tradeType === 'sell' ? 'pm-exec-sell' : (betType === 'UP' ? 'pm-exec-up' : 'pm-exec-down')}`}
                 disabled={placingBet || !betAmount || parseFloat(betAmount) <= 0}
-                onClick={handlePlacePrediction}
+                onClick={onPlacePrediction}
                 id="btn-place-bet">
                 {placingBet
                     ? <span className="pm-btn-loading"><div className="pm-spinner pm-spinner-sm"/> Processing...</span>

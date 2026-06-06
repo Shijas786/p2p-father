@@ -669,6 +669,102 @@ class PolymarketService {
         delete tradesCache[cacheKey];
         console.log(`[Cache] Cleared positions and trades cache for ${cacheKey}`);
     }
+
+    private isDbCacheSupported: boolean | null = null;
+
+    async checkDbCacheSupport(): Promise<boolean> {
+        if (this.isDbCacheSupported !== null) return this.isDbCacheSupported;
+        try {
+            const { db } = await import("../db/client");
+            const client = db.getClient();
+            const { error } = await client.from("users").select("predictions_cache").limit(1);
+            this.isDbCacheSupported = !error;
+        } catch {
+            this.isDbCacheSupported = false;
+        }
+        return this.isDbCacheSupported;
+    }
+
+    async getUserPredictionsCache(telegramId: number): Promise<any | null> {
+        // 1. Try DB cache first if supported
+        const dbSupported = await this.checkDbCacheSupport();
+        if (dbSupported) {
+            try {
+                const { db } = await import("../db/client");
+                const client = db.getClient();
+                const { data, error } = await client
+                    .from("users")
+                    .select("predictions_cache")
+                    .eq("telegram_id", telegramId)
+                    .single();
+                if (!error && data?.predictions_cache) {
+                    return data.predictions_cache;
+                }
+            } catch (e: any) {
+                console.warn("[Cache] Failed to read from DB cache:", e.message);
+            }
+        }
+
+        // 2. Fallback to Redis / In-Memory cache
+        try {
+            const cached = await redis.get(`predict_cache:${telegramId}`);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (e: any) {
+            console.warn("[Cache] Failed to read from Redis cache:", e.message);
+        }
+
+        return null;
+    }
+
+    async saveUserPredictionsCache(telegramId: number, data: any): Promise<void> {
+        // Save to DB cache if supported
+        const dbSupported = await this.checkDbCacheSupport();
+        if (dbSupported) {
+            try {
+                const { db } = await import("../db/client");
+                const client = db.getClient();
+                await client
+                    .from("users")
+                    .update({ predictions_cache: data })
+                    .eq("telegram_id", telegramId);
+            } catch (e: any) {
+                console.warn("[Cache] Failed to write to DB cache:", e.message);
+            }
+        }
+
+        // Save to Redis / In-Memory cache
+        try {
+            await redis.setex(`predict_cache:${telegramId}`, 3600 * 24, JSON.stringify(data)); // cache for 24 hours
+        } catch (e: any) {
+            console.warn("[Cache] Failed to write to Redis cache:", e.message);
+        }
+    }
+
+    async clearUserPredictionsCache(telegramId: number): Promise<void> {
+        // Clear DB cache if supported
+        const dbSupported = await this.checkDbCacheSupport();
+        if (dbSupported) {
+            try {
+                const { db } = await import("../db/client");
+                const client = db.getClient();
+                await client
+                    .from("users")
+                    .update({ predictions_cache: null })
+                    .eq("telegram_id", telegramId);
+            } catch (e: any) {
+                console.warn("[Cache] Failed to clear DB cache:", e.message);
+            }
+        }
+
+        // Clear Redis / In-Memory cache
+        try {
+            await redis.del(`predict_cache:${telegramId}`);
+        } catch (e: any) {
+            console.warn("[Cache] Failed to clear Redis cache:", e.message);
+        }
+    }
 }
 
 export const polymarketService = new PolymarketService();
