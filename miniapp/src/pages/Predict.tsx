@@ -537,17 +537,43 @@ export function Predict({ user }: Props) {
     }, [isHistorical]);
 
     // Poll for next market when countdown is 00:00 and nextMarket is not yet set
+    // Auto-clear positions the moment the round ends so stale positions
+    // don't show while waiting for the next market to be available
+    const roundEndedRef = useRef(false);
     useEffect(() => {
         if (isHistorical || selectedRound !== -1) return;
         const isEnded = timeLeft.mins === '00' && timeLeft.secs === '00';
-        if (!isEnded || nextMarket) return;
+        if (!isEnded) {
+            roundEndedRef.current = false;
+            return;
+        }
 
+        // Clear stale positions immediately when round ends
+        if (!roundEndedRef.current) {
+            roundEndedRef.current = true;
+            setPositions([]);
+            polymarketWs.clearPositions();
+        }
+
+        // Poll for the next market — auto-transition when it arrives (no tap needed)
+        if (nextMarket) return;
         const interval = setInterval(() => {
             loadData();
-        }, 10000);
+        }, 5000); // check every 5s instead of 10s for faster transition
 
         return () => clearInterval(interval);
     }, [timeLeft, nextMarket, isHistorical, selectedRound, loadData]);
+
+    // Auto-transition to next market as soon as backend confirms it — no tap needed
+    useEffect(() => {
+        if (!nextMarket || isHistorical) return;
+        // Small delay so user sees the round-end state briefly before switching
+        const timer = setTimeout(() => {
+            handleGoToNextMarket();
+        }, 2000);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nextMarket, isHistorical]);
 
     const handleGoToNextMarket = () => {
         haptic('medium');
