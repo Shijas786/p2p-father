@@ -2740,16 +2740,20 @@ router.post("/predictions/deposit", async (req: Request, res: Response) => {
         const { amount, chain = 'polygon', token = 'USDC' } = req.body;
         if (!amount) return res.status(400).json({ error: "Missing amount" });
 
-        // All deposits have a $1 minimum
         if (parseFloat(amount) < 1) {
             return res.status(400).json({ error: "Minimum deposit is 1 USDC (receives pUSD 1:1)" });
+        }
+
+        // Enforce higher minimum for cross-chain bridges to prevent stuck deposits
+        const isNonPolygon = (chain || 'polygon').toLowerCase() !== 'polygon';
+        if (isNonPolygon && parseFloat(amount) < 3) {
+            return res.status(400).json({ error: "Minimum deposit is 3 USDC for bridge transfers (Base/BSC) to avoid stuck funds" });
         }
 
         const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
         const { txHash, bridgeAddress } = await polymarketRelayerService.depositGasless(user.wallet_index, amountBigInt, chain, token);
 
         // Track cross-chain bridge deposits so we can notify the user when pUSD arrives (or if it's stuck)
-        const isNonPolygon = (chain || 'polygon').toLowerCase() !== 'polygon';
         if (isNonPolygon && txHash) {
             bridgeMonitor.trackDeposit({
                 telegramId: Number(user.telegram_id),
