@@ -579,7 +579,7 @@ class PolymarketRelayerService {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Builder-Code": (env as any).POLYMARKET_BUILDER_CODE || ""
+                    "X-Builder-Code": (env as any).POLYMARKET_BUILDER_CODE || (env as any).POLYMARKET_BUILDER_API_KEY || ""
                 },
                 // Pass the Polymarket deposit wallet — this is the address that receives pUSD on Polygon
                 body: JSON.stringify({ address: depositWallet })
