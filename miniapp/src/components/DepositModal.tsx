@@ -759,12 +759,12 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     </div>
 
                     <button className="pm-btn-continue" 
-                        disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > selectedAsset.balance || (selectedAsset.chain !== 'Polygon' && parseFloat(amount) < 3) || (selectedAsset.chain === 'Polygon' && parseFloat(amount) < 1)}
+                        disabled={!amount || parseFloat(amount) < 1 || parseFloat(amount) > selectedAsset.balance}
                         onClick={() => { haptic('selection'); setStep('confirm'); }}>
                         Continue
-                        {amount && parseFloat(amount) > 0 && parseFloat(amount) < (selectedAsset.chain !== 'Polygon' ? 3 : 1) && (
+                        {amount && parseFloat(amount) > 0 && parseFloat(amount) < 1 && (
                             <span style={{display:'block',fontSize:'11px',opacity:0.7,fontWeight:'normal'}}>
-                                Min {selectedAsset.chain !== 'Polygon' ? '$3' : '$1'} for {selectedAsset.chain}
+                                Min $1 for {selectedAsset.chain}
                             </span>
                         )}
                     </button>
@@ -920,7 +920,7 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             {step === 'manual' && (
                 <div className="pm-dep-content" style={{overflowY: 'auto'}}>
                     <div className="mf-mobile-intro">
-                        <p>Deposit funds cross-chain from any exchange on <strong>any supported network</strong>. Your USDC is bridged to Polygon and wrapped to <strong>pUSD</strong> (1:1) automatically. <strong>Minimum deposit: $1 (Polygon) · $3 (Base/BSC bridge).</strong></p>
+                        <p>Deposit funds cross-chain from any exchange on <strong>any supported network</strong>. Your USDC is bridged to Polygon and wrapped to <strong>pUSD</strong> (1:1) automatically. <strong>Minimum deposit: $1 equivalent.</strong></p>
                     </div>
 
                     <div className="mf-card">
