@@ -190,7 +190,8 @@ class PolymarketService {
             await polymarketRelayerService.deployDepositWallet(userWalletIndex);
             
             // Allow time for Polygon indexing before sending the next batch
-            await new Promise(r => setTimeout(r, 2000));
+            console.log(`[Polymarket] Waiting 8s for Polymarket registry to index the new proxy...`);
+            await new Promise(r => setTimeout(r, 8000));
         }
 
         const user = await db.getUserByWalletIndex(userWalletIndex);
@@ -240,21 +241,25 @@ class PolymarketService {
             });
 
             let newCreds;
+            console.log(`[Polymarket] Attempting to derive existing API key...`);
             try {
-                console.log(`[Polymarket] Attempting to derive existing API key...`);
                 newCreds = await tempClient.deriveApiKey();
             } catch (err: any) {
-                console.log(`[Polymarket] deriveApiKey failed (status: ${err?.response?.status || err.message}). Attempting to create new API key...`);
+                console.log(`[Polymarket] deriveApiKey threw an error (status: ${err?.response?.status || err.message}).`);
+            }
+
+            if (!newCreds || !newCreds.secret) {
+                console.log(`[Polymarket] No valid credentials derived. Attempting to create new API key...`);
                 try {
                     newCreds = await tempClient.createApiKey();
                 } catch (createErr: any) {
-                    console.error(`[Polymarket] createApiKey also failed:`, createErr?.response?.data || createErr.message);
+                    console.error(`[Polymarket] createApiKey failed:`, createErr?.response?.data || createErr.message);
                     throw createErr;
                 }
             }
 
             if (!newCreds?.secret) {
-                throw new Error("CLOB credentials not initialized — API key creation failed");
+                throw new Error("CLOB credentials not initialized — API key creation failed completely");
             }
 
             clobCredsCache[userWalletIndex] = newCreds;
