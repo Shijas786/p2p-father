@@ -3508,6 +3508,18 @@ router.post("/predictions/claim", async (req: Request, res: Response) => {
                 }
             }
             if (!indexSet) {
+                const { data: dbTrade } = await db.getClient()
+                    .from("prediction_trades")
+                    .select("outcome")
+                    .eq("user_id", user.id)
+                    .eq("condition_id", req.body.conditionId)
+                    .limit(1)
+                    .maybeSingle();
+                if (dbTrade) {
+                    indexSet = dbTrade.outcome === "UP" ? 1 : 2;
+                }
+            }
+            if (!indexSet) {
                 return res.status(400).json({ error: "Cannot determine indexSet for claim. Please provide outcomeIndex or conditionId with known positions." });
             }
             uniqueConditions.set(req.body.conditionId, indexSet);
