@@ -578,8 +578,7 @@ class PolymarketRelayerService {
             const depositRes = await fetch("https://bridge.polymarket.com/deposit", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    "X-Builder-Code": (env as any).POLYMARKET_BUILDER_CODE || (env as any).POLYMARKET_BUILDER_API_KEY || ""
+                    "Content-Type": "application/json"
                 },
                 // Pass the Polymarket deposit wallet — this is the address that receives pUSD on Polygon
                 body: JSON.stringify({ address: depositWallet })
