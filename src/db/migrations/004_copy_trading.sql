@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS copy_trade_logs (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   copier_user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   lead_user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  lead_trade_id       UUID NOT NULL REFERENCES prediction_trades(id) ON DELETE CASCADE,
+  lead_trade_id       UUID REFERENCES prediction_trades(id) ON DELETE CASCADE,
   copier_trade_id     UUID, -- References copier's row in prediction_trades
   status              TEXT NOT NULL CHECK (status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
   error_message       TEXT,
