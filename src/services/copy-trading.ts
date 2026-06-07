@@ -86,8 +86,8 @@ export class CopyTradingService {
                         }
 
                         // Resolve copier balance
-                        const balanceData = await polymarketService.getBalanceForProxy(user.wallet_index).catch(() => ({ balance: 0 }));
-                        const copierBalance = balanceData?.balance || 0;
+                        const balanceStr = await polymarketRelayerService.getPusdBalance(user.wallet_index).catch(() => "0");
+                        const copierBalance = parseFloat(balanceStr) || 0;
 
                         if (copierBalance < copierAmount) {
                             throw new Error(`Insufficient cash balance. Required: $${copierAmount.toFixed(2)}, Available: $${copierBalance.toFixed(2)}`);
