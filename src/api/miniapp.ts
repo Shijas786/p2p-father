@@ -2146,10 +2146,15 @@ const LEADERBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
     console.log("=== HIT PREDICTIONS LEADERBOARD ROUTE IN MINIAPP.TS ===");
     
-    // Serve from cache if valid
+    // Serve from cache if valid — but recompute is_me per user
     if (leaderboardCache && Date.now() - leaderboardCache.ts < LEADERBOARD_CACHE_TTL) {
         console.log("[Leaderboard] Serving from cache");
-        return res.json({ leaderboard: leaderboardCache.data });
+        const currentUserId = req.telegramUser?.id;
+        const withMe = leaderboardCache.data.map((row: any) => ({
+            ...row,
+            is_me: currentUserId === row._telegram_id,
+        }));
+        return res.json({ leaderboard: withMe });
     }
     try {
         const { createClient } = await import("@supabase/supabase-js");
@@ -2187,6 +2192,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
 
             return {
                 rank: i + 1,
+                _telegram_id: s.telegram_id, // kept for cache is_me injection
                 user: displayName,
                 pred: `$${totalWagered.toFixed(2)}`,
                 pnl: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`,
@@ -2194,12 +2200,17 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                 wins,
                 losses,
                 winRatio,
-                is_me: currentUserId === s.telegram_id,
             };
         });
 
         leaderboardCache = { data: leaderboard, ts: Date.now() };
-        res.json({ leaderboard });
+
+        // Serve with is_me injected fresh for this request
+        const withMe = leaderboard.map((row: any) => ({
+            ...row,
+            is_me: currentUserId === row._telegram_id,
+        }));
+        res.json({ leaderboard: withMe });
     } catch (err: any) {
         console.error("[MINIAPP] Predictions leaderboard error:", err);
         res.status(500).json({ error: err.message });
@@ -2581,6 +2592,9 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             betSide,
             orderType
         );
+
+        // Bust leaderboard cache so this trade's volume shows immediately
+        leaderboardCache = null;
 
         // Record the trade for the leaderboard
         try {

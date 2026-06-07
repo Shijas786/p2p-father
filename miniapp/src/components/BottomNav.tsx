@@ -27,14 +27,12 @@ export function BottomNav({ user }: Props) {
     const [activeTrades, setActiveTrades] = useState(0);
     const isAdmin = user?.is_admin;
 
-    const tabs: any[] = isAdmin
-        ? [
-            ...baseTabs.slice(0, 4),
-            { path: '/predict', icon: '', Icon: IconMarket, label: 'Predict' },
-            baseTabs[4],
-            { path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }
-          ]
-        : baseTabs;
+    const tabs: any[] = [
+        ...baseTabs.slice(0, 4),
+        { path: '/predict', icon: '', Icon: IconMarket, label: 'Predict' },
+        baseTabs[4],
+        ...(isAdmin ? [{ path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }] : []),
+    ];
 
     useEffect(() => {
         async function check() {
