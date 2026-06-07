@@ -153,12 +153,18 @@ export function Predict({ user }: Props) {
                     outcome: h.outcome, timestamp: h.timestamp,
                 }));
                 setHistory(parsed);
-                if (parsed.length > 0) {
-                    setPriceToBeat(parsed[parsed.length - 1].open || 0);
+                // Only use history as fallback — prefer openPrice from the market object
+                if (parsed.length > 0 && !snap.market?.openPrice) {
+                    // history[0] is newest (backend reverses it), that's the current round's open
+                    setPriceToBeat(parsed[0].open || 0);
                 }
             }
 
             if (snap.market) {
+                // Use the exact Binance open price for this round if available
+                if (snap.market.openPrice) {
+                    setPriceToBeat(snap.market.openPrice);
+                }
                 const currentMarket = activeMarketRef.current;
                 if (currentMarket && snap.market.slug !== currentMarket.slug) {
                     // Backend rolled over to a new market! Keep showing current (ended) market
@@ -442,7 +448,7 @@ export function Predict({ user }: Props) {
     useEffect(() => {
         // Fallback only if Polymarket API hasn't loaded a valid strike
         if (priceToBeat === 0 && history && history.length > 0) {
-            setPriceToBeat(history[history.length - 1].open);
+            setPriceToBeat(history[0].open); // history[0] = current round (backend sends newest first)
         }
 
         // If historical slug, find and select that round

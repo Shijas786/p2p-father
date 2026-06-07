@@ -2426,6 +2426,22 @@ router.get("/predictions/copy-traders/status", async (req: Request, res: Respons
     }
 });
 
+/** Fetch the exact open price of the current 5-minute round from Binance */
+async function getCurrentRoundOpenPrice(): Promise<number | null> {
+    try {
+        const roundStartMs = Math.floor(Date.now() / 300000) * 300000;
+        const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${roundStartMs}&limit=1`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+            return parseFloat(data[0][1]); // index 1 = open price
+        }
+    } catch (err: any) {
+        console.warn('[RoundOpen] Failed to fetch round open price:', err.message);
+    }
+    return null;
+}
+
 async function getCachedBitcoinHistory(): Promise<any[]> {
     const cacheKey = "btc_price_history_cache";
     try {
@@ -3415,13 +3431,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
         // Resolve active market first (almost instant < 5ms due to cache)
         const market = await polymarketService.getActiveBtcMarket().catch(() => null);
 
-        // Fetch outcome prices and cached history in parallel (cached history uses Redis, <5ms)
-        const [[yesPrice, noPrice], parsedHistory] = await Promise.all([
+        // Fetch outcome prices, cached history, and current round open price in parallel
+        const [[yesPrice, noPrice], parsedHistory, roundOpenPrice] = await Promise.all([
             Promise.all([
                 market ? polymarketService.getOutcomePrice(market.yesTokenId, false).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 },
                 market ? polymarketService.getOutcomePrice(market.noTokenId, true).catch(() => ({ buyPrice: 0.5, sellPrice: 0.5 })) : { buyPrice: 0.5, sellPrice: 0.5 }
             ]),
-            getCachedBitcoinHistory()
+            getCachedBitcoinHistory(),
+            getCurrentRoundOpenPrice(),
         ]);
 
         if (cached) {
@@ -3443,7 +3460,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 market: market ? {
                     ...market,
                     yesPrice,
-                    noPrice
+                    noPrice,
+                    openPrice: roundOpenPrice,
                 } : null,
                 history: parsedHistory,
                 realizedPnl: cached.realizedPnl || 0,
@@ -3462,7 +3480,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             market: market ? {
                 ...market,
                 yesPrice,
-                noPrice
+                noPrice,
+                openPrice: roundOpenPrice,
             } : null,
             history: parsedHistory,
             realizedPnl: fresh.realizedPnl,
