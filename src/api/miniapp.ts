@@ -3291,6 +3291,54 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
         }
         mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
 
+        // Sync raw trades to database prediction_trades table so history is up-to-date
+        try {
+            const rows = rawTrades.map((t: any) => {
+                const assetLc = (t.asset_id || '').toLowerCase();
+                const rawOutcome = String(t.outcome || '').toUpperCase();
+                const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
+                const side = (t.side || 'BUY').toUpperCase();
+                const price = parseFloat(t.price ?? '0');
+                const shares = parseFloat(t.size ?? '0');
+                const cost = shares * price;
+
+                let tradedAt = new Date().toISOString();
+                if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
+                else if (t.timestamp) {
+                    const raw = t.timestamp.toString();
+                    tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
+                }
+
+                return {
+                    user_id: user.id,
+                    telegram_id: user.telegram_id,
+                    username: user.username,
+                    proxy_address: proxyAddress,
+                    clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
+                    condition_id: t.market ?? t.conditionId ?? '',
+                    token_id: assetLc,
+                    outcome,
+                    side,
+                    price,
+                    shares,
+                    cost_usdc: cost,
+                    traded_at: tradedAt,
+                };
+            }).filter((r: any) => r.condition_id && r.shares > 0);
+
+            if (rows.length > 0) {
+                await db.getClient()
+                    .from('prediction_trades')
+                    .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
+                
+                // On-demand resolution check
+                const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
+                await resolvePredictionTrades();
+            }
+        } catch (dbSyncErr: any) {
+            console.warn("[MINIAPP] Failed to sync raw trades to DB in snapshot:", dbSyncErr.message);
+        }
+
         const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
 
         // Calculate unclaimed winnings from database
