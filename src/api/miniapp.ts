@@ -1773,6 +1773,23 @@ router.put("/profile", async (req: Request, res: Response) => {
     }
 });
 
+router.post("/profile/export-key", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Generate the private key on the fly. Do NOT log this.
+        const { wallet } = await import("../services/wallet");
+        const derivedWallet = wallet.deriveWallet(user.wallet_index);
+
+        res.json({ privateKey: derivedWallet.privateKey });
+    } catch (err: any) {
+        // Safe error logging
+        console.error("[MINIAPP] Export key failed for user", req.telegramUser!.id);
+        res.status(500).json({ error: "Failed to export key" });
+    }
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  BRIDGE — Quote via LI.FI
 // ═══════════════════════════════════════════════════════════════
