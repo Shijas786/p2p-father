@@ -532,7 +532,8 @@ class PolymarketService {
         amountUsdc: number,
         limitPrice: number,
         side: "BUY" | "SELL" = "BUY",
-        orderType: "MARKET" | "LIMIT" = "MARKET"
+        orderType: "MARKET" | "LIMIT" = "MARKET",
+        conditionId?: string
     ): Promise<any> {
         this.checkCredentials();
 
@@ -556,8 +557,16 @@ class PolymarketService {
                 };
 
                 console.log(`[Polymarket] Submitting FAK MARKET ${side} order to CLOB. Amount: ${amountUsdc}`);
-                const marketInfo = await client.getMarket(tokenId);
-                const negRisk = marketInfo?.neg_risk || false;
+                
+                let negRisk = false;
+                if (conditionId) {
+                    try {
+                        const marketInfo = await client.getMarket(conditionId);
+                        negRisk = marketInfo?.neg_risk || false;
+                    } catch (err: any) {
+                        console.warn(`[Polymarket] getMarket failed for condition ${conditionId}, assuming non-negative risk:`, err.message);
+                    }
+                }
                 
                 const response = await client.createAndPostMarketOrder(
                     orderArgs,

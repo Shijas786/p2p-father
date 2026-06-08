@@ -2595,6 +2595,14 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         if (!amount || !outcome) return res.status(400).json({ error: "Missing amount/outcome" });
 
         const market = await polymarketService.getActiveBtcMarket();
+        
+        // Prevent betting on expired/ended rounds
+        const now = Date.now();
+        const endsAt = new Date(market.endsAt).getTime();
+        if (now >= endsAt) {
+            return res.status(400).json({ error: "Round has already ended. Please wait for the next round." });
+        }
+
         const tokenId = outcome === 'UP' || outcome === 'YES' ? market.yesTokenId : market.noTokenId;
         const limitPrice = price ? parseFloat(price) : 0.50;
         const betSide = side || "BUY";
@@ -2606,7 +2614,8 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             parseFloat(amount),
             limitPrice,
             betSide,
-            orderType
+            orderType,
+            market.conditionId
         );
 
         // Bust leaderboard cache so this trade's volume shows immediately
