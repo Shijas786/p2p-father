@@ -160,7 +160,6 @@
 .prof-section-header {
     display: flex;
     align-items: center;
-    gap: 8px;
     padding: 12px 16px;
     border-bottom: 1px solid #2b2f36;
 }
@@ -304,7 +303,6 @@
 .prof-nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
     padding: 14px 16px;
     border-bottom: 1px solid #2b2f36;
     cursor: pointer;

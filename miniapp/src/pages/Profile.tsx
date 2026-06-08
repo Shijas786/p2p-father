@@ -599,29 +599,29 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
                 }}>
                     <div className="prof-modal animate-in" style={{
-                        background: '#1a1d21', borderRadius: '16px', padding: '24px',
-                        width: '100%', maxWidth: '400px', border: '1px solid rgba(255,255,255,0.1)'
+                        background: '#1a1d21', borderRadius: '12px', padding: '20px',
+                        width: '100%', maxWidth: '320px', border: '1px solid rgba(255,255,255,0.1)'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, color: '#fff', fontSize: '18px' }}>Export Private Key</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>Export Private Key</h3>
                             <button onClick={() => { setShowExportModal(false); setPrivateKey(null); }} style={{
-                                background: 'transparent', border: 'none', color: '#848e9c', fontSize: '24px', padding: '0 8px'
+                                background: 'transparent', border: 'none', color: '#848e9c', fontSize: '20px', padding: '0 4px'
                             }}>×</button>
                         </div>
                         
                         <div className="prof-warning-box" style={{
                             background: 'rgba(255, 77, 79, 0.1)', border: '1px solid rgba(255, 77, 79, 0.2)',
-                            borderRadius: '12px', padding: '16px', marginBottom: '24px'
+                            borderRadius: '8px', padding: '12px', marginBottom: '16px'
                         }}>
-                            <strong style={{ color: '#ff4d4f', display: 'block', marginBottom: '8px' }}>⚠️ CRITICAL WARNING</strong>
-                            <p style={{ color: '#ff4d4f', margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
+                            <strong style={{ color: '#ff4d4f', display: 'block', marginBottom: '6px', fontSize: '12px' }}>⚠️ CRITICAL WARNING</strong>
+                            <p style={{ color: '#ff4d4f', margin: 0, fontSize: '11px', lineHeight: '1.4' }}>
                                 Anyone with this key can steal all your assets. We will NEVER ask you for this key. Do not share it with support, admins, or anyone else.
                             </p>
                         </div>
                         
                         {!privateKey ? (
                             <div style={{ textAlign: 'center' }}>
-                                <p style={{ color: '#848e9c', fontSize: '14px', marginBottom: '20px' }}>
+                                <p style={{ color: '#848e9c', fontSize: '12px', marginBottom: '16px' }}>
                                     Press and hold the button below for 3 seconds to reveal your private key.
                                 </p>
                                 <button 
@@ -630,8 +630,8 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     onPointerUp={stopHold}
                                     onPointerLeave={stopHold}
                                     style={{
-                                        position: 'relative', overflow: 'hidden', padding: '16px',
-                                        width: '100%', background: '#2b3139', color: '#fff'
+                                        position: 'relative', overflow: 'hidden', padding: '12px',
+                                        width: '100%', background: '#2b3139', color: '#fff', fontSize: '14px', borderRadius: '8px'
                                     }}
                                 >
                                     <div style={{
