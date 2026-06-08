@@ -14,8 +14,6 @@ function TradingViewChartComponent() {
         hide_top_toolbar
         hide_side_toolbar
         save_image={false}
-        backgroundColor="rgba(24, 26, 32, 1)"
-        gridColor="rgba(255, 255, 255, 0.05)"
       />
     </div>
   );
