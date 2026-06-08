@@ -9,9 +9,9 @@
   <rect x="22" y="30" width="20" height="14" rx="2" fill="#1a1103" stroke="#f0b90b" stroke-width="1.5"/>
   
   <!-- Lock Shackle -->
-  <path d="M26 30 V 22 C 26 18, 38 18, 38 22 V 30" fill="none" stroke="#f0b90b" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M 26 30 L 26 22 C 26 18 38 18 38 22 L 38 30" fill="none" stroke="#f0b90b" stroke-width="1.5" stroke-linecap="round"/>
   
   <!-- Lock Keyhole -->
   <circle cx="32" cy="36" r="2" fill="#f0b90b"/>
-  <path d="M31 37 L30 40 L34 40 L33 37 Z" fill="#f0b90b"/>
+  <path d="M 31 37 L 30 40 L 34 40 L 33 37 Z" fill="#f0b90b"/>
 </svg>
