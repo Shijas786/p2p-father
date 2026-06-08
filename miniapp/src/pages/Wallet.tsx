@@ -566,16 +566,16 @@ export function Wallet({ user }: Props) {
             {/* Manage Funds / Deposit Modal */}
             {showReceive && (
                 <div className="modal-overlay" onClick={() => setShowReceive(false)}>
-                    <div className="modal-content qr-modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>{(balances?.address || user?.wallet_address) ? 'Deposit Crypto' : 'Receive Crypto'}</h3>
+                    <div className="modal-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowX: 'hidden' }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ width: '100%', textAlign: 'center' }}>{(balances?.address || user?.wallet_address) ? 'Deposit Crypto' : 'Receive Crypto'}</h3>
                         <p className="text-sm text-muted mb-2">Scan or copy address to receive funds</p>
-                        <div className="qr-code-box">
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address || user?.wallet_address || wagmiAddress}`} alt="QR" width={150} height={150} />
+                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', margin: '16px auto', display: 'inline-block' }}>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address || user?.wallet_address || wagmiAddress}`} alt="QR" width={150} height={150} style={{ display: 'block' }} />
                         </div>
-                        <div className="p-2 bg-secondary rounded mb-4 break-all mono text-sm select-all">
+                        <div className="p-2 bg-secondary rounded mb-4 mono text-sm select-all" style={{ wordBreak: 'break-all', width: '100%', boxSizing: 'border-box' }}>
                             {balances?.address || user?.wallet_address || wagmiAddress}
                         </div>
-                        <button className="btn btn-primary btn-block" onClick={copyAddress}>
+                        <button className="btn btn-primary btn-block" onClick={copyAddress} style={{ width: '100%' }}>
                             Copy Address
                         </button>
                     </div>
