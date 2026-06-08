@@ -205,10 +205,6 @@ export const api = {
                 method: 'PUT',
                 body: JSON.stringify(data),
             }),
-        exportKey: () => 
-            request<{ privateKey: string }>('/profile/export-key', {
-                method: 'POST',
-            }),
     },
 
     // ---- Stats ----

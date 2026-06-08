@@ -54,14 +54,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [message, setMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Export Key State
-    const [showExportModal, setShowExportModal] = useState(false);
-    const [privateKey, setPrivateKey] = useState<string | null>(null);
-    const [isHolding, setIsHolding] = useState(false);
-    const [holdProgress, setHoldProgress] = useState(0);
-    const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
     };
@@ -179,52 +171,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             x_handle: xInput.trim() || null,
         }, 'Socials updated!');
     }
-
-    const startHold = () => {
-        setIsHolding(true);
-        setHoldProgress(0);
-        let progress = 0;
-        
-        progressTimerRef.current = setInterval(() => {
-            progress += 5;
-            setHoldProgress(p => p < 100 ? p + 5 : 100);
-        }, 150);
-
-        holdTimerRef.current = setTimeout(async () => {
-            if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-            setIsHolding(false);
-            haptic('success');
-            try {
-                setSaving(true);
-                const res = await api.profile.exportKey();
-                setPrivateKey(res.privateKey);
-            } catch (err: any) {
-                setMessage(`error:${err.message}`);
-                haptic('error');
-            } finally {
-                setSaving(false);
-            }
-        }, 3000);
-    };
-
-    const stopHold = () => {
-        setIsHolding(false);
-        setHoldProgress(0);
-        if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-        if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-    };
-
-    const copyPrivateKey = () => {
-        if (privateKey) {
-            navigator.clipboard.writeText(privateKey);
-            haptic('success');
-            setMessage('success:Private Key copied to clipboard!');
-            setTimeout(() => {
-                setShowExportModal(false);
-                setPrivateKey(null);
-            }, 2000);
-        }
-    };
 
     if (!user) {
         return (
@@ -564,22 +510,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     </button>
                 </div>
 
-                {/* 5.5 Security Section */}
-                {user?.wallet_type !== 'external' && (
-                    <div className="prof-nav-item" onClick={() => { haptic('light'); setShowExportModal(true); }} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <svg width="28" height="28" viewBox="0 0 64 64" style={{ marginRight: '16px' }} xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="32" cy="32" r="28" fill="none" stroke="#f0b90b" strokeWidth="0.5" strokeDasharray="2 6" opacity="0.4" />
-                            <circle cx="32" cy="32" r="22" fill="#1a1103" stroke="#8a5b08" strokeWidth="1.5" />
-                            <rect x="22" y="30" width="20" height="14" rx="2" fill="#1a1103" stroke="#f0b90b" strokeWidth="1.5" />
-                            <path d="M 26 30 L 26 22 C 26 18 38 18 38 22 L 38 30" fill="none" stroke="#f0b90b" strokeWidth="1.5" strokeLinecap="round" />
-                            <circle cx="32" cy="36" r="2" fill="#f0b90b" />
-                            <path d="M 31 37 L 30 40 L 34 40 L 33 37 Z" fill="#f0b90b" />
-                        </svg>
-                        <span className="prof-nav-text" style={{ color: '#ff4d4f' }}>Export Private Key</span>
-                        <span className="prof-nav-chevron">›</span>
-                    </div>
-                )}
-
                 {/* 6. Account Info */}
                 <div className="prof-account-row">
                     <span className="prof-account-label">Telegram ID</span>
@@ -595,74 +525,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             {message && (
                 <div className={`prof-message ${message.startsWith('success:') ? 'success' : 'error'}`}>
                     {message.replace(/^(success|error):/, '')}
-                </div>
-            )}
-
-            {/* Export Key Modal */}
-            {showExportModal && (
-                <div className="prof-modal-overlay" style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-                }}>
-                    <div className="prof-modal animate-in" style={{
-                        background: '#1a1d21', borderRadius: '12px', padding: '20px',
-                        width: '100%', maxWidth: '320px', border: '1px solid rgba(255,255,255,0.1)'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>Export Private Key</h3>
-                            <button onClick={() => { setShowExportModal(false); setPrivateKey(null); }} style={{
-                                background: 'transparent', border: 'none', color: '#848e9c', fontSize: '20px', padding: '0 4px'
-                            }}>×</button>
-                        </div>
-                        
-                        <div className="prof-warning-box" style={{
-                            background: 'rgba(255, 77, 79, 0.1)', border: '1px solid rgba(255, 77, 79, 0.2)',
-                            borderRadius: '8px', padding: '12px', marginBottom: '16px'
-                        }}>
-                            <strong style={{ color: '#ff4d4f', display: 'block', marginBottom: '6px', fontSize: '12px' }}>⚠️ CRITICAL WARNING</strong>
-                            <p style={{ color: '#ff4d4f', margin: 0, fontSize: '11px', lineHeight: '1.4' }}>
-                                Anyone with this key can steal all your assets. We will NEVER ask you for this key. Do not share it with support, admins, or anyone else.
-                            </p>
-                        </div>
-                        
-                        {!privateKey ? (
-                            <div style={{ textAlign: 'center' }}>
-                                <p style={{ color: '#848e9c', fontSize: '12px', marginBottom: '16px' }}>
-                                    Press and hold the button below for 3 seconds to reveal your private key.
-                                </p>
-                                <button 
-                                    className={`prof-save-btn ${isHolding ? 'holding' : ''}`}
-                                    onPointerDown={startHold}
-                                    onPointerUp={stopHold}
-                                    onPointerLeave={stopHold}
-                                    style={{
-                                        position: 'relative', overflow: 'hidden', padding: '12px',
-                                        width: '100%', background: '#2b3139', color: '#fff', fontSize: '14px', borderRadius: '8px'
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute', top: 0, left: 0, bottom: 0,
-                                        width: `${holdProgress}%`, background: '#ff4d4f', transition: 'width 0.15s linear', opacity: 0.8
-                                    }} />
-                                    <span style={{ position: 'relative', zIndex: 1, fontWeight: 600 }}>Hold to Reveal</span>
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="animate-in" style={{ textAlign: 'center' }}>
-                                <div style={{
-                                    background: '#0b0e11', padding: '16px', borderRadius: '8px',
-                                    color: '#f0b90b', fontFamily: 'monospace', fontSize: '13px',
-                                    wordBreak: 'break-all', marginBottom: '20px', border: '1px solid rgba(240, 185, 11, 0.2)'
-                                }}>
-                                    {privateKey}
-                                </div>
-                                <button className="prof-save-btn" onClick={copyPrivateKey} style={{ width: '100%' }}>
-                                    Copy to Clipboard
-                                </button>
-                            </div>
-                        )}
-                    </div>
                 </div>
             )}
 
