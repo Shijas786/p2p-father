@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import { polymarketWs } from '../lib/polymarketWs';
 import { haptic } from '../lib/telegram';
 import { useToast } from '../components/Toast';
-import { PredictChart } from '../components/PredictChart';
+import { TradingViewChart } from '../components/TradingViewChart';
 import { TradePanel } from '../components/TradePanel';
 import { DepositModal } from '../components/DepositModal';
 import './Predict.css';
@@ -1047,12 +1047,7 @@ export function Predict({ user }: Props) {
                 <div className="pm-chart-wrap">
 
                     <div className="pm-chart" style={{ flex: 1, position: 'relative' }}>
-                        <PredictChart 
-                            livePrice={livePrice} 
-                            priceToBeat={displayPtb} 
-                            startTimeMs={liveEndMs ? liveEndMs - 300000 : 0} 
-                            endTimeMs={liveEndMs || 0} 
-                        />
+                        <TradingViewChart />
                     </div>
                 </div>
 
