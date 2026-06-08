@@ -2618,6 +2618,41 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             market.conditionId
         );
 
+        // Optimistically insert trade into our DB for instant history feedback
+        try {
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+            
+            // Extract Polymarket's order ID if available, otherwise fallback to local timestamp-based ID
+            let clobTradeId = `opt_${Date.now()}`;
+            if (result && result.orderID) {
+                clobTradeId = result.orderID;
+            } else if (result && result.transactionHash) {
+                clobTradeId = result.transactionHash;
+            }
+
+            await db.getClient().from("prediction_trades").insert({
+                user_id: user.id,
+                telegram_id: user.telegram_id,
+                username: user.username,
+                proxy_address: proxyAddress || '',
+                clob_trade_id: clobTradeId,
+                condition_id: market.conditionId,
+                token_id: tokenId,
+                outcome: outcome === 'UP' || outcome === 'YES' ? 'UP' : 'DOWN',
+                side: betSide,
+                price: limitPrice,
+                shares: parseFloat(amount) / limitPrice,
+                cost_usdc: parseFloat(amount),
+                traded_at: new Date().toISOString()
+            });
+            console.log(`[MINIAPP] Optimistically inserted trade ${clobTradeId} for user ${user.telegram_id}`);
+            
+            // Clear prediction cache to ensure snapshot re-fetches the new optimistic history
+            await polymarketService.clearUserPredictionsCache(user.telegram_id);
+        } catch (optErr: any) {
+            console.warn(`[MINIAPP] Failed to optimistically insert trade:`, optErr.message);
+        }
+
         // Bust leaderboard cache so this trade's volume shows immediately
         leaderboardCache = null;
 
@@ -3222,52 +3257,6 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             }
         }
 
-        // Realized PNL
-        let realizedPnl = activeRealizedPnl;
-        try {
-            const openConditionIds = new Set<string>();
-            for (const p of positionsData) {
-                realizedPnl += parseFloat(p.cashPnl ?? '0') || 0;
-                openConditionIds.add(p.conditionId);
-            }
-
-            const conditionMap: Record<string, { cost: number; shares: number; outcomeIndex: number }> = {};
-            for (const t of rawTrades) {
-                const cid = t.conditionId;
-                if (!cid) continue;
-                const size = parseFloat(t.size ?? '0');
-                const price = parseFloat(t.price ?? '0');
-                if (!conditionMap[cid]) conditionMap[cid] = { cost: 0, shares: 0, outcomeIndex: t.outcomeIndex ?? 1 };
-                if (t.side === 'BUY') {
-                    conditionMap[cid].cost += size * price;
-                    conditionMap[cid].shares += size;
-                } else if (t.side === 'SELL') {
-                    conditionMap[cid].cost -= size * price;
-                    conditionMap[cid].shares -= size;
-                }
-            }
-
-            const pnlPromises = Object.entries(conditionMap).map(async ([cid, data]) => {
-                if (openConditionIds.has(cid)) return 0;
-                if (data.shares <= 0.001) return 0;
-                try {
-                    const res = await getConditionResolution(cid);
-                    if (!res) return 0;
-                    const num = data.outcomeIndex === 0 ? res.num0 : res.num1;
-                    const payoutFraction = num / res.denominator;
-                    return data.shares * payoutFraction - data.cost;
-                } catch {
-                    return 0;
-                }
-            });
-            const resolvedPnls = await Promise.all(pnlPromises);
-            for (const profit of resolvedPnls) {
-                realizedPnl += profit;
-            }
-        } catch (e: any) {
-            console.warn('[MINIAPP] Snapshot realized PNL error:', e.message);
-        }
-
         const positions = Object.values(positionMap)
             .filter(p => p.qty > 0.001)
             .map(p => {
@@ -3289,48 +3278,45 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
                 };
             });
 
-        const mappedTrades = [];
-        for (const t of rawTrades) {
-            const assetLc = (t.asset_id || "").toLowerCase();
-            const yesLc = yesTokenIdLc;
-            const noLc = noTokenIdLc;
-            let outcome = "UNKNOWN";
-            const rawOutcome = (t.outcome || "").toUpperCase();
-            if (rawOutcome === "YES" || rawOutcome === "UP" || t.outcomeIndex === 0) {
-                outcome = "UP";
-            } else if (rawOutcome === "NO" || rawOutcome === "DOWN" || t.outcomeIndex === 1) {
-                outcome = "DOWN";
-            } else {
-                outcome = assetLc === yesLc ? "UP" : assetLc === noLc ? "DOWN" : "UNKNOWN";
-            }
+        // Use database as the source of truth for history
+        const { data: dbTrades } = await db.getClient()
+            .from('prediction_trades')
+            .select('*')
+            .eq('telegram_id', user.telegram_id)
+            .order('traded_at', { ascending: false });
+            
+        const mappedTrades = (dbTrades || []).map((t: any) => ({
+            id: t.clob_trade_id,
+            side: t.side,
+            outcome: t.outcome,
+            conditionId: t.condition_id,
+            qty: parseFloat(t.shares),
+            price: parseFloat(t.price),
+            cost: parseFloat(t.cost_usdc),
+            timestamp: new Date(t.traded_at).getTime(),
+            resolved: t.resolved,
+            resolution: t.resolution,
+            payout: t.payout_usdc ? parseFloat(t.payout_usdc) : 0,
+            pnl: t.pnl_usdc ? parseFloat(t.pnl_usdc) : 0
+        }));
 
-            const ti = t as any;
-            let ts = Date.now();
-            if (ti.create_time) ts = new Date(ti.create_time).getTime();
-            else if (ti.timestamp || ti.matched_time) {
-                const raw = (ti.timestamp || ti.matched_time).toString();
-                if (raw.includes("T") || raw.includes("-")) ts = new Date(raw).getTime();
-                else {
-                    const p = parseInt(raw);
-                    if (p > 0 && p < 2000000000) ts = p * 1000;
-                    else if (p > 0) ts = p;
-                }
+        // Keep activeRealizedPnl for floating returns
+        let realizedPnl = activeRealizedPnl;
+        try {
+            const { data: userStats } = await db.getClient()
+                .from('prediction_user_stats')
+                .select('realized_pnl')
+                .eq('telegram_id', user.telegram_id)
+                .single();
+            
+            if (userStats) {
+                realizedPnl += parseFloat(userStats.realized_pnl || '0');
             }
-
-            mappedTrades.push({
-                id: ti.id ?? ti.trade_id,
-                side: ti.side,
-                outcome,
-                conditionId: ti.market,
-                qty: parseFloat(ti.size ?? "0"),
-                price: parseFloat(ti.price ?? "0"),
-                cost: parseFloat(ti.size ?? "0") * parseFloat(ti.price ?? "0"),
-                timestamp: ts,
-            });
+        } catch (dbErr: any) {
+            console.warn('[MINIAPP] Failed to fetch realized PNL from DB:', dbErr.message);
         }
-        mappedTrades.sort((a, b) => b.timestamp - a.timestamp);
 
-        // Sync raw trades to database prediction_trades table so history is up-to-date
+        // Still sync rawTrades from Polymarket to ensure we don't miss anything that happened outside our app
         try {
             const rows = rawTrades.map((t: any) => {
                 const assetLc = (t.asset_id || '').toLowerCase();
