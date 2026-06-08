@@ -567,7 +567,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 {/* 5.5 Security Section */}
                 {user?.wallet_type !== 'external' && (
                     <div className="prof-nav-item" onClick={() => { haptic('light'); setShowExportModal(true); }} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <img src="/icons for trade/profile icons/security.svg?v=1" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                        <img src="/icons for trade/profile icons/export-key.svg?v=1" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
                         <span className="prof-nav-text" style={{ color: '#ff4d4f' }}>Export Private Key</span>
                         <span className="prof-nav-chevron">›</span>
                     </div>
