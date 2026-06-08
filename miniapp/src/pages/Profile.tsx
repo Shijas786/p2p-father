@@ -567,7 +567,14 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 {/* 5.5 Security Section */}
                 {user?.wallet_type !== 'external' && (
                     <div className="prof-nav-item" onClick={() => { haptic('light'); setShowExportModal(true); }} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <img src="/icons for trade/profile icons/export-key.svg?v=2" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                        <svg width="28" height="28" viewBox="0 0 64 64" style={{ marginRight: '16px' }} xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="32" cy="32" r="28" fill="none" stroke="#f0b90b" strokeWidth="0.5" strokeDasharray="2 6" opacity="0.4" />
+                            <circle cx="32" cy="32" r="22" fill="#1a1103" stroke="#8a5b08" strokeWidth="1.5" />
+                            <rect x="22" y="30" width="20" height="14" rx="2" fill="#1a1103" stroke="#f0b90b" strokeWidth="1.5" />
+                            <path d="M 26 30 L 26 22 C 26 18 38 18 38 22 L 38 30" fill="none" stroke="#f0b90b" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="32" cy="36" r="2" fill="#f0b90b" />
+                            <path d="M 31 37 L 30 40 L 34 40 L 33 37 Z" fill="#f0b90b" />
+                        </svg>
                         <span className="prof-nav-text" style={{ color: '#ff4d4f' }}>Export Private Key</span>
                         <span className="prof-nav-chevron">›</span>
                     </div>
