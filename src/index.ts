@@ -7,6 +7,7 @@ import path from "path";
 import axios from "axios";
 
 import { miniappRouter } from "./api/miniapp";
+import { webhookRouter } from "./api/webhook";
 import { customHttpsAgent } from "./services/polymarket";
 
 async function main() {
@@ -108,6 +109,9 @@ async function main() {
 
     // Mount Mini App API
     app.use("/api/miniapp", miniappRouter);
+
+    // Mount Webhook API for external integrations
+    app.use("/api/webhook", webhookRouter);
 
     // API Stats Endpoint (Consumed by the frontend)
     app.get("/api/stats", async (req, res) => {
