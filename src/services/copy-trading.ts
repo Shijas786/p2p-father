@@ -26,8 +26,10 @@ export class CopyTradingService {
                 const { data: leadStats, error: statsErr } = await supabase
                     .from("prediction_user_stats")
                     .select("user_id, username, allow_copy_trading")
-                    .eq("telegram_id", leadTelegramId)
+                    .eq("telegram_id", Number(leadTelegramId))
                     .single();
+
+                console.log(`[Copy Trading] leadStats lookup for tgId=${leadTelegramId}:`, leadStats ? `found user_id=${leadStats.user_id}, allow=${leadStats.allow_copy_trading}` : `NOT FOUND (err: ${statsErr?.message})`);
 
                 if (statsErr || !leadStats) {
                     console.warn(`[Copy Trading] Could not find stats for lead ${leadTelegramId}:`, statsErr?.message);
@@ -146,9 +148,10 @@ export class CopyTradingService {
                             await supabase.from("copy_trade_logs").insert({
                                 copier_user_id: conn.copier_user_id,
                                 lead_user_id: leadStats.user_id,
+                                lead_trade_id: null, // nullable — will be populated by sync job
                                 status: logStatus,
                                 error_message: logError,
-                                amount_wagered: copierAmount,
+                                amount_wagered: copierAmount || 0,
                             });
                         } catch (logDbErr: any) {
                             console.warn("[Copy Trading] Failed to write copy_trade_logs row:", logDbErr.message);
