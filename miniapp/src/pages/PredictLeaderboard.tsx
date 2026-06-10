@@ -73,7 +73,30 @@ export function PredictLeaderboard() {
                                     <span className={`pm-lb-rank-badge rank-${row.rank || i+1}`}>{`#${row.rank || i+1}`}</span>
                                 </td>
                                 <td className="td-user">
-                                    <div className="pm-lb-user">
+                                    <div className="pm-lb-user" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {row.photo_url ? (
+                                            <img 
+                                                src={row.photo_url} 
+                                                alt={row.user} 
+                                                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
+                                            />
+                                        ) : (
+                                            <div className="pm-lb-avatar-fallback" style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                background: 'linear-gradient(135deg, #1677ff 0%, #722ed1 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                color: '#fff',
+                                                flexShrink: 0
+                                            }}>
+                                                {String(row.user || 'U').charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
                                         <span className="pm-lb-user-name">{row.user}</span>
                                     </div>
                                 </td>

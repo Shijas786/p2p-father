@@ -2187,7 +2187,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                 total_losses,
                 total_wagered,
                 realized_pnl,
-                users ( first_name )
+                users ( first_name, photo_url )
             `)
             .order("total_wagered", { ascending: false })
             .limit(100);
@@ -2211,6 +2211,7 @@ router.get("/predictions/leaderboard", async (req: Request, res: Response) => {
                 rank: i + 1,
                 _telegram_id: s.telegram_id, // kept for cache is_me injection
                 user: displayName,
+                photo_url: s.users?.photo_url || '',
                 pred: `$${totalWagered.toFixed(2)}`,
                 pnl: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`,
                 trades: s.total_trades || 0,
