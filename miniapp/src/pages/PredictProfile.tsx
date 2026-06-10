@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { haptic } from '../lib/telegram';
 import { api } from '../lib/api';
 import { useToast } from '../components/Toast';
@@ -22,6 +22,8 @@ interface Props {
 
 export function PredictProfile({ user }: Props) {
     const navigate = useNavigate();
+    const { telegramId } = useParams<{ telegramId?: string }>();
+    const [profileUser, setProfileUser] = useState<any>(null);
     const [tab, setTab] = useState<'positions' | 'activity'>('positions');
     const [subTab, setSubTab] = useState<'active' | 'closed'>('active');
 
@@ -56,31 +58,31 @@ export function PredictProfile({ user }: Props) {
     
     const loadData = useCallback(async () => {
         try {
-            const [posRes, tradeRes] = await Promise.allSettled([
-                api.predictions.getPositions(true),
-                api.predictions.getTrades('?all=true')
-            ]);
-
-            if (posRes.status === 'fulfilled' && posRes.value) {
-                const res = posRes.value;
-                if (res.positions) {
-                    setPositions(res.positions);
-                }
-                if (typeof res.realizedPnl === 'number') {
-                    setRealizedPnl(res.realizedPnl);
-                }
+            const snap = await api.predictions.getSnapshot(telegramId);
+            
+            if (snap.positions) {
+                setPositions(snap.positions);
             }
-
-            if (tradeRes.status === 'fulfilled' && tradeRes.value) {
-                const res = tradeRes.value;
-                if (res.trades) {
-                    setTrades(res.trades);
-                }
+            if (typeof snap.realizedPnl === 'number') {
+                setRealizedPnl(snap.realizedPnl);
+            }
+            if (snap.trades) {
+                // Ensure timestamp is added if missing
+                const mappedTrades = snap.trades.map((t: any) => ({
+                    ...t,
+                    timestamp: t.timestamp || (t.traded_at ? new Date(t.traded_at).getTime() : Date.now())
+                }));
+                setTrades(mappedTrades);
+            }
+            if (snap.user) {
+                setProfileUser(snap.user);
+            } else {
+                setProfileUser(user);
             }
         } catch (e) {
             console.error("[Profile] Error loading predictions data:", e);
         }
-    }, []);
+    }, [telegramId, user]);
 
     useEffect(() => {
         loadData();
@@ -184,8 +186,8 @@ export function PredictProfile({ user }: Props) {
                     <div className="pm-prof-user-header">
                         <div className="pm-prof-avatar-gradient"></div>
                         <div className="pm-prof-user-info">
-                            <h2>{user?.first_name || user?.username || 'Telegram User'}</h2>
-                            <p>Joined {new Date(user?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
+                            <h2>{profileUser?.first_name || profileUser?.username || 'Telegram User'}</h2>
+                            <p>Joined {new Date(profileUser?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
                         </div>
                     </div>
                     
@@ -365,7 +367,7 @@ export function PredictProfile({ user }: Props) {
                                                 {trade.outcome === 'UP' ? 'Up' : 'Down'} {(trade.price * 100).toFixed(0)}¢
                                             </span>
                                             <span className="pm-prof-bet-shares" style={{ color: '#888', fontSize: '12px' }}>{trade.qty.toFixed(1)} shares</span>
-                                            {trade.resolved && trade.resolution === 'WIN' && !trade.claimed && (
+                                            {trade.resolved && trade.resolution === 'WIN' && !trade.claimed && !telegramId && (
                                                 <button 
                                                     className="pm-prof-claim-btn"
                                                     onClick={(e) => handleClaim(e, trade.conditionId)}

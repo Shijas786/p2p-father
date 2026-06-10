@@ -252,7 +252,7 @@ export const api = {
         getDepositWallet: () => request<{ address: string; evmBridgeAddress?: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
         getBalance: () => request<{ balance: string }>('/predictions/balance'),
-        getSnapshot: () => request<{
+        getSnapshot: (telegramId?: string) => request<{
             balance: string;
             positions: any[];
             trades: any[];
@@ -261,7 +261,9 @@ export const api = {
             market: any;
             history: any[];
             realizedPnl: number;
-        }>('/predictions/snapshot'),
+            unclaimedWinnings?: number;
+            user?: any;
+        }>(`/predictions/snapshot${telegramId ? `?telegramId=${telegramId}` : ''}`),
         getMarket: () => request<{
             market: any;
             yesPrice: { buyPrice: number; sellPrice: number };

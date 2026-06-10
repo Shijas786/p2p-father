@@ -3419,8 +3419,9 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
 
 router.get("/predictions/snapshot", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user) return res.status(401).json({ error: "Unauthorized" });
+        const targetTgId = req.query.telegramId ? Number(req.query.telegramId) : req.telegramUser!.id;
+        const user = await db.getUserByTelegramId(targetTgId);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
         const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
         if (!proxyAddress) {
@@ -3432,7 +3433,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 depositAddress: "",
                 market: null,
                 history: [],
-                realizedPnl: 0
+                realizedPnl: 0,
+                user: {
+                    id: user.id,
+                    telegram_id: user.telegram_id,
+                    username: user.username,
+                    first_name: user.first_name,
+                    created_at: user.created_at
+                }
             });
         }
 
@@ -3477,7 +3485,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 } : null,
                 history: parsedHistory,
                 realizedPnl: cached.realizedPnl || 0,
-                unclaimedWinnings: cached.unclaimedWinnings || 0
+                unclaimedWinnings: cached.unclaimedWinnings || 0,
+                user: {
+                    id: user.id,
+                    telegram_id: user.telegram_id,
+                    username: user.username,
+                    first_name: user.first_name,
+                    created_at: user.created_at
+                }
             });
         }
 
@@ -3497,7 +3512,14 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             } : null,
             history: parsedHistory,
             realizedPnl: fresh.realizedPnl,
-            unclaimedWinnings: fresh.unclaimedWinnings || 0
+            unclaimedWinnings: fresh.unclaimedWinnings || 0,
+            user: {
+                id: user.id,
+                telegram_id: user.telegram_id,
+                username: user.username,
+                first_name: user.first_name,
+                created_at: user.created_at
+            }
         });
     } catch (err: any) {
         console.error("[MINIAPP] Snapshot endpoint error:", err);

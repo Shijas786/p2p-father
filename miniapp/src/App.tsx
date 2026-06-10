@@ -323,6 +323,7 @@ function AppInner() {
           <Route path="predict" element={<Predict user={user} />} />
           <Route path="predict/:slug" element={<Predict user={user} />} />
           <Route path="predict-profile" element={<PredictProfile user={user} />} />
+          <Route path="predict-profile/:telegramId" element={<PredictProfile user={user} />} />
           <Route path="predict-leaderboard" element={<PredictLeaderboard />} />
           <Route path="predict-copy-trading" element={<PredictCopyTrading />} />
 

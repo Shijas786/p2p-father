@@ -63,7 +63,12 @@ export function PredictLeaderboard() {
                         {leaderboard.length === 0 ? (
                             <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px', color: '#888'}}>No traders found</td></tr>
                         ) : leaderboard.map((row, i) => (
-                            <tr key={row.rank || i}>
+                            <tr key={row.rank || i} style={{ cursor: 'pointer' }} onClick={() => {
+                                if (row._telegram_id) {
+                                    haptic('light');
+                                    navigate(`/predict-profile/${row._telegram_id}`);
+                                }
+                            }}>
                                 <td className="td-rank">
                                     <span className={`pm-lb-rank-badge rank-${row.rank || i+1}`}>{`#${row.rank || i+1}`}</span>
                                 </td>
