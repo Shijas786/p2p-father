@@ -2353,7 +2353,14 @@ router.post("/predictions/copy-traders/copy", async (req: Request, res: Response
             return res.status(400).json({ error: "You cannot copy trade yourself" });
         }
 
-        // 2. Setup the connection
+        // 2. Deactivate other active copy connections for this copier to enforce "one lead at a time"
+        await supabase
+            .from("copy_connections")
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq("copier_user_id", user.id)
+            .neq("lead_user_id", leadUserId);
+
+        // 3. Setup/activate the target connection
         const { error } = await supabase
             .from("copy_connections")
             .upsert({
