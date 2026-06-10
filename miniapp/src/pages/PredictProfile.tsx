@@ -113,7 +113,7 @@ export function PredictProfile({ user }: Props) {
     // Calculate cumulative PnL points
     let cumulative = 0;
     const chartPoints = resolvedTradesInTimeframe.map((t: any) => {
-        cumulative += t.pnlUsdc;
+        cumulative += (t.pnl ?? t.pnlUsdc ?? 0);
         return { x: t.timestamp, y: cumulative };
     });
 
