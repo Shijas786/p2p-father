@@ -123,7 +123,9 @@ export class CopyTradingService {
                         // Notify copier on Telegram
                         try {
                             const leadName = leadStats.username ? `@${leadStats.username}` : `Trader ${leadTelegramId}`;
-                            const msg = `⚡ <b>Copy Trade Executed!</b>\n\nReplicated entry from <b>${leadName}</b>:\n• Action: <b>${side} ${outcome}</b>\n• Amount: <b>$${copierAmount.toFixed(2)} USDC</b>`;
+                            const priceLabel = side === "BUY" ? "Buy Price" : "Sell Price";
+                            const priceCents = (price * 100).toFixed(0);
+                            const msg = `⚡ <b>Copy Trade Executed!</b>\n\nReplicated entry from <b>${leadName}</b>:\n• Action: <b>${side} ${outcome}</b>\n• ${priceLabel}: <b>${priceCents}¢</b>\n• Amount: <b>$${copierAmount.toFixed(2)} USDC</b>`;
                             await bot.api.sendMessage(user.telegram_id, msg, { parse_mode: "HTML" }).catch(() => {});
                         } catch (botErr) {
                             console.warn("[Copy Trading] Failed to send telegram notification:", botErr);

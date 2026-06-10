@@ -486,3 +486,28 @@ export function startPredictionResolutionJob() {
         }
     }, 10 * 60 * 1000);
 }
+
+export function startCopyTradingWatchJob() {
+    console.log("📡 Starting Copy Trading Watch Job (polls every 30s for external trades)...");
+
+    let isRunning = false;
+
+    // Delay first run by 10s to let bot fully initialize
+    setTimeout(() => {
+        const run = async () => {
+            if (isRunning) return;
+            isRunning = true;
+            try {
+                const { runCopyTradingWatch } = await import("../jobs/copyTradingWatch");
+                await runCopyTradingWatch();
+            } catch (err: any) {
+                console.error("[CopyWatch] Job error:", err.message);
+            } finally {
+                isRunning = false;
+            }
+        };
+
+        run(); // immediate first run after delay
+        setInterval(run, 30 * 1000); // then every 30s
+    }, 10 * 1000);
+}

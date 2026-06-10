@@ -192,7 +192,27 @@ export function TradePanel({
                             <span className="pm-earnings-label">Total</span>
                             <span className="pm-earnings-val">${winQty.toFixed(2)}</span>
                         </div>
-                        <button className="pm-btn pm-btn-buy" style={{marginTop: 16}} onClick={handleClaim} disabled={claiming}>
+                        <button 
+                            style={{
+                                marginTop: 16,
+                                width: '100%',
+                                padding: '12px',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                borderRadius: '8px',
+                                border: 'none',
+                                cursor: claiming ? 'not-allowed' : 'pointer',
+                                textAlign: 'center',
+                                boxSizing: 'border-box',
+                                background: claiming ? 'rgba(14, 203, 129, 0.35)' : '#0ecb81',
+                                color: claiming ? 'rgba(0, 0, 0, 0.6)' : '#000000',
+                                transition: 'all 0.15s ease',
+                                boxShadow: claiming ? 'none' : '0 4px 12px rgba(14, 203, 129, 0.2)',
+                                display: 'block'
+                            }} 
+                            onClick={handleClaim} 
+                            disabled={claiming}
+                        >
                             {claiming ? 'Claiming...' : 'Claim Winnings'}
                         </button>
                     </div>
