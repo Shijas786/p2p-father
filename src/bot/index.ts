@@ -377,12 +377,18 @@ export async function deleteAdBroadcasts(orderId: string) {
         const broadcasts = await db.getAdBroadcasts(orderId);
         if (broadcasts.length === 0) return;
 
-        console.log(`🧹 Cleaning up ${broadcasts.length} broadcast messages for order ${orderId}...`);
+        const order = await db.getOrderById(orderId);
+        const isSellAd = order && order.type === "sell";
 
-        await Promise.allSettled(broadcasts.map(async (b) => {
-            // Use bot.api directly as we might not have a ctx
-            await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => { });
-        }));
+        if (!isSellAd) {
+            console.log(`🧹 Cleaning up ${broadcasts.length} broadcast messages for order ${orderId}...`);
+            await Promise.allSettled(broadcasts.map(async (b) => {
+                // Use bot.api directly as we might not have a ctx
+                await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => { });
+            }));
+        } else {
+            console.log(`[Bot] Retaining ${broadcasts.length} broadcast messages in group for sell order ${orderId}.`);
+        }
 
         await db.deleteAdBroadcasts(orderId);
     } catch (e) {
