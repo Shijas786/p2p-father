@@ -628,7 +628,14 @@ footer{
 .demo-step.active .step-desc { color: rgba(255,255,255,0.6); }
 
 .demo-phone { width: 300px; flex-shrink: 0; filter: drop-shadow(0 30px 60px rgba(0,0,0,.25)); }
-.phone-shell { background: #0f0f11; border-radius: 40px; padding: 12px; box-shadow: inset 0 0 0 2px #3a3a3c, inset 0 0 0 6px #121212; position: relative; overflow: hidden; }
+.phone-shell { background: #0f0f11; border-radius: 40px; padding: 12px; box-shadow: inset 0 0 0 2px #3a3a3c, inset 0 0 0 6px #121212; position: relative; }
+.phone-button { position: absolute; background: #1c1d22; border: 1px solid #3a3a3c; z-index: 10; width: 3px; }
+.phone-button.left-btn { left: -3px; border-radius: 3px 0 0 3px; border-right: none; }
+.phone-button.right-btn { right: -3px; border-radius: 0 3px 3px 0; border-left: none; }
+.phone-button.silent { top: 80px; height: 18px; }
+.phone-button.vol-up { top: 120px; height: 36px; }
+.phone-button.vol-down { top: 168px; height: 36px; }
+.phone-button.power { top: 135px; height: 52px; }
 .phone-screen { background: #000; border-radius: 30px; overflow: hidden; position: relative; display: flex; flex-direction: column; height: 600px; }
 .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; background: #000; border-radius: 20px; z-index: 999; box-shadow: 0 0 0 1px rgba(255,255,255,0.05); }
 
@@ -923,10 +930,6 @@ footer{
     <li><a href="/#miniapp">Mini App</a></li>
   </ul>
   <div class="nav-right-wrap" style="display:flex; gap:1rem; align-items:center;">
-    <button id="custom-connect-btn" class="btn-connect-grey">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
-      Connect Wallet
-    </button>
     <a class="navcta" href="https://t.me/P2pFatherBot">Open in Telegram →</a>
   </div>
 </nav>
@@ -1298,6 +1301,10 @@ footer{
     
     <div class="demo-phone">
       <div class="phone-shell">
+        <div class="phone-button left-btn silent"></div>
+        <div class="phone-button left-btn vol-up"></div>
+        <div class="phone-button left-btn vol-down"></div>
+        <div class="phone-button right-btn power"></div>
         <div class="phone-screen" id="master-screen"><div class="notch"></div><div class="toast" id="toast"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Profile Updated!</div>
     <div class="app-layer" id="app-miniapp" style="transform: translateX(0);">
       <div class="demo-cursor" id="cursor" style="opacity: 0; transform: translate(220px, 600px);"></div>
@@ -1671,6 +1678,10 @@ function clearDemo() {
   if (dp) {
     dp.innerHTML = `
       <div class="phone-shell">
+        <div class="phone-button left-btn silent"></div>
+        <div class="phone-button left-btn vol-up"></div>
+        <div class="phone-button left-btn vol-down"></div>
+        <div class="phone-button right-btn power"></div>
         <div class="phone-screen" id="master-screen"></div>
       </div>
     `;
@@ -1727,12 +1738,20 @@ function playFlow(flow) {
     dp.innerHTML = `
       <div style="display:flex; gap:1.2rem; transform: scale(0.85); transform-origin: top center; margin-left:-7rem;">
         <!-- PHONE 1: BUYER -->
-        <div class="phone-shell" style="width:330px; height:680px; flex-shrink:0; background:#000; border: 12px solid #1c1d22; border-radius:44px; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); overflow:hidden;">
+        <div class="phone-shell" style="width:330px; height:680px; flex-shrink:0; background:#000; border: 12px solid #1c1d22; border-radius:44px; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <div class="phone-button left-btn silent" style="left: -15px; top: 90px; height: 18px;"></div>
+          <div class="phone-button left-btn vol-up" style="left: -15px; top: 135px; height: 38px;"></div>
+          <div class="phone-button left-btn vol-down" style="left: -15px; top: 185px; height: 38px;"></div>
+          <div class="phone-button right-btn power" style="right: -15px; top: 150px; height: 56px;"></div>
           <div style="color:#f0b90b; font-size:0.8rem; text-align:center; font-weight:700; margin-top:0.4rem; margin-bottom:0.4rem; letter-spacing:0.5px;">BUYER (You)</div>
           <div class="phone-screen" id="master-screen" style="height:625px; width:100%; position:relative; overflow:hidden; background:#0b0e11;"></div>
         </div>
         <!-- PHONE 2: SELLER -->
-        <div class="phone-shell" style="width:330px; height:680px; flex-shrink:0; background:#000; border: 12px solid #1c1d22; border-radius:44px; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); overflow:hidden;">
+        <div class="phone-shell" style="width:330px; height:680px; flex-shrink:0; background:#000; border: 12px solid #1c1d22; border-radius:44px; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <div class="phone-button left-btn silent" style="left: -15px; top: 90px; height: 18px;"></div>
+          <div class="phone-button left-btn vol-up" style="left: -15px; top: 135px; height: 38px;"></div>
+          <div class="phone-button left-btn vol-down" style="left: -15px; top: 185px; height: 38px;"></div>
+          <div class="phone-button right-btn power" style="right: -15px; top: 150px; height: 56px;"></div>
           <div style="color:#f6465d; font-size:0.8rem; text-align:center; font-weight:700; margin-top:0.4rem; margin-bottom:0.4rem; letter-spacing:0.5px;">SELLER (@Cryptowolf07)</div>
           <div class="phone-screen" id="seller-screen" style="height:625px; width:100%; position:relative; overflow:hidden; background:#0b0e11;"></div>
         </div>
