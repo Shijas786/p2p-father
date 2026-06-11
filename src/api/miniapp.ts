@@ -110,7 +110,7 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
     const initData = req.headers["x-telegram-init-data"] as string;
 
     if (!initData) {
-        console.warn(`[AUTH] ❌ Missing initData | IP: ${req.ip} | UA: ${req.headers['user-agent']?.slice(0, 80)}`);
+        console.warn(`[AUTH] ❌ Missing initData`);
         return res.status(401).json({ error: "Please open this app through the Telegram bot" });
     }
 
