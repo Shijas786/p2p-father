@@ -27,6 +27,72 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- JSON-LD Structured Data Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "P2PFather",
+      "operatingSystem": "All",
+      "applicationCategory": "FinanceApplication",
+      "description": "P2PFather is a secure, decentralized peer-to-peer (P2P) crypto exchange that runs inside Telegram. Trade USDT, USDC, and BNB instantly on Base and BSC with 0% fee on Base and no KYC required.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0.00",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Do I pay gas fees when creating an ad?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Creating a buy or sell ad is completely off-chain and free. You only pay a gas fee when you actually deposit crypto into the escrow vault before a trade starts. That's a one-time on-chain transaction on Base or BSC — usually under $0.05."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which blockchains does P2PFather support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We support two chains — Base (Coinbase's L2, for USDC) and BSC (Binance Smart Chain, for USDT). Both are fast and cheap. You choose the chain when you set up your trade."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What tokens can I trade?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Currently USDT (BEP-20 on BSC) and USDC (ERC-20 on Base). These are the two most trusted stablecoins, traded against Indian Rupee (INR) via UPI, NEFT, IMPS, or bank transfer."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the escrow work? Is my crypto safe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When a trade starts, the seller's crypto is locked inside our audited smart contract on-chain. Neither party can touch it until both sides confirm. The contract only releases crypto to the buyer after the seller verifies the INR payment landed. If there's a dispute, an admin can step in to resolve it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the fees?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "P2PFather charges 0.25% on BSC and 0% on Base — deducted from the released crypto. There are no hidden charges, no monthly subscriptions, no KYC fees."
+          }
+        }
+      ]
+    }
+    </script>
+
     <style>
         body { transition: opacity ease-in 0.2s; } 
         body[unresolved] { opacity: 0; display: block; overflow: hidden; position: relative; } 
@@ -1450,7 +1516,7 @@ footer{
     <div style="position: relative;">
       <div style="position: absolute; top: -5px; left: -5px; width: 46px; height: 46px; background: var(--gold); opacity: 0.08; border-radius: 50%; filter: blur(12px); z-index: -1;"></div>
       <div style="width: 36px; height: 36px; margin-bottom: 1.25rem;">
-        <img src="https://ui-avatars.com/api/?name=Muhammed+Fayiz&background=e19036&color=fff&size=80&bold=true" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <img src="https://ui-avatars.com/api/?name=Muhammed+Fayiz&background=e19036&color=fff&size=80&bold=true" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" alt="Muhammed Fayiz K">
       </div>
       <p style="font-size: 1rem; font-weight: 800; color: var(--ink); line-height: 1.5; margin-bottom: 1rem; letter-spacing: -0.01em;">
         &ldquo;A Great way to deal with strangers is P2pFather Bot, I'm really enjoying it guys. Taking small Profits from the XAUUSD and selling it here, so fast and makes more convenient for me.&rdquo;
@@ -1465,7 +1531,7 @@ footer{
     <div style="position: relative;">
       <div style="position: absolute; top: -5px; left: -5px; width: 46px; height: 46px; background: var(--gold); opacity: 0.08; border-radius: 50%; filter: blur(12px); z-index: -1;"></div>
       <div style="width: 36px; height: 36px; margin-bottom: 1.25rem;">
-        <img src="https://demo-project.supabase.co/storage/v1/object/public/avatars/avatars/06ae9580-c02a-402e-87da-57034b8a07db/1775419720045.jpeg" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" onerror="this.src='https://ui-avatars.com/api/?name=F&background=10b981&color=fff&size=80&bold=true'">
+        <img src="https://demo-project.supabase.co/storage/v1/object/public/avatars/avatars/06ae9580-c02a-402e-87da-57034b8a07db/1775419720045.jpeg" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" onerror="this.src='https://ui-avatars.com/api/?name=F&background=10b981&color=fff&size=80&bold=true'" alt="faarixx">
       </div>
       <p style="font-size: 1rem; font-weight: 800; color: var(--ink); line-height: 1.5; margin-bottom: 1rem; letter-spacing: -0.01em;">
         &ldquo;Bro transaction was dn nd smooth, Clean build aanu, luv it 🔥&rdquo;
@@ -2903,7 +2969,7 @@ function playFlow(flow) {
       <!-- Rabby Overlay specifically for SELL flow -->
       <div class="rw-overlay" id="rw-overlay" style="display:none;">
         <div class="rw-popup">
-          <div class="rw-header"><img src="favicon.png" /> https://p2pfather.com</div>
+          <div class="rw-header"><img src="favicon.png" alt="P2PFather Icon" /> https://p2pfather.com</div>
           <div class="rw-row">
             <div class="rw-row-title">Simulation Results</div>
             <div class="rw-row-val"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg> - 25.0800 USDC</div>

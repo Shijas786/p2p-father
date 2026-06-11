@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /guide.html
+Allow: /reward-hub.html
+Allow: /privacy.html
+
+# Disallow internal assets or private routes if any
+Disallow: /app/
+Disallow: /api/
+Disallow: /dashboard.html
+
+Sitemap: https://p2pfather.com/sitemap.xml
