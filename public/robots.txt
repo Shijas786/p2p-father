@@ -4,6 +4,9 @@ Allow: /index.html
 Allow: /guide.html
 Allow: /reward-hub.html
 Allow: /privacy.html
+Allow: /how-it-works.html
+Allow: /faq.html
+Allow: /kerala-crypto.html
 
 # Disallow internal assets or private routes if any
 Disallow: /app/
