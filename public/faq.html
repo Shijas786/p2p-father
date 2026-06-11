@@ -27,6 +27,48 @@
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/favicon.png">
 
+    <!-- JSON-LD Structured Data Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why do bank accounts get frozen after P2P trades in India?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When you sell USDT/USDC, the buyer might transfer INR using a compromised or scammed bank account. The original victim reports the scam, causing the Cyber Cell to request a freeze on all accounts that received the funds in that chain."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does P2PFather prevent P2P scams?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "P2PFather uses audited smart contract escrow on Base and BSC networks. Stablecoins are locked on-chain before payment and are only released after the seller verifies receiving the exact UPI/IMPS amount. We support direct coordinator chats and disputes managed by admins."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What should I do if my bank account is frozen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Contact your bank manager to get the Cyber Cell notice details (case reference, investigating officer's contact). Collect P2PFather chat screenshots and UTR bank records to officially submit an explanation letter showing you sold crypto legitimately."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the red flags of a P2P scammer?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Red flags include: bank account sender name mismatching their Telegram profile, requests to trade off-escrow, edited/missing UTR numbers on payment receipts, and high pressure to release crypto before seeing the bank deposit."
+          }
+        }
+      ]
+    }
+    </script>
+
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
         rel="stylesheet">
