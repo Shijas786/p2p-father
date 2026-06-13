@@ -328,29 +328,31 @@ export function TradePanel({
                             <div className="pm-amount-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                 <div className="pm-amount-left">
                                     <span className="pm-amount-title">LIMIT PRICE</span>
-                                    <span className="pm-amount-sub">Max {(basePrice * 100).toFixed(0)}¢</span>
                                 </div>
-                                <div className="pm-amount-right">
-                                    <input
-                                        type="number"
-                                        value={limitPrice}
-                                        onChange={e => setLimitPrice(e.target.value)}
-                                        placeholder="0"
-                                        className="pm-amount-input pm-mono"
-                                        id="input-limit-price"
-                                        style={{ paddingRight: '20px' }}
-                                    />
-                                    <span className="pm-cent-sign" style={{ position: 'absolute', right: '16px', color: '#fff', opacity: 0.5, fontSize: '16px' }}>¢</span>
+                                <div className="pm-amount-right" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px' }}>
+                                    <button className="pm-quick-btn" style={{ minWidth: '32px', height: '32px', padding: 0, fontSize: '18px', background: 'transparent' }} onClick={() => setLimitPrice(p => Math.max(1, (parseInt(p||'0') - 1)).toString())}>-</button>
+                                    <div style={{ position: 'relative', width: '80px' }}>
+                                        <input
+                                            type="number"
+                                            value={limitPrice}
+                                            onChange={e => setLimitPrice(e.target.value)}
+                                            placeholder="0"
+                                            className="pm-amount-input pm-mono"
+                                            style={{ paddingRight: '16px', background: 'transparent', textAlign: 'center', width: '100%' }}
+                                        />
+                                        <span className="pm-cent-sign" style={{ position: 'absolute', right: '8px', color: '#fff', opacity: 0.5, fontSize: '14px', top: '50%', transform: 'translateY(-50%)' }}>¢</span>
+                                    </div>
+                                    <button className="pm-quick-btn" style={{ minWidth: '32px', height: '32px', padding: 0, fontSize: '18px', background: 'transparent' }} onClick={() => setLimitPrice(p => Math.min(99, (parseInt(p||'0') + 1)).toString())}>+</button>
                                 </div>
                             </div>
                         )}
                         <div className="pm-amount-row">
                             <div className="pm-amount-left">
-                                <span className="pm-amount-title">AMOUNT</span>
+                                <span className="pm-amount-title">{orderType === 'LIMIT' ? 'SHARES' : 'AMOUNT'}</span>
                                 <span className="pm-amount-sub">${parseFloat(cashBalance).toFixed(2)} cash</span>
                             </div>
                             <div className="pm-amount-right">
-                                <span className="pm-dollar-sign pm-muted">$</span>
+                                {orderType === 'MARKET' && <span className="pm-dollar-sign pm-muted">$</span>}
                                 <input
                                     type="number"
                                     value={betAmount}
@@ -364,10 +366,30 @@ export function TradePanel({
                     </div>
 
                     <div className="pm-quick-btns">
-                        {[1, 5, 10, 100].map(v => (
-                            <button key={v} className="pm-quick-btn" onClick={() => handleQuickAmount(String(v))} id={`quick-${v}`}>+${v}</button>
-                        ))}
-                        <button className="pm-quick-btn pm-quick-max" onClick={() => handleQuickAmount('Max')} id="quick-max">Max</button>
+                        {orderType === 'LIMIT' ? (
+                            <>
+                                {[-100, -10, 10, 100].map(v => (
+                                    <button key={v} className="pm-quick-btn pm-quick-pct" onClick={() => {
+                                        haptic('light');
+                                        setBetAmount(prev => Math.max(0, parseFloat(prev || '0') + v).toString());
+                                    }} id={`quick-shares-${v}`}>{v > 0 ? `+${v}` : v}</button>
+                                ))}
+                                <button className="pm-quick-btn pm-quick-pct" onClick={() => {
+                                    haptic('light');
+                                    const lPrice = parseFloat(limitPrice || '0') / 100;
+                                    if (lPrice > 0) {
+                                        setBetAmount(Math.floor(parseFloat(cashBalance) / lPrice).toString());
+                                    }
+                                }} id="quick-max">Max</button>
+                            </>
+                        ) : (
+                            <>
+                                {[1, 5, 10, 100].map(v => (
+                                    <button key={v} className="pm-quick-btn" onClick={() => handleQuickAmount(String(v))} id={`quick-${v}`}>+${v}</button>
+                                ))}
+                                <button className="pm-quick-btn pm-quick-max" onClick={() => handleQuickAmount('Max')} id="quick-max">Max</button>
+                            </>
+                        )}
                     </div>
                 </>
             ) : (
@@ -376,19 +398,21 @@ export function TradePanel({
                         <div className="pm-amount-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             <div className="pm-amount-left">
                                 <span className="pm-amount-title">LIMIT PRICE</span>
-                                <span className="pm-amount-sub">Current {(basePrice * 100).toFixed(0)}¢</span>
                             </div>
-                            <div className="pm-amount-right">
-                                <input
-                                    type="number"
-                                    value={limitPrice}
-                                    onChange={e => setLimitPrice(e.target.value)}
-                                    placeholder="0"
-                                    className="pm-amount-input pm-mono"
-                                    id="input-limit-price-sell"
-                                    style={{ paddingRight: '20px' }}
-                                />
-                                <span className="pm-cent-sign" style={{ position: 'absolute', right: '16px', color: '#fff', opacity: 0.5, fontSize: '16px' }}>¢</span>
+                            <div className="pm-amount-right" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px' }}>
+                                <button className="pm-quick-btn" style={{ minWidth: '32px', height: '32px', padding: 0, fontSize: '18px', background: 'transparent' }} onClick={() => setLimitPrice(p => Math.max(1, (parseInt(p||'0') - 1)).toString())}>-</button>
+                                <div style={{ position: 'relative', width: '80px' }}>
+                                    <input
+                                        type="number"
+                                        value={limitPrice}
+                                        onChange={e => setLimitPrice(e.target.value)}
+                                        placeholder="0"
+                                        className="pm-amount-input pm-mono"
+                                        style={{ paddingRight: '16px', background: 'transparent', textAlign: 'center', width: '100%' }}
+                                    />
+                                    <span className="pm-cent-sign" style={{ position: 'absolute', right: '8px', color: '#fff', opacity: 0.5, fontSize: '14px', top: '50%', transform: 'translateY(-50%)' }}>¢</span>
+                                </div>
+                                <button className="pm-quick-btn" style={{ minWidth: '32px', height: '32px', padding: 0, fontSize: '18px', background: 'transparent' }} onClick={() => setLimitPrice(p => Math.min(99, (parseInt(p||'0') + 1)).toString())}>+</button>
                             </div>
                         </div>
                     )}
@@ -420,29 +444,60 @@ export function TradePanel({
             )}
 
             {/* Payout preview */}
-            {betAmount && parseFloat(betAmount) > 0 && (
-                tradeType === 'buy' ? (
-                    <div className="pm-payout-sell">
-                        <div className="pm-payout-sell-left">
-                            <span className="pm-receive-text">To win 💸</span>
-                            <span className="pm-receive-avg">{orderType === 'LIMIT' ? 'Limit' : 'Avg.'} Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
+            {tradeType === 'buy' ? (
+                orderType === 'LIMIT' ? (
+                    <div className="pm-payout-sell" style={{ flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#848e9c' }}>
+                            <span>Total</span>
+                            <span className="pm-mono" style={{ color: '#0090ff' }}>${(parseFloat(betAmount || '0') * (parseFloat(limitPrice || '0') / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="pm-payout-sell-right">
-                            <span className="pm-green pm-receive-val pm-mono">${potentialPayout}</span>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="pm-payout-sell">
-                        <div className="pm-payout-sell-left">
-                            <span className="pm-receive-text">You'll receive 💸</span>
-                            <span className="pm-receive-avg">{orderType === 'LIMIT' ? 'Limit' : 'Avg.'} Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
-                        </div>
-                        <div className="pm-payout-sell-right">
-                            <span className="pm-green pm-receive-val pm-mono">
-                                ${(parseFloat(betAmount) * effectivePrice).toFixed(2)}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#848e9c' }}>
+                            <span>To win ⓘ</span>
+                            <span className="pm-mono" style={{ color: '#0ecb81' }}>
+                                <span style={{ marginRight: '4px' }}>💸</span>
+                                ${(parseFloat(betAmount || '0') * 1.0).toFixed(2)}
                             </span>
                         </div>
                     </div>
+                ) : (
+                    betAmount && parseFloat(betAmount) > 0 ? (
+                        <div className="pm-payout-sell">
+                            <div className="pm-payout-sell-left">
+                                <span className="pm-receive-text">To win 💸</span>
+                                <span className="pm-receive-avg">Avg. Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
+                            </div>
+                            <div className="pm-payout-sell-right">
+                                <span className="pm-green pm-receive-val pm-mono">${potentialPayout}</span>
+                            </div>
+                        </div>
+                    ) : null
+                )
+            ) : (
+                orderType === 'LIMIT' ? (
+                    <div className="pm-payout-sell">
+                        <div className="pm-payout-sell-left">
+                            <span className="pm-receive-text">You'll receive ⓘ</span>
+                        </div>
+                        <div className="pm-payout-sell-right">
+                            <span className="pm-green pm-receive-val pm-mono">
+                                💸 ${(parseFloat(betAmount || '0') * (parseFloat(limitPrice || '0') / 100)).toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    betAmount && parseFloat(betAmount) > 0 ? (
+                        <div className="pm-payout-sell">
+                            <div className="pm-payout-sell-left">
+                                <span className="pm-receive-text">You'll receive 💸</span>
+                                <span className="pm-receive-avg">Avg. Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
+                            </div>
+                            <div className="pm-payout-sell-right">
+                                <span className="pm-green pm-receive-val pm-mono">
+                                    ${(parseFloat(betAmount) * effectivePrice).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    ) : null
                 )
             )}
 

@@ -733,25 +733,42 @@ export function Predict({ user }: Props) {
         haptic('medium');
         if (!betAmount || parseFloat(betAmount) <= 0) { showToast('Enter a valid amount', 'warning'); return; }
         
+        const defaultPrice = tradeType === 'buy' 
+            ? (betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)
+            : (betType === 'UP' ? yesPrice.sellPrice : noPrice.sellPrice);
+        const finalPrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : defaultPrice;
+
+        const inputAmount = parseFloat(betAmount);
+        
+        // Calculate costUsd and shareQty
+        let costUsd: number;
+        let shareQty: number;
+
         if (tradeType === 'buy') {
-            if (parseFloat(betAmount) > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
+            if (orderType === 'LIMIT') {
+                shareQty = inputAmount; // input is shares
+                costUsd = inputAmount * finalPrice;
+            } else {
+                costUsd = inputAmount; // input is USD
+                shareQty = inputAmount / finalPrice;
+            }
+            if (costUsd > parseFloat(cashBalance)) { showToast('Insufficient cash balance', 'warning'); return; }
         } else {
+            shareQty = inputAmount; // input is shares
+            costUsd = inputAmount * finalPrice; // cost/value returned
             const availableShares = positions.find(p => p.outcome === betType)?.qty || 0;
-            if (parseFloat(betAmount) > availableShares) { showToast('Insufficient shares to sell', 'warning'); return; }
+            if (shareQty > availableShares) { showToast('Insufficient shares to sell', 'warning'); return; }
         }
         
         setPlacingBet(true);
         setBetSlowMsg('');
-        // After 3s show a hint that proxy wallet setup is happening (first bet only)
         const slowTimer = setTimeout(() => setBetSlowMsg('Setting up wallet…'), 3000);
         try {
-            const defaultPrice = tradeType === 'buy' 
-                ? (betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)
-                : (betType === 'UP' ? yesPrice.sellPrice : noPrice.sellPrice);
-            const finalPrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : defaultPrice;
+            // For backend `placeBet`, amountUsdc should be `costUsd` for BUY, and `shareQty` for SELL.
+            const apiAmount = tradeType === 'buy' ? costUsd : shareQty;
 
             const res = await api.predictions.placeBet(
-                parseFloat(betAmount), betType,
+                apiAmount, betType,
                 finalPrice,
                 tradeType.toUpperCase() as 'BUY'|'SELL',
                 orderType
@@ -760,24 +777,21 @@ export function Predict({ user }: Props) {
             if (res.success) { 
                 showToast('Prediction placed!', 'success');
 
-                // Optimistically update cash balance to prevent portfolio dipping
+                // Optimistically update cash balance
                 if (tradeType === 'buy') {
-                    setCashBalance(prev => (parseFloat(prev || '0') - parseFloat(betAmount)).toFixed(2));
+                    setCashBalance(prev => (parseFloat(prev || '0') - costUsd).toFixed(2));
                 } else {
-                    const receivedUsdc = parseFloat(betAmount) * finalPrice;
-                    setCashBalance(prev => (parseFloat(prev || '0') + receivedUsdc).toFixed(2));
+                    setCashBalance(prev => (parseFloat(prev || '0') + costUsd).toFixed(2));
                 }
 
-                // Construct optimistic trade and prepend to history lists instantly
-                const shareQty = tradeType === 'buy' ? (parseFloat(betAmount) / finalPrice) : parseFloat(betAmount);
-                const cashCost = tradeType === 'buy' ? parseFloat(betAmount) : (parseFloat(betAmount) * finalPrice);
+                // Construct optimistic trade and prepend to history
                 const tempTrade: Trade = {
                     id: `temp-${Date.now()}`,
                     side: tradeType.toUpperCase(),
                     outcome: betType,
                     qty: shareQty,
                     price: finalPrice,
-                    cost: cashCost,
+                    cost: costUsd,
                     timestamp: Date.now()
                 };
                 setRecentTrades(prev => [tempTrade, ...prev]);
