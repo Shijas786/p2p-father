@@ -969,7 +969,7 @@ export function Wallet({ user }: Props) {
                                             <span className="token-details-name">{asset.name}</span>
                                             {asset.verified && <VerifiedBadge />}
                                         </div>
-                                        <span className="token-details-subtitle">{asset.balance} {asset.symbol}</span>
+                                        <span className="token-details-subtitle">{asset.balance} {asset.symbol} · {asset.chain}</span>
                                     </div>
                                 </div>
                                 <div className="token-list-item-right">
