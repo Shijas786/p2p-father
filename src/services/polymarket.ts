@@ -1,5 +1,5 @@
 import { Chain, ClobClient, OrderType, Side } from "@polymarket/clob-client-v2";
-import { encodePacked, keccak256, createWalletClient, http } from "viem";
+import { encodePacked, keccak256, createWalletClient, http, stringToHex } from "viem";
 import https from "https";
 
 // ==========================================
@@ -590,7 +590,7 @@ class PolymarketService {
                     price: limitPrice,
                     side: side === "SELL" ? Side.SELL : Side.BUY,
                     size,
-                    builderCode: "P2P_KERALA"
+                    builderCode: stringToHex("P2P_KERALA", { size: 32 })
                 };
 
                 console.log(`[Polymarket] Submitting GTC LIMIT ${side} order to CLOB. Size: ${size} shares at $${limitPrice}`);
