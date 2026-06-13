@@ -705,7 +705,9 @@ export function Predict({ user }: Props) {
         // After 3s show a hint that proxy wallet setup is happening (first bet only)
         const slowTimer = setTimeout(() => setBetSlowMsg('Setting up wallet…'), 3000);
         try {
-            const defaultPrice = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
+            const defaultPrice = tradeType === 'buy' 
+                ? (betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)
+                : (betType === 'UP' ? yesPrice.sellPrice : noPrice.sellPrice);
             const finalPrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : defaultPrice;
 
             const res = await api.predictions.placeBet(

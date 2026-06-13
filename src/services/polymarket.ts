@@ -576,7 +576,7 @@ class PolymarketService {
                 return response;
             } else {
                 // LIMIT order
-                let size = amountUsdc / limitPrice;
+                let size = side === "SELL" ? amountUsdc : amountUsdc / limitPrice;
                 
                 // Polymarket minimum order constraints for LIMIT orders
                 const MIN_SHARES = 5;

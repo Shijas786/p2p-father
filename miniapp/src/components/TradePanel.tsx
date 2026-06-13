@@ -47,8 +47,8 @@ export function TradePanel({
     const claiming = claimingProp !== undefined ? claimingProp : localClaiming;
     const setClaiming = setClaimingProp !== undefined ? setClaimingProp : setLocalClaiming;
 
-    const computedYesBuy = yesPrice.buyPrice;
-    const computedNoBuy = noPrice.buyPrice;
+    const computedYesBuy = tradeType === 'buy' ? yesPrice.buyPrice : yesPrice.sellPrice;
+    const computedNoBuy = tradeType === 'buy' ? noPrice.buyPrice : noPrice.sellPrice;
 
     const basePrice = betType === 'UP' ? computedYesBuy : computedNoBuy;
     const effectivePrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : basePrice;
@@ -372,6 +372,26 @@ export function TradePanel({
                 </>
             ) : (
                 <div className="pm-amount-block pm-sell-block">
+                    {orderType === 'LIMIT' && (
+                        <div className="pm-amount-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div className="pm-amount-left">
+                                <span className="pm-amount-title">LIMIT PRICE</span>
+                                <span className="pm-amount-sub">Current {(basePrice * 100).toFixed(0)}¢</span>
+                            </div>
+                            <div className="pm-amount-right">
+                                <input
+                                    type="number"
+                                    value={limitPrice}
+                                    onChange={e => setLimitPrice(e.target.value)}
+                                    placeholder="0"
+                                    className="pm-amount-input pm-mono"
+                                    id="input-limit-price-sell"
+                                    style={{ paddingRight: '20px' }}
+                                />
+                                <span className="pm-cent-sign" style={{ position: 'absolute', right: '16px', color: '#fff', opacity: 0.5, fontSize: '16px' }}>¢</span>
+                            </div>
+                        </div>
+                    )}
                     <div className="pm-amount-row pm-sell-row">
                         <div className="pm-amount-left">
                             <span className="pm-amount-title pm-shares-title" style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 700, color: 'var(--pm-muted)' }}>SHARES</span>
