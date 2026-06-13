@@ -963,6 +963,9 @@ export function Wallet({ user }: Props) {
                                 <div className="token-list-item-left">
                                     <div className="token-logo-container">
                                         {tokenIcons[asset.symbol] || <IconTokenETH size={32} />}
+                                        <div className="chain-badge-overlay">
+                                            {chainBadgeIcons[asset.chain]}
+                                        </div>
                                     </div>
                                     <div className="token-details-text" style={{ marginLeft: 12 }}>
                                         <div className="token-details-title-row">
