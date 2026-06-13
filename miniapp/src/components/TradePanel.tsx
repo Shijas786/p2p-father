@@ -251,6 +251,12 @@ export function TradePanel({
         );
     }
 
+    const numShares = tradeType === 'buy'
+        ? (betAmount && effectivePrice > 0 ? parseFloat(betAmount) / effectivePrice : 0)
+        : (betAmount ? parseFloat(betAmount) : 0);
+
+    const isLimitAmountTooLow = orderType === 'LIMIT' && betAmount && parseFloat(betAmount) > 0 && numShares < 5;
+
     return (
         <div className="pm-trade-card">
             {/* Card header */}
@@ -497,15 +503,8 @@ export function TradePanel({
                                 </span>
                             </div>
                         </div>
-                    ) : null
                 )
             )}
-
-    const numShares = tradeType === 'buy'
-        ? (betAmount && effectivePrice > 0 ? parseFloat(betAmount) / effectivePrice : 0)
-        : (betAmount ? parseFloat(betAmount) : 0);
-
-    const isLimitAmountTooLow = orderType === 'LIMIT' && betAmount && parseFloat(betAmount) > 0 && numShares < 5;
 
             {isLimitAmountTooLow && (
                 <div style={{ color: '#ff4d4d', fontSize: '12px', textAlign: 'center', marginBottom: '10px' }}>
