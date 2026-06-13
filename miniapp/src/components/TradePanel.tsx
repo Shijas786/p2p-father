@@ -446,9 +446,21 @@ export function TradePanel({
                 )
             )}
 
+    const numShares = tradeType === 'buy'
+        ? (betAmount && effectivePrice > 0 ? parseFloat(betAmount) / effectivePrice : 0)
+        : (betAmount ? parseFloat(betAmount) : 0);
+
+    const isLimitAmountTooLow = orderType === 'LIMIT' && betAmount && parseFloat(betAmount) > 0 && numShares < 5;
+
+            {isLimitAmountTooLow && (
+                <div style={{ color: '#ff4d4d', fontSize: '12px', textAlign: 'center', marginBottom: '10px' }}>
+                    Limit orders require a minimum of 5 shares.
+                </div>
+            )}
+
             <button
                 className={`pm-exec-btn ${tradeType === 'sell' ? 'pm-exec-sell' : (betType === 'UP' ? 'pm-exec-up' : 'pm-exec-down')}`}
-                disabled={placingBet || !betAmount || parseFloat(betAmount) <= 0}
+                disabled={placingBet || !betAmount || parseFloat(betAmount) <= 0 || isLimitAmountTooLow}
                 onClick={onPlacePrediction}
                 id="btn-place-bet">
                 {placingBet

@@ -63,8 +63,14 @@ export function Predict({ user }: Props) {
     const [cashBalance, setCashBalance] = useState('0.00');
     const [yesPrice, setYesPrice]     = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
-    const [loading, setLoading]       = useState(false);
-    const [unclaimedWinnings, setUnclaimedWinnings] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    
+    // State: Open Orders
+    const [openOrders, setOpenOrders] = useState<any[]>([]);
+    const [cancelingOrder, setCancelingOrder] = useState<string | null>(null);
+
+    // State: Prediction Market
     const [activeMarket, setActiveMarket] = useState<any>(null);
     const [nextMarket, setNextMarket] = useState<any>(null);
 
@@ -248,12 +254,46 @@ export function Predict({ user }: Props) {
                     }
                 }
             }
-        } catch (e) {
-            console.error('[Predict] loadData fatal error:', e);
+        } catch (err) {
+            console.error("Failed to load initial data", err);
         } finally {
             setLoading(false);
         }
     }, []);
+
+    const loadOpenOrders = useCallback(async () => {
+        try {
+            const res = await api.predictions.getOpenOrders();
+            if (res.success) {
+                setOpenOrders(res.orders);
+            }
+        } catch (err) {
+            console.error("Failed to load open orders", err);
+        }
+    }, []);
+
+    const handleCancelOrder = async (orderId: string) => {
+        try {
+            setCancelingOrder(orderId);
+            const res = await api.predictions.cancelOrder(orderId);
+            if (res.success) {
+                showToast("Order canceled", "success");
+                loadOpenOrders();
+            } else {
+                showToast("Failed to cancel order", "error");
+            }
+        } catch (err: any) {
+            showToast("Failed to cancel order", "error");
+        } finally {
+            setCancelingOrder(null);
+        }
+    };
+
+    // Load initial data
+    useEffect(() => {
+        loadData();
+        loadOpenOrders();
+    }, [loadData, loadOpenOrders]);
 
     // ── WebSocket Initialization ─────────────────────────────────────────────
     useEffect(() => {
@@ -1219,6 +1259,68 @@ export function Predict({ user }: Props) {
                                 </div>
                             ))}
                         </>
+                    )}
+                </div>
+
+                {/* ── OPEN ORDERS ── */}
+                <div className="pm-inline-positions" style={{ marginTop: '16px' }}>
+                    <div className="pm-inline-pos-header">
+                        <span className="pm-inline-pos-title" style={{ fontSize: '16px' }}>Open Orders</span>
+                    </div>
+                    {openOrders.length === 0 ? (
+                        <div className="pm-positions-empty" style={{ padding: '16px', textAlign: 'center', color: '#848e9c', fontSize: '13px' }}>No open orders</div>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', minWidth: '350px', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ color: '#848e9c', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, fontSize: '10px' }}>SIDE</th>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, fontSize: '10px' }}>OUTCOME</th>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, fontSize: '10px' }}>PRICE</th>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, fontSize: '10px' }}>FILLED</th>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, fontSize: '10px' }}>TOTAL</th>
+                                        <th style={{ padding: '8px 4px', fontWeight: 600, textAlign: 'right' }}>
+                                            <button onClick={() => handleCancelOrder('ALL')} disabled={cancelingOrder !== null} style={{ background: 'transparent', border: 'none', color: '#f6465d', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase' }}>
+                                                {cancelingOrder === 'ALL' ? 'Canceling...' : 'Cancel All'}
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {openOrders.map((order: any, i: number) => {
+                                        const isBuy = order.side === 'BUY';
+                                        let isUp = true;
+                                        if (activeMarket) {
+                                            const assetLc = (order.asset_id || order.asset || '').toLowerCase();
+                                            isUp = assetLc === activeMarket.yesTokenId.toLowerCase();
+                                        }
+                                        const price = parseFloat(order.price) * 100;
+                                        const size = parseFloat(order.size || order.original_size || "0");
+                                        const filled = parseFloat(order.size_matched || "0");
+                                        const total = size * parseFloat(order.price);
+                                        
+                                        return (
+                                            <tr key={order.id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                                <td style={{ padding: '12px 4px', color: '#fff' }}>{isBuy ? 'Buy' : 'Sell'}</td>
+                                                <td style={{ padding: '12px 4px' }}>
+                                                    <span className={`pm-pos-outcome-badge ${isUp ? 'pm-pos-badge-up' : 'pm-pos-badge-down'}`} style={{ padding: '2px 6px', fontSize: '11px', background: isUp ? 'rgba(14,203,129,0.1)' : 'rgba(246,70,93,0.1)' }}>
+                                                        {isUp ? 'Up' : 'Down'}
+                                                    </span>
+                                                </td>
+                                                <td className="pm-mono" style={{ padding: '12px 4px', color: '#fff' }}>{price.toFixed(0)}¢</td>
+                                                <td className="pm-mono" style={{ padding: '12px 4px', color: '#fff' }}>{filled} / {size}</td>
+                                                <td className="pm-mono" style={{ padding: '12px 4px', color: '#fff' }}>${total.toFixed(2)}</td>
+                                                <td style={{ padding: '12px 4px', textAlign: 'right' }}>
+                                                    <button onClick={() => handleCancelOrder(order.id)} disabled={cancelingOrder === order.id} style={{ background: 'transparent', border: 'none', color: '#848e9c', fontSize: '14px', cursor: 'pointer' }}>
+                                                        {cancelingOrder === order.id ? <span className="pm-spinner pm-spinner-sm" style={{ width: 12, height: 12, borderWidth: 2 }} /> : '✕'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
 

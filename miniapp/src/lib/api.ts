@@ -229,6 +229,12 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ amount, outcome, price, side, orderType })
             }),
+        getOpenOrders: () => request<{ success: boolean; orders: any[] }>(`/predictions/open-orders?_t=${Date.now()}`),
+        cancelOrder: (orderId: string) => 
+            request<{ success: boolean }>('/predictions/cancel-order', {
+                method: 'POST',
+                body: JSON.stringify({ orderId })
+            }),
         depositGasless: (amount: number, chain?: string, token?: string) => 
             request<{ success: boolean; txHash: string }>('/predictions/deposit', {
                 method: 'POST',

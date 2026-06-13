@@ -612,6 +612,43 @@ class PolymarketService {
         }
     }
 
+    async getOpenOrders(userWalletIndex: number, marketConditionId?: string) {
+        try {
+            const client = await this.getBuilderClobClient(userWalletIndex);
+            const params: any = {};
+            if (marketConditionId) {
+                params.market = marketConditionId;
+            }
+            const res = await client.getOpenOrders(params);
+            return res;
+        } catch (err: any) {
+            console.error(`[Polymarket] Error fetching open orders for wallet ${userWalletIndex}:`, err);
+            return [];
+        }
+    }
+
+    async cancelOrder(userWalletIndex: number, orderId: string) {
+        try {
+            const client = await this.getBuilderClobClient(userWalletIndex);
+            const res = await client.cancelOrders([orderId]);
+            return res;
+        } catch (err: any) {
+            console.error(`[Polymarket] Error canceling order ${orderId} for wallet ${userWalletIndex}:`, err);
+            throw err;
+        }
+    }
+
+    async cancelAllOrders(userWalletIndex: number) {
+        try {
+            const client = await this.getBuilderClobClient(userWalletIndex);
+            const res = await client.cancelAll();
+            return res;
+        } catch (err: any) {
+            console.error(`[Polymarket] Error canceling all orders for wallet ${userWalletIndex}:`, err);
+            throw err;
+        }
+    }
+
     async getTradesForProxy(proxyAddress: string): Promise<any[]> {
         const cacheKey = proxyAddress.toLowerCase();
         const now = Date.now();

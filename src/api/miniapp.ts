@@ -2611,6 +2611,39 @@ router.get("/predictions/clob-keys", async (req: Request, res: Response) => {
     }
 });
 
+router.get("/predictions/open-orders", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const market = await polymarketService.getActiveBtcMarket();
+        const ordersRes = await polymarketService.getOpenOrders(user.wallet_index, market?.conditionId);
+        
+        res.json({ success: true, orders: Array.isArray(ordersRes) ? ordersRes : ordersRes?.orders || [] });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/predictions/cancel-order", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { orderId } = req.body;
+        if (!orderId) return res.status(400).json({ error: "Missing orderId" });
+
+        if (orderId === "ALL") {
+            await polymarketService.cancelAllOrders(user.wallet_index);
+        } else {
+            await polymarketService.cancelOrder(user.wallet_index, orderId);
+        }
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.post("/predictions/bet", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
