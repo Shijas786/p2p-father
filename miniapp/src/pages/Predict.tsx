@@ -777,36 +777,39 @@ export function Predict({ user }: Props) {
             clearTimeout(slowTimer);
             if (res.success) { 
                 showToast('Prediction placed!', 'success');
-
                 // Optimistically update cash balance
-                if (tradeType === 'buy') {
-                    setCashBalance(prev => (parseFloat(prev || '0') - costUsd).toFixed(2));
-                } else {
-                    setCashBalance(prev => (parseFloat(prev || '0') + costUsd).toFixed(2));
-                }
-
-                // Construct optimistic trade and prepend to history
-                const tempTrade: Trade = {
-                    id: `temp-${Date.now()}`,
-                    side: tradeType.toUpperCase(),
-                    outcome: betType,
-                    qty: shareQty,
-                    price: finalPrice,
-                    cost: costUsd,
-                    timestamp: Date.now()
-                };
-                setRecentTrades(prev => [tempTrade, ...prev]);
-                setTrades(prev => [tempTrade, ...prev]);
-
-                // Optimistically update positions via polymarketWs to show instantly in active positions and net position cards
-                const activeMarket = activeMarketRef.current;
-                if (activeMarket) {
-                    const tokenId = betType === 'UP' ? activeMarket.yesTokenId : activeMarket.noTokenId;
+                if (orderType === 'MARKET') {
                     if (tradeType === 'buy') {
-                        polymarketWs.optimisticBuy(tokenId, betType, shareQty, finalPrice, activeMarket.slug);
+                        setCashBalance(prev => (parseFloat(prev || '0') - costUsd).toFixed(2));
                     } else {
-                        polymarketWs.optimisticSell(tokenId, shareQty);
+                        setCashBalance(prev => (parseFloat(prev || '0') + costUsd).toFixed(2));
                     }
+
+                    // Construct optimistic trade and prepend to history
+                    const tempTrade: Trade = {
+                        id: `temp-${Date.now()}`,
+                        side: tradeType.toUpperCase(),
+                        outcome: betType,
+                        qty: shareQty,
+                        price: finalPrice,
+                        cost: costUsd,
+                        timestamp: Date.now()
+                    };
+                    setRecentTrades(prev => [tempTrade, ...prev]);
+                    setTrades(prev => [tempTrade, ...prev]);
+
+                    // Optimistically update positions via polymarketWs to show instantly in active positions and net position cards
+                    const activeMarket = activeMarketRef.current;
+                    if (activeMarket) {
+                        const tokenId = betType === 'UP' ? activeMarket.yesTokenId : activeMarket.noTokenId;
+                        if (tradeType === 'buy') {
+                            polymarketWs.optimisticBuy(tokenId, betType, shareQty, finalPrice, activeMarket.slug);
+                        } else {
+                            polymarketWs.optimisticSell(tokenId, shareQty);
+                        }
+                    }
+                } else {
+                    setTimeout(loadOpenOrders, 1000);
                 }
 
                 setBetAmount(''); 
