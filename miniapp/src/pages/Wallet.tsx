@@ -149,8 +149,8 @@ export function Wallet({ user }: Props) {
         try {
             const data = await api.wallet.getBalances();
             setBalances(data);
-            setVaultBaseUsdc(data.vault_base_usdc || '0.02');
-            setVaultBscUsdc(data.vault_bsc_usdc || '11.00');
+            setVaultBaseUsdc(data.vault_base_usdc || '0.00');
+            setVaultBscUsdc(data.vault_bsc_usdc || '0.00');
             setVaultBaseUsdt(data.vault_base_usdt || '0.00');
             setVaultBscUsdt(data.vault_bsc_usdt || '0.00');
             setVaultBscBnb(data.vault_bsc_bnb || '0.0000');
