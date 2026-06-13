@@ -471,35 +471,27 @@ export function Wallet({ user }: Props) {
         BSC: <IconChainBsc size={12} />,
     };
 
-    // Full List of Mock & Real Assets matching screenshot
-    const staticAssets = [
-        {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            chain: 'Base',
-            balance: balances?.eth || '0.0006',
-            price: 2500,
-            change: '+1.3%',
-            verified: true,
-            isNestedParent: true,
-            tokensCount: 3,
-            subTokens: [
-                { symbol: 'ETH', name: 'Ethereum', chain: 'Optimism', balance: '0.0022', price: 1663.63, change: '0.0022 ETH', displayBalance: '$3.66', verified: true },
-                { symbol: 'ETH', name: 'Ethereum', chain: 'Arbitrum', balance: '0.0017', price: 1641.17, change: '0.0017 ETH', displayBalance: '$2.79', verified: true },
-                { symbol: 'ETH', name: 'Ethereum', chain: 'Base', balance: '0.0006', price: 1683.33, change: '0.0006 ETH', displayBalance: '$1.01', verified: true },
-            ]
-        },
-        { symbol: 'HYPE', name: 'Hype', chain: 'Base', balance: '0.0878', price: 59.68, change: '-1.5%', verified: true },
-        { symbol: 'GEOD', name: 'Geodnet', chain: 'Polygon', balance: '12.018', price: 0.224, change: '+6%', verified: false },
-        { symbol: 'WRON', name: 'Ronin', chain: 'Ethereum', balance: '25.7977', price: 0.058, change: '+1.7%', verified: true },
-        { symbol: 'USDC.e', name: 'Bridged USDC (Stargate)', chain: 'Base', balance: '1.1378', price: 1, change: '+0.1%', verified: false },
-        { symbol: 'USDF0', name: 'USDF0', chain: 'Base', balance: '1.0186', price: 1, change: '+0%', verified: false },
-        { symbol: 'ezETH', name: 'Renzo Restaked ETH', chain: 'Base', balance: '0.0005', price: 1760, change: '+0.6%', verified: false },
-        { symbol: 'USDC', name: 'USD Coin', chain: 'Base', balance: balances?.usdc || '0.50', price: 1, change: '0%', verified: true },
-        { symbol: 'POL', name: 'Polygon', chain: 'Polygon', balance: balances?.pol || '3.581', price: 0.075, change: '-0.7%', verified: true },
-    ];
+    // ── Live token list built from API balances ──
+    // Approximate prices (good enough for display — no price API needed)
+    const PRICES: Record<string, number> = {
+        ETH: 2500, USDC: 1, USDT: 1, BNB: 600, POL: 0.075
+    };
 
-    const totalValue = 19.13;
+    const liveAssets = [
+        { symbol: 'USDC', name: 'USD Coin',      chain: 'Base', balance: balances?.usdc     || '0', price: PRICES.USDC, change: '0%',    verified: true },
+        { symbol: 'USDC', name: 'USD Coin',      chain: 'BSC',  balance: balances?.bsc_usdc || '0', price: PRICES.USDC, change: '0%',    verified: true },
+        { symbol: 'USDT', name: 'Tether USD',    chain: 'Base', balance: balances?.usdt     || '0', price: PRICES.USDT, change: '0%',    verified: true },
+        { symbol: 'USDT', name: 'Tether USD',    chain: 'BSC',  balance: balances?.bsc_usdt || '0', price: PRICES.USDT, change: '0%',    verified: true },
+        { symbol: 'ETH',  name: 'Ethereum',      chain: 'Base', balance: balances?.eth      || '0', price: PRICES.ETH,  change: '',      verified: true, isNestedParent: true, tokensCount: 1, subTokens: [] as {symbol:string;name:string;chain:string;balance:string;price:number;change:string;displayBalance:string;verified:boolean}[] },
+        { symbol: 'BNB',  name: 'BNB',           chain: 'BSC',  balance: balances?.bnb      || '0', price: PRICES.BNB,  change: '',      verified: true },
+        { symbol: 'POL',  name: 'Polygon',       chain: 'Polygon', balance: balances?.pol   || '0', price: PRICES.POL,  change: '',      verified: true },
+    ].filter(a => parseFloat(a.balance) > 0);
+
+    // Dynamic total value from live balances
+    const totalValue = liveAssets.reduce((sum, a) => sum + parseFloat(a.balance) * a.price, 0);
+
+    const staticAssets = liveAssets;
+
 
     // Filter results based on search/chain filter
     const filteredAssets = staticAssets.filter(item => {
@@ -926,7 +918,7 @@ export function Wallet({ user }: Props) {
                                     </div>
                                     <div className="token-list-item-right">
                                         <div className="token-value-text-col">
-                                            <span className="token-value-amount">$7.47</span>
+                                            <span className="token-value-amount">${(parseFloat(asset.balance) * asset.price).toFixed(2)}</span>
                                             <span className="token-value-change positive">{asset.change}</span>
                                         </div>
                                         <div style={{ transform: ethExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', display: 'flex', alignItems: 'center', marginLeft: 8 }}>
