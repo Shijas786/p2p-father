@@ -65,6 +65,7 @@ export function Predict({ user }: Props) {
     const [noPrice, setNoPrice]       = useState({ buyPrice: 0.00, sellPrice: 0.00 });
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [unclaimedWinnings, setUnclaimedWinnings] = useState<number>(0);
     
     // State: Open Orders
     const [openOrders, setOpenOrders] = useState<any[]>([]);
