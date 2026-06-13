@@ -2619,7 +2619,7 @@ router.get("/predictions/open-orders", async (req: Request, res: Response) => {
         const market = await polymarketService.getActiveBtcMarket();
         const ordersRes = await polymarketService.getOpenOrders(user.wallet_index, market?.conditionId);
         
-        res.json({ success: true, orders: Array.isArray(ordersRes) ? ordersRes : ordersRes?.orders || [] });
+        res.json({ success: true, orders: Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.orders || [] });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
