@@ -623,10 +623,10 @@ export function Wallet({ user }: Props) {
 
                     <div className="send-amount-subtext-row">
                         <div className="fiat-swap-wrapper">
-                            <span>${(parseFloat(sendAmount || '0') * 1.0).toFixed(2)}</span>
+                            <span>${(parseFloat(sendAmount || '0') * (PRICES[sendToken] ?? 1)).toFixed(2)}</span>
                             <span style={{ marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}><IconSwap size={14} /></span>
                         </div>
-                        <span>0.00 {sendToken}</span>
+                        <span>{(parseFloat(staticAssets.find(a => a.symbol === sendToken)?.balance || '0')).toFixed(6)} {sendToken} available</span>
                     </div>
 
                     <div className="send-card-divider" />
@@ -975,7 +975,7 @@ export function Wallet({ user }: Props) {
                                 <div className="token-list-item-right">
                                     <div className="token-value-text-col">
                                         <span className="token-value-amount">
-                                            ${(parseFloat(asset.balance) * (asset.price > 10 ? 1 : asset.price)).toFixed(2)}
+                                            ${(parseFloat(asset.balance) * asset.price).toFixed(2)}
                                         </span>
                                         <span className={`token-value-change ${asset.change.startsWith('+') ? 'positive' : asset.change.startsWith('-') ? 'negative' : 'neutral'}`}>
                                             {asset.change}
