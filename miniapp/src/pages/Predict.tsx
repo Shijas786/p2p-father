@@ -903,7 +903,7 @@ export function Predict({ user }: Props) {
     }, 0);
 
     const positionsValue = positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0);
-    const portfolioTotal = parseFloat(cashBalance || '0') + unclaimedWinnings + positionsValue + openOrdersValue;
+    const portfolioTotal = parseFloat(cashBalance || '0') + positionsValue + openOrdersValue;
 
     return (
         <div className="pm-page">
@@ -919,12 +919,6 @@ export function Predict({ user }: Props) {
                         <span className="pm-metric-label">CASH</span>
                         <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${parseFloat(cashBalance).toFixed(2)}</span>
                     </div>
-                    {unclaimedWinnings > 0 && (
-                        <div className="pm-metric">
-                            <span className="pm-metric-label">UNCLAIMED</span>
-                            <span className="pm-metric-value pm-green">${unclaimedWinnings.toFixed(2)}</span>
-                        </div>
-                    )}
                 </div>
                 <div className="pm-topbar-actions">
                     <button className="pm-btn-deposit" onClick={handleOpenDeposit} id="btn-deposit">Deposit</button>

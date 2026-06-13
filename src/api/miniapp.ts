@@ -3424,15 +3424,8 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
 
         const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
 
-        // Calculate unclaimed winnings from Polymarket Data API to stay in sync
-        let unclaimedWinnings = 0;
-        try {
-            unclaimedWinnings = positionsData
-                .filter((p: any) => p.redeemable && parseFloat(p.size || "0") > 0)
-                .reduce((acc: number, p: any) => acc + parseFloat(p.size), 0);
-        } catch (err: any) {
-            console.warn("[MINIAPP] Failed to calculate unclaimed winnings from positionsData:", err.message);
-        }
+        // Auto-claiming is enabled — unclaimedWinnings is always 0
+        const unclaimedWinnings = 0;
 
         const snapshotCache = {
             balance,
