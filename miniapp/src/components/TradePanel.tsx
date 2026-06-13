@@ -503,6 +503,7 @@ export function TradePanel({
                                 </span>
                             </div>
                         </div>
+                    ) : null
                 )
             )}
 
