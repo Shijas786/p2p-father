@@ -72,13 +72,17 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
             }, 10000);
         }
         return () => clearInterval(timer);
-    }, [step, loadBalances, haptic]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
 
     // Poll pUSD balance after bridge deposit (Relay SDK is usually <5s)
     useEffect(() => {
         if (!bridgePending) return;
-        let elapsed = 0;
-        const elapsedTimer = setInterval(() => { elapsed++; setElapsedSecs(elapsed); }, 1000);
+        
+        const elapsedTimer = setInterval(() => { 
+            setElapsedSecs(prev => prev + 1); 
+        }, 1000);
+        
         const pollTimer = setInterval(async () => {
             try {
                 // Relay SDK executes instantly, we just poll the balance to confirm
@@ -91,8 +95,10 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                 }
             } catch (e) {}
         }, 3000); // 3 seconds polling since Relay is fast
+        
         return () => { clearInterval(elapsedTimer); clearInterval(pollTimer); };
-    }, [bridgePending, balanceBefore, loadBalances, haptic]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [bridgePending, balanceBefore]);
 
     const handleManualCheck = async () => {
         haptic('light');
