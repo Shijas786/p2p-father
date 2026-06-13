@@ -77,6 +77,8 @@ export function Predict({ user }: Props) {
     const [tradeType, setTradeType]   = useState<'buy'|'sell'>('buy');
     const [betType, setBetType]       = useState<'UP'|'DOWN'>('UP');
     const [betAmount, setBetAmount]   = useState('');
+    const [orderType, setOrderType]   = useState<'MARKET'|'LIMIT'>('MARKET');
+    const [limitPrice, setLimitPrice] = useState<string>('');
     const [sellPercentage, setSellPercentage] = useState<number>(0);
     const [placingBet, setPlacingBet] = useState(false);
     const [betSlowMsg, setBetSlowMsg] = useState('');
@@ -703,11 +705,14 @@ export function Predict({ user }: Props) {
         // After 3s show a hint that proxy wallet setup is happening (first bet only)
         const slowTimer = setTimeout(() => setBetSlowMsg('Setting up wallet…'), 3000);
         try {
-            const price = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
+            const defaultPrice = betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice;
+            const finalPrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : defaultPrice;
+
             const res = await api.predictions.placeBet(
                 parseFloat(betAmount), betType,
-                price,
-                tradeType.toUpperCase() as 'BUY'|'SELL'
+                finalPrice,
+                tradeType.toUpperCase() as 'BUY'|'SELL',
+                orderType
             );
             clearTimeout(slowTimer);
             if (res.success) { 
@@ -722,14 +727,14 @@ export function Predict({ user }: Props) {
                 }
 
                 // Construct optimistic trade and prepend to history lists instantly
-                const shareQty = tradeType === 'buy' ? (parseFloat(betAmount) / price) : parseFloat(betAmount);
-                const cashCost = tradeType === 'buy' ? parseFloat(betAmount) : (parseFloat(betAmount) * price);
+                const shareQty = tradeType === 'buy' ? (parseFloat(betAmount) / finalPrice) : parseFloat(betAmount);
+                const cashCost = tradeType === 'buy' ? parseFloat(betAmount) : (parseFloat(betAmount) * finalPrice);
                 const tempTrade: Trade = {
                     id: `temp-${Date.now()}`,
                     side: tradeType.toUpperCase(),
                     outcome: betType,
                     qty: shareQty,
-                    price: price,
+                    price: finalPrice,
                     cost: cashCost,
                     timestamp: Date.now()
                 };
@@ -741,7 +746,7 @@ export function Predict({ user }: Props) {
                 if (activeMarket) {
                     const tokenId = betType === 'UP' ? activeMarket.yesTokenId : activeMarket.noTokenId;
                     if (tradeType === 'buy') {
-                        polymarketWs.optimisticBuy(tokenId, betType, shareQty, price, activeMarket.slug);
+                        polymarketWs.optimisticBuy(tokenId, betType, shareQty, finalPrice, activeMarket.slug);
                     } else {
                         polymarketWs.optimisticSell(tokenId, shareQty);
                     }
@@ -1233,6 +1238,10 @@ export function Predict({ user }: Props) {
                     setBetType={setBetType}
                     betAmount={betAmount}
                     setBetAmount={setBetAmount}
+                    orderType={orderType}
+                    setOrderType={setOrderType}
+                    limitPrice={limitPrice}
+                    setLimitPrice={setLimitPrice}
                     claiming={isClaiming}
                     setClaiming={setIsClaiming}
                     isLiveEnded={isLiveEnded}

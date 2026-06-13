@@ -20,6 +20,10 @@ interface TradePanelProps {
     setBetType: (t: 'UP' | 'DOWN') => void;
     betAmount: string;
     setBetAmount: React.Dispatch<React.SetStateAction<string>>;
+    orderType: 'MARKET' | 'LIMIT';
+    setOrderType: React.Dispatch<React.SetStateAction<'MARKET' | 'LIMIT'>>;
+    limitPrice: string;
+    setLimitPrice: React.Dispatch<React.SetStateAction<string>>;
     claiming?: boolean;
     setClaiming?: (c: boolean) => void;
     isLiveEnded?: boolean;
@@ -32,6 +36,7 @@ interface TradePanelProps {
 export function TradePanel({
     isUp, yesPrice, noPrice, cashBalance, positions, selectedRound, history, trades, loadData, onOutcomeChange,
     tradeType, setTradeType, betType, setBetType, betAmount, setBetAmount,
+    orderType, setOrderType, limitPrice, setLimitPrice,
     claiming: claimingProp, setClaiming: setClaimingProp,
     isLiveEnded, activeMarket,
     onPlacePrediction, placingBet, betSlowMsg
@@ -45,9 +50,14 @@ export function TradePanel({
     const computedYesBuy = yesPrice.buyPrice;
     const computedNoBuy = noPrice.buyPrice;
 
+    const basePrice = betType === 'UP' ? computedYesBuy : computedNoBuy;
+    const effectivePrice = orderType === 'LIMIT' && limitPrice && parseFloat(limitPrice) > 0 ? parseFloat(limitPrice) / 100 : basePrice;
+
     const potentialPayout = betAmount && parseFloat(betAmount) > 0
-        ? (parseFloat(betAmount) / (betType === 'UP' ? computedYesBuy : computedNoBuy)).toFixed(2)
+        ? (parseFloat(betAmount) / effectivePrice).toFixed(2)
         : '0.00';
+    
+    const [showOrderTypeMenu, setShowOrderTypeMenu] = useState(false);
 
     const handleQuickAmount = (v: string) => {
         haptic('light');
@@ -268,22 +278,43 @@ export function TradePanel({
                         Sell
                     </button>
                 </div>
-                <button className="pm-market-dropdown" onClick={() => haptic('light')}>
-                    Market <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
-                </button>
+                <div style={{ position: 'relative' }}>
+                    <button className="pm-market-dropdown" onClick={() => { haptic('light'); setShowOrderTypeMenu(!showOrderTypeMenu); }}>
+                        {orderType === 'LIMIT' ? 'Limit' : 'Market'} <svg width="8" height="5" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 1l4 4 4-4"/></svg>
+                    </button>
+                    {showOrderTypeMenu && (
+                        <div className="pm-notif-dropdown pm-profile-dropdown" style={{ width: '120px', right: 0, top: '100%', marginTop: '4px', zIndex: 100 }}>
+                            <div className="pm-notif-list">
+                                <div className="pm-notif-item" onClick={() => { haptic('selection'); setOrderType('MARKET'); setShowOrderTypeMenu(false); }} style={{ padding: '8px 12px' }}>
+                                    <span className="pm-notif-title" style={{ color: orderType === 'MARKET' ? '#fff' : '#848e9c' }}>Market</span>
+                                </div>
+                                <div className="pm-notif-item" onClick={() => { 
+                                    haptic('selection'); 
+                                    setOrderType('LIMIT'); 
+                                    setShowOrderTypeMenu(false);
+                                    if (!limitPrice) {
+                                        setLimitPrice((basePrice * 100).toFixed(0));
+                                    }
+                                }} style={{ padding: '8px 12px' }}>
+                                    <span className="pm-notif-title" style={{ color: orderType === 'LIMIT' ? '#fff' : '#848e9c' }}>Limit</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Outcome buttons */}
             <div className="pm-outcome-selector">
                 <button
                     className={`pm-outcome-pill ${betType === 'UP' ? 'pm-outcome-pill-up-active' : 'pm-outcome-pill-inactive'}`}
-                    onClick={() => { haptic('selection'); setBetType('UP'); onOutcomeChange?.('UP'); }}
+                    onClick={() => { haptic('selection'); setBetType('UP'); onOutcomeChange?.('UP'); if(orderType==='LIMIT') setLimitPrice((yesPrice.buyPrice * 100).toFixed(0)); }}
                     id="btn-bet-up">
                     Up {(yesPrice.buyPrice * 100).toFixed(0)}<span className="pm-cent-sign">¢</span>
                 </button>
                 <button
                     className={`pm-outcome-pill ${betType === 'DOWN' ? 'pm-outcome-pill-down-active' : 'pm-outcome-pill-inactive'}`}
-                    onClick={() => { haptic('selection'); setBetType('DOWN'); onOutcomeChange?.('DOWN'); }}
+                    onClick={() => { haptic('selection'); setBetType('DOWN'); onOutcomeChange?.('DOWN'); if(orderType==='LIMIT') setLimitPrice((noPrice.buyPrice * 100).toFixed(0)); }}
                     id="btn-bet-down">
                     Down {(noPrice.buyPrice * 100).toFixed(0)}<span className="pm-cent-sign">¢</span>
                 </button>
@@ -293,6 +324,26 @@ export function TradePanel({
             {tradeType === 'buy' ? (
                 <>
                     <div className="pm-amount-block">
+                        {orderType === 'LIMIT' && (
+                            <div className="pm-amount-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div className="pm-amount-left">
+                                    <span className="pm-amount-title">LIMIT PRICE</span>
+                                    <span className="pm-amount-sub">Max {(basePrice * 100).toFixed(0)}¢</span>
+                                </div>
+                                <div className="pm-amount-right">
+                                    <input
+                                        type="number"
+                                        value={limitPrice}
+                                        onChange={e => setLimitPrice(e.target.value)}
+                                        placeholder="0"
+                                        className="pm-amount-input pm-mono"
+                                        id="input-limit-price"
+                                        style={{ paddingRight: '20px' }}
+                                    />
+                                    <span className="pm-cent-sign" style={{ position: 'absolute', right: '16px', color: '#fff', opacity: 0.5, fontSize: '16px' }}>¢</span>
+                                </div>
+                            </div>
+                        )}
                         <div className="pm-amount-row">
                             <div className="pm-amount-left">
                                 <span className="pm-amount-title">AMOUNT</span>
@@ -354,7 +405,7 @@ export function TradePanel({
                     <div className="pm-payout-sell">
                         <div className="pm-payout-sell-left">
                             <span className="pm-receive-text">To win 💸</span>
-                            <span className="pm-receive-avg">Avg. Price {(betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice) * 100}¢ ⓘ</span>
+                            <span className="pm-receive-avg">{orderType === 'LIMIT' ? 'Limit' : 'Avg.'} Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
                         </div>
                         <div className="pm-payout-sell-right">
                             <span className="pm-green pm-receive-val pm-mono">${potentialPayout}</span>
@@ -364,11 +415,11 @@ export function TradePanel({
                     <div className="pm-payout-sell">
                         <div className="pm-payout-sell-left">
                             <span className="pm-receive-text">You'll receive 💸</span>
-                            <span className="pm-receive-avg">Avg. Price {(betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice) * 100}¢ ⓘ</span>
+                            <span className="pm-receive-avg">{orderType === 'LIMIT' ? 'Limit' : 'Avg.'} Price {(effectivePrice * 100).toFixed(1)}¢ ⓘ</span>
                         </div>
                         <div className="pm-payout-sell-right">
                             <span className="pm-green pm-receive-val pm-mono">
-                                ${(parseFloat(betAmount) * (betType === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)).toFixed(2)}
+                                ${(parseFloat(betAmount) * effectivePrice).toFixed(2)}
                             </span>
                         </div>
                     </div>

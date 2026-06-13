@@ -905,7 +905,10 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                             <div className="pm-spinner pm-spinner-lg" style={{width: 50, height: 50, borderWidth: '3px', borderColor: 'rgba(0,122,255,0.2)', borderTopColor: '#007aff'}}></div>
                             <div style={{fontSize: '18px', fontWeight: 'bold', color: '#fff'}}>Bridging Funds...</div>
                             <div style={{color: '#848e9c', fontSize: '13px', textAlign: 'center'}}>
-                                Your withdrawal has been initiated via Polymarket Bridge. Waiting for completion on {withdrawChain}...
+                                {mode === 'deposit' 
+                                    ? 'Your deposit has been initiated via cross-chain bridge. Waiting for arrival on Polygon...'
+                                    : `Your withdrawal has been initiated via Polymarket Bridge. Waiting for completion on ${withdrawChain}...`
+                                }
                             </div>
                             <div style={{fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace', color: '#4ade80'}}>{elapsedSecs}s</div>
                         </>

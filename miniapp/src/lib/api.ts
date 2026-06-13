@@ -24,6 +24,7 @@ async function request<T>(
                 'X-Telegram-Init-Data': initData,
                 ...options.headers,
             },
+            cache: 'no-store',
         });
 
         if (!res.ok) {
@@ -223,10 +224,10 @@ export const api = {
         getLeaderboard: () => request<{ leaderboard: any[] }>('/predictions/leaderboard'),
         getCopyTraders: () => request<{ traders: any[] }>('/predictions/copy-traders'),
         getHistory: () => request<{ history: any[] }>(`/predictions/history?_t=${Date.now()}`),
-        placeBet: (amount: number, outcome: 'UP' | 'DOWN', price?: number, side?: 'BUY' | 'SELL') => 
+        placeBet: (amount: number, outcome: 'UP' | 'DOWN', price?: number, side?: 'BUY' | 'SELL', orderType?: 'MARKET' | 'LIMIT') => 
             request<{ success: boolean; result: any }>('/predictions/bet', {
                 method: 'POST',
-                body: JSON.stringify({ amount, outcome, price, side })
+                body: JSON.stringify({ amount, outcome, price, side, orderType })
             }),
         depositGasless: (amount: number, chain?: string, token?: string) => 
             request<{ success: boolean; txHash: string }>('/predictions/deposit', {
@@ -251,7 +252,7 @@ export const api = {
             }),
         getDepositWallet: () => request<{ address: string; evmBridgeAddress?: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
-        getBalance: () => request<{ balance: string }>('/predictions/balance'),
+        getBalance: () => request<{ balance: string }>(`/predictions/balance?t=${Date.now()}`),
         getSnapshot: (telegramId?: string) => request<{
             balance: string;
             positions: any[];
