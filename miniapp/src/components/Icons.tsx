@@ -299,32 +299,46 @@ export function IconStar({ size = defaults.size, color = defaults.color, classNa
 export function IconTokenETH({ size = defaults.size, className }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-            <circle cx="12" cy="12" r="12" fill="#627eea" />
-            <path d="M12 3.5l-.2.6v11l.2.2.2-.2V4.1L12 3.5z" fill="#fff" opacity="0.6" />
-            <path d="M12 3.5L7.5 12.2 12 15.1V3.5z" fill="#fff" opacity="0.8" />
-            <path d="M12 3.5v11.6l4.5-2.9L12 3.5z" fill="#fff" />
-            <path d="M12 16.2l-.1.1v3.5l.1.2.1-.2v-3.5l-.1-.1z" fill="#fff" opacity="0.6" />
-            <path d="M12 20L7.5 13.3 12 16.2V20z" fill="#fff" opacity="0.8" />
-            <path d="M12 20v-3.8l4.5-2.9L12 20z" fill="#fff" />
+            <defs>
+                <linearGradient id="ethDarkGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#1e1e24" />
+                    <stop offset="100%" stopColor="#0a0a0d" />
+                </linearGradient>
+                <linearGradient id="ethSymbolGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ecf0f9" />
+                    <stop offset="100%" stopColor="#8c9cb6" />
+                </linearGradient>
+            </defs>
+            <circle cx="12" cy="12" r="11.5" fill="url(#ethDarkGrad)" stroke="#33333f" strokeWidth="1" />
+            <g transform="translate(1.5, 1.5) scale(0.87)">
+                <path d="M12 3.5l-.2.6v11l.2.2.2-.2V4.1L12 3.5z" fill="url(#ethSymbolGrad)" opacity="0.6" />
+                <path d="M12 3.5L7.5 12.2 12 15.1V3.5z" fill="url(#ethSymbolGrad)" opacity="0.85" />
+                <path d="M12 3.5v11.6l4.5-2.9L12 3.5z" fill="url(#ethSymbolGrad)" />
+                <path d="M12 16.2l-.1.1v3.5l.1.2.1-.2v-3.5l-.1-.1z" fill="url(#ethSymbolGrad)" opacity="0.6" />
+                <path d="M12 20L7.5 13.3 12 16.2V20z" fill="url(#ethSymbolGrad)" opacity="0.85" />
+                <path d="M12 20v-3.8l4.5-2.9L12 20z" fill="url(#ethSymbolGrad)" />
+            </g>
         </svg>
     );
 }
 
 export function IconTokenUSDC({ size = defaults.size, className }: IconProps) {
     return (
-        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-            <circle cx="12" cy="12" r="12" fill="#2775ca" />
-            <path d="M12 4.5a7.5 7.5 0 100 15 7.5 7.5 0 000-15zm0 13.5a6 6 0 110-12 6 6 0 010 12z" fill="#fff" opacity="0.3" />
-            <text x="12" y="16" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="system-ui">$</text>
+        <svg width={size} height={size} viewBox="0 0 32 32" className={className} fill="none">
+            <circle cx="16" cy="16" r="16" fill="#2775CA" />
+            <path d="M20.022 18.124c0-2.124-1.276-2.852-3.829-3.156-1.829-.243-2.193-.73-2.193-1.578 0-.85.607-1.397 1.822-1.397 1.092 0 1.701.364 2.01 1.276a.364.364 0 00.34.243h.77a.334.334 0 00.333-.334v-.06a3.04 3.04 0 00-2.73-2.49V9.333a.364.364 0 00-.364-.364h-.728a.364.364 0 00-.364.364v1.276c-1.822.242-2.976 1.456-2.976 2.974 0 2.002 1.215 2.791 3.768 3.095 1.701.303 2.254.668 2.254 1.639 0 .97-.85 1.638-2.01 1.638-1.578 0-2.133-.667-2.315-1.578a.36.36 0 00-.35-.303h-.8a.334.334 0 00-.333.334v.06c.212 1.7 1.367 2.913 3.098 3.218v1.278c0 .2.163.364.364.364h.728a.364.364 0 00.364-.364v-1.278c1.822-.303 3.07-1.578 3.07-3.158z" fill="white" />
+            <path d="M13.368 23.28c-3.96-1.395-6.005-5.78-4.545-9.676a7.33 7.33 0 014.545-4.484.38.38 0 00.243-.364V8a.34.34 0 00-.455-.334c-4.79 1.517-7.402 6.607-5.885 11.397a9.404 9.404 0 005.885 5.886.34.34 0 00.455-.335v-.97a.416.416 0 00-.243-.363z" fill="white" opacity="0.6" />
+            <path d="M17.09 7.666a.34.34 0 00-.455.334v.757c0 .182.122.334.304.364 3.96 1.396 6.005 5.78 4.545 9.677a7.33 7.33 0 01-4.545 4.484.38.38 0 00-.304.364v.757a.34.34 0 00.455.334c4.79-1.516 7.402-6.607 5.885-11.396A9.44 9.44 0 0017.09 7.666z" fill="white" opacity="0.6" />
         </svg>
     );
 }
 
 export function IconTokenUSDT({ size = defaults.size, className }: IconProps) {
     return (
-        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-            <circle cx="12" cy="12" r="12" fill="#26a17b" />
-            <text x="12" y="16" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="system-ui">₮</text>
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="none">
+            <circle cx="12" cy="12" r="11.5" fill="#00AF84" />
+            <circle cx="12" cy="12" r="9.2" stroke="white" strokeWidth="0.7" opacity="0.35" fill="none" />
+            <path d="M7.5 8.5h9M12 8.5v9M9.5 12h5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
 }
@@ -332,8 +346,20 @@ export function IconTokenUSDT({ size = defaults.size, className }: IconProps) {
 export function IconTokenBNB({ size = defaults.size, className }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-            <circle cx="12" cy="12" r="12" fill="#F0B90B" />
-            <path d="M12 6.5l2.5 2.5-2.5 2.5-2.5-2.5 2.5-2.5zM12 17.5l2.5-2.5-2.5-2.5-2.5 2.5 2.5 2.5zM17.5 12l-2.5 2.5-2.5-2.5 2.5-2.5 2.5 2.5zM6.5 12l2.5-2.5 2.5 2.5-2.5 2.5-2.5-2.5z" fill="black" />
+            <defs>
+                <linearGradient id="bnbDarkGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#241e0b" />
+                    <stop offset="100%" stopColor="#0d0a04" />
+                </linearGradient>
+                <linearGradient id="bnbSymbolGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffdf6d" />
+                    <stop offset="100%" stopColor="#f0b90b" />
+                </linearGradient>
+            </defs>
+            <circle cx="12" cy="12" r="11.5" fill="url(#bnbDarkGrad)" stroke="#423512" strokeWidth="1" />
+            <g transform="translate(1.5, 1.5) scale(0.87)" fill="url(#bnbSymbolGrad)">
+                <path d="M12 6.5l2.5 2.5-2.5 2.5-2.5-2.5 2.5-2.5zM12 17.5l2.5-2.5-2.5-2.5-2.5 2.5 2.5 2.5zM17.5 12l-2.5 2.5-2.5-2.5 2.5-2.5 2.5 2.5zM6.5 12l2.5-2.5 2.5 2.5-2.5 2.5-2.5-2.5z" />
+            </g>
         </svg>
     );
 }
@@ -369,10 +395,9 @@ export function IconChainEth({ size = defaults.size, className }: IconProps) {
 
 export function IconChainPolygon({ size = defaults.size, className }: IconProps) {
     return (
-        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-            <circle cx="12" cy="12" r="11" fill="#8247e5" />
-            <path d="M15.5 9.5l-2.5-1.5-2.5 1.5v3l2.5 1.5 2.5-1.5v-3z" fill="white" opacity="0.9" />
-            <path d="M10.5 12.5l-2.5-1.5v3l2.5 1.5 2.5-1.5" fill="white" opacity="0.6" />
+        <svg width={size} height={size} viewBox="0 0 32 32" className={className} fill="none">
+            <circle cx="16" cy="16" r="16" fill="#8247E5" />
+            <path d="M21.092 13.394a1.045 1.045 0 00-1.048 0l-2.428 1.408-1.648.933-2.428 1.408a1.045 1.045 0 01-1.048 0l-1.916-1.11a1.03 1.03 0 01-.524-.894V13.16c0-.36.195-.7.524-.894l1.916-1.11a1.045 1.045 0 011.048 0l1.916 1.11c.33.194.524.533.524.894v1.408l1.648-.952v-1.408a1.03 1.03 0 00-.524-.894l-3.54-2.043a1.045 1.045 0 00-1.048 0L9.98 11.314a1.03 1.03 0 00-.524.894v4.087c0 .36.195.7.524.894l3.564 2.043a1.045 1.045 0 001.048 0l2.428-1.388 1.648-.952 2.428-1.388a1.045 1.045 0 011.048 0l1.916 1.11c.33.194.524.533.524.894v1.978c0 .36-.195.7-.524.894l-1.916 1.11a1.045 1.045 0 01-1.048 0l-1.916-1.11a1.03 1.03 0 01-.524-.894v-1.408l-1.648.952v1.408c0 .36.195.7.524.894l3.564 2.043a1.045 1.045 0 001.048 0l3.564-2.043c.33-.194.524-.533.524-.894v-4.087a1.03 1.03 0 00-.524-.894l-3.588-2.063z" fill="white" />
         </svg>
     );
 }
@@ -544,6 +569,24 @@ export function IconSocialX({ size = defaults.size, color = defaults.color, clas
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
             <path d="M4 4l11.733 16h4.267l-11.733-16z" />
             <path d="M4 20l6.768-6.768m2.464-2.464l6.768-6.768" opacity="0.5" />
+        </svg>
+    );
+}
+
+export function IconChainMonad({ size = defaults.size, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+            <circle cx="12" cy="12" r="11" fill="#836EFD" />
+            <path d="M7 16V8l5 5 5-5v8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+    );
+}
+
+export function IconChainRonin({ size = defaults.size, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
+            <circle cx="12" cy="12" r="11" fill="#123fe5" />
+            <text x="12" y="16.5" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="system-ui">R</text>
         </svg>
     );
 }
