@@ -722,7 +722,7 @@ export function Predict({ user }: Props) {
                 if (tradeType === 'buy') {
                     setCashBalance(prev => (parseFloat(prev || '0') - parseFloat(betAmount)).toFixed(2));
                 } else {
-                    const receivedUsdc = parseFloat(betAmount) * price;
+                    const receivedUsdc = parseFloat(betAmount) * finalPrice;
                     setCashBalance(prev => (parseFloat(prev || '0') + receivedUsdc).toFixed(2));
                 }
 
