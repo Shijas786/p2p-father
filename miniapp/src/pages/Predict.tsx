@@ -893,6 +893,17 @@ export function Predict({ user }: Props) {
             </div>
         );
     }
+    const openOrdersValue = openOrders.reduce((acc, order) => {
+        if (order.side === 'BUY') {
+            const size = parseFloat(order.size || order.original_size || '0');
+            const price = parseFloat(order.price || '0');
+            return acc + (size * price);
+        }
+        return acc;
+    }, 0);
+
+    const positionsValue = positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0);
+    const portfolioTotal = parseFloat(cashBalance || '0') + unclaimedWinnings + positionsValue + openOrdersValue;
 
     return (
         <div className="pm-page">
@@ -902,12 +913,18 @@ export function Predict({ user }: Props) {
                 <div className="pm-topbar-metrics">
                     <div className="pm-metric">
                         <span className="pm-metric-label">PORTFOLIO</span>
-                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${(parseFloat(cashBalance || '0') + unclaimedWinnings + positions.reduce((acc, pos) => acc + (pos.qty * (pos.outcome === 'UP' ? yesPrice.buyPrice : noPrice.buyPrice)), 0)).toFixed(2)}</span>
+                        <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${portfolioTotal.toFixed(2)}</span>
                     </div>
                     <div className="pm-metric">
                         <span className="pm-metric-label">CASH</span>
                         <span className={`pm-metric-value pm-green ${isClaiming ? 'pm-balance-pulsing' : ''}`}>${parseFloat(cashBalance).toFixed(2)}</span>
                     </div>
+                    {unclaimedWinnings > 0 && (
+                        <div className="pm-metric">
+                            <span className="pm-metric-label">UNCLAIMED</span>
+                            <span className="pm-metric-value pm-green">${unclaimedWinnings.toFixed(2)}</span>
+                        </div>
+                    )}
                 </div>
                 <div className="pm-topbar-actions">
                     <button className="pm-btn-deposit" onClick={handleOpenDeposit} id="btn-deposit">Deposit</button>

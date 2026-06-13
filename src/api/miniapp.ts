@@ -2617,7 +2617,7 @@ router.get("/predictions/open-orders", async (req: Request, res: Response) => {
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
         const market = await polymarketService.getActiveBtcMarket();
-        const ordersRes = await polymarketService.getOpenOrders(user.wallet_index, market?.conditionId);
+        const ordersRes = await polymarketService.getOpenOrders(user.wallet_index);
         
         res.json({ success: true, orders: Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.orders || [] });
     } catch (err: any) {
