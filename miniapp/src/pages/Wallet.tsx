@@ -565,7 +565,7 @@ export function Wallet({ user }: Props) {
                             </div>
                             <div className="token-list-item-right">
                                 <div className="token-value-text-col">
-                                    <span className="token-value-amount">${(parseFloat(asset.balance) * (asset.price > 10 ? 1 : asset.price)).toFixed(2)}</span>
+                                    <span className="token-value-amount">${(parseFloat(asset.balance) * asset.price).toFixed(2)}</span>
                                     <span className="token-value-change neutral">{asset.balance} {asset.symbol}</span>
                                 </div>
                             </div>
@@ -594,11 +594,11 @@ export function Wallet({ user }: Props) {
                                     key={pct}
                                     className="percent-pill-btn"
                                     onClick={() => {
-                                        let factor = 0.25;
-                                        if (pct === '50%') factor = 0.5;
-                                        if (pct === '75%') factor = 0.75;
-                                        if (pct === 'Max') factor = 1.0;
-                                        setSendAmount((19.13 * factor).toFixed(2));
+                                        const factor = pct === '50%' ? 0.5 : pct === '75%' ? 0.75 : pct === 'Max' ? 1.0 : 0.25;
+                                        const tokenBalance = parseFloat(
+                                            staticAssets.find(a => a.symbol === sendToken)?.balance || '0'
+                                        );
+                                        setSendAmount((tokenBalance * factor).toFixed(6));
                                     }}
                                 >
                                     {pct}
