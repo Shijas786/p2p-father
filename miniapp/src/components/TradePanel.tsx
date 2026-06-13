@@ -255,7 +255,7 @@ export function TradePanel({
         ? (betAmount && effectivePrice > 0 ? parseFloat(betAmount) / effectivePrice : 0)
         : (betAmount ? parseFloat(betAmount) : 0);
 
-    const isLimitAmountTooLow = orderType === 'LIMIT' && betAmount && parseFloat(betAmount) > 0 && numShares < 5;
+    const isLimitAmountTooLow = Boolean(orderType === 'LIMIT' && betAmount && parseFloat(betAmount) > 0 && numShares < 5);
 
     return (
         <div className="pm-trade-card">
