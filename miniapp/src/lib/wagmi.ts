@@ -21,15 +21,15 @@ export const wagmiAdapter = new WagmiAdapter({
     networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     connectors: [hotWalletConnector()],
     transports: {
-        [mainnet.id]: http('https://eth.llamarpc.com'),
-        [base.id]: http('https://mainnet.base.org'),
-        [bsc.id]: http('https://bsc-dataseed.binance.org'),
-        [polygon.id]: http('https://polygon-rpc.com'),
-        [arbitrum.id]: http('https://arb1.arbitrum.io/rpc'),
-        [optimism.id]: http('https://mainnet.optimism.io'),
-        [avalanche.id]: http('https://api.avax.network/ext/bc/C/rpc'),
-        [linea.id]: http('https://rpc.linea.build'),
-        [scroll.id]: http('https://rpc.scroll.io'),
+        [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [base.id]: http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [bsc.id]: http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [polygon.id]: http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [optimism.id]: http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [avalanche.id]: http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [linea.id]: http('https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+        [scroll.id]: http('https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
     }
 });
 
