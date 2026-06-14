@@ -129,12 +129,16 @@ function AppInner() {
     if (walletMode !== 'bot' || isConnected) return;
     
     console.log('[P2P] Attempting to connect hot wallet...');
-    const hwc = hotWalletConnector();
+    const hwc = connectors.find(c => c.id === 'hotWallet');
+    if (!hwc) {
+      console.error('[P2P] Hot wallet connector not found in wagmi config');
+      return;
+    }
     connect({ connector: hwc }, {
       onSuccess: () => console.log('[P2P] Hot wallet connected successfully!'),
       onError: (err) => console.error('[P2P] Hot wallet connection failed:', err)
     });
-  }, [walletMode, isConnected, connect]);
+  }, [walletMode, isConnected, connect, connectors]);
 
   // Only auto-skip selector for returning EXTERNAL wallet users
   // Bot wallet users always see the selector so they can switch to WalletConnect
