@@ -275,6 +275,11 @@ class WalletService {
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         const txOptions: any = {};
+        if (chain === 'bsc') {
+            const feeData = await this.getProvider(chain).getFeeData();
+            txOptions.gasPrice = feeData.gasPrice || ethers.parseUnits('3', 'gwei');
+            txOptions.gasLimit = 200000n;
+        }
 
         const tx = await escrowContract.withdraw(tokenAddress, amountUnits, txOptions);
         await tx.wait();
