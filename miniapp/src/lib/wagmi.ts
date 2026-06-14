@@ -1,6 +1,6 @@
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { base, bsc } from '@reown/appkit/networks';
+import { mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll } from '@reown/appkit/networks';
 
 const projectId = '6dcf53c47cdea609c48bc1adb474bfd0';
 
@@ -16,7 +16,7 @@ import { hotWalletConnector } from '../utils/hotWalletConnector';
 // Create Wagmi adapter for Reown
 export const wagmiAdapter = new WagmiAdapter({
     projectId,
-    networks: [base, bsc],
+    networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     connectors: [hotWalletConnector()],
 });
 
@@ -27,7 +27,7 @@ const BITGET_WALLET_LITE_ID = '21c3a371f72f0057186082edb2ddd43566f7e908508ac3e85
 // Create the AppKit modal
 export const appKit = createAppKit({
     adapters: [wagmiAdapter],
-    networks: [base, bsc],
+    networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     defaultNetwork: bsc,
     projectId,
     metadata,

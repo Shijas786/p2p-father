@@ -1,9 +1,9 @@
 import { createConnector } from 'wagmi';
 import { getAddress, numberToHex, SwitchChainError } from 'viem';
-import { base, bsc } from 'viem/chains';
+import { mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll } from 'viem/chains';
 import { api } from '../lib/api';
 
-const SUPPORTED_CHAINS = [base, bsc];
+const SUPPORTED_CHAINS = [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll];
 
 export function hotWalletConnector() {
   return createConnector((config) => {
@@ -55,7 +55,18 @@ export function hotWalletConnector() {
         }
         
         // Forward all other requests to a public RPC
-        const rpcUrl = currentChainId === 56 ? 'https://bsc-dataseed.binance.org' : 'https://mainnet.base.org';
+        const rpcUrls: Record<number, string> = {
+          1: 'https://eth.llamarpc.com',
+          56: 'https://bsc-dataseed.binance.org',
+          137: 'https://polygon-rpc.com',
+          42161: 'https://arb1.arbitrum.io/rpc',
+          10: 'https://mainnet.optimism.io',
+          43114: 'https://api.avax.network/ext/bc/C/rpc',
+          59144: 'https://rpc.linea.build',
+          534352: 'https://rpc.scroll.io',
+          8453: 'https://mainnet.base.org'
+        };
+        const rpcUrl = rpcUrls[currentChainId] || 'https://mainnet.base.org';
         
         try {
             const response = await fetch(rpcUrl, {
