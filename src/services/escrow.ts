@@ -153,7 +153,7 @@ class EscrowService {
 
         const txOptions: any = {};
         if (chain === 'bsc') {
-            // txOptions.gasPrice = ethers.parseUnits("0.05", "gwei");
+            txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
             txOptions.gasLimit = 500000;
         }
 
@@ -200,7 +200,7 @@ class EscrowService {
 
                 const txOptions: any = {};
                 if (chain === 'bsc') {
-                    // txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
+                    txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
                 const tx = await contract.release(tradeId, txOptions);
@@ -232,7 +232,7 @@ class EscrowService {
 
                 const txOptions: any = {};
                 if (chain === 'bsc') {
-                    // txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
+                    txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
                 const tx = await contract.markFiatSent(tradeId, txOptions);
@@ -264,7 +264,7 @@ class EscrowService {
 
                 const txOptions: any = {};
                 if (chain === 'bsc') {
-                    // txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
+                    txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
                 const tx = await contract.refund(tradeId, txOptions);
@@ -296,7 +296,7 @@ class EscrowService {
 
                 const txOptions: any = {};
                 if (chain === 'bsc') {
-                    // txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
+                    txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
                 const tx = await contract.raiseDispute(tradeId, reason, txOptions);

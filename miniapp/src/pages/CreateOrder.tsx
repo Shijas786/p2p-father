@@ -258,7 +258,7 @@ export function CreateOrder() {
             // Unlimited approval using maxUint256
             const currentEscrow = chain === 'bsc' ? "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a" : escrowAddress;
             const isBsc = chain === 'bsc';
-            const gasPrice = undefined;
+            const gasPrice = isBsc ? parseUnits('0.06', 9) : undefined;
 
             setTxStep('approving');
             showToast(`Approving ${token} in wallet...`, 'info');
@@ -319,7 +319,7 @@ export function CreateOrder() {
                 if (!switched) return;
 
                 const isBsc = chain === 'bsc';
-                const gasPrice = undefined;
+                const gasPrice = isBsc ? parseUnits('0.06', 9) : undefined;
 
                 // Deposit if needed (approval should already be done)
                 if (needsDeposit) {

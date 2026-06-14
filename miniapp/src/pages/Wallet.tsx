@@ -309,7 +309,7 @@ export function Wallet({ user }: Props) {
             if (!switched) return;
 
             const isBsc = vaultChain === 'bsc';
-            const gasPrice = undefined;
+            const gasPrice = isBsc ? parseUnits('0.06', 9) : undefined;
 
             showToast(`Approving ${vaultToken} in wallet...`, 'info');
             const approveHash = await writeContractAsync({
@@ -382,7 +382,7 @@ export function Wallet({ user }: Props) {
 
                 const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
                 const isBsc = vaultChain === 'bsc';
-                const gasPrice = undefined;
+                const gasPrice = isBsc ? parseUnits('0.06', 9) : undefined;
 
                 if (showVaultAction === 'deposit') {
                     setVaultSuccess('Deposit pending...');
