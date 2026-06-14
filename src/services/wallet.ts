@@ -17,19 +17,30 @@ const ESCROW_ABI = [
     "function balances(address user, address token) view returns (uint256)"
 ];
 
-type Chain = 'base' | 'bsc' | 'polygon';
+type Chain = 'base' | 'bsc' | 'polygon' | 'mainnet' | 'arbitrum' | 'optimism' | 'avalanche' | 'linea' | 'scroll';
 
 class WalletService {
     private providers: Record<string, ethers.JsonRpcProvider | null> = {
-        base: null,
-        bsc: null,
-        polygon: null
+        base: null, bsc: null, polygon: null, mainnet: null, 
+        arbitrum: null, optimism: null, avalanche: null, linea: null, scroll: null
     };
     private masterNode: ethers.HDNodeWallet | null = null;
 
     private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
         if (!this.providers[chain]) {
-            const url = chain === 'base' ? env.BASE_RPC_URL : chain === 'bsc' ? env.BSC_RPC_URL : (process.env.POLYGON_RPC_URL || "https://polygon-rpc.com");
+            let url = env.BASE_RPC_URL;
+            const ALCHEMY_KEY = 'ALCHEMY_API_KEY_PLACEHOLDER';
+            switch (chain) {
+                case 'base': url = env.BASE_RPC_URL; break; // usually https://base-mainnet.g.alchemy.com/v2/...
+                case 'bsc': url = env.BSC_RPC_URL; break;
+                case 'polygon': url = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'mainnet': url = `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'arbitrum': url = `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'optimism': url = `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'avalanche': url = `https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'linea': url = `https://linea-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'scroll': url = `https://scroll-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+            }
             this.providers[chain] = new ethers.JsonRpcProvider(url);
         }
         return this.providers[chain]!;

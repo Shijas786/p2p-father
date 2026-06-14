@@ -473,9 +473,16 @@ router.post("/wallet/execute", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Missing to/data" });
         }
 
-        let chain: 'base' | 'bsc' | 'polygon' = 'base';
-        if (chainId === 56) chain = 'bsc';
+        let chain: any = 'base';
+        if (chainId === 1) chain = 'mainnet';
+        else if (chainId === 56) chain = 'bsc';
         else if (chainId === 137) chain = 'polygon';
+        else if (chainId === 42161) chain = 'arbitrum';
+        else if (chainId === 10) chain = 'optimism';
+        else if (chainId === 43114) chain = 'avalanche';
+        else if (chainId === 59144) chain = 'linea';
+        else if (chainId === 534352) chain = 'scroll';
+        else if (chainId === 8453) chain = 'base';
         
         console.log(`[WALLET EXECUTE] User ${user.id} executing on ${chain} to ${to}`);
         
