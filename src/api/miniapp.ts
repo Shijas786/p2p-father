@@ -1495,6 +1495,26 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 txHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
             }
             await db.updateTrade(trade.id, { status: "completed" } as any);
+
+            // Log dispute resolution
+            try {
+                await db.logDisputeResolution({
+                    trade_id: trade.id,
+                    admin_user_id: user.id,
+                    admin_telegram_id: Number(user.telegram_id),
+                    seller_id: trade.seller_id,
+                    buyer_id: trade.buyer_id,
+                    amount: Number(trade.amount),
+                    token: trade.token,
+                    chain: trade.chain,
+                    released_to: 'buyer',
+                    tx_hash: txHash,
+                    dispute_reason: trade.dispute_reason,
+                });
+            } catch (logErr: any) {
+                console.error("[ADMIN] Failed to log dispute resolution for buyer:", logErr);
+            }
+
             await notifyTradeUpdate(trade.buyer_id,
                 `✅ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to you.`
             );
@@ -1511,6 +1531,25 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
             await db.updateTrade(trade.id, { status: "refunded" } as any);
             // Revert the fill on the parent order/ad
             await db.revertFillOrder(trade.order_id, trade.amount);
+
+            // Log dispute resolution
+            try {
+                await db.logDisputeResolution({
+                    trade_id: trade.id,
+                    admin_user_id: user.id,
+                    admin_telegram_id: Number(user.telegram_id),
+                    seller_id: trade.seller_id,
+                    buyer_id: trade.buyer_id,
+                    amount: Number(trade.amount),
+                    token: trade.token,
+                    chain: trade.chain,
+                    released_to: 'seller',
+                    tx_hash: txHash,
+                    dispute_reason: trade.dispute_reason,
+                });
+            } catch (logErr: any) {
+                console.error("[ADMIN] Failed to log dispute resolution for seller:", logErr);
+            }
 
             await notifyTradeUpdate(trade.seller_id,
                 `🔙 <b>Dispute Resolved!</b>\n\nAdmin has refunded <b>${trade.amount} ${trade.token}</b> to your vault.`
@@ -1799,7 +1838,12 @@ router.post("/bridge/quote", async (req: Request, res: Response) => {
         const { fromChainId, toChainId, fromToken, toToken, amount } = req.body;
 
         const response = await fetch(
-            `https://li.quest/v1/quote?fromChain=${fromChainId}&toChain=${toChainId}&fromToken=${fromToken === "USDC" ? "USDC" : fromToken}&toToken=${toToken === "USDC" ? "USDC" : toToken}&fromAmount=${amount}&fromAddress=0x0000000000000000000000000000000000000000`
+            `https://li.quest/v1/quote?fromChain=${fromChainId}&toChain=${toChainId}&fromToken=${fromToken === "USDC" ? "USDC" : fromToken}&toToken=${toToken === "USDC" ? "USDC" : toToken}&fromAmount=${amount}&fromAddress=0x0000000000000000000000000000000000000000&integrator=p2pfather&fee=0.005`,
+            {
+                headers: {
+                    'x-lifi-api-key': '2c32a108-e9b8-4563-a59a-b58a2a3264da.ecf7206c-86cd-438c-bea0-4f66a553c504'
+                }
+            }
         );
 
         if (!response.ok) {

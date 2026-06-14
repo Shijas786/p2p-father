@@ -38,6 +38,7 @@ import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
 import { copyToClipboard, formatError } from '../lib/utils';
 import { useToast } from '../components/Toast';
+import { SwapModal } from '../components/SwapModal';
 import './Wallet.css';
 
 interface Props {
@@ -53,6 +54,7 @@ export function Wallet({ user }: Props) {
     const [selectorSearch, setSelectorSearch] = useState('');
     const [showReceive, setShowReceive] = useState(false);
     const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+    const [showSwap, setShowSwap] = useState(false);
     
     // Manage Funds State
     const [vaultBaseUsdc, setVaultBaseUsdc] = useState('0.00');
@@ -781,7 +783,7 @@ export function Wallet({ user }: Props) {
                     </div>
                     <span className="action-card-label">Send</span>
                 </button>
-                <button className="action-card-btn active" onClick={triggerComingSoon}>
+                <button className="action-card-btn active" onClick={() => setShowSwap(true)}>
                     <div className="action-card-icon">
                         <IconSwap size={24} />
                     </div>
@@ -1017,6 +1019,10 @@ export function Wallet({ user }: Props) {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {showSwap && (
+                <SwapModal onClose={() => setShowSwap(false)} />
             )}
 
             {/* Vault Action Modal */}
