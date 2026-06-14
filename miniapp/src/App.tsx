@@ -125,23 +125,16 @@ function AppInner() {
   }, []);
 
   // Auto-connect Hot Wallet if mode is bot
-  const hwConnector = useRef<any>(null);
   useEffect(() => {
-    if (walletMode === 'bot' && user?.wallet_type === 'bot') {
-      let hotWallet = connectors.find(c => c.id === 'hotWallet');
-      if (!hotWallet) {
-        if (!hwConnector.current) hwConnector.current = hotWalletConnector();
-        hotWallet = hwConnector.current;
-      }
-      if (hotWallet && !isConnected && !connecting) {
-        console.log('[P2P] Attempting to connect hot wallet...');
-        connect({ connector: hotWallet }, {
-          onSuccess: () => console.log('[P2P] Hot wallet connected successfully!'),
-          onError: (err) => console.error('[P2P] Hot wallet connection failed:', err)
-        });
-      }
-    }
-  }, [walletMode, isConnected, connecting, user, connect, connectors]);
+    if (walletMode !== 'bot' || isConnected) return;
+    
+    console.log('[P2P] Attempting to connect hot wallet...');
+    const hwc = hotWalletConnector();
+    connect({ connector: hwc }, {
+      onSuccess: () => console.log('[P2P] Hot wallet connected successfully!'),
+      onError: (err) => console.error('[P2P] Hot wallet connection failed:', err)
+    });
+  }, [walletMode, isConnected, connect]);
 
   // Only auto-skip selector for returning EXTERNAL wallet users
   // Bot wallet users always see the selector so they can switch to WalletConnect

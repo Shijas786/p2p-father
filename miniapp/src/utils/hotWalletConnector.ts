@@ -82,6 +82,9 @@ export function hotWalletConnector() {
       async connect({ chainId } = {}) {
         if (chainId) currentChainId = chainId;
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        
+        config.emitter.emit('connect', { accounts: accounts.map(getAddress), chainId: currentChainId });
+        
         return { accounts: accounts.map(getAddress), chainId: currentChainId };
       },
       async disconnect() {},

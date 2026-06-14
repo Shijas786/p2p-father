@@ -57,7 +57,10 @@ export function SwapModal({ onClose }: SwapModalProps) {
             
             <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
                 <div style={{ width: '100%', maxWidth: '380px' }}>
-                    <LiFiWidget integrator="p2pfather" config={widgetConfig} />
+                    <LiFiWidget 
+                        integrator="p2pfather" 
+                        config={widgetConfig} 
+                    />
                 </div>
             </div>
         </div>
