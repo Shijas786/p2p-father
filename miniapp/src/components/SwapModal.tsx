@@ -20,6 +20,9 @@ export function SwapModal({ onClose }: SwapModalProps) {
             poweredBy: true,
             walletMenu: true,
         },
+        walletConfig: {
+            usePartialWalletManagement: true,
+        },
         theme: {
             colorSchemes: {
                 dark: {

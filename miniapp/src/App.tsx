@@ -6,6 +6,7 @@ import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
+import { hotWalletConnector } from './utils/hotWalletConnector';
 
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
@@ -124,9 +125,14 @@ function AppInner() {
   }, []);
 
   // Auto-connect Hot Wallet if mode is bot
+  const hwConnector = useRef<any>(null);
   useEffect(() => {
     if (walletMode === 'bot' && user?.wallet_type === 'bot') {
-      const hotWallet = connectors.find(c => c.id === 'hotWallet');
+      let hotWallet = connectors.find(c => c.id === 'hotWallet');
+      if (!hotWallet) {
+        if (!hwConnector.current) hwConnector.current = hotWalletConnector();
+        hotWallet = hwConnector.current;
+      }
       if (hotWallet && !isConnected && !connecting) {
         console.log('[P2P] Attempting to connect hot wallet...');
         connect({ connector: hotWallet }, {
