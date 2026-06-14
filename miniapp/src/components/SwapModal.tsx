@@ -16,6 +16,10 @@ export function SwapModal({ onClose }: SwapModalProps) {
         },
         appearance: 'dark',
         variant: 'compact',
+        hiddenUI: {
+            poweredBy: true,
+            walletMenu: true,
+        },
         theme: {
             colorSchemes: {
                 dark: {
@@ -49,7 +53,7 @@ export function SwapModal({ onClose }: SwapModalProps) {
             </div>
             
             <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: '100%', maxWidth: '440px' }}>
+                <div style={{ width: '100%', maxWidth: '380px' }}>
                     <LiFiWidget integrator="p2pfather" config={widgetConfig} />
                 </div>
             </div>
