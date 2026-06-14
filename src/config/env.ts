@@ -36,7 +36,7 @@ const envSchema = z.object({
     RELAYER_PRIVATE_KEY: z.string().default(""),
     MASTER_WALLET_SEED: z.string().default(""),
     BASE_RPC_URL: z.string().default("https://sepolia.base.org"),
-    BSC_RPC_URL: z.string().default("https://bsc-dataseed.binance.org"),
+    BSC_RPC_URL: z.string().default("https://bsc-dataseed.binance.org/"),
     USDC_ADDRESS: addressSchema.default("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
     USDT_ADDRESS: addressSchema.default("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"), // Axelar Wrapped USDT
 
