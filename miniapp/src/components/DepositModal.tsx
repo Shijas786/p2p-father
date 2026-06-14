@@ -285,13 +285,12 @@ export function DepositModal({ onClose, balances, loadBalances, copyAddress, hap
                     background: #111318;
                     color: #ffffff;
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    top: 50% !important;
-                    transform: translate(-50%, -50%) !important;
                     height: auto !important;
                     max-height: 85vh !important;
                     max-width: 380px !important;
                     border-radius: 16px;
                     border: 1px solid rgba(255, 255, 255, 0.1);
+                    overflow-y: auto;
                 }
                 .pm-dep-header {
                     display: flex;

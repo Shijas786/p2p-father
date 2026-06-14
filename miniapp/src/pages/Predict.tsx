@@ -1413,33 +1413,37 @@ export function Predict({ user }: Props) {
 
             {/* ══ DEPOSIT MODAL ═══════════════════════════════════════════ */}
             {showDepositModal && (
-                <DepositModal 
-                    initialMode={depositModalMode}
-                    onClose={() => setShowDepositModal(false)}
-                    balances={{ usdt: cashBalance, address: depositAddress, evmBridgeAddress: evmBridgeAddress }}
-                    loadBalances={async () => {
-                        setDepositWalletLoading(true);
-                        try {
-                            const b = await api.predictions.getBalance();
-                            if (b && b.balance) setCashBalance(b.balance);
-                            const r = await api.predictions.getDepositWallet();
-                            if (r) {
-                                if (r.address) setDepositAddress(r.address);
-                                if (r.evmBridgeAddress) setEvmBridgeAddress(r.evmBridgeAddress);
-                            }
-                        } catch(e) {}
-                        setDepositWalletLoading(false);
-                    }}
-                    copyAddress={(addr?: string) => { 
-                        const toCopy = addr || depositAddress;
-                        if (toCopy) { 
-                            navigator.clipboard.writeText(toCopy); 
-                            showToast('Copied!', 'success'); 
-                        } 
-                    }}
-                    haptic={haptic}
-                    onWithdraw={handleOpenWithdraw}
-                />
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setShowDepositModal(false)}>
+                    <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '420px' }}>
+                        <DepositModal
+                            initialMode={depositModalMode}
+                            onClose={() => setShowDepositModal(false)}
+                            balances={{ usdt: cashBalance, address: depositAddress, evmBridgeAddress: evmBridgeAddress }}
+                            loadBalances={async () => {
+                                setDepositWalletLoading(true);
+                                try {
+                                    const b = await api.predictions.getBalance();
+                                    if (b && b.balance) setCashBalance(b.balance);
+                                    const r = await api.predictions.getDepositWallet();
+                                    if (r) {
+                                        if (r.address) setDepositAddress(r.address);
+                                        if (r.evmBridgeAddress) setEvmBridgeAddress(r.evmBridgeAddress);
+                                    }
+                                } catch(e) {}
+                                setDepositWalletLoading(false);
+                            }}
+                            copyAddress={(addr?: string) => {
+                                const toCopy = addr || depositAddress;
+                                if (toCopy) {
+                                    navigator.clipboard.writeText(toCopy);
+                                    showToast('Copied!', 'success');
+                                }
+                            }}
+                            haptic={haptic}
+                            onWithdraw={handleOpenWithdraw}
+                        />
+                    </div>
+                </div>
             )}
 
             {/* ══ WITHDRAW MODAL ══════════════════════════════════════════ */}
