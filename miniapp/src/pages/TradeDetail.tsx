@@ -398,7 +398,7 @@ export function TradeDetail({ user }: Props) {
         setError('');
         try {
             const isBsc = tradeChain === 'bsc';
-            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+            const gasPrice = undefined;
 
             showToast(`Approving ${trade.token} in wallet...`, 'info');
             const hash = await writeContractAsync({
@@ -455,7 +455,7 @@ export function TradeDetail({ user }: Props) {
             const duration = BigInt(1800);
 
             const isBsc = tradeChain === 'bsc';
-            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+            const gasPrice = undefined;
 
             showToast("Locking funds in wallet...", "info");
             const hash = await writeContractAsync({
