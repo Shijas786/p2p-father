@@ -155,7 +155,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .action-card-btn {
@@ -169,8 +169,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 14px 6px;
-  gap: 8px;
+  padding: 10px 4px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--glass-shadow);
@@ -195,7 +195,7 @@
 }
 
 .action-card-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -209,11 +209,11 @@
   border: 1px solid var(--glass-border);
   border-top: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   background: rgba(6, 95, 70, 0.04);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   box-shadow: var(--glass-shadow);
 }
 
@@ -254,9 +254,9 @@
 }
 
 .vault-btn {
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   border: none;
   cursor: pointer;
@@ -286,7 +286,7 @@
 .vault-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 @media (max-width: 360px) {
@@ -301,10 +301,10 @@
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-top: 1px solid rgba(255, 255, 255, 0.22); /* top highlight */
   border-radius: 10px;
-  padding: 12px 10px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   transition: background 0.2s, transform 0.2s;
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.3),
@@ -338,7 +338,7 @@
 }
 
 .vault-item-symbol {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0.3px;
@@ -358,14 +358,14 @@
 }
 
 .vault-item-balance {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
 }
 
 .vault-item-fiat {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
 }
 

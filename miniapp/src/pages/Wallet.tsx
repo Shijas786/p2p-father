@@ -779,19 +779,19 @@ export function Wallet({ user }: Props) {
             <div className="actions-row">
                 <button className="action-card-btn" onClick={() => setShowSend(true)}>
                     <div className="action-card-icon">
-                        <IconSend size={24} />
+                        <IconSend size={20} />
                     </div>
                     <span className="action-card-label">Send</span>
                 </button>
                 <button className="action-card-btn active" onClick={() => setShowSwap(true)}>
                     <div className="action-card-icon">
-                        <IconSwap size={24} />
+                        <IconSwap size={20} />
                     </div>
                     <span className="action-card-label">Swap</span>
                 </button>
                 <button className="action-card-btn" onClick={() => setShowReceive(true)}>
                     <div className="action-card-icon">
-                        <IconArrowDown size={24} />
+                        <IconArrowDown size={20} />
                     </div>
                     <span className="action-card-label">Deposit</span>
                 </button>
@@ -828,7 +828,7 @@ export function Wallet({ user }: Props) {
                     <div className="vault-item-card">
                         <div className="vault-item-top">
                             <div className="vault-item-token-info">
-                                <div className="vault-item-icon"><IconTokenUSDC size={28} /></div>
+                                <div className="vault-item-icon"><IconTokenUSDC size={20} /></div>
                                 <span className="vault-item-symbol">USDC</span>
                             </div>
                             <span className="vault-item-chain-badge">Base</span>
@@ -840,7 +840,7 @@ export function Wallet({ user }: Props) {
                     <div className="vault-item-card">
                         <div className="vault-item-top">
                             <div className="vault-item-token-info">
-                                <div className="vault-item-icon"><IconTokenUSDT size={28} /></div>
+                                <div className="vault-item-icon"><IconTokenUSDT size={20} /></div>
                                 <span className="vault-item-symbol">USDT</span>
                             </div>
                             <span className="vault-item-chain-badge">Base</span>
@@ -852,7 +852,7 @@ export function Wallet({ user }: Props) {
                     <div className="vault-item-card">
                         <div className="vault-item-top">
                             <div className="vault-item-token-info">
-                                <div className="vault-item-icon"><IconTokenUSDC size={28} /></div>
+                                <div className="vault-item-icon"><IconTokenUSDC size={20} /></div>
                                 <span className="vault-item-symbol">USDC</span>
                             </div>
                             <span className="vault-item-chain-badge">BSC</span>
@@ -864,7 +864,7 @@ export function Wallet({ user }: Props) {
                     <div className="vault-item-card">
                         <div className="vault-item-top">
                             <div className="vault-item-token-info">
-                                <div className="vault-item-icon"><IconTokenUSDT size={28} /></div>
+                                <div className="vault-item-icon"><IconTokenUSDT size={20} /></div>
                                 <span className="vault-item-symbol">USDT</span>
                             </div>
                             <span className="vault-item-chain-badge">BSC</span>
@@ -876,7 +876,7 @@ export function Wallet({ user }: Props) {
                     <div className="vault-item-card">
                         <div className="vault-item-top">
                             <div className="vault-item-token-info">
-                                <div className="vault-item-icon"><IconTokenBNB size={28} /></div>
+                                <div className="vault-item-icon"><IconTokenBNB size={20} /></div>
                                 <span className="vault-item-symbol">BNB</span>
                             </div>
                             <span className="vault-item-chain-badge">BSC</span>
