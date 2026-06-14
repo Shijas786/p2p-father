@@ -16,6 +16,29 @@ export function SwapModal({ onClose }: SwapModalProps) {
         },
         appearance: 'dark',
         variant: 'compact',
+        theme: {
+            colorSchemes: {
+                dark: {
+                    palette: {
+                        primary: {
+                            main: '#28588A', // Blue button
+                        },
+                        background: {
+                            default: '#121212',
+                            paper: '#1A1A1A',
+                        },
+                    }
+                }
+            },
+            shape: {
+                borderRadius: 12,
+            },
+            container: {
+                border: '1px solid #282828',
+                borderRadius: '16px',
+                boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.4)',
+            }
+        }
     };
 
     return (
