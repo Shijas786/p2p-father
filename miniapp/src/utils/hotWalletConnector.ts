@@ -1,12 +1,12 @@
 import { createConnector } from 'wagmi';
-import { getAddress, createPublicClient, http } from 'viem';
+import { getAddress, numberToHex, SwitchChainError } from 'viem';
 import { base, bsc } from 'viem/chains';
 import { api } from '../lib/api';
 
+const SUPPORTED_CHAINS = [base, bsc];
+
 export function hotWalletConnector() {
   return createConnector((config) => {
-    const baseClient = createPublicClient({ chain: base, transport: http() });
-    
     let currentChainId = 8453; // Default to base
     let botAddress: string | null = null;
 
@@ -22,14 +22,17 @@ export function hotWalletConnector() {
       request: async ({ method, params }: any) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
           const addr = await getBotAddress();
-          return [addr];
+          return [getAddress(addr)];
         }
         if (method === 'eth_chainId') {
-          return `0x${currentChainId.toString(16)}`;
+          return numberToHex(currentChainId);
         }
         if (method === 'wallet_switchEthereumChain') {
           const chainIdHex = params[0].chainId;
-          currentChainId = parseInt(chainIdHex, 16);
+          const newChainId = parseInt(chainIdHex, 16);
+          const isSupported = SUPPORTED_CHAINS.some(c => c.id === newChainId);
+          if (!isSupported) throw new SwitchChainError(new Error(`Chain ${newChainId} not supported`));
+          currentChainId = newChainId;
           config.emitter.emit('change', { chainId: currentChainId });
           return null;
         }
@@ -43,7 +46,7 @@ export function hotWalletConnector() {
 
           const res = await api.wallet.executeRawTransaction({
             to: tx.to,
-            data: tx.data,
+            data: tx.data || '0x',
             value: tx.value ? BigInt(tx.value).toString() : "0",
             chainId
           });
@@ -87,7 +90,9 @@ export function hotWalletConnector() {
         
         return { accounts: accounts.map(getAddress), chainId: currentChainId };
       },
-      async disconnect() {},
+      async disconnect() {
+        config.emitter.emit('disconnect');
+      },
       async getAccounts() {
         const accounts = await provider.request({ method: 'eth_accounts' });
         return accounts.map(getAddress);
@@ -100,6 +105,15 @@ export function hotWalletConnector() {
       },
       async isAuthorized() {
         return true;
+      },
+      async switchChain({ chainId }: { chainId: number }) {
+        const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
+        if (!chain) throw new SwitchChainError(new Error(`Chain ${chainId} not supported`));
+        
+        currentChainId = chainId;
+        config.emitter.emit('change', { chainId });
+        
+        return chain;
       },
       onAccountsChanged(accounts) {
         if (accounts.length === 0) config.emitter.emit('disconnect');
