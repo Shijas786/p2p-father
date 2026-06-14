@@ -309,7 +309,7 @@ export function Wallet({ user }: Props) {
             if (!switched) return;
 
             const isBsc = vaultChain === 'bsc';
-            const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+            const gasPrice = undefined;
 
             showToast(`Approving ${vaultToken} in wallet...`, 'info');
             const approveHash = await writeContractAsync({
@@ -382,7 +382,7 @@ export function Wallet({ user }: Props) {
 
                 const parsedAmount = parseUnits(vaultAmount, vaultDecimals);
                 const isBsc = vaultChain === 'bsc';
-                const gasPrice = isBsc ? parseUnits('0.1', 9) : undefined;
+                const gasPrice = undefined;
 
                 if (showVaultAction === 'deposit') {
                     setVaultSuccess('Deposit pending...');
@@ -405,7 +405,7 @@ export function Wallet({ user }: Props) {
                         abi: ESCROW_ABI,
                         functionName: 'withdraw',
                         args: [vaultTokenAddress as `0x${string}`, parsedAmount],
-                        gasPrice: isBsc ? parseUnits('0.1', 9) : undefined,
+                        gasPrice: undefined,
                         gas: isBsc ? 500000n : undefined
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
