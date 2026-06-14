@@ -13,11 +13,24 @@ const metadata = {
 
 import { hotWalletConnector } from '../utils/hotWalletConnector';
 
+import { http } from 'wagmi';
+
 // Create Wagmi adapter for Reown
 export const wagmiAdapter = new WagmiAdapter({
     projectId,
     networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     connectors: [hotWalletConnector()],
+    transports: {
+        [mainnet.id]: http('https://eth.llamarpc.com'),
+        [base.id]: http('https://mainnet.base.org'),
+        [bsc.id]: http('https://bsc-dataseed.binance.org'),
+        [polygon.id]: http('https://polygon-rpc.com'),
+        [arbitrum.id]: http('https://arb1.arbitrum.io/rpc'),
+        [optimism.id]: http('https://mainnet.optimism.io'),
+        [avalanche.id]: http('https://api.avax.network/ext/bc/C/rpc'),
+        [linea.id]: http('https://rpc.linea.build'),
+        [scroll.id]: http('https://rpc.scroll.io'),
+    }
 });
 
 // Bitget Wallet IDs (WalletConnect explorer)
