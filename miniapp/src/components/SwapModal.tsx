@@ -42,8 +42,20 @@ export function SwapModal({ onClose }: SwapModalProps) {
     };
 
     return (
-        <div className="deposit-modal-overlay animate-in" onClick={onClose} style={{ zIndex: 9999 }}>
-            <div className="deposit-modal-container slide-up" onClick={e => e.stopPropagation()} style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="deposit-modal-overlay animate-in" onClick={onClose} style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+            <div className="deposit-modal-container" onClick={e => e.stopPropagation()} style={{ 
+                padding: 0, 
+                overflow: 'hidden',
+                position: 'relative',
+                bottom: 'auto',
+                width: '100%',
+                maxWidth: '440px',
+                borderRadius: '16px',
+                height: 'auto',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
                 <div className="deposit-modal-header" style={{ padding: '20px 20px 10px 20px', borderBottom: 'none' }}>
                     <div className="deposit-modal-title">Swap & Bridge</div>
                     <button className="icon-btn-rounded" onClick={onClose}>
