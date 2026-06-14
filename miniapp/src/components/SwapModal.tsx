@@ -1,12 +1,16 @@
 import React from 'react';
 import { IconX } from './Icons';
 import { LiFiWidget, WidgetConfig } from '@lifi/widget';
+import { useAccount } from 'wagmi';
 
 interface SwapModalProps {
     onClose: () => void;
 }
 
 export function SwapModal({ onClose }: SwapModalProps) {
+    const { chainId, address, isConnected, connector } = useAccount();
+    console.log('[SwapModal] Wagmi state:', { address, isConnected, connector: connector?.id });
+
     const widgetConfig: WidgetConfig = {
         apiKey: '2c32a108-e9b8-4563-a59a-b58a2a3264da.ecf7206c-86cd-438c-bea0-4f66a553c504',
         integrator: 'p2pfather',
@@ -20,9 +24,7 @@ export function SwapModal({ onClose }: SwapModalProps) {
             poweredBy: true,
             walletMenu: true,
         },
-        walletConfig: {
-            usePartialWalletManagement: true,
-        },
+        ...(chainId && { fromChain: chainId }),
         theme: {
             colorSchemes: {
                 dark: {
