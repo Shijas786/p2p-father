@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { env } from "../config/env";
-import type { User, Order, Trade, PaymentProof } from "../types";
+import type { User, Order, Trade, PaymentProof, AdminDisputeResolution } from "../types";
 
 class Database {
     private client: SupabaseClient | null = null;
@@ -763,6 +763,15 @@ class Database {
             total_fees_amount: fees,
             active_disputes: disputes.count || 0,
         };
+    }
+
+    async logDisputeResolution(resolution: Omit<AdminDisputeResolution, "id" | "created_at">): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db.from("admin_dispute_resolutions").insert(resolution);
+        if (error) {
+            console.error(`[DB] Failed to log dispute resolution: ${error.message}`);
+            throw new Error(`Failed to log dispute resolution: ${error.message}`);
+        }
     }
 }
 

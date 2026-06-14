@@ -233,3 +233,20 @@ export interface TradeMessage {
     // Joined data
     username?: string;
 }
+
+export interface AdminDisputeResolution {
+    id: string;
+    trade_id: string | null;
+    admin_user_id: string | null;
+    admin_telegram_id: number;
+    seller_id: string | null;
+    buyer_id: string | null;
+    amount: number;
+    token: string;
+    chain: string;
+    released_to: 'buyer' | 'seller';
+    tx_hash: string | null;
+    dispute_reason: string | null;
+    created_at: string;
+}
+
