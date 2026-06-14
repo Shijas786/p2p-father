@@ -471,6 +471,9 @@ export function Wallet({ user }: Props) {
         BSC: <IconChainBsc size={12} />,
     };
 
+    // ── Chain name → sendChain key mapping (used for balance lookup + send) ──
+    const chainMap2: Record<string, 'base' | 'bsc' | 'polygon'> = { Base: 'base', BSC: 'bsc', Polygon: 'polygon' };
+
     // ── Live token list built from API balances ──
     // Approximate prices (good enough for display — no price API needed)
     const PRICES: Record<string, number> = {
@@ -543,9 +546,11 @@ export function Wallet({ user }: Props) {
                             key={i}
                             onClick={() => {
                                 setSendToken(asset.symbol);
+                                // CRITICAL: set the chain so the send goes to the right network
+                                const chainMap: Record<string, 'base' | 'bsc' | 'polygon'> = { 'Base': 'base', 'BSC': 'bsc', 'Polygon': 'polygon' };
+                                setSendChain(chainMap[asset.chain] ?? 'base');
                                 setChainFilter('All');
                                 setShowSearchOverlay(false);
-                                // stay on Send view after picking a token
                             }}
                         >
                             <div className="token-list-item-left">
@@ -596,7 +601,7 @@ export function Wallet({ user }: Props) {
                                     onClick={() => {
                                         const factor = pct === '50%' ? 0.5 : pct === '75%' ? 0.75 : pct === 'Max' ? 1.0 : 0.25;
                                         const tokenBalance = parseFloat(
-                                            staticAssets.find(a => a.symbol === sendToken)?.balance || '0'
+                                            staticAssets.find(a => a.symbol === sendToken && (chainMap2[a.chain] ?? 'base') === sendChain)?.balance || '0'
                                         );
                                         setSendAmount((tokenBalance * factor).toFixed(6));
                                     }}
@@ -617,6 +622,7 @@ export function Wallet({ user }: Props) {
                         <div className="token-selector-pill" onClick={() => setShowSearchOverlay(true)}>
                             {tokenIcons[sendToken] || <IconTokenETH size={24} />}
                             <span className="token-selector-symbol" style={{ marginLeft: 6 }}>{sendToken}</span>
+                            <span style={{ marginLeft: 2, fontSize: 10, color: '#848e9c' }}>({sendChain.toUpperCase()})</span>
                             <span style={{ marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}><IconArrowDown size={14} /></span>
                         </div>
                     </div>
@@ -626,7 +632,7 @@ export function Wallet({ user }: Props) {
                             <span>${(parseFloat(sendAmount || '0') * (PRICES[sendToken] ?? 1)).toFixed(2)}</span>
                             <span style={{ marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}><IconSwap size={14} /></span>
                         </div>
-                        <span>{(parseFloat(staticAssets.find(a => a.symbol === sendToken)?.balance || '0')).toFixed(6)} {sendToken} available</span>
+                        <span>{(parseFloat(staticAssets.find(a => a.symbol === sendToken && (chainMap2[a.chain] ?? 'base') === sendChain)?.balance || '0')).toFixed(6)} {sendToken} available ({sendChain.toUpperCase()})</span>
                     </div>
 
                     <div className="send-card-divider" />
