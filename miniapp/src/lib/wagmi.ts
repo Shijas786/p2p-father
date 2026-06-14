@@ -11,10 +11,13 @@ const metadata = {
     icons: ['https://p2pfather.com/favicon.ico'],
 };
 
+import { hotWalletConnector } from '../utils/hotWalletConnector';
+
 // Create Wagmi adapter for Reown
 export const wagmiAdapter = new WagmiAdapter({
     projectId,
     networks: [base, bsc],
+    connectors: [hotWalletConnector()],
 });
 
 // Bitget Wallet IDs (WalletConnect explorer)

@@ -3,16 +3,26 @@ import { getAddress, createPublicClient, http } from 'viem';
 import { base, bsc } from 'viem/chains';
 import { api } from '../lib/api';
 
-export function hotWalletConnector(botAddress: string) {
+export function hotWalletConnector() {
   return createConnector((config) => {
     const baseClient = createPublicClient({ chain: base, transport: http() });
     
     let currentChainId = 8453; // Default to base
+    let botAddress: string | null = null;
+
+    const getBotAddress = async () => {
+      if (botAddress) return botAddress;
+      const res = await api.wallet.getBalances();
+      if (!res.address) throw new Error("Could not fetch bot address");
+      botAddress = res.address;
+      return botAddress;
+    };
 
     const provider = {
       request: async ({ method, params }: any) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
-          return [botAddress];
+          const addr = await getBotAddress();
+          return [addr];
         }
         if (method === 'eth_chainId') {
           return `0x${currentChainId.toString(16)}`;

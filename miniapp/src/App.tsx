@@ -6,7 +6,6 @@ import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
-import { hotWalletConnector } from './utils/hotWalletConnector';
 
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
@@ -126,13 +125,17 @@ function AppInner() {
 
   // Auto-connect Hot Wallet if mode is bot
   useEffect(() => {
-    if (walletMode === 'bot' && user?.wallet_address && user?.wallet_type === 'bot') {
-      if (!isConnected || connector?.id !== 'hotWallet') {
-        const hwConnector = hotWalletConnector(user.wallet_address);
-        connect({ connector: hwConnector });
+    if (walletMode === 'bot' && user?.wallet_type === 'bot') {
+      const hotWallet = connectors.find(c => c.id === 'hotWallet');
+      if (hotWallet && !isConnected && !connecting) {
+        console.log('[P2P] Attempting to connect hot wallet...');
+        connect({ connector: hotWallet }, {
+          onSuccess: () => console.log('[P2P] Hot wallet connected successfully!'),
+          onError: (err) => console.error('[P2P] Hot wallet connection failed:', err)
+        });
       }
     }
-  }, [walletMode, isConnected, connector, user, connect]);
+  }, [walletMode, isConnected, connecting, user, connect, connectors]);
 
   // Only auto-skip selector for returning EXTERNAL wallet users
   // Bot wallet users always see the selector so they can switch to WalletConnect
