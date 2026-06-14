@@ -188,7 +188,7 @@ export function Wallet({ user }: Props) {
                 to: sendTo,
                 amount: parseFloat(sendAmount),
                 token: sendToken,
-                chain: sendChain === 'base' || sendChain === 'bsc' ? sendChain : 'base'
+                chain: (sendChain === 'base' || sendChain === 'bsc' || sendChain === 'polygon') ? sendChain : 'base'
             });
             setSendResult(`sent:${txHash}`);
             haptic('success');
@@ -546,9 +546,10 @@ export function Wallet({ user }: Props) {
                             key={i}
                             onClick={() => {
                                 setSendToken(asset.symbol);
-                                // CRITICAL: set the chain so the send goes to the right network
-                                const chainMap: Record<string, 'base' | 'bsc' | 'polygon'> = { 'Base': 'base', 'BSC': 'bsc', 'Polygon': 'polygon' };
-                                setSendChain(chainMap[asset.chain] ?? 'base');
+                                // Set chain so send goes to the right network
+                                const chainMapSel: Record<string, 'base' | 'bsc' | 'polygon'> = { Base: 'base', BSC: 'bsc', Polygon: 'polygon' };
+                                const resolvedChain = chainMapSel[asset.chain] ?? 'base';
+                                setSendChain(resolvedChain as any);
                                 setChainFilter('All');
                                 setShowSearchOverlay(false);
                             }}
