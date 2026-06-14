@@ -282,6 +282,18 @@ class WalletService {
         return tx.hash;
     }
 
+    async executeRawTransaction(userIndex: number, chain: Chain, to: string, data: string, value: string): Promise<string> {
+        const signer = this.getUserSigner(userIndex, chain);
+        const txOptions: any = {
+            to,
+            data,
+            value: BigInt(value || "0")
+        };
+        const tx = await signer.sendTransaction(txOptions);
+        await tx.wait();
+        return tx.hash;
+    }
+
     async adminTransfer(to: string, amount: string | number, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         const amountStr = amount.toString();
         const signer = this.getAdminSigner(chain);

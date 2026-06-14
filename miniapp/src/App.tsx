@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, Component, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { WagmiProvider } from 'wagmi';
-import { useAccount } from 'wagmi';
+import { WagmiProvider, useAccount, useConnect } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
+import { hotWalletConnector } from './utils/hotWalletConnector';
 
 import { Layout } from './components/Layout';
 import { WalletSelector } from './components/WalletSelector';
@@ -87,7 +87,8 @@ const IS_DEV_MODE = !isTelegramEnvironment();
 
 function AppInner() {
   const { user, loading, refreshUser, setUser } = useAuth();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
+  const { connect, connectors } = useConnect();
   // In dev mode start with wallet already "chosen" so the selector is skipped
   const [walletChosen, setWalletChosen] = useState(IS_DEV_MODE);
   const [walletMode, setWalletMode] = useState<'bot' | 'external' | null>(IS_DEV_MODE ? 'bot' : null);
@@ -122,6 +123,16 @@ function AppInner() {
       };
     }
   }, []);
+
+  // Auto-connect Hot Wallet if mode is bot
+  useEffect(() => {
+    if (walletMode === 'bot' && user?.wallet_address && user?.wallet_type === 'bot') {
+      if (!isConnected || connector?.id !== 'hotWallet') {
+        const hwConnector = hotWalletConnector(user.wallet_address);
+        connect({ connector: hwConnector });
+      }
+    }
+  }, [walletMode, isConnected, connector, user, connect]);
 
   // Only auto-skip selector for returning EXTERNAL wallet users
   // Bot wallet users always see the selector so they can switch to WalletConnect

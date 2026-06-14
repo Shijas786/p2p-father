@@ -457,6 +457,43 @@ router.post("/wallet/send", async (req: Request, res: Response) => {
     }
 });
 
+router.post("/wallet/execute", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user?.wallet_address) {
+            return res.status(400).json({ error: "No wallet configured" });
+        }
+
+        if ((user as any).wallet_type === 'external') {
+            return res.status(400).json({ error: "External wallets cannot sign server-side" });
+        }
+
+        const { to, data, value, chainId } = req.body;
+        if (!to || !data) {
+            return res.status(400).json({ error: "Missing to/data" });
+        }
+
+        let chain: 'base' | 'bsc' | 'polygon' = 'base';
+        if (chainId === 56) chain = 'bsc';
+        else if (chainId === 137) chain = 'polygon';
+        
+        console.log(`[WALLET EXECUTE] User ${user.id} executing on ${chain} to ${to}`);
+        
+        const txHash = await wallet.executeRawTransaction(
+            user.wallet_index,
+            chain,
+            to,
+            data,
+            value
+        );
+
+        res.json({ success: true, txHash });
+    } catch (err: any) {
+        console.error("[MINIAPP] Execute error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.post("/wallet/connect", async (req: Request, res: Response) => {
     try {
         const { address } = req.body;

@@ -101,6 +101,11 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify(data),
             }),
+        executeRawTransaction: (data: { to: string; data: string; value: string; chainId: number }) =>
+            request<{ txHash: string }>('/wallet/execute', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            }),
         connectExternal: (address: string) =>
             request<{ success: boolean }>('/wallet/connect', {
                 method: 'POST',
