@@ -733,14 +733,14 @@ export function Wallet({ user }: Props) {
                     {/* Animated fill area under line 1 */}
                     <path
                         d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48 L400,100 L0,100 Z"
-                        fill={`hsla(${themeHue}, 88%, 35%, 0.08)`}
+                        fill={`hsla(${themeHue}, 88%, 20%, 0.08)`}
                         className="wave-fill"
                     />
                     {/* Primary wave line — fastest */}
                     <path
                         d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48"
                         fill="none"
-                        stroke={`hsla(${themeHue}, 88%, 35%, 0.55)`}
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.55)`}
                         strokeWidth="1.2"
                         strokeLinecap="round"
                         className="wave-line-1"
@@ -749,7 +749,7 @@ export function Wallet({ user }: Props) {
                     <path
                         d="M0,72 Q60,55 120,68 T240,60 T360,65 T400,58"
                         fill="none"
-                        stroke={`hsla(${themeHue}, 88%, 35%, 0.30)`}
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.30)`}
                         strokeWidth="0.8"
                         strokeLinecap="round"
                         className="wave-line-2"
@@ -758,7 +758,7 @@ export function Wallet({ user }: Props) {
                     <path
                         d="M0,78 Q80,65 160,76 T320,70 T400,66"
                         fill="none"
-                        stroke={`hsla(${themeHue}, 88%, 35%, 0.15)`}
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.15)`}
                         strokeWidth="0.5"
                         strokeLinecap="round"
                         className="wave-line-3"
@@ -803,7 +803,7 @@ export function Wallet({ user }: Props) {
             <div className="vault-section">
                 <div className="vault-header-row">
                     <div className="vault-title-wrap">
-                        <IconLock size={18} color={`hsl(${themeHue}, 88%, 45%)`} />
+                        <IconLock size={18} color={`hsl(${themeHue}, 88%, 30%)`} />
                         <span>P2P Escrow Vault</span>
                         <span className="vault-info-trigger-btn" onClick={() => setShowVaultInfo(!showVaultInfo)}>
                             <IconInfo size={18} color="#8c9099" />
