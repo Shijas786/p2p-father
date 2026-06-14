@@ -37,6 +37,13 @@ const envSchema = z.object({
     MASTER_WALLET_SEED: z.string().default(""),
     BASE_RPC_URL: z.string().default("https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
     BSC_RPC_URL: z.string().default("https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    POLYGON_RPC_URL: z.string().default("https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    MAINNET_RPC_URL: z.string().default("https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    ARBITRUM_RPC_URL: z.string().default("https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    OPTIMISM_RPC_URL: z.string().default("https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    AVALANCHE_RPC_URL: z.string().default("https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    LINEA_RPC_URL: z.string().default("https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
+    SCROLL_RPC_URL: z.string().default("https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
     USDC_ADDRESS: addressSchema.default("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
     USDT_ADDRESS: addressSchema.default("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"), // Axelar Wrapped USDT
 

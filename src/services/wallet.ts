@@ -29,17 +29,16 @@ class WalletService {
     private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
         if (!this.providers[chain]) {
             let url = env.BASE_RPC_URL;
-            const ALCHEMY_KEY = 'ALCHEMY_API_KEY_PLACEHOLDER';
             switch (chain) {
-                case 'base': url = env.BASE_RPC_URL; break; // usually https://base-mainnet.g.alchemy.com/v2/...
+                case 'base': url = env.BASE_RPC_URL; break;
                 case 'bsc': url = env.BSC_RPC_URL; break;
-                case 'polygon': url = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'mainnet': url = `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'arbitrum': url = `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'optimism': url = `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'avalanche': url = `https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'linea': url = `https://linea-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
-                case 'scroll': url = `https://scroll-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`; break;
+                case 'polygon': url = env.POLYGON_RPC_URL; break;
+                case 'mainnet': url = env.MAINNET_RPC_URL; break;
+                case 'arbitrum': url = env.ARBITRUM_RPC_URL; break;
+                case 'optimism': url = env.OPTIMISM_RPC_URL; break;
+                case 'avalanche': url = env.AVALANCHE_RPC_URL; break;
+                case 'linea': url = env.LINEA_RPC_URL; break;
+                case 'scroll': url = env.SCROLL_RPC_URL; break;
             }
             this.providers[chain] = new ethers.JsonRpcProvider(url);
         }
