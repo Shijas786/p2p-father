@@ -6,8 +6,8 @@
   --text-primary: #ffffff;
   --text-secondary: #8c9099;
   --text-muted: #5d6168;
-  --color-green: #065f46;
-  --color-green-bg: rgba(6, 95, 70, 0.14);
+  --color-green: hsl(var(--theme-hue), 88%, 35%);
+  --color-green-bg: hsla(var(--theme-hue), 88%, 35%, 0.14);
   --color-red: #ef4444;
   --color-blue: #0052ff;
   --color-blue-hover: #0045d8;
@@ -32,10 +32,10 @@
 /* ════ Header / Total Balance Card ════ */
 .wallet-header-card {
   position: relative;
-  background: rgba(6, 95, 70, 0.07);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.07);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(6, 95, 70, 0.22);
+  border: 1px solid hsla(var(--theme-hue), 88%, 35%, 0.22);
   border-top: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 12px;
   padding: 24px;
@@ -183,8 +183,8 @@
 }
 
 .action-card-btn.active {
-  border-color: rgba(6, 95, 70, 0.4);
-  box-shadow: 0 0 20px rgba(6, 95, 70, 0.2), inset 0 1px 0 rgba(255,255,255,0.12);
+  border-color: hsla(var(--theme-hue), 88%, 35%, 0.4);
+  box-shadow: 0 0 20px hsla(var(--theme-hue), 88%, 35%, 0.2), inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
 .action-card-icon {
@@ -210,7 +210,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   padding: 12px;
-  background: rgba(6, 95, 70, 0.04);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.04);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   margin-bottom: 16px;
@@ -269,7 +269,7 @@
 }
 
 .vault-btn.topup:hover {
-  background: rgba(6, 95, 70, 0.2);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.2);
 }
 
 .vault-btn.withdraw {
@@ -347,14 +347,27 @@
 .vault-item-chain-badge {
   font-size: 9px;
   font-weight: 600;
-  color: var(--color-green);
-  background: rgba(6, 95, 70, 0.15);
-  border: 1px solid rgba(6, 95, 70, 0.25);
   padding: 2px 5px;
   border-radius: 4px;
   align-self: flex-start;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+.vault-item-chain-badge.base {
+  color: #60a5fa; /* light blue for dark mode glow */
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  text-shadow: 0 0 5px rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+.vault-item-chain-badge.bsc {
+  color: #fbbf24; /* yellow/gold for dark mode glow */
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  text-shadow: 0 0 5px rgba(251, 191, 36, 0.8);
+  box-shadow: 0 0 8px rgba(217, 119, 6, 0.4);
 }
 
 .vault-item-balance {
@@ -765,9 +778,9 @@ input:checked + .switch-slider:before {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(6, 95, 70, 0.12);
-  border: 1px solid rgba(6, 95, 70, 0.3);
-  color: #065f46;
+  background: hsla(var(--theme-hue), 88%, 35%, 0.12);
+  border: 1px solid hsla(var(--theme-hue), 88%, 35%, 0.3);
+  color: hsl(var(--theme-hue), 88%, 35%);
   font-size: 12px;
   font-weight: 600;
   padding: 5px 10px;
@@ -853,7 +866,7 @@ input:checked + .switch-slider:before {
 .contact-item:hover { background: var(--bg-card-hover); }
 .contact-item.selected {
   border-color: var(--color-green);
-  background: rgba(6, 95, 70, 0.07);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.07);
 }
 .contact-avatar {
   width: 36px;
@@ -1136,8 +1149,8 @@ input:checked + .switch-slider:before {
 }
 
 .token-btn.active {
-  background: rgba(6, 95, 70, 0.08);
-  border-color: rgba(6, 95, 70, 0.3);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.08);
+  border-color: hsla(var(--theme-hue), 88%, 35%, 0.3);
 }
 
 .token-btn.active .token-btn-symbol {
@@ -1237,7 +1250,7 @@ input:checked + .switch-slider:before {
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
-  background: rgba(6, 95, 70, 0.85);
+  background: hsla(var(--theme-hue), 88%, 35%, 0.85);
   backdrop-filter: blur(12px);
   color: #fff;
   font-size: 13px;

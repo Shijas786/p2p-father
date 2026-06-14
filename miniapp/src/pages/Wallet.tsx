@@ -47,6 +47,7 @@ interface Props {
 
 export function Wallet({ user }: Props) {
     const [balances, setBalances] = useState<any>(null);
+    const [themeHue, setThemeHue] = useState(160);
 
     // Overlays
     const [showSend, setShowSend] = useState(false);
@@ -137,6 +138,7 @@ export function Wallet({ user }: Props) {
     const config = useConfig();
 
     useEffect(() => {
+        setThemeHue(Math.floor(Math.random() * 360));
         loadBalances();
     }, []);
 
@@ -719,7 +721,7 @@ export function Wallet({ user }: Props) {
     }
 
     return (
-        <div className="page wallet-page animate-in">
+        <div className="page wallet-page animate-in" style={{ '--theme-hue': themeHue } as React.CSSProperties}>
             {/* Coming Soon Toast */}
             {showComingSoon && (
                 <div className="coming-soon-toast">🚀 Coming Soon</div>
@@ -731,14 +733,14 @@ export function Wallet({ user }: Props) {
                     {/* Animated fill area under line 1 */}
                     <path
                         d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48 L400,100 L0,100 Z"
-                        fill="rgba(6, 95, 70, 0.08)"
+                        fill={`hsla(${themeHue}, 88%, 35%, 0.08)`}
                         className="wave-fill"
                     />
                     {/* Primary wave line — fastest */}
                     <path
                         d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48"
                         fill="none"
-                        stroke="rgba(6, 95, 70, 0.55)"
+                        stroke={`hsla(${themeHue}, 88%, 35%, 0.55)`}
                         strokeWidth="1.2"
                         strokeLinecap="round"
                         className="wave-line-1"
@@ -747,7 +749,7 @@ export function Wallet({ user }: Props) {
                     <path
                         d="M0,72 Q60,55 120,68 T240,60 T360,65 T400,58"
                         fill="none"
-                        stroke="rgba(6, 95, 70, 0.30)"
+                        stroke={`hsla(${themeHue}, 88%, 35%, 0.30)`}
                         strokeWidth="0.8"
                         strokeLinecap="round"
                         className="wave-line-2"
@@ -756,7 +758,7 @@ export function Wallet({ user }: Props) {
                     <path
                         d="M0,78 Q80,65 160,76 T320,70 T400,66"
                         fill="none"
-                        stroke="rgba(6, 95, 70, 0.15)"
+                        stroke={`hsla(${themeHue}, 88%, 35%, 0.15)`}
                         strokeWidth="0.5"
                         strokeLinecap="round"
                         className="wave-line-3"
@@ -801,7 +803,7 @@ export function Wallet({ user }: Props) {
             <div className="vault-section">
                 <div className="vault-header-row">
                     <div className="vault-title-wrap">
-                        <IconLock size={18} color="#10b981" />
+                        <IconLock size={18} color={`hsl(${themeHue}, 88%, 45%)`} />
                         <span>P2P Escrow Vault</span>
                         <span className="vault-info-trigger-btn" onClick={() => setShowVaultInfo(!showVaultInfo)}>
                             <IconInfo size={18} color="#8c9099" />
@@ -831,7 +833,7 @@ export function Wallet({ user }: Props) {
                                 <div className="vault-item-icon"><IconTokenUSDC size={20} /></div>
                                 <span className="vault-item-symbol">USDC</span>
                             </div>
-                            <span className="vault-item-chain-badge">Base</span>
+                            <span className="vault-item-chain-badge base">Base</span>
                         </div>
                         <div className="vault-item-balance">{parseFloat(vaultBaseUsdc).toFixed(2)}</div>
                         <div className="vault-item-fiat">≈ ${parseFloat(vaultBaseUsdc).toFixed(2)}</div>
@@ -843,7 +845,7 @@ export function Wallet({ user }: Props) {
                                 <div className="vault-item-icon"><IconTokenUSDT size={20} /></div>
                                 <span className="vault-item-symbol">USDT</span>
                             </div>
-                            <span className="vault-item-chain-badge">Base</span>
+                            <span className="vault-item-chain-badge base">Base</span>
                         </div>
                         <div className="vault-item-balance">{parseFloat(vaultBaseUsdt).toFixed(2)}</div>
                         <div className="vault-item-fiat">≈ ${parseFloat(vaultBaseUsdt).toFixed(2)}</div>
@@ -855,7 +857,7 @@ export function Wallet({ user }: Props) {
                                 <div className="vault-item-icon"><IconTokenUSDC size={20} /></div>
                                 <span className="vault-item-symbol">USDC</span>
                             </div>
-                            <span className="vault-item-chain-badge">BSC</span>
+                            <span className="vault-item-chain-badge bsc">BSC</span>
                         </div>
                         <div className="vault-item-balance">{parseFloat(vaultBscUsdc).toFixed(2)}</div>
                         <div className="vault-item-fiat">≈ ${parseFloat(vaultBscUsdc).toFixed(2)}</div>
@@ -867,7 +869,7 @@ export function Wallet({ user }: Props) {
                                 <div className="vault-item-icon"><IconTokenUSDT size={20} /></div>
                                 <span className="vault-item-symbol">USDT</span>
                             </div>
-                            <span className="vault-item-chain-badge">BSC</span>
+                            <span className="vault-item-chain-badge bsc">BSC</span>
                         </div>
                         <div className="vault-item-balance">{parseFloat(vaultBscUsdt).toFixed(2)}</div>
                         <div className="vault-item-fiat">≈ ${parseFloat(vaultBscUsdt).toFixed(2)}</div>
@@ -879,7 +881,7 @@ export function Wallet({ user }: Props) {
                                 <div className="vault-item-icon"><IconTokenBNB size={20} /></div>
                                 <span className="vault-item-symbol">BNB</span>
                             </div>
-                            <span className="vault-item-chain-badge">BSC</span>
+                            <span className="vault-item-chain-badge bsc">BSC</span>
                         </div>
                         <div className="vault-item-balance">{parseFloat(vaultBscBnb).toFixed(4)}</div>
                         <div className="vault-item-fiat">≈ ${parseFloat(vaultBscBnb).toFixed(2)}</div>
