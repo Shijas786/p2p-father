@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { WagmiProvider, useAccount, useConnect } from 'wagmi';
+import { WagmiProvider, useAccount, useConnect, useDisconnect } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig, appKit } from './lib/wagmi';
 import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
@@ -88,6 +88,7 @@ const IS_DEV_MODE = !isTelegramEnvironment();
 function AppInner() {
   const { user, loading, refreshUser, setUser } = useAuth();
   const { address, isConnected, connector } = useAccount();
+  const { disconnect } = useDisconnect();
   const { connect, connectors } = useConnect();
   // In dev mode start with wallet already "chosen" so the selector is skipped
   const [walletChosen, setWalletChosen] = useState(IS_DEV_MODE);
@@ -223,7 +224,12 @@ function AppInner() {
           });
       } else {
         setWalletMode('external');
-        if (isConnected && address) {
+        if (isConnected && connector?.id === 'hotWallet') {
+          console.log('[P2P] Disconnecting hot wallet before opening external...');
+          disconnect();
+          await new Promise(resolve => setTimeout(resolve, 500)); // allow wagmi state to clear
+          await appKit.open();
+        } else if (isConnected && address && connector?.id !== 'hotWallet') {
           setConnecting(true);
           api.wallet.connectExternal(address)
             .then(() => refreshUser())
