@@ -15,6 +15,7 @@
     "@emotion/styled": "^11.14.1",
     "@lifi/wallet-management": "^4.0.0",
     "@lifi/widget": "^4.0.0",
+    "@lifi/widget-provider-ethereum": "^4.0.0",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.1",
     "@reown/appkit": "^1.8.18",

@@ -1,6 +1,7 @@
 import React from 'react';
 import { IconX } from './Icons';
 import { LiFiWidget, WidgetConfig } from '@lifi/widget';
+import { EthereumProvider } from '@lifi/widget-provider-ethereum';
 import { useAccount } from 'wagmi';
 
 interface SwapModalProps {
@@ -23,6 +24,16 @@ export function SwapModal({ onClose }: SwapModalProps) {
         hiddenUI: {
             poweredBy: true,
             walletMenu: true,
+        },
+        providers: [
+            EthereumProvider({
+                disableMessageSigning: true,
+            }),
+        ],
+        walletConfig: {
+            onConnect() {
+                // Already connected via hot wallet
+            },
         },
         ...(chainId && { fromChain: chainId }),
         theme: {
