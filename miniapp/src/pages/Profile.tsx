@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
+import mascotImg from '../assets/mascot.png';
 import './Profile.css';
 import './PfpAnimations.css';
 
@@ -202,7 +203,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     </div>
                     {/* Mascot */}
                     <img 
-                        src="/mascot.png" 
+                        src={mascotImg} 
                         alt="Mascot" 
                         style={{ 
                             position: 'absolute', 
