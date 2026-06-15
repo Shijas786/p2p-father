@@ -5,7 +5,6 @@ import { haptic } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
 import mascotImg from '../assets/mascot.png';
 import './Profile.css';
-import './PfpAnimations.css';
 
 interface Props {
     user: any;
@@ -217,7 +216,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
 
                 {/* Left side: Avatar */}
-                <div className="prof-avatar pfp-anim-13">
+                <div className="prof-avatar">
                     {user?.photo_url ? (
                         <img src={user.photo_url} alt="" className="prof-avatar-img" />
                     ) : (
