@@ -35,7 +35,10 @@ export function SwapModal({ onClose }: SwapModalProps) {
                 // Already connected via hot wallet
             },
         },
-        ...(chainId && { fromChain: chainId }),
+        fromChain: chainId || 137,
+        fromToken: '0x0000000000000000000000000000000000000000', // Default to native token
+        toChain: 137, // Default to Polygon
+        toToken: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // Default to USDT on Polygon
         theme: {
             colorSchemes: {
                 dark: {
