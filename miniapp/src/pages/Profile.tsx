@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
 import './Profile.css';
+import './PfpAnimations.css';
 
 interface Props {
     user: any;
@@ -13,6 +14,12 @@ interface Props {
 
 export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const navigate = useNavigate();
+    const [themeHue, setThemeHue] = useState(160);
+
+    // Randomize theme on mount
+    useEffect(() => {
+        setThemeHue(Math.floor(Math.random() * 360));
+    }, []);
 
     // UPI State
     const [upiInput, setUpiInput] = useState(user?.upi_id || '');
@@ -181,11 +188,35 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     }
 
     return (
-        <div className="page profile-page animate-in">
+        <div className="page profile-page animate-in" style={{ '--theme-hue': themeHue } as React.CSSProperties}>
             {/* ═══ Profile Header ═══ */}
             <div className="prof-header">
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @keyframes shootStar { 0% { transform: translateX(100%); opacity: 1; } 100% { transform: translateX(-100%); opacity: 0; } }
+                    ` }} />
+                    {/* Shooting Stars Background */}
+                    <div style={{ width: '100%', height: '100%' }}>
+                         <div style={{ position: 'absolute', top: '20%', left: '0', width: '30px', height: '1px', background: `hsl(${themeHue}, 88%, 40%)`, animation: 'shootStar 2s infinite' }} />
+                         <div style={{ position: 'absolute', top: '60%', left: '0', width: '40px', height: '1px', background: `hsl(${themeHue}, 88%, 40%)`, animation: 'shootStar 3s infinite 1s' }} />
+                    </div>
+                    {/* Mascot */}
+                    <img 
+                        src="/mascot.png" 
+                        alt="Mascot" 
+                        style={{ 
+                            position: 'absolute', 
+                            bottom: '-25px', /* FIXED GAP for lying down image */
+                            right: '10px', 
+                            height: '110%', 
+                            objectFit: 'contain', 
+                            filter: `drop-shadow(0px 10px 15px rgba(0,0,0,0.5))`
+                        }} 
+                    />
+                </div>
+
                 {/* Left side: Avatar */}
-                <div className="prof-avatar">
+                <div className="prof-avatar pfp-anim-13">
                     {user?.photo_url ? (
                         <img src={user.photo_url} alt="" className="prof-avatar-img" />
                     ) : (
@@ -199,7 +230,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
 
                 {/* Right side: Info & Actions */}
-                <div className="prof-info-col" style={{ flex: 1 }}>
+                <div className="prof-info-col" style={{ flex: 1, position: 'relative', zIndex: 1 }}>
                     <div className="prof-name-row">
                         <h2 className="prof-username">{user?.first_name || 'User'}</h2>
                         {user?.username && <span className="prof-handle">@{user.username}</span>}
