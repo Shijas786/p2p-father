@@ -29,125 +29,117 @@
   box-sizing: border-box;
 }
 
-/* ════ Header / Total Balance Card ════ */
-.wallet-header-card {
+/* ════ Header / Total Balance Card (Glass Premium) ════ */
+.wallet-header-card.glass-premium {
   position: relative;
-  background: hsla(var(--theme-hue), 88%, 20%, 0.07);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid hsla(var(--theme-hue), 88%, 20%, 0.22);
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
+  background: rgba(10, 12, 16, 0.7);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   padding: 24px;
+  border-radius: 16px;
   margin-bottom: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
-.wallet-header-wave {
+.glass-wave-container {
   position: absolute;
-  top: 0;
-  right: 0;
   bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 70%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.glass-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  overflow: visible;
+  animation: waveScroll linear infinite;
+  transform-origin: bottom;
 }
 
-/* Wave fill — breathes gently */
-.wave-fill {
-  animation: waveFill 8s ease-in-out infinite alternate;
-  transform-origin: center bottom;
+.glass-wave-1 {
+  animation-duration: 15s;
+  opacity: 0.8;
 }
 
-/* Primary line — flows fastest */
-.wave-line-1 {
-  stroke-dasharray: 600;
-  stroke-dashoffset: 0;
-  animation: waveDash1 8s linear infinite;
+.glass-wave-2 {
+  animation-duration: 22s;
+  animation-direction: reverse;
+  opacity: 0.6;
+  height: 120%;
 }
 
-/* Secondary line — medium speed */
-.wave-line-2 {
-  stroke-dasharray: 500;
-  stroke-dashoffset: 0;
-  animation: waveDash2 12s linear infinite;
+.glass-wave-3 {
+  animation-duration: 30s;
+  opacity: 0.4;
+  height: 140%;
 }
 
-/* Tertiary line — slowest */
-.wave-line-3 {
-  stroke-dasharray: 400;
-  stroke-dashoffset: 0;
-  animation: waveDash3 18s linear infinite;
+@keyframes waveScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
-@keyframes waveDash1 {
-  0%   { stroke-dashoffset: 600; }
-  100% { stroke-dashoffset: -600; }
+.wallet-card-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-@keyframes waveDash2 {
-  0%   { stroke-dashoffset: 500; }
-  100% { stroke-dashoffset: -500; }
-}
-
-@keyframes waveDash3 {
-  0%   { stroke-dashoffset: -400; }
-  100% { stroke-dashoffset: 400; }
-}
-
-@keyframes waveFill {
-  0%   { opacity: 0.6; transform: scaleY(1); }
-  100% { opacity: 1; transform: scaleY(1.06); }
-}
-
-.wallet-label {
+.wallet-header-card.glass-premium .wallet-label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
-  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
-.wallet-total {
-  font-size: 38px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+.wallet-header-card.glass-premium .wallet-total {
+  font-size: 44px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+  margin-bottom: 2px;
 }
 
-.wallet-subtotal {
+.wallet-header-card.glass-premium .wallet-subtotal {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
-  opacity: 0.85;
 }
 
-.wallet-address-copy-row {
-  display: flex;
+.wallet-address-pill {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 6px 12px;
-  border-radius: 12px;
-  width: fit-content;
+  margin-top: 24px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   cursor: pointer;
-  border: 1px solid var(--border-color);
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.wallet-address-copy-row:hover {
-  background: rgba(255, 255, 255, 0.08);
+.wallet-address-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.wallet-address-copy-text {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--text-secondary);
+.wallet-address-pill .wallet-address-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* ════ Actions Grid ════ */
