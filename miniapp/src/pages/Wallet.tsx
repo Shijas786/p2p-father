@@ -728,31 +728,52 @@ export function Wallet({ user }: Props) {
             )}
 
             {/* Header / Total Balance Card */}
-            <div className="wallet-header-card glass-premium">
-                {/* Premium Glass Wave Animation */}
-                <div className="glass-wave-container">
-                    <svg className="glass-wave glass-wave-1" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                        <path d="M0,50 Q125,100 250,50 T500,50 T750,50 T1000,50 L1000,120 L0,120 Z" fill={`hsla(${themeHue}, 88%, 40%, 0.15)`} />
-                    </svg>
-                    <svg className="glass-wave glass-wave-2" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                        <path d="M0,50 Q125,0 250,50 T500,50 T750,50 T1000,50 L1000,120 L0,120 Z" fill={`hsla(${themeHue}, 88%, 40%, 0.10)`} />
-                    </svg>
-                    <svg className="glass-wave glass-wave-3" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                        <path d="M0,70 Q125,120 250,70 T500,70 T750,70 T1000,70 L1000,120 L0,120 Z" fill={`hsla(${themeHue}, 88%, 40%, 0.05)`} />
-                    </svg>
-                </div>
+            <div className="wallet-header-card">
+                <svg className="wallet-header-wave" viewBox="0 0 400 100" preserveAspectRatio="none">
+                    {/* Animated fill area under line 1 */}
+                    <path
+                        d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48 L400,100 L0,100 Z"
+                        fill={`hsla(${themeHue}, 88%, 20%, 0.08)`}
+                        className="wave-fill"
+                    />
+                    {/* Primary wave line — fastest */}
+                    <path
+                        d="M0,65 Q50,40 100,60 T200,50 T300,58 T400,48"
+                        fill="none"
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.55)`}
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        className="wave-line-1"
+                    />
+                    {/* Secondary wave line — medium */}
+                    <path
+                        d="M0,72 Q60,55 120,68 T240,60 T360,65 T400,58"
+                        fill="none"
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.30)`}
+                        strokeWidth="0.8"
+                        strokeLinecap="round"
+                        className="wave-line-2"
+                    />
+                    {/* Tertiary wave line — slowest */}
+                    <path
+                        d="M0,78 Q80,65 160,76 T320,70 T400,66"
+                        fill="none"
+                        stroke={`hsla(${themeHue}, 88%, 20%, 0.15)`}
+                        strokeWidth="0.5"
+                        strokeLinecap="round"
+                        className="wave-line-3"
+                    />
+                </svg>
 
-                <div className="wallet-card-content">
-                    <div className="wallet-label">TOTAL ASSET VALUE (EST.)</div>
-                    <div className="wallet-total">${totalValue.toFixed(2)}</div>
-                    <div className="wallet-subtotal">≈ ₹{(totalValue * 87).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                <div className="wallet-label">Total Asset Value (Est.)</div>
+                <div className="wallet-total">${totalValue.toFixed(2)}</div>
+                <div className="wallet-subtotal">≈ ₹{(totalValue * 87).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
 
-                    <div className="wallet-address-pill" onClick={copyAddress}>
-                        <IconCopy size={14} color="#8c9099" />
-                        <span className="wallet-address-text">
-                            {((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(0, 6)}...{((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(-4)}
-                        </span>
-                    </div>
+                <div className="wallet-address-copy-row" onClick={copyAddress}>
+                    <IconCopy size={14} color="#8c9099" />
+                    <span className="wallet-address-copy-text" style={{ marginLeft: 6 }}>
+                        {((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(0, 6)}...{((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(-4)}
+                    </span>
                 </div>
             </div>
 
