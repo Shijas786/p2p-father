@@ -158,7 +158,7 @@
     position: absolute;
     top: 36px;
     right: 0;
-    width: 300px;
+    width: 90vw; max-width: 300px;
     background: #1a1b1e;
     border: 1px solid var(--pm-border);
     border-radius: 12px;
@@ -828,7 +828,7 @@
     background: #111419;
     border: 1px solid #23262d;
     border-radius: 12px;
-    width: 320px;
+    width: 100%; max-width: 320px;
     padding: 20px;
     display: flex;
     flex-direction: column;

@@ -204,14 +204,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                     <img 
                         src={mascotImg} 
                         alt="Mascot" 
-                        style={{ 
-                            position: 'absolute', 
-                            bottom: '-14px', 
-                            right: '88px', 
-                            height: '110px', 
-                            objectFit: 'contain', 
-                            filter: `drop-shadow(0px 10px 15px rgba(0,0,0,0.5))`
-                        }} 
+                        className="prof-mascot"
                     />
                 </div>
 
