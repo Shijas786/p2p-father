@@ -359,6 +359,7 @@ export function CreateOrder() {
                 payment_methods: methods,
                 note: note.trim() || undefined,
                 excluded_dealers: excludedDealerUsernames.join(',') || undefined,
+                allowed_dealers: allowedDealerUsernames.join(',') || undefined,
                 expires_in: expiryMinutes,
                 new_traders_only: newTradersOnly,
             });

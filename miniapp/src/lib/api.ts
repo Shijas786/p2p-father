@@ -137,7 +137,9 @@ export const api = {
             payment_methods: string[];
             note?: string;
             excluded_dealers?: string;
+            allowed_dealers?: string;
             expires_in?: number;
+            new_traders_only?: boolean;
         }) =>
             request<{ order: any }>('/orders', {
                 method: 'POST',
