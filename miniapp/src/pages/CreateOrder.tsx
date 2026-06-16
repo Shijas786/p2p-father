@@ -31,8 +31,12 @@ export function CreateOrder() {
     const [note, setNote] = useState('');
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [excludedDealerUsernames, setExcludedDealerUsernames] = useState<string[]>([]);
+    const [allowedDealerUsernames, setAllowedDealerUsernames] = useState<string[]>([]);
     const [expiryMinutes, setExpiryMinutes] = useState(60); // 1 hour default
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [dealerSelectionMode, setDealerSelectionMode] = useState<'exclude' | 'allow' | null>(null);
+    const [isAdvancedSettingsExpanded, setIsAdvancedSettingsExpanded] = useState(false);
+    const [excludeSearchQuery, setExcludeSearchQuery] = useState('');
+    const [newTradersOnly, setNewTradersOnly] = useState(false);
 
     useEffect(() => {
         api.users.list().then(data => {
@@ -356,6 +360,7 @@ export function CreateOrder() {
                 note: note.trim() || undefined,
                 excluded_dealers: excludedDealerUsernames.join(',') || undefined,
                 expires_in: expiryMinutes,
+                new_traders_only: newTradersOnly,
             });
 
             haptic('success');
@@ -460,11 +465,47 @@ export function CreateOrder() {
                                 <span className="co-input-label">{token}</span>
                             </div>
 
-                            <div className="co-presets-row mb-4">
-                                {['10', '50', '100', '500'].map(p => (
-                                    <button key={p} className="btn-preset-sm" onClick={() => setAmount(p)}>{p}</button>
-                                ))}
-                            </div>
+                            {type === 'sell' && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', marginTop: '-4px' }}>
+                                    <div style={{ 
+                                        fontSize: '11px',
+                                        color: availableBalance < parseFloat(amount || '0') ? 'var(--orange)' : 'var(--text-muted)'
+                                    }}>
+                                        Available: <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+                                            {isExternalUser
+                                                ? formatBal(getExtBalance(token, chain), token === 'BNB' ? 4 : 2)
+                                                : (vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')
+                                            } {token}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {type === 'sell' && (
+                                <div className="flex gap-2 mb-4 mt-2">
+                                    {[25, 50, 75, 100].map(pct => (
+                                        <button 
+                                            key={pct} 
+                                            className="btn-preset-sm flex-1" 
+                                            onClick={() => {
+                                                const val = availableBalance * (pct / 100);
+                                                const formatted = token === 'BNB' ? val.toFixed(4) : val.toFixed(2);
+                                                setAmount(parseFloat(formatted).toString());
+                                            }}
+                                            style={{ 
+                                                fontSize: '11px', 
+                                                padding: '6px 0', 
+                                                background: 'rgba(255,255,255,0.05)', 
+                                                color: 'var(--text-secondary)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '6px'
+                                            }}
+                                        >
+                                            {pct === 100 ? 'MAX' : `${pct}%`}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="co-section-title">{token === 'BNB' ? '5. Total INR' : '5. Rate'}</div>
                             <div className="co-input-group mb-4">
@@ -509,118 +550,7 @@ export function CreateOrder() {
                                 </div>
                             )}
 
-                            {/* Exclude Specific Dealers */}
-                            <div className="co-section-title" style={{ marginTop: '16px' }}>8. Exclude Specific Dealers <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '11px' }}>(optional)</span></div>
-                            <div style={{ position: 'relative', marginBottom: '12px' }}>
-                                <div
-                                    onClick={() => {
-                                        haptic('selection');
-                                        setIsDropdownOpen(!isDropdownOpen);
-                                    }}
-                                    className="co-input-flat"
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '8px 12px',
-                                        fontSize: '12px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        cursor: 'pointer',
-                                        userSelect: 'none'
-                                    }}
-                                >
-                                    <span style={{ color: 'var(--text-muted)' }}>Select dealer...</span>
-                                    <span style={{ fontSize: '10px', opacity: 0.6 }}>{isDropdownOpen ? '▲' : '▼'}</span>
-                                </div>
-
-                                {isDropdownOpen && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        right: 0,
-                                        marginTop: '4px',
-                                        background: '#16161a',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        borderRadius: '8px',
-                                        maxHeight: '130px',
-                                        overflowY: 'auto',
-                                        zIndex: 100,
-                                        boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-                                    }}>
-                                        {allUsers.map(u => {
-                                            const isSelected = excludedDealerUsernames.includes(u.username);
-                                            return (
-                                                <div
-                                                    key={u.id}
-                                                    onClick={() => {
-                                                        haptic('selection');
-                                                        setExcludedDealerUsernames(prev =>
-                                                            prev.includes(u.username) ? prev.filter(x => x !== u.username) : [...prev, u.username]
-                                                        );
-                                                        setIsDropdownOpen(false);
-                                                    }}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        padding: '8px 12px',
-                                                        cursor: 'pointer',
-                                                        background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
-                                                        borderBottom: '1px solid rgba(255,255,255,0.02)',
-                                                        userSelect: 'none'
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        {u.photo_url ? (
-                                                            <img src={u.photo_url} style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} alt="" />
-                                                        ) : (
-                                                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff4d4d, #f43f5e)', color: '#fff', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                {u.username.substring(0, 1).toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                        <span style={{ fontSize: '12px', color: isSelected ? '#ff4d4d' : '#fff', fontWeight: isSelected ? 'bold' : 'normal' }}>@{u.username}</span>
-                                                    </div>
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{u.completed_trades || 0} trades</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                {excludedDealerUsernames.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px', marginBottom: '12px' }}>
-                                        {excludedDealerUsernames.map(username => (
-                                            <button
-                                                key={username}
-                                                type="button"
-                                                onClick={() => {
-                                                    haptic('selection');
-                                                    setExcludedDealerUsernames(prev => prev.filter(x => x !== username));
-                                                }}
-                                                style={{
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    padding: '4px 8px',
-                                                    background: 'transparent',
-                                                    color: '#ff4d4d',
-                                                    border: 'none',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                @{username} ✖
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="co-section-title" style={{ marginTop: '16px' }}>9. Ad Duration</div>
+                            <div className="co-section-title" style={{ marginTop: '16px' }}>8. Ad Duration</div>
                             <div className="co-presets-row mb-2">
                                 {[
                                     { label: '30m', val: 30 },
@@ -641,6 +571,162 @@ export function CreateOrder() {
                             <div className="text-[10px] text-muted mb-2">
                                 Ad will automatically cancel after this time.
                             </div>
+
+                            <div className="co-section-title" style={{ marginTop: '16px' }}>9. Advanced Settings</div>
+                            <div 
+                                onClick={() => { haptic('selection'); setIsAdvancedSettingsExpanded(!isAdvancedSettingsExpanded); }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: isAdvancedSettingsExpanded ? '8px 8px 0 0' : '8px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ fontSize: '14px' }}>⚙️</div>
+                                    <div style={{ fontSize: '13px', fontWeight: 'bold' }}>Advanced Settings</div>
+                                </div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '16px', transform: isAdvancedSettingsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>›</div>
+                            </div>
+                            
+                            {isAdvancedSettingsExpanded && (
+                                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', borderRadius: '0 0 8px 8px', animation: 'slideDown 0.2s ease-out' }}>
+                                    {/* New Traders Only Toggle */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>New Traders Only</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Only 0 trade users</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { haptic('selection'); setNewTradersOnly(!newTradersOnly); }}
+                                            style={{
+                                                background: newTradersOnly ? 'var(--green)' : 'rgba(255,255,255,0.1)',
+                                                color: newTradersOnly ? '#000' : '#fff',
+                                                border: 'none',
+                                                padding: '4px 10px',
+                                                borderRadius: '12px',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {newTradersOnly ? 'ON' : 'OFF'}
+                                        </button>
+                                    </div>
+
+                                    {/* Specific Dealers Only (Whitelist) */}
+                                    <div style={{ paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: allowedDealerUsernames.length > 0 ? '8px' : '0' }}>
+                                            <div>
+                                                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Specific Dealers Only</div>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Only selected users can take this ad</div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => { haptic('selection'); setDealerSelectionMode('allow'); }}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    background: 'rgba(52, 199, 89, 0.1)',
+                                                    border: '1px dashed rgba(52, 199, 89, 0.3)',
+                                                    color: 'var(--green)',
+                                                    borderRadius: '6px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                + Add
+                                            </button>
+                                        </div>
+
+                                        {allowedDealerUsernames.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                                                {allowedDealerUsernames.map(username => (
+                                                    <div
+                                                        key={username}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            padding: '2px 8px',
+                                                            background: 'rgba(52, 199, 89, 0.15)',
+                                                            border: '1px solid rgba(52, 199, 89, 0.3)',
+                                                            borderRadius: '100px',
+                                                            fontSize: '10px',
+                                                            color: 'var(--green)'
+                                                        }}
+                                                    >
+                                                        @{username}
+                                                        <div 
+                                                            onClick={() => setAllowedDealerUsernames(prev => prev.filter(x => x !== username))}
+                                                            style={{ cursor: 'pointer', background: 'rgba(52, 199, 89, 0.2)', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px' }}
+                                                        >
+                                                            ✕
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Exclude Specific Dealers */}
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: excludedDealerUsernames.length > 0 ? '8px' : '0' }}>
+                                            <div>
+                                                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Block Dealers</div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => { haptic('selection'); setDealerSelectionMode('exclude'); }}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    background: 'rgba(255, 69, 58, 0.1)',
+                                                    border: '1px dashed rgba(255, 69, 58, 0.3)',
+                                                    color: '#ff453a',
+                                                    borderRadius: '6px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                + Add
+                                            </button>
+                                        </div>
+
+                                        {excludedDealerUsernames.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                                                {excludedDealerUsernames.map(username => (
+                                                    <div
+                                                        key={username}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            padding: '2px 8px',
+                                                            background: 'rgba(255, 69, 58, 0.15)',
+                                                            border: '1px solid rgba(255, 69, 58, 0.3)',
+                                                            borderRadius: '100px',
+                                                            fontSize: '10px',
+                                                            color: '#ff453a'
+                                                        }}
+                                                    >
+                                                        @{username}
+                                                        <div 
+                                                            onClick={() => setExcludedDealerUsernames(prev => prev.filter(x => x !== username))}
+                                                            style={{ cursor: 'pointer', background: 'rgba(255,69,58,0.2)', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px' }}
+                                                        >
+                                                            ✕
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Summary & Vault */}
@@ -674,30 +760,7 @@ export function CreateOrder() {
                             </div>
                         )}
 
-                        {type === 'sell' && (
-                            <div
-                                className="co-vault-box mb-3"
-                                style={{
-                                    padding: '8px 12px',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255, 255, 255, 0.03)',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                                    boxShadow: 'none'
-                                }}
-                            >
-                                <div className="flex justify-between items-center text-[10px]">
-                                    <span className="text-muted uppercase">
-                                        {isExternalUser ? 'External Wallet Balance' : 'Vault Balance'}
-                                    </span>
-                                    <span className={availableBalance < parseFloat(amount || '0') ? 'text-orange' : 'text-secondary'} style={{ color: availableBalance < parseFloat(amount || '0') ? 'var(--orange)' : 'var(--text-secondary)', fontWeight: 'bold' }}>
-                                        {isExternalUser
-                                            ? formatBal(getExtBalance(token, chain), token === 'BNB' ? 4 : 2)
-                                            : (vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')
-                                        } {token}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
+
 
                         <div className="flex gap-2 mt-4">
                             <button className="btn btn-secondary flex-1" onClick={() => setStep(1)}>⬅️ Back</button>
@@ -752,6 +815,103 @@ export function CreateOrder() {
             {error && (
                 <div className="co-error-banner animate-shake mt-4">
                     <span>⚠️</span> {error}
+                </div>
+            )}
+            
+            {/* Dealers Search Full Screen Modal */}
+            {dealerSelectionMode !== null && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 999999,
+                    background: 'var(--bg-main)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}>
+                    <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{dealerSelectionMode === 'exclude' ? 'Block Dealers' : 'Allow Specific Dealers'}</div>
+                        <button onClick={() => setDealerSelectionMode(null)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '14px', fontWeight: 'bold' }}>Done</button>
+                    </div>
+                    
+                    <div style={{ padding: '12px 16px' }}>
+                        <input 
+                            type="text" 
+                            placeholder="Search username..." 
+                            value={excludeSearchQuery}
+                            onChange={e => setExcludeSearchQuery(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '12px 16px',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '12px',
+                                color: '#fff',
+                                outline: 'none',
+                                fontSize: '14px'
+                            }}
+                        />
+                    </div>
+                    
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px' }}>
+                        {allUsers.filter(u => u.username.toLowerCase().includes(excludeSearchQuery.toLowerCase())).map(u => {
+                            const isSelected = dealerSelectionMode === 'exclude' 
+                                ? excludedDealerUsernames.includes(u.username)
+                                : allowedDealerUsernames.includes(u.username);
+                            
+                            const activeColor = dealerSelectionMode === 'exclude' ? '#ff453a' : 'var(--green)';
+
+                            return (
+                                <div
+                                    key={u.id}
+                                    onClick={() => {
+                                        haptic('selection');
+                                        if (dealerSelectionMode === 'exclude') {
+                                            setExcludedDealerUsernames(prev =>
+                                                prev.includes(u.username) ? prev.filter(x => x !== u.username) : [...prev, u.username]
+                                            );
+                                        } else {
+                                            setAllowedDealerUsernames(prev =>
+                                                prev.includes(u.username) ? prev.filter(x => x !== u.username) : [...prev, u.username]
+                                            );
+                                        }
+                                    }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '16px 0',
+                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        {u.photo_url ? (
+                                            <img src={u.photo_url} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                                        ) : (
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff4d4d, #f43f5e)', color: '#fff', fontSize: '16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {u.username.substring(0, 1).toUpperCase()}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <div style={{ fontSize: '15px', color: isSelected ? activeColor : '#fff', fontWeight: isSelected ? 'bold' : 'normal' }}>@{u.username}</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{u.completed_trades || 0} trades</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        border: `2px solid ${isSelected ? activeColor : 'rgba(255,255,255,0.2)'}`,
+                                        background: isSelected ? activeColor : 'transparent',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        transition: 'all 0.2s ease'
+                                    }}>
+                                        {isSelected && <span style={{ color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </div>

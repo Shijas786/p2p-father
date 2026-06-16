@@ -208,7 +208,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                             position: 'absolute', 
                             bottom: '-25px', /* FIXED GAP for lying down image */
                             right: '10px', 
-                            height: '110%', 
+                            height: '90%', 
                             objectFit: 'contain', 
                             filter: `drop-shadow(0px 10px 15px rgba(0,0,0,0.5))`
                         }} 

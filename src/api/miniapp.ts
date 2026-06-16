@@ -761,7 +761,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers, new_traders_only } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -866,7 +866,8 @@ router.post("/orders", async (req: Request, res: Response) => {
                 group_id: group_id ? parseInt(group_id.toString()) : undefined,
                 note: note ? note.toString().slice(0, 200) : undefined,
                 excluded_dealers: resolvedDealerIds,
-                excluded_usernames: excludedUsernames
+                excluded_usernames: excludedUsernames,
+                new_traders_only: !!new_traders_only
             },
         });
 
@@ -992,6 +993,15 @@ router.post("/trades", async (req: Request, res: Response) => {
             if (isExcluded) {
                 return res.status(400).json({
                     error: "This order is not available to you. The creator has restricted access for your account."
+                });
+            }
+        }
+
+        // Check if the order is restricted to new traders only
+        if (order.payment_details?.new_traders_only) {
+            if ((user.completed_trades || 0) > 0) {
+                return res.status(400).json({
+                    error: "This order is restricted to new traders only (0 completed trades)."
                 });
             }
         }

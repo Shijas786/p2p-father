@@ -242,6 +242,11 @@ export function Home({ user }: Props) {
 
                                         <div className="p2p-action-section">
                                             <div className="p2p-methods">
+                                                {order.payment_details?.new_traders_only && (
+                                                    <span className="p2p-method-tag" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                                        🌱 NEW TRADERS
+                                                    </span>
+                                                )}
                                                 {(order.payment_methods || []).map((m: string) => (
                                                     <span key={m} className="p2p-method-tag">{m}</span>
                                                 ))}
@@ -327,6 +332,12 @@ export function Home({ user }: Props) {
                                 <div style={{ margin: '10px 0 4px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '10px', padding: '10px 12px' }}>
                                     <div style={{ fontSize: '9px', color: '#eab308', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>📝 Trader's Note</div>
                                     <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>{confirmOrder.payment_details.note}</div>
+                                </div>
+                            )}
+                            {confirmOrder.payment_details?.new_traders_only && (
+                                <div style={{ margin: '10px 0 4px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', padding: '10px 12px' }}>
+                                    <div style={{ fontSize: '9px', color: '#3b82f6', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>🌱 New Traders Only</div>
+                                    <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>This ad is restricted to users with 0 completed trades.</div>
                                 </div>
                             )}
                             <div className="p2p-modal-actions">

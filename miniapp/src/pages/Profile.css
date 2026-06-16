@@ -56,19 +56,7 @@
     z-index: 1;
 }
 
-.prof-avatar::before {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    border-top-color: hsla(var(--theme-hue), 88%, 60%, 1);
-    border-bottom-color: hsla(var(--theme-hue), 88%, 60%, 1);
-    border-left-color: rgba(255, 255, 255, 0.8);
-    border-right-color: rgba(255, 255, 255, 0.8);
-    animation: pfpSpinSlow 12s linear infinite;
-    pointer-events: none;
-}
+
 
 @keyframes pfpSpinSlow {
     0% { transform: rotate(0deg); }
