@@ -206,7 +206,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         alt="Mascot" 
                         style={{ 
                             position: 'absolute', 
-                            bottom: '-25px', /* FIXED GAP for lying down image */
+                            bottom: '-40px', /* FIXED GAP for lying down image */
                             right: '10px', 
                             height: '90%', 
                             objectFit: 'contain', 
