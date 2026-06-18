@@ -66,3 +66,11 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* ── Hide Reown branding from AppKit modal ── */
+wui-ux-by-reown,
+w3m-legal-footer,
+wui-text[variant="tiny-500"]:has(+ wui-icon[name="reown"]),
+[data-testid="w3m-ux-by-reown"] {
+  display: none !important;
+}

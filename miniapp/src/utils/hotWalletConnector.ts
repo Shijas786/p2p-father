@@ -93,6 +93,7 @@ export function hotWalletConnector() {
       id: 'hotWallet',
       name: 'P2PFather Hot Wallet',
       type: 'hotWallet',
+      icon: '/favicon.png',
       async connect({ chainId } = {}) {
         if (chainId) currentChainId = chainId;
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
