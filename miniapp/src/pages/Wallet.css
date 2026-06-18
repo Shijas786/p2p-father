@@ -6,8 +6,6 @@
   --text-primary: #ffffff;
   --text-secondary: #8c9099;
   --text-muted: #5d6168;
-  --color-green: hsl(var(--theme-hue), 88%, 20%);
-  --color-green-bg: hsla(var(--theme-hue), 88%, 20%, 0.14);
   --color-red: #ef4444;
   --color-blue: #0052ff;
   --color-blue-hover: #0045d8;
@@ -21,6 +19,8 @@
 }
 
 .wallet-page {
+  --color-green: hsl(var(--theme-hue), 88%, 45%);
+  --color-green-bg: hsla(var(--theme-hue), 88%, 45%, 0.14);
   background-color: var(--bg-main);
   color: var(--text-primary);
   min-height: 100vh;
@@ -832,6 +832,10 @@ input:checked + .switch-slider:before {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.2s;
+}
+.contact-cancel-btn:active {
+  transform: scale(0.96);
 }
 .contact-save-btn {
   background: var(--color-green);
@@ -842,9 +846,14 @@ input:checked + .switch-slider:before {
   padding: 8px 18px;
   border-radius: 8px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
-.contact-save-btn:hover { opacity: 0.85; }
+.contact-save-btn:hover {
+  opacity: 0.85;
+}
+.contact-save-btn:active {
+  transform: scale(0.96);
+}
 
 /* Contacts list */
 .contacts-list {
@@ -1235,13 +1244,19 @@ input:checked + .switch-slider:before {
   transition: all 0.2s;
 }
 
-.modal-action-btn:hover {
-  background: #34d399;
+.modal-action-btn:hover:not(:disabled) {
+  background: hsl(var(--theme-hue), 88%, 55%);
+}
+
+.modal-action-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .modal-action-btn:disabled {
-  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ═══ Coming Soon Toast ═══ */
