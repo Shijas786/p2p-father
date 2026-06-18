@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
-import mascotImg from '../assets/mascot.png';
 import './Profile.css';
 
 interface Props {
@@ -200,12 +199,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                          <div style={{ position: 'absolute', top: '20%', left: '0', width: '30px', height: '1px', background: `hsl(${themeHue}, 88%, 40%)`, animation: 'shootStar 2s infinite' }} />
                          <div style={{ position: 'absolute', top: '60%', left: '0', width: '40px', height: '1px', background: `hsl(${themeHue}, 88%, 40%)`, animation: 'shootStar 3s infinite 1s' }} />
                     </div>
-                    {/* Mascot */}
-                    <img 
-                        src={mascotImg} 
-                        alt="Mascot" 
-                        className="prof-mascot"
-                    />
                 </div>
 
                 {/* Left side: Avatar */}
