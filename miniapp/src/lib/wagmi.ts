@@ -37,6 +37,12 @@ export const wagmiAdapter = new WagmiAdapter({
 const METAMASK_WALLET_ID = 'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96';
 const TRUST_WALLET_ID = '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0';
 
+// Wallets to completely block from showing (even as "Recent")
+const EXCLUDED_WALLET_IDS = [
+    '38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662', // Bitget Wallet
+    '21c3a371f72f0057186082edb2ddd43566f7e908508ac3e85373c6d1966ed614', // Bitget Wallet Lite
+];
+
 // Create the AppKit modal
 export const appKit = createAppKit({
     adapters: [wagmiAdapter],
@@ -48,6 +54,7 @@ export const appKit = createAppKit({
         METAMASK_WALLET_ID,
         TRUST_WALLET_ID,
     ],
+    excludedWalletIds: EXCLUDED_WALLET_IDS,
     features: {
         analytics: false,
         email: false,
