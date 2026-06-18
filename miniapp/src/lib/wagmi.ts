@@ -54,7 +54,7 @@ export const appKit = createAppKit({
         METAMASK_WALLET_ID,
         TRUST_WALLET_ID,
     ],
-    excludedWalletIds: EXCLUDED_WALLET_IDS,
+    excludeWalletIds: EXCLUDED_WALLET_IDS,
     features: {
         analytics: false,
         email: false,
