@@ -3065,9 +3065,12 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "Unauthorized" });
 
+        // Resolve active market first
+        const activeMarket = await polymarketService.getActiveBtcMarket().catch(() => null);
+
         // Try reading user snapshot from predictions_cache (Supabase / Redis)
         const cached = await polymarketService.getUserPredictionsCache(user.telegram_id);
-        if (cached && cached.positions) {
+        if (cached && cached.positions && activeMarket && cached.marketSlug === activeMarket.slug) {
             // ✅ Include realizedPnl from cache — previously missing, causing frontend to show $0.00
             return res.json({ positions: cached.positions, realizedPnl: cached.realizedPnl ?? 0 });
         }
@@ -3085,7 +3088,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
             const [tradesRes, positionsRes, market] = await Promise.all([
                 polymarketService.getTradesForProxy(proxyAddress),
                 polymarketService.getPositionsForProxy(proxyAddress).catch(() => []),
-                polymarketService.getActiveBtcMarket()
+                activeMarket ? Promise.resolve(activeMarket) : polymarketService.getActiveBtcMarket()
             ]);
 
             // Auto-claim background check disabled - using manual claim buttons instead
@@ -3563,6 +3566,7 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             realizedPnl: parseFloat(realizedPnl.toFixed(2)),
             depositAddress: proxyAddress,
             unclaimedWinnings,
+            marketSlug: market ? market.slug : null,
             timestamp: Date.now() // Add timestamp for throttling updates
         };
 
@@ -3608,6 +3612,9 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
         // Resolve active market first (almost instant < 5ms due to cache)
         const market = await polymarketService.getActiveBtcMarket().catch(() => null);
 
+        // Check if cache matches current market slug
+        const isCacheValid = cached && market && cached.marketSlug === market.slug;
+
         // Fetch outcome prices, cached history, and current round open price in parallel
         const [[yesPrice, noPrice], parsedHistory, roundOpenPrice] = await Promise.all([
             Promise.all([
@@ -3618,7 +3625,7 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             getCurrentRoundOpenPrice(),
         ]);
 
-        if (cached) {
+        if (isCacheValid) {
             // Serve cached predictions instantly, trigger background refresh only if cache is older than 15 seconds
             const cacheAge = Date.now() - (cached.timestamp || 0);
             if (cacheAge > 15000) {
