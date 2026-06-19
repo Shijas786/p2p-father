@@ -2764,15 +2764,40 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         const betSide = side || "BUY";
         const orderType = req.body.orderType === "LIMIT" ? "LIMIT" : "MARKET";
 
+        let finalAmount = parseFloat(amount);
+        if (betSide === "SELL") {
+            try {
+                const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
+                if (proxyAddress) {
+                    const positionsData = await polymarketService.getPositionsForProxy(proxyAddress).catch(() => []);
+                    const activePos = positionsData.find((p: any) => (p.asset || "").toLowerCase() === tokenId.toLowerCase());
+                    if (activePos && parseFloat(activePos.size) > 0) {
+                        const maxShares = parseFloat(activePos.size);
+                        // If requested amount exceeds maxShares, or is very close to it (within 0.01), clamp it to maxShares
+                        if (finalAmount > maxShares || Math.abs(finalAmount - maxShares) < 0.01) {
+                            console.log(`[MINIAPP] Clamping sell amount from ${finalAmount} to actual on-chain shares ${maxShares}`);
+                            finalAmount = maxShares;
+                        }
+                    }
+                }
+            } catch (clampErr: any) {
+                console.warn("[MINIAPP] Failed to auto-clamp sell amount:", clampErr.message);
+            }
+        }
+
         const result = await polymarketService.placeBet(
             user.wallet_index,
             tokenId,
-            parseFloat(amount),
+            finalAmount,
             limitPrice,
             betSide,
             orderType,
             market.conditionId
         );
+
+        if (result && result.error) {
+            throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
+        }
 
         // Optimistically insert trade into our DB for instant history feedback
         try {
@@ -2797,8 +2822,8 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
                 outcome: outcome === 'UP' || outcome === 'YES' ? 'UP' : 'DOWN',
                 side: betSide,
                 price: limitPrice,
-                shares: parseFloat(amount) / limitPrice,
-                cost_usdc: parseFloat(amount),
+                shares: betSide === "SELL" ? finalAmount : finalAmount / limitPrice,
+                cost_usdc: betSide === "SELL" ? finalAmount * limitPrice : finalAmount,
                 traded_at: new Date().toISOString()
             });
             console.log(`[MINIAPP] Optimistically inserted trade ${clobTradeId} for user ${user.telegram_id}`);
@@ -2816,7 +2841,7 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         try {
             await db.getClient().from("miniapp_trades").insert({
                 telegram_id: user.telegram_id,
-                amount: parseFloat(amount),
+                amount: betSide === "SELL" ? finalAmount * limitPrice : finalAmount,
                 side: betSide,
             });
         } catch (dbErr: any) {
@@ -2895,7 +2920,7 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
             CopyTradingService.triggerCopyTrades(
                 user.telegram_id,
                 tokenId,
-                parseFloat(amount),
+                finalAmount,
                 limitPrice,
                 outcome,
                 betSide
@@ -3261,7 +3286,7 @@ router.get("/predictions/positions", async (req: Request, res: Response) => {
                     const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
                     return {
                         outcome: p.outcome,
-                        qty: parseFloat(p.qty.toFixed(2)),
+                        qty: parseFloat(p.qty.toFixed(6)),
                         avg: parseFloat(p.avgPrice.toFixed(2)),
                         currentPrice: parseFloat(effectivePrice.toFixed(2)),
                         value: parseFloat(value.toFixed(2)),
@@ -3483,7 +3508,7 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
                 const returnPct = cost > 0 ? (returnAmt / cost) * 100 : 0;
                 return {
                     outcome: p.outcome,
-                    qty: parseFloat(p.qty.toFixed(2)),
+                    qty: parseFloat(p.qty.toFixed(6)),
                     avg: parseFloat(p.avgPrice.toFixed(2)),
                     currentPrice: parseFloat(effectivePrice.toFixed(2)),
                     value: parseFloat(value.toFixed(2)),

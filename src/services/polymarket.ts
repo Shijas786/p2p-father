@@ -227,6 +227,7 @@ class PolymarketService {
                 funderAddress: depositWallet,
                 signatureType: 3, // POLY_1271
                 creds,
+                throwOnError: true,
             });
         }
 
@@ -238,6 +239,7 @@ class PolymarketService {
                 signer,
                 signatureType: 3, // POLY_1271
                 funderAddress: depositWallet,
+                throwOnError: true,
             });
 
             let newCreds;
