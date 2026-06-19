@@ -302,16 +302,25 @@ class PolymarketService {
         const cacheKey = "btc:active_market";
         const staleCacheKey = "btc:active_market:stale";
 
-        // Try Redis cache first
+        // Try Redis cache first — but ONLY if it matches the current round's slug
         try {
             const cached = await redis.get(cacheKey);
             if (cached) {
-                return JSON.parse(cached);
+                const parsed = JSON.parse(cached);
+                // Validate slug matches current time window. If not, bust immediately.
+                if (parsed && parsed.slug === slug) {
+                    return parsed;
+                } else {
+                    // Round rolled over — delete stale cache so we always fetch the new market
+                    console.log(`[Polymarket] Redis cache slug mismatch (cached: ${parsed?.slug}, expected: ${slug}). Busting cache.`);
+                    await redis.del(cacheKey).catch(() => {});
+                }
             }
         } catch (cacheErr: any) {
             console.warn("[Polymarket] Redis cache read error:", cacheErr.message);
         }
 
+        // In-memory cache: also validate slug matches current round
         if (marketCache[slug] && now - marketCache[slug].timestamp < 5000) {
             try {
                 await this.getOutcomePrice(marketCache[slug].data.yesTokenId);
@@ -321,6 +330,11 @@ class PolymarketService {
                 delete marketCache[slug];
                 return await this.getActiveBtcMarket();
             }
+        }
+
+        // Also clear any in-memory cache entries for old slugs
+        for (const k of Object.keys(marketCache)) {
+            if (k !== slug) delete marketCache[k];
         }
 
         let result: ActiveMarketInfo | null = null;

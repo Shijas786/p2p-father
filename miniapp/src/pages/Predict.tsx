@@ -598,11 +598,11 @@ export function Predict({ user }: Props) {
             polymarketWs.clearPositions();
         }
 
-        // Poll for the next market — auto-transition when it arrives (no tap needed)
+        // Poll for the next market — use force-refresh so we bypass the server cache and detect the new market ASAP
         if (nextMarket) return;
         const interval = setInterval(() => {
-            loadData();
-        }, 5000); // check every 5s instead of 10s for faster transition
+            loadData(true); // force-refresh to detect new market slug immediately from Polymarket
+        }, 2000); // check every 2s for faster transition
 
         return () => clearInterval(interval);
     }, [timeLeft, nextMarket, isHistorical, selectedRound, loadData]);
@@ -644,7 +644,8 @@ export function Predict({ user }: Props) {
         haptic('medium');
         showToast("Refreshing live market...", "info");
         try {
-            const snap = await api.predictions.getSnapshot();
+            // Force refresh=true to bypass the server-side snapshot cache and get new market instantly
+            const snap = await api.predictions.getSnapshot(undefined, true);
             if (snap.market) {
                 const currentMarket = activeMarketRef.current;
                 if (currentMarket && snap.market.slug !== currentMarket.slug) {
@@ -671,7 +672,7 @@ export function Predict({ user }: Props) {
                 }
             }
             // Reload all data
-            await loadData();
+            await loadData(true);
         } catch (e) {
             console.error(e);
             showToast("Failed to refresh live market", "error");
