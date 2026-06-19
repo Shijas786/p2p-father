@@ -3866,7 +3866,7 @@ router.get("/predictions/my-stats", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(telegramUser.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const { data, error } = await db.getClient()
+        let { data, error } = await db.getClient()
             .from("prediction_user_stats")
             .select("*")
             .eq("user_id", user.id)
@@ -3875,25 +3875,63 @@ router.get("/predictions/my-stats", async (req: Request, res: Response) => {
         if (error) throw error;
 
         if (!data) {
-            return res.json({
-                total_trades: 0,
-                total_wins: 0,
-                total_losses: 0,
-                total_wagered: 0,
-                total_payout: 0,
-                realized_pnl: 0,
-                pending_claims: 0
-            });
+            // New user/trader logic: try to resolve proxy address and insert a stats row so it can be synced
+            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(
+                user.wallet_index,
+                (user as any).deposit_wallet_address
+            ).catch(() => null);
+
+            if (proxyAddress) {
+                const supabase = db.getClient();
+                const newRow = {
+                    user_id: user.id,
+                    telegram_id: Number(user.telegram_id),
+                    username: user.username || null,
+                    proxy_address: proxyAddress,
+                    total_trades: 0,
+                    total_wins: 0,
+                    total_losses: 0,
+                    total_wagered: 0,
+                    total_payout: 0,
+                    realized_pnl: 0,
+                    pending_claims: 0,
+                    updated_at: new Date().toISOString()
+                };
+
+                const { data: inserted, error: insertErr } = await supabase
+                    .from("prediction_user_stats")
+                    .insert(newRow)
+                    .select()
+                    .maybeSingle();
+
+                if (!insertErr && inserted) {
+                    data = inserted;
+                } else if (insertErr) {
+                    console.error("[MINIAPP] Failed to insert prediction_user_stats:", insertErr.message);
+                }
+            }
         }
 
-        // Trigger background sync for this user to ensure stats are fresh on next load
-        if (data.proxy_address) {
-            import("../jobs/resolvePredictionTrades").then(({ syncSingleUserStatsFromPolymarket }) => {
-                syncSingleUserStatsFromPolymarket(user.id, Number(user.telegram_id), data.proxy_address).catch(() => {});
-            }).catch(() => {});
+        if (data) {
+            // Trigger background sync for this user to ensure stats are fresh on next load
+            if (data.proxy_address) {
+                import("../jobs/resolvePredictionTrades").then(({ syncSingleUserStatsFromPolymarket }) => {
+                    syncSingleUserStatsFromPolymarket(user.id, Number(user.telegram_id), data.proxy_address).catch(() => {});
+                }).catch(() => {});
+            }
+            return res.json(data);
         }
 
-        return res.json(data);
+        // Fallback for new user with no proxy address yet
+        return res.json({
+            total_trades: 0,
+            total_wins: 0,
+            total_losses: 0,
+            total_wagered: 0,
+            total_payout: 0,
+            realized_pnl: 0,
+            pending_claims: 0
+        });
     } catch (err: any) {
         console.error("[MINIAPP] Error in my-stats:", err.message);
         res.status(500).json({ error: err.message });
