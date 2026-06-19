@@ -829,6 +829,123 @@ class PolymarketService {
             console.warn("[Cache] Failed to clear Redis cache:", e.message);
         }
     }
+
+    /**
+     * Reconciles optimistic trades in prediction_trades table with actual synced trades from Polymarket.
+     * Deletes stale optimistic trades that never matched actual trades (failed/killed orders).
+     */
+    async reconcileAndCleanupTrades(telegramId: number, proxyAddress: string, rawTrades: any[]): Promise<void> {
+        try {
+            if (!rawTrades || rawTrades.length === 0) return;
+
+            const supabase = db.getClient();
+            const now = Date.now();
+            const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const twoMinutesAgo = new Date(now - 2 * 60 * 1000).toISOString();
+
+            // Fetch recent db trades for this user that are not yet resolved
+            const { data: dbTrades, error } = await supabase
+                .from('prediction_trades')
+                .select('*')
+                .eq('telegram_id', telegramId)
+                .gt('traded_at', sevenDaysAgo);
+
+            if (error || !dbTrades || dbTrades.length === 0) return;
+
+            // Map raw trades for easy checking
+            const rawTradesMap = rawTrades.map((t: any) => {
+                const rawOutcome = String(t.outcome || '').toUpperCase();
+                const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
+                const side = (t.side || 'BUY').toUpperCase();
+                const price = parseFloat(t.price ?? '0');
+                const shares = parseFloat(t.size ?? '0');
+                const txHash = t.transactionHash || '';
+                
+                let timestamp = now;
+                if (t.create_time) {
+                    timestamp = new Date(t.create_time).getTime();
+                } else if (t.timestamp) {
+                    const raw = t.timestamp.toString();
+                    timestamp = raw.includes('T') ? new Date(raw).getTime() : parseInt(raw) * 1000;
+                }
+
+                return {
+                    txHash,
+                    conditionId: t.market ?? t.conditionId ?? '',
+                    outcome,
+                    side,
+                    price,
+                    shares,
+                    timestamp
+                };
+            }).filter(t => t.conditionId && t.shares > 0);
+
+            const matchedTxHashes = new Set<string>();
+
+            for (const dbTrade of dbTrades) {
+                // If it already matches a transaction hash in rawTrades, it's reconciled
+                const isAlreadyReconciled = rawTradesMap.some(t => t.txHash === dbTrade.clob_trade_id);
+                if (isAlreadyReconciled) continue;
+
+                // Find a match in rawTrades
+                const match = rawTradesMap.find(t => {
+                    if (matchedTxHashes.has(t.txHash)) return false;
+                    
+                    const isSameCondition = t.conditionId.toLowerCase() === dbTrade.condition_id.toLowerCase();
+                    const isSameSide = t.side === dbTrade.side;
+                    const isSameOutcome = t.outcome === dbTrade.outcome;
+                    
+                    // Allow small float variance (5%)
+                    const isCloseShares = Math.abs(t.shares - parseFloat(dbTrade.shares)) / dbTrade.shares < 0.05;
+                    // Allow up to 5 minutes time variance
+                    const isCloseTime = Math.abs(t.timestamp - new Date(dbTrade.traded_at).getTime()) < 5 * 60 * 1000;
+
+                    return isSameCondition && isSameSide && isSameOutcome && isCloseShares && isCloseTime;
+                });
+
+                if (match) {
+                    console.log(`[Reconcile] Matching optimistic trade ${dbTrade.clob_trade_id} to actual tx ${match.txHash}`);
+                    // Update database record's clob_trade_id to the real transactionHash
+                    const { error: updateErr } = await supabase
+                        .from('prediction_trades')
+                        .update({ clob_trade_id: match.txHash })
+                        .eq('id', dbTrade.id);
+
+                    if (updateErr) {
+                        if (updateErr.message?.includes('duplicate key value') || updateErr.code === '23505') {
+                            // Already exists in DB! Delete this duplicate optimistic trade.
+                            console.log(`[Reconcile] Unique constraint violation: trade ${match.txHash} already exists. Deleting duplicate optimistic trade ${dbTrade.id}`);
+                            await supabase
+                                .from('prediction_trades')
+                                .delete()
+                                .eq('id', dbTrade.id);
+                        } else {
+                            console.warn(`[Reconcile] Failed to update clob_trade_id for trade ${dbTrade.id}:`, updateErr.message);
+                        }
+                    } else {
+                        matchedTxHashes.add(match.txHash);
+                    }
+                } else {
+                    // No match found in Polymarket trades.
+                    // If it is older than 2 minutes, it's a failed/killed/cancelled order. Delete it.
+                    const isStale = new Date(dbTrade.traded_at).getTime() < new Date(twoMinutesAgo).getTime();
+                    if (isStale) {
+                        console.log(`[Reconcile] Deleting stale/unfilled optimistic trade ${dbTrade.clob_trade_id} (Traded At: ${dbTrade.traded_at})`);
+                        const { error: deleteErr } = await supabase
+                            .from('prediction_trades')
+                            .delete()
+                            .eq('id', dbTrade.id);
+
+                        if (deleteErr) {
+                            console.warn(`[Reconcile] Failed to delete stale trade ${dbTrade.id}:`, deleteErr.message);
+                        }
+                    }
+                }
+            }
+        } catch (err: any) {
+            console.error("[Reconcile] Error in reconcileAndCleanupTrades:", err.message);
+        }
+    }
 }
 
 export const polymarketService = new PolymarketService();

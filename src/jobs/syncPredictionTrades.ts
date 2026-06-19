@@ -83,6 +83,9 @@ export async function syncPredictionTrades() {
 
             if (rows.length === 0) continue;
 
+            // Reconcile optimistic/duplicate/stale trades first
+            await polymarketService.reconcileAndCleanupTrades(user.telegram_id, proxyAddress, rawTrades).catch(() => {});
+
             const { error } = await supabase
                 .from('prediction_trades')
                 .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });

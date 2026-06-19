@@ -2830,6 +2830,9 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
                 polymarketService.clearUserCache(proxyAddress);
                 const rawTrades = await polymarketService.getTradesForProxy(proxyAddress).catch(() => []);
                 if (rawTrades && rawTrades.length > 0) {
+                    // Reconcile optimistic trades first
+                    await polymarketService.reconcileAndCleanupTrades(user.telegram_id, proxyAddress, rawTrades);
+
                     const rows = rawTrades.map((t: any) => {
                         const assetLc = (t.asset_id || '').toLowerCase();
                         const rawOutcome = String(t.outcome || '').toUpperCase();
@@ -3434,7 +3437,60 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
                 };
             });
 
-        // Use database as the source of truth for history
+        // Still sync rawTrades from Polymarket to ensure we don't miss anything that happened outside our app
+        try {
+            if (rawTrades && rawTrades.length > 0) {
+                // Reconcile optimistic/duplicate/stale trades first
+                await polymarketService.reconcileAndCleanupTrades(user.telegram_id, proxyAddress, rawTrades);
+
+                const rows = rawTrades.map((t: any) => {
+                    const assetLc = (t.asset_id || '').toLowerCase();
+                    const rawOutcome = String(t.outcome || '').toUpperCase();
+                    const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
+                    const side = (t.side || 'BUY').toUpperCase();
+                    const price = parseFloat(t.price ?? '0');
+                    const shares = parseFloat(t.size ?? '0');
+                    const cost = shares * price;
+
+                    let tradedAt = new Date().toISOString();
+                    if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
+                    else if (t.timestamp) {
+                        const raw = t.timestamp.toString();
+                        tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
+                    }
+
+                    return {
+                        user_id: user.id,
+                        telegram_id: user.telegram_id,
+                        username: user.username,
+                        proxy_address: proxyAddress,
+                        clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
+                        condition_id: t.market ?? t.conditionId ?? '',
+                        token_id: assetLc,
+                        outcome,
+                        side,
+                        price,
+                        shares,
+                        cost_usdc: cost,
+                        traded_at: tradedAt,
+                    };
+                }).filter((r: any) => r.condition_id && r.shares > 0);
+
+                if (rows.length > 0) {
+                    await db.getClient()
+                        .from('prediction_trades')
+                        .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
+                    
+                    // On-demand resolution check
+                    const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
+                    await resolvePredictionTrades();
+                }
+            }
+        } catch (dbSyncErr: any) {
+            console.warn("[MINIAPP] Failed to sync raw trades to DB in snapshot:", dbSyncErr.message);
+        }
+
+        // Use database as the source of truth for history (queried after sync & reconcile)
         const { data: dbTrades } = await db.getClient()
             .from('prediction_trades')
             .select('*')
@@ -3470,54 +3526,6 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
             }
         } catch (dbErr: any) {
             console.warn('[MINIAPP] Failed to fetch realized PNL from DB:', dbErr.message);
-        }
-
-        // Still sync rawTrades from Polymarket to ensure we don't miss anything that happened outside our app
-        try {
-            const rows = rawTrades.map((t: any) => {
-                const assetLc = (t.asset_id || '').toLowerCase();
-                const rawOutcome = String(t.outcome || '').toUpperCase();
-                const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
-                const side = (t.side || 'BUY').toUpperCase();
-                const price = parseFloat(t.price ?? '0');
-                const shares = parseFloat(t.size ?? '0');
-                const cost = shares * price;
-
-                let tradedAt = new Date().toISOString();
-                if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
-                else if (t.timestamp) {
-                    const raw = t.timestamp.toString();
-                    tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
-                }
-
-                return {
-                    user_id: user.id,
-                    telegram_id: user.telegram_id,
-                    username: user.username,
-                    proxy_address: proxyAddress,
-                    clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
-                    condition_id: t.market ?? t.conditionId ?? '',
-                    token_id: assetLc,
-                    outcome,
-                    side,
-                    price,
-                    shares,
-                    cost_usdc: cost,
-                    traded_at: tradedAt,
-                };
-            }).filter((r: any) => r.condition_id && r.shares > 0);
-
-            if (rows.length > 0) {
-                await db.getClient()
-                    .from('prediction_trades')
-                    .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
-                
-                // On-demand resolution check
-                const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
-                await resolvePredictionTrades();
-            }
-        } catch (dbSyncErr: any) {
-            console.warn("[MINIAPP] Failed to sync raw trades to DB in snapshot:", dbSyncErr.message);
         }
 
         const recentTrades = mappedTrades.filter(t => market && t.conditionId === market.conditionId);
