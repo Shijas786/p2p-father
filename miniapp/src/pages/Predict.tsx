@@ -105,7 +105,6 @@ export function Predict({ user }: Props) {
     const [withdrawAmount, setWithdrawAmount]         = useState('');
     const [withdrawRecipient, setWithdrawRecipient]   = useState('');
     const [withdrawLoading, setWithdrawLoading]       = useState(false);
-    const [showNetPositions, setShowNetPositions]     = useState(false);
     const [historyPage, setHistoryPage]               = useState(0);
 
     const chartRef = useRef<HTMLDivElement>(null);
@@ -1203,38 +1202,7 @@ export function Predict({ user }: Props) {
                 <div className="pm-inline-positions">
                     <div className="pm-inline-pos-header">
                         <span className="pm-inline-pos-title">Positions</span>
-                        <button className="pm-view-net-btn" onClick={() => { haptic('light'); setShowNetPositions(v => !v); }} id="btn-view-net">
-                            {showNetPositions ? 'Hide Net' : 'View Net Positions'}
-                        </button>
                     </div>
-                    {showNetPositions && positions.length > 0 && (
-                        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
-                            <div style={{ fontSize: 12, color: '#848e9c', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Net Position Summary</div>
-                            {(['UP', 'DOWN'] as const).map(side => {
-                                const sidePnl = positions.filter(p => p.outcome === side);
-                                if (sidePnl.length === 0) return null;
-                                const totalQty = sidePnl.reduce((s, p) => s + p.qty, 0);
-                                const totalCost = sidePnl.reduce((s, p) => s + p.cost, 0);
-                                const totalValue = sidePnl.reduce((s, p) => s + p.value, 0);
-                                const netReturn = totalValue - totalCost;
-                                return (
-                                    <div key={side} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span className={`pm-pos-outcome-badge ${side === 'UP' ? 'pm-pos-badge-up' : 'pm-pos-badge-down'}`}>{side === 'UP' ? '▲ Up' : '▼ Down'}</span>
-                                            <span className="pm-mono" style={{ color: '#848e9c', fontSize: 12 }}>{totalQty.toFixed(2)} shares</span>
-                                        </span>
-                                        <span className={`pm-mono ${netReturn >= 0 ? 'pm-green' : 'pm-red'}`} style={{ fontWeight: 700 }}>
-                                            {netReturn >= 0 ? '+' : ''}${netReturn.toFixed(2)}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
-                                <span style={{ color: '#848e9c' }}>Total Invested</span>
-                                <span className="pm-mono">${positions.reduce((s, p) => s + p.cost, 0).toFixed(2)}</span>
-                            </div>
-                        </div>
-                    )}
                     {positions.length === 0 ? (
                         <div className="pm-positions-empty">No current position</div>
                     ) : (

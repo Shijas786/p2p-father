@@ -3307,22 +3307,82 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
 
         // Auto-claim background check disabled - using manual claim buttons instead
 
-        // Process positions & trades
+        // 1. Sync rawTrades from Polymarket to DB to ensure we don't miss anything that happened outside our app
+        try {
+            if (rawTrades && rawTrades.length > 0) {
+                // Reconcile optimistic/duplicate/stale trades first
+                await polymarketService.reconcileAndCleanupTrades(user.telegram_id, proxyAddress, rawTrades);
+
+                const rows = rawTrades.map((t: any) => {
+                    const assetLc = (t.asset_id || '').toLowerCase();
+                    const rawOutcome = String(t.outcome || '').toUpperCase();
+                    const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
+                    const side = (t.side || 'BUY').toUpperCase();
+                    const price = parseFloat(t.price ?? '0');
+                    const shares = parseFloat(t.size ?? '0');
+                    const cost = shares * price;
+
+                    let tradedAt = new Date().toISOString();
+                    if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
+                    else if (t.timestamp) {
+                        const raw = t.timestamp.toString();
+                        tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
+                    }
+
+                    return {
+                        user_id: user.id,
+                        telegram_id: user.telegram_id,
+                        username: user.username,
+                        proxy_address: proxyAddress,
+                        clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
+                        condition_id: t.market ?? t.conditionId ?? '',
+                        token_id: assetLc,
+                        outcome,
+                        side,
+                        price,
+                        shares,
+                        cost_usdc: cost,
+                        traded_at: tradedAt,
+                    };
+                }).filter((r: any) => r.condition_id && r.shares > 0);
+
+                if (rows.length > 0) {
+                    await db.getClient()
+                        .from('prediction_trades')
+                        .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
+                    
+                    // On-demand resolution check
+                    const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
+                    await resolvePredictionTrades();
+                }
+            }
+        } catch (dbSyncErr: any) {
+            console.warn("[MINIAPP] Failed to sync raw trades to DB in snapshot:", dbSyncErr.message);
+        }
+
+        // 2. Use database as the source of truth for history (queried after sync & reconcile)
+        const { data: dbTrades } = await db.getClient()
+            .from('prediction_trades')
+            .select('*')
+            .eq('telegram_id', user.telegram_id)
+            .order('traded_at', { ascending: false });
+
+        // 3. Process positions & trades using database trades (so it includes fresh, unindexed trades)
         const yesTokenIdLc = market ? market.yesTokenId.toLowerCase() : "";
         const noTokenIdLc = market ? market.noTokenId.toLowerCase() : "";
 
         const positionMap: Record<string, { outcome: string; asset: string; title?: string; qty: number; totalCost: number; avgPrice: number; currentPrice: number | null }> = {};
         let activeRealizedPnl = 0;
-        const sortedTrades = [...(rawTrades || [])].reverse();
+        const sortedTrades = [...(dbTrades || [])].reverse();
 
         for (const trade of sortedTrades) {
-            const tradeAssetLc = (trade.asset_id || trade.asset || "").toLowerCase();
+            const tradeAssetLc = (trade.token_id || "").toLowerCase();
             const isUp = market ? tradeAssetLc === yesTokenIdLc : false;
             const isDown = market ? tradeAssetLc === noTokenIdLc : false;
             if (!isUp && !isDown) continue;
 
             const key = isUp ? "UP" : "DOWN";
-            const qty = parseFloat(trade.size ?? "0");
+            const qty = parseFloat(trade.shares ?? "0");
             const price = parseFloat(trade.price ?? "0");
             const isSell = trade.side === "SELL";
 
@@ -3330,11 +3390,11 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
                 positionMap[key] = {
                     outcome: isUp ? 'UP' : 'DOWN',
                     asset: tradeAssetLc,
-                    title: trade.title,
+                    title: trade.title || (isUp ? "Bitcoin Price > Strike" : "Bitcoin Price <= Strike"),
                     qty: 0,
                     totalCost: 0,
                     avgPrice: 0,
-                    currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : parseFloat(trade.price ?? "0")),
+                    currentPrice: isUp ? yesPrice?.buyPrice ?? null : (isDown ? noPrice?.buyPrice ?? null : price),
                 };
             }
 
@@ -3361,18 +3421,22 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
 
             if (activePos && parseFloat(activePos.size) > 0 && !activePos.redeemable) {
                 const syncedQty = parseFloat(activePos.size);
-                if (activePos.initialValue !== undefined) {
-                    const initialValue = parseFloat(activePos.initialValue);
-                    positionMap[key].qty = syncedQty;
-                    positionMap[key].totalCost = initialValue;
-                    positionMap[key].avgPrice = initialValue / syncedQty;
-                } else {
-                    const oldQty = positionMap[key].qty;
-                    if (oldQty > 0 && syncedQty !== oldQty) {
-                        positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                // Only overwrite if the synced quantity from Polymarket is larger or if our trade-loop computed quantity is 0
+                // (this protects against the positions API lagging behind the real-time trades API)
+                if (syncedQty > positionMap[key].qty || positionMap[key].qty === 0) {
+                    if (activePos.initialValue !== undefined) {
+                        const initialValue = parseFloat(activePos.initialValue);
+                        positionMap[key].qty = syncedQty;
+                        positionMap[key].totalCost = initialValue;
+                        positionMap[key].avgPrice = initialValue / syncedQty;
+                    } else {
+                        const oldQty = positionMap[key].qty;
+                        if (oldQty > 0 && syncedQty !== oldQty) {
+                            positionMap[key].totalCost = (positionMap[key].totalCost / oldQty) * syncedQty;
+                        }
+                        positionMap[key].qty = syncedQty;
+                        positionMap[key].avgPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
                     }
-                    positionMap[key].qty = syncedQty;
-                    positionMap[key].avgPrice = positionMap[key].qty > 0 ? positionMap[key].totalCost / positionMap[key].qty : 0;
                 }
             } else if (activePos && activePos.redeemable) {
                 positionMap[key].qty = 0;
@@ -3430,66 +3494,6 @@ export async function refreshUserSnapshotCache(user: any, proxyAddress: string):
                 };
             });
 
-        // Still sync rawTrades from Polymarket to ensure we don't miss anything that happened outside our app
-        try {
-            if (rawTrades && rawTrades.length > 0) {
-                // Reconcile optimistic/duplicate/stale trades first
-                await polymarketService.reconcileAndCleanupTrades(user.telegram_id, proxyAddress, rawTrades);
-
-                const rows = rawTrades.map((t: any) => {
-                    const assetLc = (t.asset_id || '').toLowerCase();
-                    const rawOutcome = String(t.outcome || '').toUpperCase();
-                    const outcome = (rawOutcome === 'YES' || rawOutcome === 'UP' || t.outcomeIndex === 0) ? 'UP' : 'DOWN';
-                    const side = (t.side || 'BUY').toUpperCase();
-                    const price = parseFloat(t.price ?? '0');
-                    const shares = parseFloat(t.size ?? '0');
-                    const cost = shares * price;
-
-                    let tradedAt = new Date().toISOString();
-                    if (t.create_time) tradedAt = new Date(t.create_time).toISOString();
-                    else if (t.timestamp) {
-                        const raw = t.timestamp.toString();
-                        tradedAt = raw.includes('T') ? raw : new Date(parseInt(raw) * 1000).toISOString();
-                    }
-
-                    return {
-                        user_id: user.id,
-                        telegram_id: user.telegram_id,
-                        username: user.username,
-                        proxy_address: proxyAddress,
-                        clob_trade_id: t.id ?? t.trade_id ?? t.transactionHash ?? crypto.createHash('md5').update(`${proxyAddress}-${t.conditionId || t.market}-${t.side}-${t.price}-${t.size}-${t.timestamp || t.create_time}`).digest('hex'),
-                        condition_id: t.market ?? t.conditionId ?? '',
-                        token_id: assetLc,
-                        outcome,
-                        side,
-                        price,
-                        shares,
-                        cost_usdc: cost,
-                        traded_at: tradedAt,
-                    };
-                }).filter((r: any) => r.condition_id && r.shares > 0);
-
-                if (rows.length > 0) {
-                    await db.getClient()
-                        .from('prediction_trades')
-                        .upsert(rows, { onConflict: 'clob_trade_id', ignoreDuplicates: true });
-                    
-                    // On-demand resolution check
-                    const { resolvePredictionTrades } = await import("../jobs/resolvePredictionTrades");
-                    await resolvePredictionTrades();
-                }
-            }
-        } catch (dbSyncErr: any) {
-            console.warn("[MINIAPP] Failed to sync raw trades to DB in snapshot:", dbSyncErr.message);
-        }
-
-        // Use database as the source of truth for history (queried after sync & reconcile)
-        const { data: dbTrades } = await db.getClient()
-            .from('prediction_trades')
-            .select('*')
-            .eq('telegram_id', user.telegram_id)
-            .order('traded_at', { ascending: false });
-            
         const mappedTrades = (dbTrades || []).map((t: any) => ({
             id: t.clob_trade_id,
             side: t.side,
