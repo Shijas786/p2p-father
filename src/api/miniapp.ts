@@ -3886,6 +3886,13 @@ router.get("/predictions/my-stats", async (req: Request, res: Response) => {
             });
         }
 
+        // Trigger background sync for this user to ensure stats are fresh on next load
+        if (data.proxy_address) {
+            import("../jobs/resolvePredictionTrades").then(({ syncSingleUserStatsFromPolymarket }) => {
+                syncSingleUserStatsFromPolymarket(user.id, Number(user.telegram_id), data.proxy_address).catch(() => {});
+            }).catch(() => {});
+        }
+
         return res.json(data);
     } catch (err: any) {
         console.error("[MINIAPP] Error in my-stats:", err.message);

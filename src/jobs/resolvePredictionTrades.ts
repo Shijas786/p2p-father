@@ -5,6 +5,7 @@
  */
 import { db } from '../db/client';
 import { ethers } from 'ethers';
+import axios from 'axios';
 
 const CTF_ADDRESS = '0x4d97dcd97ec945f40cf65f87097ace5ea0476045';
 const CTF_ABI = [
@@ -122,5 +123,59 @@ export async function resolvePredictionTrades() {
         }
     }
 
+    // Sync official PnL / Volume from Polymarket
+    await syncPredictionUserStatsFromPolymarket().catch(() => {});
     console.log(`[ResolveTrades] Resolved ${updatedCount} trades.`);
+}
+
+export async function syncSingleUserStatsFromPolymarket(userId: string, telegramId: number, proxyAddress: string) {
+    try {
+        if (!proxyAddress || !proxyAddress.startsWith('0x')) return;
+        const url = `https://data-api.polymarket.com/v1/leaderboard?user=${proxyAddress.toLowerCase()}&timePeriod=ALL`;
+        const res = await axios.get(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            },
+            timeout: 5000
+        });
+
+        const data = res.data;
+        if (Array.isArray(data) && data.length > 0) {
+            const polymarketUser = data[0];
+            const pnl = parseFloat(polymarketUser.pnl || '0');
+            const vol = parseFloat(polymarketUser.vol || '0');
+
+            const supabase = db.getClient();
+            await supabase
+                .from('prediction_user_stats')
+                .update({
+                    realized_pnl: pnl,
+                    total_wagered: vol,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId);
+        }
+    } catch (err: any) {
+        console.warn(`[SyncStats] Failed to sync stats for user ${telegramId}:`, err.message);
+    }
+}
+
+export async function syncPredictionUserStatsFromPolymarket() {
+    const supabase = db.getClient();
+    try {
+        const { data: statsRows } = await supabase
+            .from('prediction_user_stats')
+            .select('user_id, telegram_id, proxy_address');
+
+        if (!statsRows || statsRows.length === 0) return;
+
+        console.log(`[SyncStats] Syncing Polymarket official PnL/Vol for ${statsRows.length} users...`);
+
+        for (const row of statsRows) {
+            await syncSingleUserStatsFromPolymarket(row.user_id, row.telegram_id, row.proxy_address);
+            await new Promise(r => setTimeout(r, 100)); // rate limit
+        }
+    } catch (e: any) {
+        console.error('[SyncStats] Error in syncPredictionUserStatsFromPolymarket:', e.message);
+    }
 }
