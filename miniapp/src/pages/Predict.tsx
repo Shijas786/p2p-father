@@ -130,11 +130,10 @@ export function Predict({ user }: Props) {
         noPriceRef.current = noPrice;
     }, [noPrice]);
 
-    // ── Load all data ───────────────────────────────────────────────────────
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (refresh = false) => {
         setLoading(true);
         try {
-            const snap = await api.predictions.getSnapshot();
+            const snap = await api.predictions.getSnapshot(undefined, refresh);
             
             // Set balance
             if (snap.balance !== undefined) {
@@ -192,12 +191,8 @@ export function Predict({ user }: Props) {
                     if (snap.positions) {
                         const activeBtcMarket = snap.market;
                         if (activeBtcMarket) {
-                            const syncedAssets: string[] = [];
-                            for (const p of snap.positions) {
-                                if (p.outcome === 'UP') syncedAssets.push(activeBtcMarket.yesTokenId);
-                                if (p.outcome === 'DOWN') syncedAssets.push(activeBtcMarket.noTokenId);
-                            }
-                            polymarketWs.syncWithBackend(syncedAssets);
+                            // Yield control to the backend snapshot for both tokens of the active market
+                            polymarketWs.syncWithBackend([activeBtcMarket.yesTokenId, activeBtcMarket.noTokenId]);
                         }
                         
                         // Merge WS positions into data API positions
@@ -815,7 +810,7 @@ export function Predict({ user }: Props) {
                 setBetAmount(''); 
                 
                 // Delay backend fetch to allow relayer to settle funds
-                setTimeout(loadData, 3000);
+                setTimeout(() => loadData(true), 3000);
             }
             else showToast('Failed to place prediction', 'error');
         } catch (e: any) { clearTimeout(slowTimer); showToast(e.message || 'Order failed', 'error'); }

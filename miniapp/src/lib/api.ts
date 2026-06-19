@@ -266,18 +266,24 @@ export const api = {
         getDepositWallet: () => request<{ address: string; evmBridgeAddress?: string }>('/predictions/deposit-wallet'),
         getClobKeys: () => request<{ address: string; apiKey?: string; secret?: string; passphrase?: string }>('/predictions/clob-keys'),
         getBalance: () => request<{ balance: string }>(`/predictions/balance?t=${Date.now()}`),
-        getSnapshot: (telegramId?: string) => request<{
-            balance: string;
-            positions: any[];
-            trades: any[];
-            recentTrades: any[];
-            depositAddress: string;
-            market: any;
-            history: any[];
-            realizedPnl: number;
-            unclaimedWinnings?: number;
-            user?: any;
-        }>(`/predictions/snapshot${telegramId ? `?telegramId=${telegramId}` : ''}`),
+        getSnapshot: (telegramId?: string, refresh?: boolean) => {
+            const queryParams = [];
+            if (telegramId) queryParams.push(`telegramId=${telegramId}`);
+            if (refresh) queryParams.push(`refresh=true`);
+            const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+            return request<{
+                balance: string;
+                positions: any[];
+                trades: any[];
+                recentTrades: any[];
+                depositAddress: string;
+                market: any;
+                history: any[];
+                realizedPnl: number;
+                unclaimedWinnings?: number;
+                user?: any;
+            }>(`/predictions/snapshot${queryString}`);
+        },
         getMarket: () => request<{
             market: any;
             yesPrice: { buyPrice: number; sellPrice: number };

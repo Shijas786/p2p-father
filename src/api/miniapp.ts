@@ -2888,13 +2888,6 @@ router.post("/predictions/bet", async (req: Request, res: Response) => {
         // Clear predictions snapshot cache (Supabase / Redis)
         await polymarketService.clearUserPredictionsCache(user.telegram_id);
 
-        // Pre-warm the cache in the background!
-        try {
-            const proxyAddress = await polymarketRelayerService.resolveDepositWallet(user.wallet_index, (user as any).deposit_wallet_address);
-            if (proxyAddress) {
-                refreshUserSnapshotCache(user, proxyAddress).catch(() => {});
-            }
-        } catch {}
 
         // Trigger copy trading replication for followers in the background
         try {
