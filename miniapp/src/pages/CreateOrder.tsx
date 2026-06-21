@@ -557,7 +557,8 @@ export function CreateOrder() {
                                     { label: '30m', val: 30 },
                                     { label: '1h', val: 60 },
                                     { label: '6h', val: 360 },
-                                    { label: '12h', val: 720 }
+                                    { label: '12h', val: 720 },
+                                    { label: '7d', val: 10080 }
                                 ].map(opt => (
                                     <button
                                         key={opt.val}

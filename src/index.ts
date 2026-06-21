@@ -444,8 +444,8 @@ async function main() {
         });
     });
 
-    server.listen(port, () => {
-        console.log(`  🔗 Website & Health server live on port ${port}`);
+    server.listen(Number(port), '0.0.0.0', () => {
+        console.log(`  🔗 Website & Health server live on port ${port} (0.0.0.0)`);
         console.log(`  🌍 Visit http://localhost:${port} to see the landing page`);
         console.log(`  📡 BTC price WebSocket proxy live at ws://…/ws/btcprice`);
     });
