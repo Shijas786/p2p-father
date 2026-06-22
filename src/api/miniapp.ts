@@ -660,7 +660,7 @@ router.get("/referrals/claim-signature", async (req: Request, res: Response) => 
             name: "P2PFatherReferrals",
             version: "1",
             chainId: 8453, // Base Mainnet
-            verifyingContract: env.REWARD_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000" // Replace with actual address
+            verifyingContract: process.env.REWARD_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000" // Replace with actual address
         };
 
         const types = {
