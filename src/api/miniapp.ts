@@ -208,25 +208,6 @@ router.get("/predictions/orderbook", async (req: Request, res: Response) => {
             }
         };
 
-        // SANITY CHECK: A healthy binary market has YES.buy + NO.buy close to 1.0 (roughly 0.50–1.10).
-        // Two failure modes:
-        //   1. Both too HIGH (e.g. 0.99 + 0.99 = 1.98) — spam asks when MMs briefly pull liquidity
-        //   2. Both too LOW  (e.g. 0.03 + 0.03 = 0.06) — thin book at round-start before MMs post
-        const priceSum = result.yes.buyPrice + result.no.buyPrice;
-        const isAnomalous = priceSum > 1.10 || priceSum < 0.50 || result.yes.buyPrice < 0.10 || result.no.buyPrice < 0.10;
-        if (isAnomalous) {
-            console.warn(`[Orderbook] Anomalous prices detected (yes=${result.yes.buyPrice}, no=${result.no.buyPrice}, sum=${priceSum}). Serving cached data.`);
-            if (_obCache) {
-                // Serve previous known good price
-                _obCache.ts = now; // Update timestamp to avoid immediate refetch
-                return res.json(_obCache.data);
-            } else {
-                // No cache yet — derive from bids if available, else fall back to 0.5
-                result.yes.buyPrice = result.yes.sellPrice > 0.10 ? Math.min(0.98, result.yes.sellPrice + 0.02) : 0.5;
-                result.no.buyPrice = result.no.sellPrice > 0.10 ? Math.min(0.98, result.no.sellPrice + 0.02) : 0.5;
-            }
-        }
-
         _obCache = { data: result, ts: now };
         res.json(result);
     } catch (err: any) {
@@ -288,16 +269,9 @@ router.get("/predictions/market", async (req: Request, res: Response) => {
             }
         };
 
-        let yesPrice = await safeGetPrice(market?.yesTokenId, false);
-        let noPrice = await safeGetPrice(market?.noTokenId, true);
+        const yesPrice = await safeGetPrice(market?.yesTokenId, false);
+        const noPrice = await safeGetPrice(market?.noTokenId, true);
         
-        // SANITY CHECK: prices should sum close to 1.0 (0.50–1.10)
-        const priceSum2 = yesPrice.buyPrice + noPrice.buyPrice;
-        if (priceSum2 > 1.10 || priceSum2 < 0.50 || yesPrice.buyPrice < 0.10 || noPrice.buyPrice < 0.10) {
-            yesPrice.buyPrice = yesPrice.sellPrice > 0.10 ? Math.min(0.98, yesPrice.sellPrice + 0.02) : 0.5;
-            noPrice.buyPrice = noPrice.sellPrice > 0.10 ? Math.min(0.98, noPrice.sellPrice + 0.02) : 0.5;
-        }
-
         res.json({
             market,
             yesPrice,
@@ -638,61 +612,6 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
         res.json({ txHash });
     } catch (err: any) {
         console.error("[MINIAPP] Vault withdraw error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════
-//  REFERRALS
-// ═══════════════════════════════════════════════════════════════
-
-router.get("/referrals/claim-signature", async (req: Request, res: Response) => {
-    try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user) return res.status(401).json({ error: "Unauthorized" });
-
-        const { address } = req.query;
-        if (!address || typeof address !== 'string' || !ethers.isAddress(address)) {
-            return res.status(400).json({ error: "Valid hot wallet address is required" });
-        }
-
-        const stats = await db.getReferralsByReferrer(user.telegram_id);
-        if (stats.qualified < 5) {
-            return res.status(400).json({ error: "You need at least 5 qualified invites to claim rewards." });
-        }
-
-        // Generate EIP-712 Signature
-        const domain = {
-            name: "P2PFatherReferrals",
-            version: "1",
-            chainId: 8453, // Base Mainnet
-            verifyingContract: process.env.REWARD_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000" // Replace with actual address
-        };
-
-        const types = {
-            ClaimReward: [
-                { name: "user", type: "address" },
-                { name: "totalQualifiedInvites", type: "uint256" }
-            ]
-        };
-
-        const value = {
-            user: address,
-            totalQualifiedInvites: stats.qualified
-        };
-
-        const signer = new ethers.Wallet(env.RELAYER_PRIVATE_KEY);
-        const signature = await signer.signTypedData(domain, types, value);
-
-        res.json({
-            success: true,
-            user: address,
-            totalQualifiedInvites: stats.qualified,
-            signature,
-            contractAddress: domain.verifyingContract
-        });
-    } catch (err: any) {
-        console.error("[MINIAPP] Claim signature error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -3705,13 +3624,6 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             getCachedBitcoinHistory(),
             getCurrentRoundOpenPrice(),
         ]);
-
-        // SANITY CHECK: prices should sum close to 1.0 (0.50–1.10)
-        const priceSum3 = yesPrice.buyPrice + noPrice.buyPrice;
-        if (priceSum3 > 1.10 || priceSum3 < 0.50 || yesPrice.buyPrice < 0.10 || noPrice.buyPrice < 0.10) {
-            yesPrice.buyPrice = yesPrice.sellPrice > 0.10 ? Math.min(0.98, yesPrice.sellPrice + 0.02) : 0.5;
-            noPrice.buyPrice = noPrice.sellPrice > 0.10 ? Math.min(0.98, noPrice.sellPrice + 0.02) : 0.5;
-        }
 
         if (isCacheValid) {
             // Serve cached predictions instantly, trigger background refresh only if cache is older than 15 seconds
