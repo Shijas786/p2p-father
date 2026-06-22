@@ -208,17 +208,22 @@ router.get("/predictions/orderbook", async (req: Request, res: Response) => {
             }
         };
 
-        // SANITY CHECK: If market makers temporarily pull liquidity, spam asks (e.g. 0.99) might be the only ones left.
-        // This causes both sides to show 99¢ (sum = 1.98). If sum > 1.10, the book is illiquid.
-        if (result.yes.buyPrice + result.no.buyPrice > 1.10 || result.yes.buyPrice < 0.01 || result.no.buyPrice < 0.01) {
+        // SANITY CHECK: A healthy binary market has YES.buy + NO.buy close to 1.0 (roughly 0.50–1.10).
+        // Two failure modes:
+        //   1. Both too HIGH (e.g. 0.99 + 0.99 = 1.98) — spam asks when MMs briefly pull liquidity
+        //   2. Both too LOW  (e.g. 0.03 + 0.03 = 0.06) — thin book at round-start before MMs post
+        const priceSum = result.yes.buyPrice + result.no.buyPrice;
+        const isAnomalous = priceSum > 1.10 || priceSum < 0.50 || result.yes.buyPrice < 0.10 || result.no.buyPrice < 0.10;
+        if (isAnomalous) {
+            console.warn(`[Orderbook] Anomalous prices detected (yes=${result.yes.buyPrice}, no=${result.no.buyPrice}, sum=${priceSum}). Serving cached data.`);
             if (_obCache) {
                 // Serve previous known good price
                 _obCache.ts = now; // Update timestamp to avoid immediate refetch
                 return res.json(_obCache.data);
             } else {
-                // If no cache, try to derive from bids (sellPrice) if they exist, otherwise fallback to 0.5
-                result.yes.buyPrice = result.yes.sellPrice !== 0.5 ? Math.min(0.99, result.yes.sellPrice + 0.02) : 0.5;
-                result.no.buyPrice = result.no.sellPrice !== 0.5 ? Math.min(0.99, result.no.sellPrice + 0.02) : 0.5;
+                // No cache yet — derive from bids if available, else fall back to 0.5
+                result.yes.buyPrice = result.yes.sellPrice > 0.10 ? Math.min(0.98, result.yes.sellPrice + 0.02) : 0.5;
+                result.no.buyPrice = result.no.sellPrice > 0.10 ? Math.min(0.98, result.no.sellPrice + 0.02) : 0.5;
             }
         }
 
@@ -286,10 +291,11 @@ router.get("/predictions/market", async (req: Request, res: Response) => {
         let yesPrice = await safeGetPrice(market?.yesTokenId, false);
         let noPrice = await safeGetPrice(market?.noTokenId, true);
         
-        // SANITY CHECK: prevent showing 99¢ for both
-        if (yesPrice.buyPrice + noPrice.buyPrice > 1.10 || yesPrice.buyPrice < 0.01 || noPrice.buyPrice < 0.01) {
-            yesPrice.buyPrice = yesPrice.sellPrice !== 0.5 ? Math.min(0.99, yesPrice.sellPrice + 0.02) : 0.5;
-            noPrice.buyPrice = noPrice.sellPrice !== 0.5 ? Math.min(0.99, noPrice.sellPrice + 0.02) : 0.5;
+        // SANITY CHECK: prices should sum close to 1.0 (0.50–1.10)
+        const priceSum2 = yesPrice.buyPrice + noPrice.buyPrice;
+        if (priceSum2 > 1.10 || priceSum2 < 0.50 || yesPrice.buyPrice < 0.10 || noPrice.buyPrice < 0.10) {
+            yesPrice.buyPrice = yesPrice.sellPrice > 0.10 ? Math.min(0.98, yesPrice.sellPrice + 0.02) : 0.5;
+            noPrice.buyPrice = noPrice.sellPrice > 0.10 ? Math.min(0.98, noPrice.sellPrice + 0.02) : 0.5;
         }
 
         res.json({
@@ -3700,10 +3706,11 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             getCurrentRoundOpenPrice(),
         ]);
 
-        // SANITY CHECK: prevent showing 99¢ for both on UI refresh
-        if (yesPrice.buyPrice + noPrice.buyPrice > 1.10 || yesPrice.buyPrice < 0.01 || noPrice.buyPrice < 0.01) {
-            yesPrice.buyPrice = yesPrice.sellPrice !== 0.5 ? Math.min(0.99, yesPrice.sellPrice + 0.02) : 0.5;
-            noPrice.buyPrice = noPrice.sellPrice !== 0.5 ? Math.min(0.99, noPrice.sellPrice + 0.02) : 0.5;
+        // SANITY CHECK: prices should sum close to 1.0 (0.50–1.10)
+        const priceSum3 = yesPrice.buyPrice + noPrice.buyPrice;
+        if (priceSum3 > 1.10 || priceSum3 < 0.50 || yesPrice.buyPrice < 0.10 || noPrice.buyPrice < 0.10) {
+            yesPrice.buyPrice = yesPrice.sellPrice > 0.10 ? Math.min(0.98, yesPrice.sellPrice + 0.02) : 0.5;
+            noPrice.buyPrice = noPrice.sellPrice > 0.10 ? Math.min(0.98, noPrice.sellPrice + 0.02) : 0.5;
         }
 
         if (isCacheValid) {
