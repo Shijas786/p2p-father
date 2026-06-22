@@ -208,6 +208,20 @@ router.get("/predictions/orderbook", async (req: Request, res: Response) => {
             }
         };
 
+        // SANITY CHECK: If market makers temporarily pull liquidity, spam asks (e.g. 0.99) might be the only ones left.
+        // This causes both sides to show 99¢ (sum = 1.98). If sum > 1.10, the book is illiquid.
+        if (result.yes.buyPrice + result.no.buyPrice > 1.10 || result.yes.buyPrice < 0.01 || result.no.buyPrice < 0.01) {
+            if (_obCache) {
+                // Serve previous known good price
+                _obCache.ts = now; // Update timestamp to avoid immediate refetch
+                return res.json(_obCache.data);
+            } else {
+                // If no cache, try to derive from bids (sellPrice) if they exist, otherwise fallback to 0.5
+                result.yes.buyPrice = result.yes.sellPrice !== 0.5 ? Math.min(0.99, result.yes.sellPrice + 0.02) : 0.5;
+                result.no.buyPrice = result.no.sellPrice !== 0.5 ? Math.min(0.99, result.no.sellPrice + 0.02) : 0.5;
+            }
+        }
+
         _obCache = { data: result, ts: now };
         res.json(result);
     } catch (err: any) {
@@ -269,9 +283,15 @@ router.get("/predictions/market", async (req: Request, res: Response) => {
             }
         };
 
-        const yesPrice = await safeGetPrice(market?.yesTokenId, false);
-        const noPrice = await safeGetPrice(market?.noTokenId, true);
+        let yesPrice = await safeGetPrice(market?.yesTokenId, false);
+        let noPrice = await safeGetPrice(market?.noTokenId, true);
         
+        // SANITY CHECK: prevent showing 99¢ for both
+        if (yesPrice.buyPrice + noPrice.buyPrice > 1.10 || yesPrice.buyPrice < 0.01 || noPrice.buyPrice < 0.01) {
+            yesPrice.buyPrice = yesPrice.sellPrice !== 0.5 ? Math.min(0.99, yesPrice.sellPrice + 0.02) : 0.5;
+            noPrice.buyPrice = noPrice.sellPrice !== 0.5 ? Math.min(0.99, noPrice.sellPrice + 0.02) : 0.5;
+        }
+
         res.json({
             market,
             yesPrice,
@@ -612,6 +632,61 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
         res.json({ txHash });
     } catch (err: any) {
         console.error("[MINIAPP] Vault withdraw error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  REFERRALS
+// ═══════════════════════════════════════════════════════════════
+
+router.get("/referrals/claim-signature", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { address } = req.query;
+        if (!address || typeof address !== 'string' || !ethers.isAddress(address)) {
+            return res.status(400).json({ error: "Valid hot wallet address is required" });
+        }
+
+        const stats = await db.getReferralsByReferrer(user.telegram_id);
+        if (stats.qualified < 5) {
+            return res.status(400).json({ error: "You need at least 5 qualified invites to claim rewards." });
+        }
+
+        // Generate EIP-712 Signature
+        const domain = {
+            name: "P2PFatherReferrals",
+            version: "1",
+            chainId: 8453, // Base Mainnet
+            verifyingContract: env.REWARD_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000" // Replace with actual address
+        };
+
+        const types = {
+            ClaimReward: [
+                { name: "user", type: "address" },
+                { name: "totalQualifiedInvites", type: "uint256" }
+            ]
+        };
+
+        const value = {
+            user: address,
+            totalQualifiedInvites: stats.qualified
+        };
+
+        const signer = new ethers.Wallet(env.RELAYER_PRIVATE_KEY);
+        const signature = await signer.signTypedData(domain, types, value);
+
+        res.json({
+            success: true,
+            user: address,
+            totalQualifiedInvites: stats.qualified,
+            signature,
+            contractAddress: domain.verifyingContract
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Claim signature error:", err);
         res.status(500).json({ error: err.message });
     }
 });
