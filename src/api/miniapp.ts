@@ -3700,6 +3700,12 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
             getCurrentRoundOpenPrice(),
         ]);
 
+        // SANITY CHECK: prevent showing 99¢ for both on UI refresh
+        if (yesPrice.buyPrice + noPrice.buyPrice > 1.10 || yesPrice.buyPrice < 0.01 || noPrice.buyPrice < 0.01) {
+            yesPrice.buyPrice = yesPrice.sellPrice !== 0.5 ? Math.min(0.99, yesPrice.sellPrice + 0.02) : 0.5;
+            noPrice.buyPrice = noPrice.sellPrice !== 0.5 ? Math.min(0.99, noPrice.sellPrice + 0.02) : 0.5;
+        }
+
         if (isCacheValid) {
             // Serve cached predictions instantly, trigger background refresh only if cache is older than 15 seconds
             const cacheAge = Date.now() - (cached.timestamp || 0);
