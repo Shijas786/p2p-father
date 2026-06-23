@@ -128,7 +128,15 @@ function AppInner() {
 
   // Auto-connect Hot Wallet if mode is bot
   useEffect(() => {
-    if (walletMode !== 'bot' || isConnected) return;
+    if (walletMode !== 'bot') return;
+    
+    if (isConnected && connector?.id === 'hotWallet') return;
+
+    if (isConnected && connector?.id !== 'hotWallet') {
+      console.log('[P2P] Disconnecting external wallet to switch to hot wallet...');
+      disconnect();
+      return;
+    }
     
     console.log('[P2P] Attempting to connect hot wallet...');
     const hwc = connectors.find(c => c.id === 'hotWallet');
@@ -140,7 +148,7 @@ function AppInner() {
       onSuccess: () => console.log('[P2P] Hot wallet connected successfully!'),
       onError: (err) => console.error('[P2P] Hot wallet connection failed:', err)
     });
-  }, [walletMode, isConnected, connect, connectors]);
+  }, [walletMode, isConnected, connector, connect, connectors, disconnect]);
 
   // Only auto-skip selector for returning EXTERNAL wallet users
   // Bot wallet users always see the selector so they can switch to WalletConnect
@@ -158,7 +166,7 @@ function AppInner() {
 
   // When wagmi detects a connected external wallet, save it to backend
   useEffect(() => {
-    if (walletMode === 'external' && isConnected && address && !savingAddress) {
+    if (walletMode === 'external' && isConnected && address && connector?.id !== 'hotWallet' && !savingAddress) {
       const isMismatch = user && user.wallet_address && address.toLowerCase() !== user.wallet_address.toLowerCase();
 
       if (!walletChosen || isMismatch) {
@@ -186,7 +194,7 @@ function AppInner() {
           });
       }
     }
-  }, [walletMode, isConnected, address, savingAddress, walletChosen, user, refreshUser]);
+  }, [walletMode, isConnected, address, connector, savingAddress, walletChosen, user, refreshUser]);
 
   const handleSwitchWallet = async () => {
     try {

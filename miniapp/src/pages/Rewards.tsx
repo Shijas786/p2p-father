@@ -90,8 +90,8 @@ export function Rewards({ user, onSwitchWallet }: { user: any, onSwitchWallet: (
   return (
     <div className="rewards-page animate-in">
       <div className="rewards-header">
-        <h1 className="rewards-title">Bounty Hub</h1>
-        <p className="rewards-subtitle">Complete quests, invite traders, and earn crypto rewards directly to your wallet.</p>
+        <h1 className="rewards-title">Rewards Hub</h1>
+        <p className="rewards-subtitle">Collect your cut of USDC for recruitments and family missions.</p>
       </div>
 
       <div className="campaign-container">
