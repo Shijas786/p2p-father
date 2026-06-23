@@ -1,0 +1,343 @@
+@import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap');
+
+:root {
+  --bg-page: #0d1117;
+  --text-dark: #1f2739;
+  --text-light: #7c869e;
+  --card-bg: #ebfcf0; /* Light greenish doodle color */
+}
+
+.rewards-page {
+  background: var(--bg-page);
+  color: #fff;
+  min-height: 100vh;
+  padding: 16px 16px 120px 16px; /* Matches standard tab padding */
+  font-family: 'Nunito', -apple-system, sans-serif;
+  max-width: 500px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.rewards-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.rewards-title {
+  font-family: 'Lilita One', cursive;
+  font-size: 28px;
+  margin: 0;
+  color: #ffcc00;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 
+    -1.5px -1.5px 0 #000,
+     1.5px -1.5px 0 #000,
+    -1.5px  1.5px 0 #000,
+     1.5px  1.5px 0 #000,
+     0px  4px 0px #000;
+}
+
+.rewards-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.campaign-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* SUPERCELL STYLE CARD */
+.quest-card {
+  --accent: #54e346;
+  --accent-shadow: #2da122;
+  
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 12px;
+  position: relative;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15), 0 2px 0px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1.5px solid #e0e6ed;
+}
+
+.quest-card.theme-gold {
+  --accent: #ffcc00;
+  --accent-shadow: #cc8800;
+}
+
+.quest-card.theme-cyan {
+  --accent: #00b5ff;
+  --accent-shadow: #0077b3;
+}
+
+.quest-card.theme-purple {
+  --accent: #d854ff;
+  --accent-shadow: #9222b3;
+}
+
+.quest-card.theme-red {
+  --accent: #ff3b3b;
+  --accent-shadow: #b31b1b;
+}
+
+.quest-badge {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  background: #ff3b3b;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-family: 'Lilita One', cursive;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 #000;
+  border: 1.5px solid #000;
+  box-shadow: 0 2px 0 #000;
+  transform: rotate(3deg);
+}
+
+.quest-badge.inactive {
+  background: #9ca3af;
+  border-color: #555;
+  box-shadow: 0 2px 0 #555;
+  text-shadow: none;
+  transform: rotate(0deg);
+}
+
+.quest-title {
+  font-family: 'Lilita One', cursive;
+  font-size: 18px;
+  color: var(--text-dark);
+  margin: 0 0 6px 0;
+  letter-spacing: 0.5px;
+}
+
+.quest-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-family: 'Lilita One', cursive;
+  color: #fff;
+  background: var(--accent);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #000;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 0 var(--accent-shadow);
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+/* Steps */
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #1e293b; /* Dark slate background */
+  padding: 10px;
+  border-radius: 10px;
+  border: 1.5px solid #0f172a;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.step-number {
+  background: var(--accent);
+  color: #fff;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Lilita One', cursive;
+  font-size: 11px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 0 var(--accent-shadow);
+  margin-top: 2px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.step-text {
+  font-size: 11px;
+  color: #cbd5e1; /* Light text */
+  line-height: 1.3;
+  font-weight: 800;
+}
+.step-text strong {
+  color: #f8fafc; /* Even lighter text */
+}
+
+/* Progress */
+.progress-section {
+  margin-top: 12px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 800;
+}
+
+.progress-value {
+  font-family: 'Lilita One', cursive;
+  font-size: 12px;
+  color: var(--text-dark);
+}
+
+.progress-value span {
+  color: var(--accent);
+  text-shadow: 1px 1px 0 #000;
+}
+
+.progress-track {
+  height: 14px;
+  background: #e0e6ed;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  border: 2px solid #cbd5e1;
+}
+
+.progress-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent),
+    var(--accent) 10px,
+    #00ffb3 10px,
+    #00ffb3 20px
+  );
+  background-size: 28px 28px;
+  animation: moveStripes 1s linear infinite;
+  border-radius: 5px;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.15);
+  transition: width 0.3s ease;
+}
+
+@keyframes moveStripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 28px 0; }
+}
+
+/* BIG CHUNKY BUTTONS */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.claim-btn {
+  flex: 1;
+  background: var(--accent);
+  border: 1.5px solid #000;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Lilita One', cursive;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 8px 6px;
+  box-shadow: 0 3px 0 var(--accent-shadow), inset 0 -1.5px 0 rgba(0,0,0,0.1);
+  cursor: pointer;
+  text-shadow: 
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0px  1.5px 0px #000;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.claim-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--accent-shadow), inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.claim-btn.btn-secondary {
+  background: #00b5ff;
+  box-shadow: 0 3px 0 #0077b3, inset 0 -1.5px 0 rgba(0,0,0,0.1);
+}
+.claim-btn.btn-secondary:active:not(:disabled) {
+  box-shadow: 0 0 0 #0077b3, inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.claim-btn:disabled {
+  background: #bdc3c7;
+  color: #fff;
+  border-color: #000;
+  box-shadow: 0 3px 0 #7f8c8d;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+.claim-btn:disabled:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #7f8c8d;
+}
+
+/* Locked / Coming Soon */
+.quest-card.coming-soon {
+  opacity: 0.8;
+  filter: grayscale(0.5);
+}
+
+.tx-error {
+  color: #ff3b3b;
+  font-family: 'Lilita One', cursive;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.tx-hash {
+  color: #54e346;
+  font-family: 'Lilita One', cursive;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+/* Animated Progress Particles */
+.progress-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pp {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  animation: floatRight 3s infinite linear;
+}
+
+.pp.p1 { top: 2px; left: -20px; animation-duration: 4s; }
+.pp.p2 { top: 6px; left: -20px; animation-duration: 5s; animation-delay: 1.5s; width: 10px; }
+.pp.p3 { top: 4px; left: -20px; animation-duration: 3s; animation-delay: 0.5s; width: 12px; }
+
+@keyframes floatRight {
+  0% { transform: translateX(0) scale(0.5) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(500px) scale(1.2) rotate(180deg); opacity: 0; }
+}

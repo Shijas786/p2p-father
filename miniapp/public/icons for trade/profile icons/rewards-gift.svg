@@ -1,0 +1,31 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gift Box Body -->
+  <rect x="16" y="28" width="32" height="24" rx="2" fill="#0a1e38" stroke="#1a4060" stroke-width="2"/>
+  
+  <!-- Vertical Ribbon -->
+  <rect x="28" y="28" width="8" height="24" fill="#1a4060"/>
+  
+  <!-- Gift Box Lid -->
+  <rect x="12" y="20" width="40" height="8" rx="2" fill="#0a2540" stroke="#00e5a0" stroke-width="2" stroke-dasharray="4 2"/>
+  
+  <!-- Vertical Ribbon on Lid -->
+  <rect x="28" y="20" width="8" height="8" fill="#00e5a0"/>
+  
+  <!-- Ribbon Bow (Left and Right loops) -->
+  <path d="M 32 20 C 24 10 16 16 28 20" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 32 20 C 40 10 48 16 36 20" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Star/Sparkle Animation -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="44 14; 44 10; 44 14" dur="2s" repeatCount="indefinite" />
+    <path d="M0 -3 L1 -1 L3 0 L1 1 L0 3 L-1 1 L-3 0 L-1 -1 Z" fill="#ffcc00">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" />
+    </path>
+  </g>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="20 12; 20 8; 20 12" dur="2.5s" repeatCount="indefinite" />
+    <path d="M0 -2 L0.8 -0.8 L2 0 L0.8 0.8 L0 2 L-0.8 0.8 L-2 0 L-0.8 -0.8 Z" fill="#00e5a0">
+      <animate attributeName="opacity" values="0.1;0.8;0.1" dur="2.5s" repeatCount="indefinite" />
+    </path>
+  </g>
+</svg>
