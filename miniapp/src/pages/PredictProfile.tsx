@@ -188,6 +188,16 @@ export function PredictProfile({ user }: Props) {
                         <div className="pm-prof-user-info">
                             <h2>{profileUser?.first_name || profileUser?.username || 'Telegram User'}</h2>
                             <p>Joined {new Date(profileUser?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
+                            {profileUser?.wallet_address && (
+                                <div className="pm-prof-wallet-address" onClick={() => {
+                                    navigator.clipboard.writeText(profileUser.wallet_address);
+                                    showToast("Address copied!", "success");
+                                    haptic('success');
+                                }} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', cursor: 'pointer', color: '#888', fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '6px' }}>
+                                    <span>{profileUser.wallet_address.slice(0, 6)}...{profileUser.wallet_address.slice(-4)}</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </div>
+                            )}
                         </div>
                     </div>
                     
