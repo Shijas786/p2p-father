@@ -3675,7 +3675,8 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                     telegram_id: user.telegram_id,
                     username: user.username,
                     first_name: user.first_name,
-                    created_at: user.created_at
+                    created_at: user.created_at,
+                    wallet_address: user.wallet_address
                 }
             });
         }
