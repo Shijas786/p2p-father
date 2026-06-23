@@ -3620,7 +3620,7 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                     username: user.username,
                     first_name: user.first_name,
                     created_at: user.created_at,
-                    wallet_address: user.wallet_address
+                    wallet_address: ""
                 }
             });
         }
@@ -3676,7 +3676,7 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                     username: user.username,
                     first_name: user.first_name,
                     created_at: user.created_at,
-                    wallet_address: user.wallet_address
+                    wallet_address: cached.depositAddress || proxyAddress
                 }
             });
         }
@@ -3704,7 +3704,7 @@ router.get("/predictions/snapshot", async (req: Request, res: Response) => {
                 username: user.username,
                 first_name: user.first_name,
                 created_at: user.created_at,
-                wallet_address: user.wallet_address
+                wallet_address: fresh.depositAddress || proxyAddress
             }
         });
     } catch (err: any) {
