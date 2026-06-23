@@ -317,9 +317,18 @@ router.post("/auth", async (req: Request, res: Response) => {
             }
         } // Fix: Missing closing brace for the if statement
 
+        // Count qualified invites
+        const supabaseClient = db.getClient();
+        const { count: qualified_invites } = await supabaseClient
+            .from("referrals")
+            .select("*", { count: "exact", head: true })
+            .eq("referrer_telegram_id", tgUser.id)
+            .eq("status", "completed");
+
         res.json({
             user: {
                 ...user,
+                qualified_invites: qualified_invites || 0,
                 is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id)),
                 admin_ids: env.ADMIN_IDS
             }
@@ -3934,6 +3943,64 @@ router.get("/predictions/my-stats", async (req: Request, res: Response) => {
         });
     } catch (err: any) {
         console.error("[MINIAPP] Error in my-stats:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/referrals/claim-signature", validateInitData, async (req: Request, res: Response) => {
+    try {
+        const address = req.query.address as string;
+        const tgUser = req.telegramUser;
+
+        if (!address || !tgUser) {
+            return res.status(400).json({ error: "Missing address or user" });
+        }
+
+        // 1. Get total qualified invites
+        const supabaseClient = db.getClient();
+        const { count: qualified_invites } = await supabaseClient
+            .from("referrals")
+            .select("*", { count: "exact", head: true })
+            .eq("referrer_telegram_id", tgUser.id)
+            .eq("status", "completed");
+
+        const totalQualifiedInvites = qualified_invites || 0;
+
+        // 2. Generate EIP-712 Signature
+        // The contract expects: ClaimReward(address user,uint256 totalQualifiedInvites)
+        const REWARD_CONTRACT_ADDRESS = process.env.REWARD_CONTRACT_ADDRESS || "0x7B56349B3195050Dd817275CAF083fDE2C70239C"; // Proxy address
+        const domain = {
+            name: "P2PFatherReferrals",
+            version: "1",
+            chainId: 8453, // Base Mainnet
+            verifyingContract: REWARD_CONTRACT_ADDRESS
+        };
+
+        const types = {
+            ClaimReward: [
+                { name: "user", type: "address" },
+                { name: "totalQualifiedInvites", type: "uint256" }
+            ]
+        };
+
+        const value = {
+            user: address,
+            totalQualifiedInvites: totalQualifiedInvites
+        };
+
+        const { ethers } = require("ethers");
+        const signer = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY!);
+        
+        const signature = await signer.signTypedData(domain, types, value);
+
+        res.json({
+            success: true,
+            contractAddress: REWARD_CONTRACT_ADDRESS,
+            totalQualifiedInvites,
+            signature
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP] Error generating claim signature:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

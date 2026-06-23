@@ -1,6 +1,7 @@
 {
   "name": "p2pkerala",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "P2PFather — Telegram P2P Crypto Exchange Bot",
   "main": "dist/index.js",
   "scripts": {
@@ -24,6 +25,7 @@
     "@google/generative-ai": "^0.24.1",
     "@grammyjs/conversations": "^2.0.3",
     "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.6.1",
     "@polymarket/builder-relayer-client": "^0.0.10",
     "@polymarket/clob-client-v2": "latest",
     "@safe-global/api-kit": "^4.2.0",
@@ -46,15 +48,31 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.2",
+    "@nomicfoundation/hardhat-ethers": "^3.1.3",
+    "@nomicfoundation/hardhat-ignition": "^0.15.16",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.17",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.3",
+    "@nomicfoundation/ignition-core": "^0.15.15",
+    "@openzeppelin/hardhat-upgrades": "^3.0.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.3.20",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.4",
     "@types/ws": "^8.5.10",
     "@vercel/node": "^5.6.3",
+    "chai": "^4.5.0",
     "hardhat": "^2.28.6",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.17",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
+    "typechain": "^8.3.2",
     "typescript": "^5.7.3",
     "vercel": "^50.16.0"
   }
