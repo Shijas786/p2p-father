@@ -184,6 +184,14 @@ export function Wallet({ user }: Props) {
             setSendResult('error:Invalid amount');
             return;
         }
+
+        // BUG-05: External wallet users must sign via their own wallet app
+        if (user?.wallet_type === 'external') {
+            showToast("Please use your wallet app (MetaMask / Trust Wallet) to send tokens directly.", "info");
+            haptic('error');
+            return;
+        }
+
         haptic('medium');
         setSending(true);
         setSendResult('');
@@ -240,12 +248,13 @@ export function Wallet({ user }: Props) {
     const bscUsdcAddr = (CONTRACTS as any).bsc.tokens.USDC;
     const bscUsdtAddr = (CONTRACTS as any).bsc.tokens.USDT;
 
-    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr, refetchInterval: 5000 } });
-    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr, refetchInterval: 5000 } });
-    const { data: bscNativeBal } = useBalance({ address: wagmiAddress, chainId: bsc.id, query: { enabled: !!isExt, refetchInterval: 5000 } });
+    // BUG-13: Throttled to 15s (from 5s) to reduce Alchemy RPC load on mobile
+    const { data: extBscUsdc } = useReadContract({ address: bscUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdcAddr, refetchInterval: 15000 } });
+    const { data: extBscUsdt } = useReadContract({ address: bscUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: bsc.id, query: { enabled: !!isExt && !!bscUsdtAddr, refetchInterval: 15000 } });
+    const { data: bscNativeBal } = useBalance({ address: wagmiAddress, chainId: bsc.id, query: { enabled: !!isExt, refetchInterval: 15000 } });
 
-    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr, refetchInterval: 5000 } });
-    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr, refetchInterval: 5000 } });
+    const { data: extBaseUsdc } = useReadContract({ address: baseUsdcAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdcAddr, refetchInterval: 15000 } });
+    const { data: extBaseUsdt } = useReadContract({ address: baseUsdtAddr, abi: ERC20_ABI, functionName: 'balanceOf', args: wagmiAddress ? [wagmiAddress] : undefined, chainId: base.id, query: { enabled: !!isExt && !!baseUsdtAddr, refetchInterval: 15000 } });
 
     const getExtBalance = (token: string, chain: string) => {
         if (!isExt) return "0.00";
@@ -510,6 +519,9 @@ export function Wallet({ user }: Props) {
         return true;
     });
 
+    // BUG-10: Single canonical source of truth for the wallet address shown in UI
+    const displayAddress = (balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string;
+
     if (showSearchOverlay) {
         // Token selector — must be checked BEFORE showSend so it always renders on top
         return (
@@ -772,12 +784,12 @@ export function Wallet({ user }: Props) {
                 <div className="wallet-address-copy-row" onClick={copyAddress}>
                     <IconCopy size={14} color="#8c9099" />
                     <span className="wallet-address-copy-text" style={{ marginLeft: 6 }}>
-                        {((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(0, 6)}...{((balances?.address || user?.wallet_address || wagmiAddress || '0x0000000000000000000000000000000000000000') as string).slice(-4)}
+                        {displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}
                     </span>
                 </div>
             </div>
 
-            {/* Actions Grid (3-column, removed Buy button) */}
+            {/* Actions Grid */}
             <div className="actions-row">
                 <button className="action-card-btn" onClick={() => setShowSend(true)}>
                     <div className="action-card-icon">
@@ -785,7 +797,19 @@ export function Wallet({ user }: Props) {
                     </div>
                     <span className="action-card-label">Send</span>
                 </button>
-                <button className="action-card-btn active" onClick={() => setShowSwap(true)}>
+                <button
+                    className="action-card-btn active"
+                    onClick={() => {
+                        if (user?.wallet_type === 'bot') {
+                            // Bot wallet users: show informational toast; the LiFi widget
+                            // routes eth_sendTransaction through the server-side hotWallet,
+                            // but some swaps also require message signing which the bot
+                            // wallet cannot do. Open the modal so they can see what's available.
+                            showToast("Swap works best with WalletConnect. Bot wallet may not support all routes.", "info");
+                        }
+                        setShowSwap(true);
+                    }}
+                >
                     <div className="action-card-icon">
                         <IconSwap size={20} />
                     </div>
@@ -1011,10 +1035,10 @@ export function Wallet({ user }: Props) {
                         <h3 style={{ width: '100%', textAlign: 'center' }}>{(balances?.address || user?.wallet_address) ? 'Deposit Crypto' : 'Receive Crypto'}</h3>
                         <p className="text-sm text-muted mb-2">Scan or copy address to receive funds</p>
                         <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', margin: '16px auto', display: 'inline-block' }}>
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${balances?.address || user?.wallet_address || wagmiAddress}`} alt="QR" width={150} height={150} style={{ display: 'block' }} />
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${displayAddress}`} alt="QR" width={150} height={150} style={{ display: 'block' }} />
                         </div>
                         <div className="p-2 bg-secondary rounded mb-4 mono text-sm select-all" style={{ wordBreak: 'break-all', width: '100%', boxSizing: 'border-box' }}>
-                            {balances?.address || user?.wallet_address || wagmiAddress}
+                            {displayAddress}
                         </div>
                         <button className="btn btn-primary btn-block" onClick={copyAddress} style={{ width: '100%', background: 'var(--color-blue)' }}>
                             Copy Address

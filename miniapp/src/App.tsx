@@ -327,11 +327,11 @@ function AppInner() {
           // walletChosen will be set by the useEffect above after address is saved
           await appKit.open();
 
-          // Fallback: if wagmi already connected (persisted session), trigger save
-          // Small delay to let wagmi state update
+          // Fallback: if wagmi already has a REAL external wallet connected
+          // (persisted session), trigger save. Guard against hotWallet address.
           setTimeout(() => {
-            console.log('[P2P] After modal open, wagmi state:', { isConnected, address });
-            if (isConnected && address) {
+            console.log('[P2P] After modal open, wagmi state:', { isConnected, address, connectorId: connector?.id });
+            if (isConnected && address && connector?.id !== 'hotWallet') {
               appKit.close();
             }
           }, 1500);

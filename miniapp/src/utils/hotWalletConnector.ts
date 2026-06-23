@@ -103,6 +103,8 @@ export function hotWalletConnector() {
         return { accounts: accounts.map(getAddress), chainId: currentChainId };
       },
       async disconnect() {
+        // Clear cached bot address so next connect fetches a fresh one
+        botAddress = null;
         config.emitter.emit('disconnect');
       },
       async getAccounts() {
@@ -116,7 +118,11 @@ export function hotWalletConnector() {
         return provider;
       },
       async isAuthorized() {
-        return true;
+        // Always return false — let App.tsx useEffect connect hotWallet
+        // explicitly when walletMode === 'bot'. This prevents wagmi from
+        // auto-reconnecting the hot wallet during external wallet sessions
+        // (which caused the bot address to bleed into external wallet mode).
+        return false;
       },
       async switchChain({ chainId }: { chainId: number }) {
         const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);

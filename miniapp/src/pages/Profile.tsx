@@ -146,8 +146,10 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     }
 
     async function saveReceiveAddr() {
-        if (receiveAddrInput && !receiveAddrInput.startsWith('0x')) {
-            setMessage('error:Enter a valid wallet address (0x...)');
+        // Full EVM address validation: must be 0x + exactly 40 hex characters
+        const isValidEVMAddress = /^0x[a-fA-F0-9]{40}$/.test(receiveAddrInput);
+        if (receiveAddrInput && !isValidEVMAddress) {
+            setMessage('error:Enter a valid EVM wallet address (0x + 40 hex characters)');
             return;
         }
         await saveField({ receive_address: receiveAddrInput || null }, 'Receive address updated!');

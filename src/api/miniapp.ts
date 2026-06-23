@@ -520,12 +520,21 @@ router.post("/wallet/connect", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Invalid Ethereum address" });
         }
 
+        // Normalise to EIP-55 checksum format before saving
+        let normalisedAddress: string;
+        try {
+            normalisedAddress = ethers.getAddress(address);
+        } catch {
+            return res.status(400).json({ error: "Invalid Ethereum address checksum" });
+        }
+
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         await db.updateUser(user.id, {
-            wallet_address: address,
+            wallet_address: normalisedAddress,
             wallet_type: 'external',
+            receive_address: null, // Clear any custom receive address to avoid cross-wallet payout confusion
         } as any);
 
         res.json({ success: true });
@@ -545,6 +554,7 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
         await db.updateUser(user.id, {
             wallet_address: derived.address,
             wallet_type: 'bot',
+            receive_address: null, // Clear any custom receive address from previous wallet
         } as any);
 
         res.json({ success: true, address: derived.address });
