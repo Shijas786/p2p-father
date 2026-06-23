@@ -40,7 +40,7 @@ export function Rewards({ user, onSwitchWallet }: { user: any, onSwitchWallet: (
     if (!address) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/referrals/claim-signature?address=${address}`, {
+      const res = await fetch(`/api/miniapp/referrals/claim-signature?address=${address}`, {
         headers: {
           'x-telegram-init-data': window.Telegram?.WebApp?.initData || '',
         }
