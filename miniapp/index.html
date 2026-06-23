@@ -13,6 +13,43 @@
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.height = '100%';
+      div.style.background = 'rgba(0,0,0,0.95)';
+      div.style.color = '#ff4d4d';
+      div.style.padding = '20px';
+      div.style.zIndex = '999999';
+      div.style.overflow = 'auto';
+      div.style.fontFamily = 'monospace';
+      div.style.fontSize = '14px';
+      div.innerHTML = '<h1>🚨 JS Error:</h1><p style="font-weight:bold">' + msg + '</p><p>URL: ' + url + '</p><p>Line: ' + lineNo + ', Col: ' + columnNo + '</p><pre style="white-space:pre-wrap; background:#222; padding:10px; border-radius:4px; margin-top:10px;">' + (error && error.stack ? error.stack : '') + '</pre>';
+      document.body.appendChild(div);
+      return false;
+    };
+    window.onunhandledrejection = function (event) {
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.height = '100%';
+      div.style.background = 'rgba(0,0,0,0.95)';
+      div.style.color = '#ff9900';
+      div.style.padding = '20px';
+      div.style.zIndex = '999999';
+      div.style.overflow = 'auto';
+      div.style.fontFamily = 'monospace';
+      div.style.fontSize = '14px';
+      div.innerHTML = '<h1>⚠️ Unhandled Rejection:</h1><p style="font-weight:bold">' + event.reason + '</p><pre style="white-space:pre-wrap; background:#222; padding:10px; border-radius:4px; margin-top:10px;">' + (event.reason && event.reason.stack ? event.reason.stack : event.reason) + '</pre>';
+      document.body.appendChild(div);
+    };
+  </script>
 </head>
 
 <body>
