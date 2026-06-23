@@ -3959,12 +3959,20 @@ router.get("/predictions/my-stats", async (req: Request, res: Response) => {
 
 router.get("/referrals/claim-signature", validateInitData, async (req: Request, res: Response) => {
     try {
-        const address = req.query.address as string;
         const tgUser = req.telegramUser;
 
-        if (!address || !tgUser) {
-            return res.status(400).json({ error: "Missing address or user" });
+        if (!tgUser) {
+            return res.status(400).json({ error: "Missing user" });
         }
+
+        // Always use the bot (custodial) wallet for reward claims — ignore any
+        // address passed by the frontend so external-wallet users cannot redirect
+        // rewards to their own address.
+        const user = await db.getUserByTelegramId(tgUser.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const derived = wallet.deriveWallet(user.wallet_index);
+        const botAddress = derived.address;
 
         // 1. Get total qualified invites
         const supabaseClient = db.getClient();
@@ -3994,7 +4002,7 @@ router.get("/referrals/claim-signature", validateInitData, async (req: Request, 
         };
 
         const value = {
-            user: address,
+            user: botAddress,  // Always the bot wallet — never the external address
             totalQualifiedInvites: totalQualifiedInvites
         };
 
