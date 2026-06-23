@@ -24,6 +24,7 @@ import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
 import { Leaderboard } from './pages/Leaderboard';
+import { Rewards } from './pages/Rewards';
 import { ToastProvider } from './components/Toast';
 import { APP_VERSION } from './constants';
 import './styles/global.css';
@@ -352,6 +353,7 @@ function AppInner() {
 
           <Route path="ads" element={<MyAds />} />
           <Route path="admin" element={<Admin user={user} />} />
+          <Route path="rewards" element={<Rewards user={user} onSwitchWallet={handleSwitchWallet} />} />
           <Route path="profile" element={<Profile user={user} onUpdate={refreshUser} onSwitchWallet={handleSwitchWallet} />} />
           <Route path="leaderboard" element={<Leaderboard />} />
         </Route>

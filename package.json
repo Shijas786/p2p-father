@@ -5,7 +5,7 @@
   "description": "P2PFather — Telegram P2P Crypto Exchange Bot",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "NO_BOT=true tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "prebuild": "rm -rf dist",
     "build": "tsc",

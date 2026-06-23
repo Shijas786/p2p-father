@@ -309,14 +309,16 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
 
                 {/* 1.5 Bounty Hub / Rewards */}
-                <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/rewards'); }} style={{ background: 'linear-gradient(45deg, rgba(96, 40, 255, 0.1), transparent)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <img src="/icons for trade/profile icons/rewards-gift.svg?v=1" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
-                    <div style={{ flex: 1 }}>
-                        <div className="prof-nav-text" style={{ color: '#8b5cf6', fontWeight: 600 }}>Bounty Hub (Rewards)</div>
-                        <div className="prof-nav-sub" style={{ fontSize: '12px', color: '#848e9c' }}>Claim USDC for invites & quests</div>
+                {user?.is_admin && (
+                    <div className="prof-nav-item" onClick={() => { haptic('light'); navigate('/rewards'); }} style={{ background: 'linear-gradient(45deg, rgba(96, 40, 255, 0.1), transparent)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <img src="/icons for trade/profile icons/rewards-gift.svg?v=1" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                        <div style={{ flex: 1 }}>
+                            <div className="prof-nav-text" style={{ color: '#8b5cf6', fontWeight: 600 }}>Bounty Hub (Rewards)</div>
+                            <div className="prof-nav-sub" style={{ fontSize: '12px', color: '#848e9c' }}>Claim USDC for invites & quests</div>
+                        </div>
+                        <span className="prof-nav-chevron">›</span>
                     </div>
-                    <span className="prof-nav-chevron">›</span>
-                </div>
+                )}
 
                 {/* 2. Payment Methods (Expanded) */}
                 <div className="prof-section-header" onClick={() => { haptic('light'); setIsPaymentMethodsExpanded(!isPaymentMethodsExpanded); }} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

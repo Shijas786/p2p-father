@@ -1563,9 +1563,13 @@ bot.command("invite", async (ctx) => {
         `• ⏳ *Pending (Not Joined):* \`${stats.pending}\``,
     ].join("\n");
 
+    const cacheBuster = `?v=${Date.now()}`;
+    const claimUrl = `https://p2pfather.com/miniapp/claim-rewards${cacheBuster}`;
+
     const keyboard = new InlineKeyboard()
         .url("🔗 Share Invite Link", shareUrl).row()
         .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
+        .webApp("💰 Claim Rewards", claimUrl).row()
         .text("🔄 Refresh Stats", "refresh_referrals")
         .text("🏆 Invite Leaderboard", "show_referral_leaderboard");
 
@@ -1874,9 +1878,13 @@ bot.on("callback_query:data", async (ctx) => {
                 `• ⏳ *Pending (Not Joined):* \`${stats.pending}\``,
             ].join("\n");
 
+            const cacheBusterClaim = `?v=${Date.now()}`;
+            const claimUrl = `https://p2pfather.com/miniapp/claim-rewards${cacheBusterClaim}`;
+
             const keyboard = new InlineKeyboard()
                 .url("🔗 Share Invite Link", shareUrl).row()
                 .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
+                .webApp("💰 Claim Rewards", claimUrl).row()
                 .text("🔄 Refresh Stats", "refresh_referrals")
                 .text("🏆 Invite Leaderboard", "show_referral_leaderboard");
 
