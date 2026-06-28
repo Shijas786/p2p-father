@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast';
 import { useBalance } from 'wagmi';
 import { bsc, base } from 'wagmi/chains';
 import { formatError } from '../lib/utils';
+import { IconChainBase, IconChainBsc } from '../components/Icons';
 import './CreateOrder.css';
 
 const PAYMENT_METHODS = ['UPI', 'IMPS', 'NEFT', 'PAYTM', 'BANK', 'CDM', 'DIGITAL_RUPEE'];
@@ -412,15 +413,17 @@ export function CreateOrder() {
                             <div className="co-section-title">2. Network</div>
                             <div className="flex gap-2 mb-4">
                                 <button
-                                    className={`btn-toggle-net flex-1 ${chain === 'base' ? 'active' : ''}`}
+                                    className={`btn-toggle-net flex-1 flex items-center justify-center gap-2 ${chain === 'base' ? 'active' : ''}`}
                                     onClick={() => { setChain('base'); setToken('USDT'); }}
                                 >
+                                    <IconChainBase size={18} />
                                     Base
                                 </button>
                                 <button
-                                    className={`btn-toggle-net flex-1 ${chain === 'bsc' ? 'active' : ''}`}
+                                    className={`btn-toggle-net flex-1 flex items-center justify-center gap-2 ${chain === 'bsc' ? 'active' : ''}`}
                                     onClick={() => { setChain('bsc'); setToken('USDT'); }}
                                 >
+                                    <IconChainBsc size={18} />
                                     BSC
                                 </button>
                             </div>
