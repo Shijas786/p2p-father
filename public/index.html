@@ -108,6 +108,41 @@
         body { transition: opacity ease-in 0.2s; } 
         body[unresolved] { opacity: 0; display: block; overflow: hidden; position: relative; } 
     </style>
+    <style id="reactbits-styles">
+      /* Shiny Border / Star Border */
+      @property --shiny-angle {
+        syntax: '<angle>';
+        initial-value: 0deg;
+        inherits: false;
+      }
+      .shiny-border {
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+        border: none !important;
+      }
+      .shiny-border::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        background: conic-gradient(from var(--shiny-angle), transparent 30%, #10b981, #3b82f6, transparent 70%);
+        z-index: -2;
+        animation: spinShiny 3s linear infinite;
+        border-radius: inherit;
+      }
+      .shiny-border::after {
+        content: '';
+        position: absolute;
+        inset: 2px;
+        background: inherit;
+        z-index: -1;
+        border-radius: calc(inherit - 2px);
+      }
+      @keyframes spinShiny {
+        0% { --shiny-angle: 0deg; }
+        100% { --shiny-angle: 360deg; }
+      }
+    </style>
     <style>
 @keyframes shimmer {
   0% { background-position: -200% 0; }
@@ -1034,18 +1069,18 @@ footer{
 <section class="hero" style="position: relative;">
   <div class="hero-grid"></div>
 
-  <h1>Buy &amp; sell crypto<br>with <span class="marker-yellow"><em>real people</em></span>—<br><span class="marker-green">safely.</span></h1>
+  <h1 data-text-pressure>Buy &amp; sell crypto<br>with <span class="marker-yellow"><em>real people</em></span>—<br><span class="marker-green">safely.</span></h1>
 
   <p class="hero-sub">
     No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
   </p>
 
   <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
-    <a href="https://t.me/P2pFatherBot" class="btn btn-dark">
+    <a href="https://t.me/P2pFatherBot" class="btn btn-dark shiny-border" style="background:var(--ink);">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       Start Trading
     </a>
-    <a href="https://t.me/P2pFatherGroup" class="btn btn-community-match">
+    <a href="https://t.me/P2pFatherGroup" class="btn btn-community-match shiny-border" style="background:#10b981;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
       Join Community
     </a>
@@ -1395,7 +1430,7 @@ footer{
       </div>
     </div>
     
-    <div class="demo-phone">
+    <div class="demo-phone tilt">
       <div class="phone-shell">
         <div class="phone-button left-btn silent"></div>
         <div class="phone-button left-btn vol-up"></div>
@@ -1506,14 +1541,17 @@ footer{
 <hr class="rule">
 
 <!-- CTA -->
-<section class="cta-section">
-  <div class="eyebrow r on" style="justify-content:center;">Ready to trade safely?</div>
-  <h2 class="cta-h r d1 on">No more getting<br><span style="color: #ef4444;">blocked</span>.</h2>
-  <p class="cta-sub r d2 on">Open the bot, browse live offers, and make your first escrow-protected trade — right inside Telegram.</p>
-  <a href="https://t.me/P2pFatherBot" class="btn btn-dark r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem;">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
-    Open P2PFather
-  </a>
+<section class="cta-section" style="position: relative; overflow: hidden; text-align: center;">
+  <div class="soft-aurora-container" style="position: absolute; inset: 0; z-index: 0; opacity: 0.8; pointer-events: none;"></div>
+  <div style="position: relative; z-index: 1;">
+    <div class="eyebrow r on" style="justify-content:center; margin-bottom: 1rem;">Ready to trade safely?</div>
+    <h2 class="cta-h r d1 on" data-blur-text style="margin-bottom: 1.5rem;">No more getting<br><span style="color: #ef4444;">blocked</span>.</h2>
+    <p class="cta-sub r d2 on" style="margin-bottom: 3rem;">Open the bot, browse live offers, and make your first escrow-protected trade — right inside Telegram.</p>
+    <a href="https://t.me/P2pFatherBot" class="btn btn-dark shiny-border r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem; background: var(--ink);">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      Open P2PFather
+    </a>
+  </div>
 </section>
 
 <!-- TESTIMONIALS -->
@@ -2564,7 +2602,6 @@ function playFlow(flow) {
             <div style="background:#f6465d; color:#fff; font-weight:700; width:100%; font-size:0.65rem; letter-spacing:0.5px; border-radius:6px; padding:0.35rem; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:4px; box-shadow:0 0 8px rgba(246,70,93,0.15); margin-bottom:0.4rem;">
               <span>⚠️</span> Raise Dispute
             </div>
-
             <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:4px; margin-bottom:0.4rem; height:75px; display:flex; flex-direction:column; justify-content:space-between;">
               <div style="font-size:0.6rem; color:#848e9c; font-weight:bold; margin-bottom:1px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:1px; display:flex; justify-content:space-between;">
                 <span>💬 Trade Chat</span>
@@ -3667,5 +3704,8 @@ setTimeout(() => playFlow('profile'), 500);
     modal.open();
   });
 </script>
+<script src="blurtext.js"></script>
+<script src="interactions.js"></script>
+<script type="module" src="softaurora.js"></script>
 </body>
 </html>
