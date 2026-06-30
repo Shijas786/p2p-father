@@ -268,15 +268,21 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const available = order.amount - (order.filled_amount || 0);
     const token = order.token || "USDC";
 
+    // When the status is locked, completed, cancelled, expired, or filled (i.e. not active/open),
+    // always show the original amount (order.amount) instead of the remaining available amount (which might be 0).
+    const status = statusOverride || order.status;
+    const isClosedOrLocked = status && ["locked", "completed", "cancelled", "expired", "filled"].includes(status);
+    const displayAmount = isClosedOrLocked ? order.amount : available;
+
     const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
     const emoji = order.type === "sell" ? "🔴" : "🟢";
     const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
-    const amountStr = `<b>${escapeHTML(formatTokenAmount(available, token))}</b>`;
+    const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
 
     const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
     const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
-    const totalLine = `🧾 Total: ₹${escapeHTML((available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
+    const totalLine = `🧾 Total: ₹${escapeHTML((displayAmount * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
     const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
 
