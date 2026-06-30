@@ -58,8 +58,8 @@ export function startExpiryJob() {
                         .eq("id", orderId)
                         .single();
                     
-                    // If order is gone or not active, clean up
-                    if (!order || order.status !== 'active') {
+                    // If order is gone or not active and not filled, clean up
+                    if (!order || (order.status !== 'active' && order.status !== 'filled')) {
                         console.log(`[JOB] Cleaning up orphaned broadcasts for order ${orderId} (Status: ${order?.status || 'deleted'})`);
                         deleteAdBroadcasts(orderId as string).catch(() => {});
                     }

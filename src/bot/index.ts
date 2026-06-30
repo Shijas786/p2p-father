@@ -301,13 +301,13 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         lines.push(`📝 Note: ${escapeHTML(traderNote)}`);
     }
 
-    if (statusOverride === "locked") {
+    if (status === "locked" || status === "filled") {
         lines.push(`🔒 Status: <b>Locked / Trade in Progress</b>`);
-    } else if (statusOverride === "completed") {
+    } else if (status === "completed") {
         lines.push(`✅ Status: <b>Completed</b>`);
-    } else if (statusOverride === "cancelled") {
+    } else if (status === "cancelled") {
         lines.push(`❌ Status: <b>Cancelled</b>`);
-    } else if (statusOverride === "expired") {
+    } else if (status === "expired") {
         lines.push(`⏱️ Status: <b>Expired</b>`);
     } else if (order.expires_at) {
         const timeRemaining = formatTimeRemaining(order.expires_at);
