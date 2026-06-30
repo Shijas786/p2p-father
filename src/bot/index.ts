@@ -264,7 +264,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
     }
 }
 
-export function buildAdMessageText(order: any, user: any): string {
+export function buildAdMessageText(order: any, user: any, statusOverride?: string): string {
     const available = order.amount - (order.filled_amount || 0);
     const token = order.token || "USDC";
 
@@ -295,7 +295,15 @@ export function buildAdMessageText(order: any, user: any): string {
         lines.push(`📝 Note: ${escapeHTML(traderNote)}`);
     }
 
-    if (order.expires_at) {
+    if (statusOverride === "locked") {
+        lines.push(`🔒 Status: <b>Locked / Trade in Progress</b>`);
+    } else if (statusOverride === "completed") {
+        lines.push(`✅ Status: <b>Completed</b>`);
+    } else if (statusOverride === "cancelled") {
+        lines.push(`❌ Status: <b>Cancelled</b>`);
+    } else if (statusOverride === "expired") {
+        lines.push(`⏱️ Status: <b>Expired</b>`);
+    } else if (order.expires_at) {
         const timeRemaining = formatTimeRemaining(order.expires_at);
         lines.push(`⏱️ Expires in: <b>${timeRemaining}</b>`);
     }
@@ -331,24 +339,30 @@ export async function broadcastAd(order: any, user: any) {
     }
 }
 
-export async function updateAdBroadcasts(order: any, user: any) {
+export async function updateAdBroadcasts(order: any, user: any, statusOverride?: string) {
     try {
         const botUser = await getBotInfo();
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
-        const keyboard = new InlineKeyboard()
-            .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
 
-        if (order.type === 'sell') {
-            keyboard.success();
-        } else {
-            keyboard.danger();
+        let keyboard: InlineKeyboard | undefined;
+        // If there is no status override, or if it is explicitly 'active', show the button.
+        // Otherwise (locked, completed, cancelled, expired), remove the keyboard.
+        if (!statusOverride || statusOverride === 'active') {
+            keyboard = new InlineKeyboard()
+                .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
+
+            if (order.type === 'sell') {
+                keyboard.success();
+            } else {
+                keyboard.danger();
+            }
         }
 
         const broadcasts = await db.getAdBroadcasts(order.id);
         if (broadcasts.length === 0) return;
 
-        const msgText = buildAdMessageText(order, user);
+        const msgText = buildAdMessageText(order, user, statusOverride);
 
         for (const b of broadcasts) {
             await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
@@ -372,24 +386,17 @@ export async function updateAdBroadcasts(order: any, user: any) {
     }
 }
 
-export async function deleteAdBroadcasts(orderId: string) {
+export async function deleteAdBroadcasts(orderId: string, statusOverride?: string) {
     try {
         const broadcasts = await db.getAdBroadcasts(orderId);
         if (broadcasts.length === 0) return;
 
         const order = await db.getOrderById(orderId);
-        const isSellAd = order && order.type === "sell";
-
-        if (!isSellAd) {
-            console.log(`🧹 Cleaning up ${broadcasts.length} broadcast messages for order ${orderId}...`);
-            await Promise.allSettled(broadcasts.map(async (b) => {
-                // Use bot.api directly as we might not have a ctx
-                await bot.api.deleteMessage(b.chat_id, b.message_id).catch(() => { });
-            }));
-        } else {
-            console.log(`[Bot] Retaining ${broadcasts.length} broadcast messages in group for sell order ${orderId}.`);
+        if (order) {
+            console.log(`[Bot] Retaining/updating ${broadcasts.length} broadcast messages in group for order ${orderId} (Type: ${order.type}, Status: ${statusOverride || order.status}).`);
+            const user = await db.getUserById(order.user_id);
+            await updateAdBroadcasts(order, user, statusOverride || order.status);
         }
-
         await db.deleteAdBroadcasts(orderId);
     } catch (e) {
         console.error("deleteAdBroadcasts error:", e);
@@ -2995,6 +3002,9 @@ bot.on("callback_query:data", async (ctx) => {
                     };
 
                     await broadcastTradeSuccess(tradeWithUsername, order || trade);
+                    if (order) {
+                        deleteAdBroadcasts(order.id, "completed").catch(console.error);
+                    }
                 } catch (e) {
                     console.error("Trade broadcast error:", e);
                 }
@@ -3214,12 +3224,27 @@ bot.on("callback_query:data", async (ctx) => {
             const releaseToBuyer = action === "buyer";
 
             try {
+                const trade = await db.getTradeById(tradeId);
+
                 // Update database
                 await db.updateTrade(tradeId, {
                     status: "resolved",
                     resolution: releaseToBuyer ? "Released to buyer" : "Refunded to seller",
                     resolved_by: (await ensureUser(ctx)).id,
                 });
+
+                if (trade) {
+                    if (releaseToBuyer) {
+                        await deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
+                    } else {
+                        await db.revertFillOrder(trade.order_id, trade.amount);
+                        const o = await db.getOrderById(trade.order_id);
+                        if (o) {
+                            const orderUser = await db.getUserById(o.user_id);
+                            await updateAdBroadcasts(o, orderUser, "active").catch(console.error);
+                        }
+                    }
+                }
 
                 await ctx.editMessageText(
                     `✅ Dispute resolved! ${releaseToBuyer ? "Released to buyer" : "Refunded to seller"}.`

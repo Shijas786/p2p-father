@@ -1153,13 +1153,16 @@ router.post("/trades", async (req: Request, res: Response) => {
 
             res.json({ trade });
 
-            // If the order was fully filled, clean up the broadcast message immediately
-            db.getOrderById(order_id).then(o => {
-                if (o && o.status === "filled") {
-                    import("../bot").then(({ deleteAdBroadcasts }) => {
-                        deleteAdBroadcasts(order_id).catch(err => {
-                            console.error("[MINIAPP] Failed to delete broadcast for filled order:", err);
-                        });
+            // Update the Telegram broadcast message live status
+            db.getOrderById(order_id).then(async (o) => {
+                if (o) {
+                    const orderUser = (o.user_id === seller?.id) ? seller : ((o.user_id === buyer?.id) ? buyer : await db.getUserById(o.user_id));
+                    import("../bot").then(({ updateAdBroadcasts }) => {
+                        if (o.status === "filled") {
+                            updateAdBroadcasts(o, orderUser, "locked").catch(console.error);
+                        } else {
+                            updateAdBroadcasts(o, orderUser).catch(console.error);
+                        }
                     }).catch(console.error);
                 }
             }).catch(console.error);
@@ -1352,6 +1355,14 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
             };
             const { broadcastTradeSuccess } = await import("../bot");
             await broadcastTradeSuccess(tradeWithUsername, originalOrder || trade);
+
+            // Update broadcast message to COMPLETED on Telegram and delete database records
+            db.getOrderById(trade.order_id).then(async (o) => {
+                if (o) {
+                    const { deleteAdBroadcasts } = await import("../bot");
+                    await deleteAdBroadcasts(o.id, "completed").catch(console.error);
+                }
+            }).catch(console.error);
         } catch (e) {
             console.error("FOMO Broadcast error:", e);
         }
@@ -1501,6 +1512,15 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
         // Revert the fill on the parent order/ad
         await db.revertFillOrder(trade.order_id, trade.amount);
 
+        // Update broadcast message back to active
+        db.getOrderById(trade.order_id).then(async (o) => {
+            if (o) {
+                const orderUser = await db.getUserById(o.user_id);
+                const { updateAdBroadcasts } = await import("../bot");
+                await updateAdBroadcasts(o, orderUser, "active").catch(console.error);
+            }
+        }).catch(console.error);
+
         res.json({ success: true, refund_tx_hash: refundTxHash });
 
         // NOTIFY PARTIES
@@ -1595,6 +1615,14 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 `⚠️ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to the buyer.`
             );
             res.json({ success: true, txHash });
+
+            // Update broadcast message to COMPLETED on Telegram and delete database records
+            db.getOrderById(trade.order_id).then(async (o) => {
+                if (o) {
+                    const { deleteAdBroadcasts } = await import("../bot");
+                    await deleteAdBroadcasts(o.id, "completed").catch(console.error);
+                }
+            }).catch(console.error);
         } else {
             // Refund to seller
             let txHash: string | null = null;
@@ -1638,6 +1666,15 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 message: `✅ Dispute resolved: Refunded to Seller.`,
                 type: "system"
             });
+
+            // Update broadcast message back to active
+            db.getOrderById(trade.order_id).then(async (o) => {
+                if (o) {
+                    const orderUser = await db.getUserById(o.user_id);
+                    const { updateAdBroadcasts } = await import("../bot");
+                    await updateAdBroadcasts(o, orderUser, "active").catch(console.error);
+                }
+            }).catch(console.error);
 
             res.json({ success: true, txHash });
         }
