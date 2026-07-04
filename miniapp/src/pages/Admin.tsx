@@ -248,7 +248,7 @@ export function Admin({ user }: Props) {
                                             );
                                         })
                                     )}
-                                    <div ref={el => chatEndRefs.current[d.id] = el} />
+                                    <div ref={el => { chatEndRefs.current[d.id] = el; }} />
                                 </div>
 
                                 {/* Reply Input Area */}
