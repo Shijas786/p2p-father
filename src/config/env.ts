@@ -64,7 +64,7 @@ const envSchema = z.object({
     AUTO_RELEASE_SECONDS: z.string().default("2700"),
     NODE_ENV: z.string().default("development"),
     COMMUNITY_CHAT_ID: z.string().default(""),
-    COMMUNITY_INVITE_LINK: z.string().default("https://t.me/P2pFatherGroup"),
+    COMMUNITY_INVITE_LINK: z.string().default("https://t.me/P2pFather0"),
 
     // Polymarket Builder
     POLYMARKET_PRIVATE_KEY: z.string().optional(),
