@@ -345,7 +345,8 @@ export async function broadcastAd(order: any, user: any) {
     }
 }
 
-export async function updateAdBroadcasts(order: any, user: any, statusOverride?: string) {
+export async function updateAdBroadcasts(order: any, user: any, statusOverride?: string): Promise<{ chat_id: number; message_id: number }[]> {
+    const processedBroadcasts: { chat_id: number; message_id: number }[] = [];
     try {
         const botUser = await getBotInfo();
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
@@ -366,30 +367,47 @@ export async function updateAdBroadcasts(order: any, user: any, statusOverride?:
         }
 
         const broadcasts = await db.getAdBroadcasts(order.id);
-        if (broadcasts.length === 0) return;
+        if (broadcasts.length === 0) return [];
 
         const msgText = buildAdMessageText(order, user, statusOverride);
 
         for (const b of broadcasts) {
-            await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
-                parse_mode: "HTML",
-                reply_markup: keyboard
-            }).catch((err: any) => {
+            let success = false;
+            let isTerminalError = false;
+            try {
+                await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
+                    parse_mode: "HTML",
+                    reply_markup: keyboard
+                });
+                success = true;
+            } catch (err: any) {
                 const msg = err.description || err.message || "";
-                if (!msg.includes("message is not modified") &&
-                    !msg.includes("message to edit not found") &&
-                    !msg.includes("deactivated") &&
-                    !msg.includes("blocked") &&
-                    !msg.includes("kicked")) {
-                    console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id}:`, msg);
+                if (msg.includes("message is not modified") ||
+                    msg.includes("message to edit not found") ||
+                    msg.includes("deactivated") ||
+                    msg.includes("blocked") ||
+                    msg.includes("kicked") ||
+                    msg.includes("chat not found") ||
+                    msg.includes("forbidden") ||
+                    msg.includes("group chat was deactivated")
+                ) {
+                    isTerminalError = true;
+                } else {
+                    console.warn(`[Bot] Failed to edit broadcast message ${b.message_id} in chat ${b.chat_id} (Retrying later):`, msg);
                 }
-            });
+            }
+
+            if (success || isTerminalError) {
+                processedBroadcasts.push(b);
+            }
+
             // ⏳ Small 50ms delay to respect Telegram's rate limits
             await new Promise(r => setTimeout(r, 50));
         }
     } catch (e) {
         console.error("updateAdBroadcasts error:", e);
     }
+    return processedBroadcasts;
 }
 
 export async function deleteAdBroadcasts(orderId: string, statusOverride?: string) {
@@ -401,9 +419,16 @@ export async function deleteAdBroadcasts(orderId: string, statusOverride?: strin
         if (order) {
             console.log(`[Bot] Retaining/updating ${broadcasts.length} broadcast messages in group for order ${orderId} (Type: ${order.type}, Status: ${statusOverride || order.status}).`);
             const user = await db.getUserById(order.user_id);
-            await updateAdBroadcasts(order, user, statusOverride || order.status);
+            const processed = await updateAdBroadcasts(order, user, statusOverride || order.status);
+            
+            // Delete only the successfully processed broadcasts from database
+            for (const b of processed) {
+                await db.deleteSpecificAdBroadcast(orderId, b.chat_id, b.message_id);
+            }
+        } else {
+            // If the order has been deleted from DB entirely, clean up all broadcast records
+            await db.deleteAdBroadcasts(orderId);
         }
-        await db.deleteAdBroadcasts(orderId);
     } catch (e) {
         console.error("deleteAdBroadcasts error:", e);
     }
@@ -2695,6 +2720,12 @@ bot.on("callback_query:data", async (ctx) => {
                                 { parse_mode: "Markdown" }
                             );
                         }
+
+                        // Update the Telegram broadcast message live status to locked
+                        const orderUser = await db.getUserById(order.user_id);
+                        if (orderUser) {
+                            updateAdBroadcasts(order, orderUser, "locked").catch(console.error);
+                        }
                     } catch (blockchainError: any) {
                         console.error("Blockchain error during trade creation:", blockchainError);
                         // Critical: Revert the fill so the ad remains active!
@@ -2776,6 +2807,12 @@ bot.on("callback_query:data", async (ctx) => {
                                 `🔔 *Trade Started!* 🟢\n\nSeller matched your Buy Ad for ${escapeMarkdown(formatTokenAmount(order.amount, tokenSymbol))}.\nCrypto is locked in escrow.\n\n👇 *Pay Now via UPI*`,
                                 { parse_mode: "Markdown" }
                             );
+                        }
+
+                        // Update the Telegram broadcast message live status to locked
+                        const orderUser = await db.getUserById(order.user_id);
+                        if (orderUser) {
+                            updateAdBroadcasts(order, orderUser, "locked").catch(console.error);
                         }
                     } catch (blockchainError: any) {
                         console.error("Sell trade initiation failed:", blockchainError);

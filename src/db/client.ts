@@ -627,6 +627,17 @@ class Database {
         if (error) console.error("Failed to delete ad broadcast records:", error.message);
     }
 
+    async deleteSpecificAdBroadcast(orderId: string, chatId: number, messageId: number): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db
+            .from("ad_broadcasts")
+            .delete()
+            .eq("order_id", orderId)
+            .eq("chat_id", chatId)
+            .eq("message_id", messageId);
+        if (error) console.error("Failed to delete specific ad broadcast record:", error.message);
+    }
+
     async getTotalFees(): Promise<number> {
         const db = this.getClient();
         const { data } = await db.from("fees").select("amount");

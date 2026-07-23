@@ -774,9 +774,9 @@ router.post("/orders", async (req: Request, res: Response) => {
         if (!user) return res.status(401).json({ error: "User not found" });
 
         // Require at least one payment method set up
-        if (!user.upi_id && !user.phone_number) {
+        if (!user.upi_id && !user.phone_number && !user.bank_account_number && !user.digital_rupee_id && !user.cdm_bank_number) {
             return res.status(400).json({
-                error: "Please set up your UPI ID or Phone Number in your Profile before creating an ad."
+                error: "Please set up your payment details (UPI ID, Phone Number, or Bank Account) in your Profile before creating an ad."
             });
         }
 

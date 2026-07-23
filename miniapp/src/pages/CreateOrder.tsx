@@ -303,6 +303,22 @@ export function CreateOrder() {
             return;
         }
 
+        // Check payment details setup
+        const hasPaymentDetails = !!(
+            user?.upi_id ||
+            user?.phone_number ||
+            user?.bank_account_number ||
+            user?.digital_rupee_id ||
+            user?.cdm_bank_number
+        );
+        if (!hasPaymentDetails) {
+            const msg = "Please set up your payment details (UPI ID, Phone Number, or Bank Account) in your Profile before creating an ad.";
+            setError(msg);
+            showToast(msg, "error");
+            haptic('error');
+            return;
+        }
+
         haptic('medium');
         setSubmitting(true);
         setError('');
@@ -819,7 +835,30 @@ export function CreateOrder() {
             {/* Error Display */}
             {error && (
                 <div className="co-error-banner animate-shake mt-4">
-                    <span>⚠️</span> {error}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+                        <span>⚠️</span>
+                        <span style={{ flex: 1 }}>{error}</span>
+                        {(error.toLowerCase().includes('profile') || error.toLowerCase().includes('payment')) && (
+                            <button
+                                type="button"
+                                onClick={() => navigate('/profile')}
+                                style={{
+                                    padding: '6px 12px',
+                                    background: 'var(--primary, #f3ba2f)',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    marginLeft: 'auto'
+                                }}
+                            >
+                                Go to Profile ➡️
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
             

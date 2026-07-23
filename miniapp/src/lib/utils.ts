@@ -44,7 +44,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  * Simplifies complex blockchain/API error messages for end-users.
  */
 export function formatError(err: any): string {
-    const msg = (err?.message || String(err)).toLowerCase();
+    const rawMsg = err?.message || String(err || '');
+    const msg = rawMsg.toLowerCase();
 
     // Standard Wallet Rejections
     if (msg.includes('user rejected') || msg.includes('action_rejected') || msg.includes('user_rejected')) {
@@ -75,9 +76,19 @@ export function formatError(err: any): string {
         return "Contract execution failed. Check your balance or vault.";
     }
 
-    // Fallback: Try to extract a clean message if it's already semi-clinical
-    if (msg.length < 60 && !msg.includes(':') && !msg.includes('0x')) {
-        return err.message;
+    // Payment method / Profile errors
+    if (msg.includes('payment') || msg.includes('upi') || msg.includes('profile') || msg.includes('phone number') || msg.includes('bank account')) {
+        return rawMsg || "Please set up your payment details in your Profile before creating an ad.";
+    }
+
+    // Preserve clean, readable API error messages (no stack traces, no hex/contract dumps, no raw JSON objects)
+    if (rawMsg && typeof rawMsg === 'string' && !rawMsg.includes('0x') && !rawMsg.includes('{') && !rawMsg.includes('JSON') && !rawMsg.includes('RPC') && !rawMsg.includes('at ')) {
+        return rawMsg;
+    }
+
+    // Fallback: Try to extract a clean message if short enough
+    if (msg.length < 150 && !msg.includes(':') && !msg.includes('0x') && !msg.includes('{')) {
+        return rawMsg;
     }
 
     return "Operation failed. Please try again.";
