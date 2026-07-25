@@ -521,13 +521,13 @@ export function CreateOrder() {
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', marginTop: '-4px' }}>
                                     <div style={{ 
                                         fontSize: '11px',
-                                        color: availableBalance < parseFloat(amount || '0') ? 'var(--orange)' : 'var(--text-muted)'
+                                        color: hasLoadedBalance && availableBalance < parseFloat(amount || '0') ? 'var(--orange)' : 'var(--text-muted)'
                                     }}>
                                         {isExternalUser ? 'Wallet Available: ' : 'Vault Available: '}
                                         <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
                                             {isExternalUser
                                                 ? formatBal(getExtBalance(token, chain), token === 'BNB' ? 4 : 2)
-                                                : (vaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')
+                                                : (apiVaultBalance !== undefined ? formatBal(availableBalance, token === 'BNB' ? 4 : 2) : '...')
                                             } {token}
                                         </span>
                                         {!isExternalUser && reserved > 0 && (
