@@ -113,17 +113,21 @@ export function CreateOrder() {
     const escrowAddress = (CONTRACTS as any)[chain]?.escrow;
     const effectiveAddress = (isExternalUser ? address : user?.wallet_address) as `0x${string}` | undefined;
 
-    // 1. Check Vault Balance
-    const { data: vaultBalance, isLoading: loadingVault } = useReadContract({
+    // 1. Check Vault Balance via wagmi (external wallet only)
+    const { data: vaultBalance, isLoading: loadingVaultContract } = useReadContract({
         address: escrowAddress,
         abi: ESCROW_ABI,
         functionName: 'balances',
         args: effectiveAddress && tokenAddress ? [effectiveAddress, tokenAddress] : undefined,
         chainId: targetChainId,
         query: {
-            enabled: !!effectiveAddress && !!tokenAddress && !!escrowAddress && type === 'sell'
+            enabled: !!effectiveAddress && !!tokenAddress && !!escrowAddress && type === 'sell' && isExternalUser
         }
     });
+
+    // For internal bot wallet: fetch vault balance from backend API (reliable, uses server-side RPC)
+    const [apiVaultBalance, setApiVaultBalance] = useState<string | undefined>(undefined);
+    const [loadingApiVault, setLoadingApiVault] = useState(false);
 
     // 2. Check ERC20 Allowance
     const { data: allowance, isLoading: loadingAllowance } = useReadContract({
@@ -149,17 +153,40 @@ export function CreateOrder() {
     const [reserved, setReserved] = useState(0);
     useEffect(() => {
         if (type === 'sell') {
-            api.wallet.getBalances().then(data => {
-                let res = '0';
-                if (chain === 'base') {
-                    res = (token === 'USDC' ? data.reserved_base_usdc : data.reserved_base_usdt) || '0';
-                } else {
-                    res = (token === 'USDC' ? data.reserved_bsc_usdc :
-                        token === 'USDT' ? data.reserved_bsc_usdt :
-                            token === 'BNB' ? data.reserved_bsc_bnb : '0') || '0';
-                }
-                setReserved(parseFloat(res));
-            }).catch(console.error);
+            if (!isExternalUser) {
+                // Internal bot wallet: use backend API for reliable vault balance
+                setLoadingApiVault(true);
+                api.wallet.getBalances().then(data => {
+                    let vaultStr = '0';
+                    let res = '0';
+                    if (chain === 'base') {
+                        vaultStr = (token === 'USDC' ? data.vault_base_usdc : data.vault_base_usdt) || '0';
+                        res = (token === 'USDC' ? data.reserved_base_usdc : data.reserved_base_usdt) || '0';
+                    } else {
+                        vaultStr = (token === 'USDC' ? data.vault_bsc_usdc :
+                            token === 'USDT' ? data.vault_bsc_usdt :
+                                token === 'BNB' ? data.vault_bsc_bnb : '0') || '0';
+                        res = (token === 'USDC' ? data.reserved_bsc_usdc :
+                            token === 'USDT' ? data.reserved_bsc_usdt :
+                                token === 'BNB' ? data.reserved_bsc_bnb : '0') || '0';
+                    }
+                    setApiVaultBalance(vaultStr);
+                    setReserved(parseFloat(res));
+                }).catch(console.error).finally(() => setLoadingApiVault(false));
+            } else {
+                // External wallet: just fetch reserved from API
+                api.wallet.getBalances().then(data => {
+                    let res = '0';
+                    if (chain === 'base') {
+                        res = (token === 'USDC' ? data.reserved_base_usdc : data.reserved_base_usdt) || '0';
+                    } else {
+                        res = (token === 'USDC' ? data.reserved_bsc_usdc :
+                            token === 'USDT' ? data.reserved_bsc_usdt :
+                                token === 'BNB' ? data.reserved_bsc_bnb : '0') || '0';
+                    }
+                    setReserved(parseFloat(res));
+                }).catch(console.error);
+            }
         }
         // Fetch base fee from stats but override locally based on selected chain
         api.stats.get().then(data => {
@@ -222,18 +249,23 @@ export function CreateOrder() {
         }
     }
 
-    const physicalBalance = vaultBalance !== undefined ? parseFloat(formatUnits(vaultBalance as bigint, decimals)) : 0;
+    // Use API vault balance for internal users (reliable), wagmi contract read for external
+    const physicalBalance = isExternalUser
+        ? (vaultBalance !== undefined ? parseFloat(formatUnits(vaultBalance as bigint, decimals)) : 0)
+        : parseFloat(apiVaultBalance || '0');
     const availableBalance = physicalBalance - reserved;
 
     const isNative = (chain === 'bsc' && token === 'BNB') || (chain === 'base' && token === 'ETH');
     // Use a small epsilon (1e-6) to avoid floating point precision issues
-    const needsDeposit = type === 'sell' && vaultBalance !== undefined && amount &&
+    const hasLoadedBalance = isExternalUser ? vaultBalance !== undefined : apiVaultBalance !== undefined;
+    const needsDeposit = type === 'sell' && hasLoadedBalance && amount &&
         availableBalance < (parseFloat(amount) - 0.000001);
 
     const needsApproval = !isNative && needsDeposit && isExternalUser && allowance !== undefined && amount &&
         parseFloat(formatUnits(allowance as bigint, decimals)) < parseFloat(amount);
 
     // Guard: Wait for balance info if sell, AND wait for connection if we know we are an external user
+    const loadingVault = isExternalUser ? loadingVaultContract : loadingApiVault;
     const isDataLoading = (type === 'sell') && (loadingVault || (isExternalUser && (loadingAllowance || !isConnected)));
 
     function toggleMethod(m: string) {
