@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { env } from "../config/env";
+import { getFastProvider } from "../utils/provider";
 
 const ERC20_ABI = [
     "function balanceOf(address) view returns (uint256)",
@@ -20,29 +21,14 @@ const ESCROW_ABI = [
 type Chain = 'base' | 'bsc' | 'polygon' | 'mainnet' | 'arbitrum' | 'optimism' | 'avalanche' | 'linea' | 'scroll';
 
 class WalletService {
-    private providers: Record<string, ethers.JsonRpcProvider | null> = {
+    private providers: Record<string, ethers.Provider | null> = {
         base: null, bsc: null, polygon: null, mainnet: null, 
         arbitrum: null, optimism: null, avalanche: null, linea: null, scroll: null
     };
     private masterNode: ethers.HDNodeWallet | null = null;
 
-    private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
-        if (!this.providers[chain]) {
-            let url = env.BASE_RPC_URL;
-            switch (chain) {
-                case 'base': url = env.BASE_RPC_URL; break;
-                case 'bsc': url = env.BSC_RPC_URL; break;
-                case 'polygon': url = env.POLYGON_RPC_URL; break;
-                case 'mainnet': url = env.MAINNET_RPC_URL; break;
-                case 'arbitrum': url = env.ARBITRUM_RPC_URL; break;
-                case 'optimism': url = env.OPTIMISM_RPC_URL; break;
-                case 'avalanche': url = env.AVALANCHE_RPC_URL; break;
-                case 'linea': url = env.LINEA_RPC_URL; break;
-                case 'scroll': url = env.SCROLL_RPC_URL; break;
-            }
-            this.providers[chain] = new ethers.JsonRpcProvider(url);
-        }
-        return this.providers[chain]!;
+    private getProvider(chain: Chain = 'base'): ethers.Provider {
+        return getFastProvider(chain);
     }
 
     private getMasterNode(): ethers.HDNodeWallet {

@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { env } from "../config/env";
+import { getFastProvider } from "../utils/provider";
 
 // Minimal ERC20 ABI for USDC interactions
 const ERC20_ABI = [
@@ -70,7 +71,7 @@ const ESCROW_ABI = [
 type Chain = 'base' | 'bsc';
 
 class EscrowService {
-    private providers: Record<string, ethers.JsonRpcProvider | null> = {
+    private providers: Record<string, ethers.Provider | null> = {
         base: null,
         bsc: null
     };
@@ -79,12 +80,8 @@ class EscrowService {
         bsc: null
     };
 
-    private getProvider(chain: Chain = 'base'): ethers.JsonRpcProvider {
-        if (!this.providers[chain]) {
-            const url = chain === 'base' ? env.BASE_RPC_URL : env.BSC_RPC_URL;
-            this.providers[chain] = new ethers.JsonRpcProvider(url);
-        }
-        return this.providers[chain]!;
+    private getProvider(chain: Chain = 'base'): ethers.Provider {
+        return getFastProvider(chain);
     }
 
     private getRelayer(chain: Chain = 'base'): ethers.Wallet {
