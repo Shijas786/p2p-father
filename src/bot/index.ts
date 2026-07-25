@@ -197,8 +197,8 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
 
 let availableGifs: string[] = [];
 
-function formatTraderDisplay(username?: string | null, firstName?: string | null, hideHandle: boolean = false): string {
-    if (hideHandle) {
+function formatTraderDisplay(username?: string | null, firstName?: string | null, hideHandle: any = false): string {
+    if (Boolean(hideHandle)) {
         if (username && username.length > 2) {
             return `@${escapeHTML(username.slice(0, 2))}***`;
         }
@@ -217,8 +217,21 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         // ✨ Liveness Feedback - A small delay gives a "live processing" feel for completions
         await new Promise(r => setTimeout(r, 1200));
 
-        const buyer = formatTraderDisplay(trade.buyer_username, trade.buyer_first_name || "Buyer", trade.buyer_hide_handle);
-        const seller = formatTraderDisplay(trade.seller_username, trade.seller_first_name || "Seller", trade.seller_hide_handle);
+        // Always fetch fresh real-time privacy settings from DB
+        let sellerHide = Boolean(trade.seller_hide_handle);
+        let buyerHide = Boolean(trade.buyer_hide_handle);
+
+        if (trade.seller_id) {
+            const s = await db.getUserById(trade.seller_id);
+            if (s) sellerHide = Boolean(s.hide_group_handle);
+        }
+        if (trade.buyer_id) {
+            const b = await db.getUserById(trade.buyer_id);
+            if (b) buyerHide = Boolean(b.hide_group_handle);
+        }
+
+        const buyer = formatTraderDisplay(trade.buyer_username, trade.buyer_first_name || "Buyer", buyerHide);
+        const seller = formatTraderDisplay(trade.seller_username, trade.seller_first_name || "Seller", sellerHide);
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
         const chain = trade.chain || order?.chain || 'bsc';
 
@@ -379,7 +392,17 @@ export async function updateAdBroadcasts(order: any, user: any, statusOverride?:
         const broadcasts = await db.getAdBroadcasts(order.id);
         if (broadcasts.length === 0) return [];
 
-        const msgText = buildAdMessageText(order, user, statusOverride);
+        // Always fetch fresh user record from DB to ensure privacy mode preference is 100% up-to-date
+        let freshUser = user;
+        if (order.user_id) {
+            const dbUser = await db.getUserById(order.user_id);
+            if (dbUser) freshUser = dbUser;
+        } else if (user?.telegram_id) {
+            const dbUser = await db.getUserByTelegramId(user.telegram_id);
+            if (dbUser) freshUser = dbUser;
+        }
+
+        const msgText = buildAdMessageText(order, freshUser, statusOverride);
 
         for (const b of broadcasts) {
             let success = false;
