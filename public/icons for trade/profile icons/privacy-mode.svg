@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cyber Shield / Privacy Base (Subtle Floating Movement) -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 0; 0 -1.5; 0 0" dur="4s" repeatCount="indefinite" />
+    
+    <!-- Shield Outer Body -->
+    <path d="M32 12 L48 20 V34 C48 44 32 52 32 52 C32 52 16 44 16 34 V20 Z" fill="#0a1e38" stroke="#1a4060" stroke-width="1.5" />
+    
+    <!-- Shield Inner Cyber Layer -->
+    <path d="M32 16 L44 22 V33 C44 41 32 47 32 47 C32 47 20 41 20 33 V22 Z" fill="#0a2540" stroke="#00e5a0" stroke-width="1.2" stroke-dasharray="2 1">
+      <animate attributeName="opacity" values="0.8; 1; 0.8" dur="4s" repeatCount="indefinite" />
+    </path>
+
+    <!-- Center Lock / Stealth Keyhole -->
+    <g transform="translate(32, 30)">
+      <!-- Lock Shackle -->
+      <path d="M-6 -2 V-7 C-6 -10.3 -3.3 -13 0 -13 C3.3 -13 6 -10.3 6 -7 V-2" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round"/>
+      <!-- Lock Body -->
+      <rect x="-8" y="-2" width="16" height="13" rx="2" fill="#042d1a" stroke="#00e5a0" stroke-width="1.2"/>
+      <!-- Keyhole Dot -->
+      <circle cx="0" cy="3.5" r="2" fill="#00e5a0">
+        <animate attributeName="opacity" values="1; 0.4; 1" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </g>
+
+    <!-- Pulsing Cyber Shield Glow -->
+    <circle cx="32" cy="32" r="14" fill="#00e5a0" opacity="0.05">
+      <animate attributeName="opacity" values="0.05; 0.25; 0.05" dur="2.5s" repeatCount="indefinite" />
+      <animate attributeName="r" values="12; 18; 12" dur="2.5s" repeatCount="indefinite" />
+    </circle>
+  </g>
+</svg>

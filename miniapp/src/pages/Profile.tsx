@@ -53,6 +53,13 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [cdmUserName, setCdmUserName] = useState(user?.cdm_user_name || '');
     const [editingCdm, setEditingCdm] = useState(false);
 
+    // Privacy Mode State
+    const [privacyMode, setPrivacyMode] = useState<boolean>(Boolean(user?.hide_group_handle));
+
+    useEffect(() => {
+        setPrivacyMode(Boolean(user?.hide_group_handle));
+    }, [user?.hide_group_handle]);
+
     // Accordion State
     const [isPaymentMethodsExpanded, setIsPaymentMethodsExpanded] = useState(false);
 
@@ -463,6 +470,43 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
 
 
+                {/* 2.5 Privacy Mode Toggle */}
+                <div className="prof-payment-item">
+                    <div className="prof-payment-top">
+                        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                            <img src="/icons for trade/profile icons/privacy-mode.svg?v=1" alt="" style={{ width: '28px', height: '28px', marginRight: '16px' }} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span className="prof-payment-name">Broadcast Privacy</span>
+                                <span className="prof-payment-value" style={{ fontSize: '11px', color: '#848e9c' }}>
+                                    {privacyMode 
+                                        ? `Stealth Active (@${user?.username ? user.username.slice(0, 2) : 'us'}***)` 
+                                        : `Public Handle (@${user?.username || 'username'})`}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Style #2: Neon Emerald Pulse Switch */}
+                        <div 
+                            className={`toggle-s2 ${privacyMode ? 'active' : ''}`} 
+                            onClick={async () => {
+                                haptic('medium');
+                                const nextVal = !privacyMode;
+                                setPrivacyMode(nextVal);
+                                try {
+                                    await api.profile.update({ hide_group_handle: nextVal });
+                                    haptic('success');
+                                    onUpdate();
+                                } catch (err) {
+                                    console.warn('Backend sync warning:', err);
+                                }
+                            }}
+                            title="Toggle Broadcast Privacy"
+                        >
+                            <div className="knob" />
+                        </div>
+                    </div>
+                </div>
+
                 {/* 3. Hot Wallet Address */}
                 <div className="prof-payment-item">
                     <div className="prof-payment-top">
@@ -516,7 +560,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                 </div>
 
                 {/* 5. Connected Wallet Info */}
-                <div className="prof-wallet-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px' }}>
+                <div className="prof-wallet-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                         <img 
                             src={`/icons for trade/profile icons/${user?.wallet_type === 'external' ? 'external-wallet.svg?v=1' : 'connected-wallet.svg?v=4'}`} 
@@ -541,16 +585,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         Switch
                     </button>
                 </div>
-
-                {/* 6. Account Info */}
-                <div className="prof-account-row">
-                    <span className="prof-account-label">Telegram ID</span>
-                    <span className="prof-account-value">{user?.telegram_id}</span>
-                </div>
-                <div className="prof-account-row" style={{ borderBottom: 'none' }}>
-                    <span className="prof-account-label">Member Since</span>
-                    <span className="prof-account-value">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</span>
-                </div>
             </div>
 
             {/* Status Message */}
@@ -561,8 +595,8 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             )}
 
             <div className="text-center" style={{ opacity: 0.3, fontSize: '10px', padding: '12px 0 4px' }}>
-                    Build Version: {APP_VERSION}
-                </div>
+                Build Version: {APP_VERSION}
             </div>
+        </div>
     );
 }

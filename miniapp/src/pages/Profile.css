@@ -539,3 +539,40 @@
         bottom: -8px;
     }
 }
+
+/* ── Custom Cyber Toggle Switch (Style #2 Neon Emerald Glow) ── */
+.toggle-s2 { 
+    width: 48px; 
+    height: 24px; 
+    background: #0a1e38; 
+    border-radius: 20px; 
+    border: 1.5px solid #1a4060; 
+    position: relative; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+    flex-shrink: 0; 
+}
+
+.toggle-s2.active { 
+    background: #042d1a; 
+    border-color: #00e5a0; 
+    box-shadow: 0 0 12px rgba(0, 229, 160, 0.4); 
+}
+
+.toggle-s2 .knob { 
+    width: 16px; 
+    height: 16px; 
+    background: #1a4060; 
+    border-radius: 50%; 
+    position: absolute; 
+    top: 2.5px; 
+    left: 3px; 
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
+}
+
+.toggle-s2.active .knob { 
+    transform: translateX(23px); 
+    background: #00e5a0; 
+    box-shadow: 0 0 8px #00e5a0; 
+}
+

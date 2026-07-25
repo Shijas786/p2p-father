@@ -31,35 +31,7 @@ const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY)
 
 const router = Router();
 
-// Withdraw
-router.post("/withdraw", async (req: Request, res: Response) => {
-    try {
-        const { tgId, walletIndex, destChainId, destTokenAddress, amount, recipient } = req.body;
-        if (!tgId || walletIndex === undefined || !destChainId || !destTokenAddress || !amount || !recipient) {
-            return res.status(400).json({ success: false, error: "Missing parameters" });
-        }
 
-        const amountBig = BigInt(amount);
-        if (amountBig <= 0n) {
-            return res.status(400).json({ success: false, error: "Invalid amount" });
-        }
-
-        console.log(`[${tgId}] Withdrawal Request: ${amountBig} pUSD -> ${recipient} on Chain ${destChainId}`);
-        
-        const txHash = await polymarketRelayerService.withdrawCrossChain(
-            walletIndex,
-            destChainId.toString(),
-            destTokenAddress,
-            recipient,
-            amountBig
-        );
-
-        return res.json({ success: true, txHash });
-    } catch (e: any) {
-        console.error("Withdrawal error:", e);
-        return res.status(500).json({ success: false, error: e.message });
-    }
-});
 
 function escapeHTML(str: string): string {
     return str ? str.replace(/[&<>"']/g, (m) => {
@@ -284,6 +256,47 @@ router.get("/predictions/market", async (req: Request, res: Response) => {
 });
 
 router.use(validateInitData);
+
+// ═══════════════════════════════════════════════════════════════
+//  WITHDRAWAL — Authenticated Cross-Chain Hot Wallet Withdrawal
+// ═══════════════════════════════════════════════════════════════
+
+router.post("/withdraw", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+        const { walletIndex, destChainId, destTokenAddress, amount, recipient } = req.body;
+        if (walletIndex === undefined || !destChainId || !destTokenAddress || !amount || !recipient) {
+            return res.status(400).json({ success: false, error: "Missing parameters" });
+        }
+
+        // Strict Ownership Check: Ensure user only withdraws from their assigned wallet_index
+        if (Number(walletIndex) !== Number(user.wallet_index)) {
+            return res.status(403).json({ success: false, error: "Forbidden: Wallet index mismatch" });
+        }
+
+        const amountBig = BigInt(amount);
+        if (amountBig <= 0n) {
+            return res.status(400).json({ success: false, error: "Invalid amount" });
+        }
+
+        console.log(`[${user.telegram_id}] Withdrawal Request: ${amountBig} pUSD -> ${recipient} on Chain ${destChainId}`);
+        
+        const txHash = await polymarketRelayerService.withdrawCrossChain(
+            user.wallet_index,
+            destChainId.toString(),
+            destTokenAddress,
+            recipient,
+            amountBig
+        );
+
+        return res.json({ success: true, txHash });
+    } catch (e: any) {
+        console.error("Withdrawal error:", e);
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTH — Validate & return/create user
@@ -752,19 +765,6 @@ if (env.NODE_ENV === 'development') {
             timestamp: new Date().toISOString(),
             v: "v1.2.3"
         });
-    });
-
-    router.get("/debug/db-dump", async (req: Request, res: Response) => {
-        try {
-            const users = await db.getUserByTelegramId(123456789);
-            const { data: allOrders } = await (db as any).getClient().from("orders").select("*");
-            res.json({
-                target_user: users,
-                orders: allOrders
-            });
-        } catch (err: any) {
-            res.status(500).json({ error: err.message });
-        }
     });
 }
 
@@ -1349,8 +1349,10 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
                 ...trade,
                 seller_username: user.username,
                 seller_first_name: user.first_name,
+                seller_hide_handle: (user as any)?.hide_group_handle,
                 buyer_username: buyerUser?.username,
                 buyer_first_name: buyerUser?.first_name,
+                buyer_hide_handle: (buyerUser as any)?.hide_group_handle,
                 release_tx_hash: releaseTxHash || trade.release_tx_hash,
             };
             const { broadcastTradeSuccess } = await import("../bot");
@@ -1893,7 +1895,8 @@ router.put("/profile", async (req: Request, res: Response) => {
         const {
             upi_id, phone_number, bank_account_number, bank_ifsc, bank_name,
             receive_address, cdm_bank_number, cdm_bank_name, cdm_phone,
-            cdm_user_name, digital_rupee_id, bio, instagram_handle, x_handle
+            cdm_user_name, digital_rupee_id, bio, instagram_handle, x_handle,
+            hide_group_handle
         } = req.body;
         const updates: Record<string, any> = {};
         if (upi_id !== undefined) updates.upi_id = upi_id;
@@ -1910,6 +1913,7 @@ router.put("/profile", async (req: Request, res: Response) => {
         if (bio !== undefined) updates.bio = bio;
         if (instagram_handle !== undefined) updates.instagram_handle = instagram_handle;
         if (x_handle !== undefined) updates.x_handle = x_handle;
+        if (hide_group_handle !== undefined) updates.hide_group_handle = Boolean(hide_group_handle);
 
         if (Object.keys(updates).length > 0) {
             await db.updateUser(user.id, updates as any);

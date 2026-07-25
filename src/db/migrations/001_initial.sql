@@ -249,7 +249,7 @@ ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_proofs ENABLE ROW LEVEL SECURITY;
 
 -- Service role can do everything (bot backend uses service key)
-CREATE POLICY "Service role full access" ON users FOR ALL USING (true);
-CREATE POLICY "Service role full access" ON orders FOR ALL USING (true);
-CREATE POLICY "Service role full access" ON trades FOR ALL USING (true);
-CREATE POLICY "Service role full access" ON payment_proofs FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON users FOR ALL TO service_role USING (true);
+CREATE POLICY "Service role full access" ON orders FOR ALL TO service_role USING (true);
+CREATE POLICY "Service role full access" ON trades FOR ALL TO service_role USING (true);
+CREATE POLICY "Service role full access" ON payment_proofs FOR ALL TO service_role USING (true);

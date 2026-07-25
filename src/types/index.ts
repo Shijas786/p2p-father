@@ -52,6 +52,7 @@ export interface User {
     bio: string | null;
     instagram_handle: string | null;
     x_handle: string | null;
+    hide_group_handle?: boolean;
     created_at: string;
     photo_url?: string; // Manual PFP
     total_volume?: number;

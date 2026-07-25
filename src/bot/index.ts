@@ -197,18 +197,28 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
 
 let availableGifs: string[] = [];
 
+function formatTraderDisplay(username?: string | null, firstName?: string | null, hideHandle: boolean = false): string {
+    if (hideHandle) {
+        if (username && username.length > 2) {
+            return `@${escapeHTML(username.slice(0, 2))}***`;
+        }
+        if (firstName && firstName.length > 2) {
+            return `${escapeHTML(firstName.slice(0, 2))}***`;
+        }
+        return "Anonymous Trader";
+    }
+    if (username) return `@${escapeHTML(username)}`;
+    if (firstName) return escapeHTML(firstName);
+    return "Trader";
+}
+
 export async function broadcastTradeSuccess(trade: any, order: any) {
     try {
         // ✨ Liveness Feedback - A small delay gives a "live processing" feel for completions
         await new Promise(r => setTimeout(r, 1200));
 
-        const buyerUsername = trade.buyer_username;
-        const buyerFirstName = trade.buyer_first_name || "Buyer";
-        const buyer = buyerUsername ? `@${escapeHTML(buyerUsername)}` : escapeHTML(buyerFirstName);
-
-        const sellerUsername = trade.seller_username;
-        const sellerFirstName = trade.seller_first_name || "Seller";
-        const seller = sellerUsername ? `@${escapeHTML(sellerUsername)}` : escapeHTML(sellerFirstName);
+        const buyer = formatTraderDisplay(trade.buyer_username, trade.buyer_first_name || "Buyer", trade.buyer_hide_handle);
+        const seller = formatTraderDisplay(trade.seller_username, trade.seller_first_name || "Seller", trade.seller_hide_handle);
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
         const chain = trade.chain || order?.chain || 'bsc';
 
@@ -276,7 +286,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
 
     const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
     const emoji = order.type === "sell" ? "🔴" : "🟢";
-    const username = user?.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user?.first_name || "anon")}</b>`;
+    const username = formatTraderDisplay(user?.username, user?.first_name, user?.hide_group_handle);
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
     const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
 
@@ -1510,6 +1520,8 @@ bot.command("profile", async (ctx) => {
             user.trust_score >= 60 ? "🟢" :
                 user.trust_score >= 30 ? "🟡" : "🔴";
 
+    const privacyStatus = (user as any).hide_group_handle ? "ON 🔒" : "OFF 🔓";
+
     await ctx.reply(
         [
             "👤 *Your Profile*",
@@ -1526,10 +1538,38 @@ bot.command("profile", async (ctx) => {
             "",
             `💳 Wallet: ${user.wallet_address ? `\`${escapeMarkdown(truncateAddress(user.wallet_address))}\`` : "Not set"}`,
             `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
+            `🔒 Group Privacy Mode: ${escapeMarkdown(privacyStatus)} (Toggle via /privacy)`,
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
         ].join("\n"),
         { parse_mode: "Markdown" }
     );
+});
+
+bot.command("privacy", async (ctx) => {
+    try {
+        const user = await ensureUser(ctx);
+        if (!user) return;
+
+        const currentPrivacy = (user as any).hide_group_handle || false;
+        const newPrivacy = !currentPrivacy;
+
+        await db.updateUser(user.id, { hide_group_handle: newPrivacy } as any);
+
+        if (newPrivacy) {
+            await ctx.reply(
+                "🔒 *Privacy Mode: ACTIVATED*\n\nYour username will now be masked (e.g. `@us***`) in public group trade announcements. Transaction links will remain attached for protocol transparency.\n\nUse /privacy anytime to toggle.",
+                { parse_mode: "Markdown" }
+            );
+        } else {
+            await ctx.reply(
+                "🔓 *Privacy Mode: DEACTIVATED*\n\nYour full Telegram handle will be displayed in public group trade announcements.\n\nUse /privacy anytime to toggle.",
+                { parse_mode: "Markdown" }
+            );
+        }
+    } catch (err: any) {
+        console.error("/privacy command error:", err);
+        await ctx.reply("Failed to update privacy settings.");
+    }
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -3039,8 +3079,10 @@ bot.on("callback_query:data", async (ctx) => {
                         ...trade,
                         seller_username: sellerUser?.username,
                         seller_first_name: sellerUser?.first_name,
+                        seller_hide_handle: (sellerUser as any)?.hide_group_handle,
                         buyer_username: buyerUser?.username,
                         buyer_first_name: buyerUser?.first_name,
+                        buyer_hide_handle: (buyerUser as any)?.hide_group_handle,
                         release_tx_hash: txHash,
                     };
 
