@@ -26,6 +26,7 @@ import { Admin } from './pages/Admin';
 import { Leaderboard } from './pages/Leaderboard';
 import { Rewards } from './pages/Rewards';
 import { ToastProvider } from './components/Toast';
+import { MaintenanceNotice } from './components/MaintenanceNotice';
 import { APP_VERSION } from './constants';
 import './styles/global.css';
 
@@ -343,6 +344,7 @@ function AppInner() {
 
   return (
     <>
+      <MaintenanceNotice user={user} />
       <DeepLinkHandler />
       <Routes>
         <Route element={<Layout />}>

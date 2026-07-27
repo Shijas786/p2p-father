@@ -31,6 +31,20 @@ const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY)
 
 const router = Router();
 
+// System Status & Maintenance Endpoints (Public)
+let isMaintenanceActive = process.env.MAINTENANCE_MODE === "true";
+let maintenanceMessage = process.env.MAINTENANCE_MESSAGE || "P2PFather is currently undergoing a production system upgrade to enhance escrow security and performance. Trading and ad creation are temporarily paused.";
+
+router.get("/system/status", async (req: Request, res: Response) => {
+    res.json({
+        maintenance: process.env.MAINTENANCE_MODE === "true" || isMaintenanceActive,
+        title: "System Upgrade in Progress",
+        message: maintenanceMessage,
+        estimatedTime: process.env.MAINTENANCE_ESTIMATED_TIME || "Expected back online shortly",
+        timestamp: new Date().toISOString()
+    });
+});
+
 
 
 function escapeHTML(str: string): string {
@@ -753,7 +767,25 @@ router.get("/orders", async (req: Request, res: Response) => {
     }
 });
 
-// Moved /orders/mine above /orders/:id
+router.post("/admin/maintenance", validateInitData, async (req: Request, res: Response) => {
+    try {
+        const user = (req as any).telegramUser;
+        const telegramId = Number(user?.id);
+        if (!env.ADMIN_IDS.includes(telegramId)) {
+            return res.status(403).json({ error: "Admin access required" });
+        }
+        const { active, message } = req.body;
+        if (typeof active === "boolean") {
+            isMaintenanceActive = active;
+        }
+        if (message) {
+            maintenanceMessage = message;
+        }
+        res.json({ ok: true, maintenance: isMaintenanceActive, message: maintenanceMessage });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Debug endpoints (dev only)
 if (env.NODE_ENV === 'development') {
