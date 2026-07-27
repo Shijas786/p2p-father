@@ -33,7 +33,7 @@ const router = Router();
 
 // System Status & Maintenance Endpoints (Public)
 let isMaintenanceActive = process.env.MAINTENANCE_MODE === "true";
-let maintenanceMessage = process.env.MAINTENANCE_MESSAGE || "P2PFather is currently undergoing a production system upgrade to enhance escrow security and performance. Trading and ad creation are temporarily paused.";
+let maintenanceMessage = process.env.MAINTENANCE_MESSAGE || "P2PFather is currently undergoing maintenance.";
 
 router.get("/system/status", async (req: Request, res: Response) => {
     res.json({

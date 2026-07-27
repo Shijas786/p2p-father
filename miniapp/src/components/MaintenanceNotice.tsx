@@ -16,9 +16,9 @@ export const MaintenanceNotice: React.FC<MaintenanceNoticeProps> = ({ user, onRe
     message: string;
     estimatedTime: string;
   }>({
-    maintenance: true,
+    maintenance: false,
     title: 'System Upgrade in Progress',
-    message: 'P2PFather is currently undergoing a production system upgrade to enhance escrow security and performance. Trading and ad creation are temporarily paused to safeguard your transactions.',
+    message: 'P2PFather is currently undergoing a production system upgrade to enhance escrow security and performance.',
     estimatedTime: 'Expected back online shortly'
   });
 
