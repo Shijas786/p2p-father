@@ -1721,19 +1721,21 @@ footer{
 
 <script>
 // Live stats from API
+let currentStats = { vol: null, trades: null, users: null };
+
 async function fetchLiveStats() {
   try {
     const res = await fetch('/api/stats');
     if (!res.ok) return;
     const data = await res.json();
 
-    function animateCount(el, target, format) {
-      const duration = 1800;
+    function animateCount(el, startVal, target, format) {
+      const duration = startVal === 0 ? 1800 : 800;
       const start = performance.now();
       function step(now) {
         const p = Math.min((now - start) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        const val = Math.floor(target * eased);
+        const val = Math.floor(startVal + (target - startVal) * eased);
         el.textContent = format(val);
         if (p < 1) requestAnimationFrame(step);
       }
@@ -1741,25 +1743,32 @@ async function fetchLiveStats() {
     }
 
     // Volume — handle both field names (old: total_volume_usdc, new: total_volume)
-    const rawVol = data.total_volume || data.total_volume_usdc || 0;
+    const rawVol = Math.floor(data.total_volume || data.total_volume_usdc || 0);
     const volEl = document.getElementById('stat-volume');
-    if (volEl && rawVol > 0) {
-      animateCount(volEl, Math.floor(rawVol), v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'K+' : v + '+'));
+    if (volEl && rawVol > 0 && rawVol !== currentStats.vol) {
+      const prev = currentStats.vol || 0;
+      currentStats.vol = rawVol;
+      animateCount(volEl, prev, rawVol, v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'K+' : v + '+'));
     }
 
     // Trades — handle all possible field names across API versions
     const rawTrades = data.total_trades || data.completed_trades || data.total_trade_count || 0;
     const tradeEl = document.getElementById('stat-trades');
-    if (tradeEl && rawTrades > 0) {
-      animateCount(tradeEl, rawTrades, v => v.toLocaleString('en-IN'));
-    } else if (tradeEl) {
+    if (tradeEl && rawTrades > 0 && rawTrades !== currentStats.trades) {
+      const prev = currentStats.trades || 0;
+      currentStats.trades = rawTrades;
+      animateCount(tradeEl, prev, rawTrades, v => v.toLocaleString('en-IN'));
+    } else if (tradeEl && rawTrades === 0) {
       tradeEl.textContent = '—';
     }
 
     // Users
+    const rawUsers = data.total_users || 0;
     const userEl = document.getElementById('stat-users');
-    if (userEl && data.total_users > 0) {
-      animateCount(userEl, data.total_users, v => v.toLocaleString('en-IN'));
+    if (userEl && rawUsers > 0 && rawUsers !== currentStats.users) {
+      const prev = currentStats.users || 0;
+      currentStats.users = rawUsers;
+      animateCount(userEl, prev, rawUsers, v => v.toLocaleString('en-IN'));
     }
   } catch (e) {
     // silently fail — fallback values stay visible
