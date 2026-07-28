@@ -749,25 +749,24 @@ class Database {
 
     async getStats() {
         const db = this.getClient();
-        const [trades, orders, users, fees, disputes] = await Promise.all([
-            db.from("trades").select("id, status, amount", { count: "exact" }),
+        const [trades, completedTradesQuery, orders, users, fees, disputes] = await Promise.all([
+            db.from("trades").select("id", { count: "exact" }),
+            db.from("trades").select("amount", { count: "exact" }).in("status", ["completed", "COMPLETED"]),
             db.from("orders").select("id", { count: "exact" }).eq("status", "active"),
             db.from("users").select("id", { count: "exact" }),
             this.getTotalFees(),
-            db.from("trades").select("id", { count: "exact" }).eq("status", "disputed"),
+            db.from("trades").select("id", { count: "exact" }).in("status", ["disputed", "DISPUTED"]),
         ]);
 
-        const completedTrades = (trades.data || []).filter(
-            (t: any) => t.status === "completed"
-        );
-        const totalVolume = completedTrades.reduce(
-            (sum: number, t: any) => sum + (t.amount || 0),
+        const completedCount = completedTradesQuery.count || (completedTradesQuery.data || []).length;
+        const totalVolume = (completedTradesQuery.data || []).reduce(
+            (sum: number, t: any) => sum + (parseFloat(t.amount) || 0),
             0
         );
 
         return {
             total_trades: trades.count || 0,
-            completed_trades: completedTrades.length,
+            completed_trades: completedCount,
             active_orders: orders.count || 0,
             total_users: users.count || 0,
             total_volume_generic: totalVolume,

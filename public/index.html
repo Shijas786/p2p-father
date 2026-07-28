@@ -1721,7 +1721,7 @@ footer{
 
 <script>
 // Live stats from API
-(async function fetchLiveStats() {
+async function fetchLiveStats() {
   try {
     const res = await fetch('/api/stats');
     if (!res.ok) return;
@@ -1764,7 +1764,9 @@ footer{
   } catch (e) {
     // silently fail — fallback values stay visible
   }
-})();
+}
+fetchLiveStats();
+setInterval(fetchLiveStats, 15000);
 
 // FAQ accordion
 function toggleFaq(el) {
