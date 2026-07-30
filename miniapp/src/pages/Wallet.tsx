@@ -46,7 +46,14 @@ interface Props {
 }
 
 export function Wallet({ user }: Props) {
-    const [balances, setBalances] = useState<any>(null);
+    const [balances, setBalances] = useState<any>(() => {
+        try {
+            const cached = localStorage.getItem('p2p_wallet_cached_balances');
+            return cached ? JSON.parse(cached) : null;
+        } catch {
+            return null;
+        }
+    });
     const [themeHue, setThemeHue] = useState(160);
 
     // Overlays
@@ -153,6 +160,9 @@ export function Wallet({ user }: Props) {
         try {
             const data = await api.wallet.getBalances();
             setBalances(data);
+            try {
+                localStorage.setItem('p2p_wallet_cached_balances', JSON.stringify(data));
+            } catch {}
             setVaultBaseUsdc(data.vault_base_usdc || '0.00');
             setVaultBscUsdc(data.vault_bsc_usdc || '0.00');
             setVaultBaseUsdt(data.vault_base_usdt || '0.00');

@@ -384,18 +384,23 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             });
         }
 
-        const balances = await wallet.getBalances(user.wallet_address);
-        const vaultBaseUsdc = await escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base');
-        const vaultBscUsdc = await escrow.getVaultBalance(user.wallet_address, "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 'bsc');
-        const vaultBaseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, 'base');
-        const vaultBscUsdt = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", 'bsc');
-        const vaultBscBnb = await escrow.getVaultBalance(user.wallet_address, "0x0000000000000000000000000000000000000000", 'bsc');
-
-        const reservedBaseUsdc = await db.getReservedAmount(user.id, 'USDC', 'base');
-        const reservedBscUsdc = await db.getReservedAmount(user.id, 'USDC', 'bsc');
-        const reservedBaseUsdt = await db.getReservedAmount(user.id, 'USDT', 'base');
-        const reservedBscUsdt = await db.getReservedAmount(user.id, 'USDT', 'bsc');
-        const reservedBscBnb = await db.getReservedAmount(user.id, 'BNB', 'bsc');
+        const [
+            balances,
+            vaultBaseUsdc, vaultBscUsdc, vaultBaseUsdt, vaultBscUsdt, vaultBscBnb,
+            reservedBaseUsdc, reservedBscUsdc, reservedBaseUsdt, reservedBscUsdt, reservedBscBnb
+        ] = await Promise.all([
+            wallet.getBalances(user.wallet_address),
+            escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base').catch(() => "0.0"),
+            escrow.getVaultBalance(user.wallet_address, "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", 'bsc').catch(() => "0.0"),
+            escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, 'base').catch(() => "0.0"),
+            escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", 'bsc').catch(() => "0.0"),
+            escrow.getVaultBalance(user.wallet_address, "0x0000000000000000000000000000000000000000", 'bsc').catch(() => "0.0"),
+            db.getReservedAmount(user.id, 'USDC', 'base').catch(() => 0),
+            db.getReservedAmount(user.id, 'USDC', 'bsc').catch(() => 0),
+            db.getReservedAmount(user.id, 'USDT', 'base').catch(() => 0),
+            db.getReservedAmount(user.id, 'USDT', 'bsc').catch(() => 0),
+            db.getReservedAmount(user.id, 'BNB', 'bsc').catch(() => 0)
+        ]);
 
         res.json({
             ...balances,

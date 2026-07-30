@@ -65,35 +65,35 @@ class WalletService {
     // ═══════════════════════════════════════
 
     async getBalances(address: string) {
-        // Base - Native ETH
         const baseProvider = this.getProvider('base');
-        const ethBal = await baseProvider.getBalance(address);
-        const usdcBal = await this.getTokenBalance(address, env.USDC_ADDRESS, 'base');
-        const usdtBal = await this.getTokenBalance(address, env.USDT_ADDRESS, 'base');
-
-        // BSC - Native BNB
         const bscProvider = this.getProvider('bsc');
-        const bnbBal = await bscProvider.getBalance(address);
+        const polProvider = this.getProvider('polygon');
 
-        // BSC Token addresses
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
         const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
-
-        const bscUsdcBal = await this.getTokenBalance(address, bscUsdc, 'bsc');
-        const bscUsdtBal = await this.getTokenBalance(address, bscUsdt, 'bsc');
-
-        // Polygon - Native POL and pUSD
-        const polProvider = this.getProvider('polygon');
-        const polBal = await polProvider.getBalance(address);
         const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
-        const pusdBal = await this.getTokenBalance(address, pusdAddress, 'polygon');
 
-        // Vault Balances
-        const vaultBaseUsdc = await this.getVaultBalance(address, env.USDC_ADDRESS, 'base');
-        const vaultBaseUsdt = await this.getVaultBalance(address, env.USDT_ADDRESS, 'base');
-        const vaultBscBnb = await this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc');
-        const vaultBscUsdc = await this.getVaultBalance(address, bscUsdc, 'bsc');
-        const vaultBscUsdt = await this.getVaultBalance(address, bscUsdt, 'bsc');
+        // 🚀 Parallel RPC execution using Promise.all for instant response
+        const [
+            ethBal, usdcBal, usdtBal,
+            bnbBal, bscUsdcBal, bscUsdtBal,
+            polBal, pusdBal,
+            vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt
+        ] = await Promise.all([
+            baseProvider.getBalance(address).catch(() => 0n),
+            this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6).catch(() => "0.0"),
+            this.getTokenBalance(address, env.USDT_ADDRESS, 'base', 6).catch(() => "0.0"),
+            bscProvider.getBalance(address).catch(() => 0n),
+            this.getTokenBalance(address, bscUsdc, 'bsc', 18).catch(() => "0.0"),
+            this.getTokenBalance(address, bscUsdt, 'bsc', 18).catch(() => "0.0"),
+            polProvider.getBalance(address).catch(() => 0n),
+            this.getTokenBalance(address, pusdAddress, 'polygon', 18).catch(() => "0.0"),
+            this.getVaultBalance(address, env.USDC_ADDRESS, 'base').catch(() => "0.0"),
+            this.getVaultBalance(address, env.USDT_ADDRESS, 'base').catch(() => "0.0"),
+            this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc').catch(() => "0.0"),
+            this.getVaultBalance(address, bscUsdc, 'bsc').catch(() => "0.0"),
+            this.getVaultBalance(address, bscUsdt, 'bsc').catch(() => "0.0")
+        ]);
 
         return {
             address,
@@ -113,7 +113,7 @@ class WalletService {
         };
     }
 
-    async getTokenBalance(address: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
+    async getTokenBalance(address: string, tokenAddress: string, chain: Chain = 'base', knownDecimals?: number): Promise<string> {
         if (tokenAddress === "0x0000000000000000000000000000000000000000") {
             const provider = this.getProvider(chain);
             const balance = await provider.getBalance(address);
@@ -122,6 +122,10 @@ class WalletService {
         const provider = this.getProvider(chain);
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
         try {
+            if (knownDecimals !== undefined) {
+                const balance = await contract.balanceOf(address);
+                return ethers.formatUnits(balance, knownDecimals);
+            }
             const [balance, decimals] = await Promise.all([
                 contract.balanceOf(address),
                 contract.decimals()
