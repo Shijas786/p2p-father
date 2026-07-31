@@ -378,3 +378,80 @@ export const DEMO_TRADES = [
         created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     },
 ];
+
+// ─── Admin panel demo data ─────────────────────────────────────────────────────
+
+export const DEMO_ADMIN_DISPUTES = [
+    {
+        id: 'dispute-trade-a1b2c3d4',
+        amount: '250.00',
+        token: 'USDC',
+        chain: 'base',
+        fiat_amount: 21875,
+        rate: 87.5,
+        dispute_reason: 'Buyer claims they sent ₹21,875 via UPI but seller says payment was not received. Buyer has shared UTR screenshot.',
+        created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        buyer:  { username: 'RohanFi',      first_name: 'Rohan',  trust_score: 91 },
+        seller: { username: 'CryptoKing_KL', first_name: 'Arjun',  trust_score: 99, upi_id: 'arjun@okicici', phone_number: '9876543210' },
+        payment_proofs: [{ utr: 'ICIC24071800123456' }],
+        chatMessages: [
+            { id: 1, user_id: 'buyer-1',  username: 'RohanFi',       first_name: 'Rohan',  sender_role: 'buyer',  message: 'I have sent the payment. UTR: ICIC24071800123456',        created_at: new Date(Date.now() - 2.5 * 3600000).toISOString() },
+            { id: 2, user_id: 'seller-1', username: 'CryptoKing_KL', first_name: 'Arjun',  sender_role: 'seller', message: 'I have not received any payment in my account yet.',       created_at: new Date(Date.now() - 2.2 * 3600000).toISOString() },
+            { id: 3, user_id: 'buyer-1',  username: 'RohanFi',       first_name: 'Rohan',  sender_role: 'buyer',  message: 'I am sharing the bank screenshot now.',                   created_at: new Date(Date.now() - 2.0 * 3600000).toISOString(), image_url: null },
+            { id: 4, user_id: 'seller-1', username: 'CryptoKing_KL', first_name: 'Arjun',  sender_role: 'seller', message: 'Still not received. Please check if you sent to right UPI.', created_at: new Date(Date.now() - 1.5 * 3600000).toISOString() },
+        ],
+    },
+    {
+        id: 'dispute-trade-e5f6g7h8',
+        amount: '100.00',
+        token: 'USDT',
+        chain: 'bsc',
+        fiat_amount: 8750,
+        rate: 87.5,
+        dispute_reason: 'Seller released funds but buyer says crypto not received in wallet. Possible wrong wallet address.',
+        created_at: new Date(Date.now() - 5.5 * 60 * 60 * 1000).toISOString(),
+        buyer:  { username: 'AmalDEFI',   first_name: 'Amal',   trust_score: 73 },
+        seller: { username: 'P2PVipin',   first_name: 'Vipin',  trust_score: 88, upi_id: 'vipin@paytm', phone_number: '9845001234' },
+        payment_proofs: [{ utr: 'PYTM24071900654321' }],
+        chatMessages: [
+            { id: 5, user_id: 'buyer-2',  username: 'AmalDEFI', first_name: 'Amal',  sender_role: 'buyer',  message: 'Crypto not showing in my wallet even after 30 mins.', created_at: new Date(Date.now() - 5 * 3600000).toISOString() },
+            { id: 6, user_id: 'seller-2', username: 'P2PVipin', first_name: 'Vipin', sender_role: 'seller', message: 'I released it. TX hash: 0xabc123...def456. Check BSC scan.', created_at: new Date(Date.now() - 4.5 * 3600000).toISOString() },
+            { id: 7, user_id: 'buyer-2',  username: 'AmalDEFI', first_name: 'Amal',  sender_role: 'buyer',  message: 'The TX shows a different address. I did not give that address!', created_at: new Date(Date.now() - 4 * 3600000).toISOString() },
+        ],
+    },
+];
+
+export const DEMO_ADMIN_STATS = {
+    total_users:      1284,
+    total_trades:     3920,
+    completed_trades: 3741,
+    active_orders:    47,
+    active_trades:    12,
+    active_disputes:  2,
+    total_volume:     487320.50,
+    total_fees:       2436.60,
+    volume_today:     14250.00,
+};
+
+export const DEMO_ADMIN_USERS = [
+    { id: 'trader-1', username: 'CryptoKing_KL', first_name: 'Arjun',  photo_url: null, completed_trades: 312 },
+    { id: 'trader-2', username: 'P2PVipin',       first_name: 'Vipin',  photo_url: null, completed_trades: 198 },
+    { id: 'trader-3', username: 'SarahTrades',    first_name: 'Sarah',  photo_url: null, completed_trades: 145 },
+    { id: 'trader-4', username: 'RohanFi',        first_name: 'Rohan',  photo_url: null, completed_trades: 91  },
+    { id: 'trader-5', username: 'KeralaHODL',     first_name: 'Priya',  photo_url: null, completed_trades: 67  },
+    { id: 'trader-6', username: 'AmalDEFI',       first_name: 'Amal',   photo_url: null, completed_trades: 43  },
+    { id: 'trader-7', username: 'NeethuBTC',      first_name: 'Neethu', photo_url: null, completed_trades: 29  },
+    { id: 'dev-user', username: 'dev_user',        first_name: 'Developer', photo_url: null, completed_trades: 45 },
+];
+
+export const DEMO_ADMIN_TRADES = [
+    { id: 'demo-trade-1', amount: '100.00', token: 'USDC', chain: 'base',  status: 'in_escrow',           fiat_amount: 8750,  rate: 87.5, created_at: new Date(Date.now() - 30 * 60000).toISOString(),           buyer: { username: 'dev_user' },  seller: { username: 'CryptoKing_KL' } },
+    { id: 'demo-trade-2', amount: '200.00', token: 'USDC', chain: 'bsc',   status: 'fiat_sent',           fiat_amount: 17440, rate: 87.2, created_at: new Date(Date.now() - 2 * 3600000).toISOString(),          buyer: { username: 'P2PVipin' },   seller: { username: 'dev_user' } },
+    { id: 'demo-trade-3', amount: '150.00', token: 'USDT', chain: 'base',  status: 'completed',           fiat_amount: 13065, rate: 87.1, created_at: new Date(Date.now() - 86400000).toISOString(),             buyer: { username: 'dev_user' },  seller: { username: 'SarahTrades' } },
+    { id: 'demo-trade-4', amount: '500.00', token: 'USDC', chain: 'bsc',   status: 'completed',           fiat_amount: 43450, rate: 86.9, created_at: new Date(Date.now() - 3 * 86400000).toISOString(),         buyer: { username: 'RohanFi' },    seller: { username: 'dev_user' } },
+    { id: 'demo-trade-5', amount: '250.00', token: 'USDC', chain: 'base',  status: 'disputed',            fiat_amount: 21875, rate: 87.5, created_at: new Date(Date.now() - 3 * 3600000).toISOString(),          buyer: { username: 'RohanFi' },    seller: { username: 'CryptoKing_KL' } },
+    { id: 'demo-trade-6', amount: '100.00', token: 'USDT', chain: 'bsc',   status: 'disputed',            fiat_amount: 8750,  rate: 87.5, created_at: new Date(Date.now() - 5.5 * 3600000).toISOString(),        buyer: { username: 'AmalDEFI' },   seller: { username: 'P2PVipin' } },
+    { id: 'demo-trade-7', amount: '75.00',  token: 'USDT', chain: 'bsc',   status: 'cancelled',           fiat_amount: 6548,  rate: 87.3, created_at: new Date(Date.now() - 5 * 86400000).toISOString(),         buyer: { username: 'dev_user' },  seller: { username: 'KeralaHODL' } },
+    { id: 'demo-trade-8', amount: '300.00', token: 'USDC', chain: 'base',  status: 'waiting_for_escrow',  fiat_amount: 26250, rate: 87.5, created_at: new Date(Date.now() - 10 * 60000).toISOString(),           buyer: { username: 'NeethuBTC' },  seller: { username: 'dev_user' } },
+    { id: 'demo-trade-9', amount: '50.00',  token: 'USDC', chain: 'base',  status: 'fiat_confirmed',      fiat_amount: 4375,  rate: 87.5, created_at: new Date(Date.now() - 45 * 60000).toISOString(),           buyer: { username: 'dev_user' },  seller: { username: 'AmalDEFI' } },
+];

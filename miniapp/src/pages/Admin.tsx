@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../lib/api';
-import { haptic } from '../lib/telegram';
+import { haptic, isTelegramEnvironment } from '../lib/telegram';
+import {
+    DEMO_ADMIN_DISPUTES,
+    DEMO_ADMIN_STATS,
+    DEMO_ADMIN_USERS,
+    DEMO_ADMIN_TRADES,
+} from '../lib/devMocks';
 import './Admin.css';
 
 type AdminTab = 'disputes' | 'stats' | 'users' | 'trades';
@@ -111,6 +117,13 @@ export function Admin({ user }: Props) {
     async function loadDisputes() {
         setDisputesLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                // Dev mode: use mock disputes
+                await new Promise(r => setTimeout(r, 400));
+                setDisputes(DEMO_ADMIN_DISPUTES as any);
+                setDisputesLoading(false);
+                return;
+            }
             const { disputes: loaded } = await api.admin.getDisputes();
             const list = loaded || [];
             const withChats = await Promise.all(
@@ -132,6 +145,14 @@ export function Admin({ user }: Props) {
     async function loadStats() {
         setStatsLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                await new Promise(r => setTimeout(r, 300));
+                setStats(DEMO_ADMIN_STATS);
+                setStatsLoaded(true);
+                setLastRefresh(new Date());
+                setStatsLoading(false);
+                return;
+            }
             const data = await api.admin.getStats();
             setStats(data);
             setStatsLoaded(true);
@@ -146,6 +167,13 @@ export function Admin({ user }: Props) {
     async function loadUsers() {
         setUsersLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                await new Promise(r => setTimeout(r, 300));
+                setUsers(DEMO_ADMIN_USERS);
+                setUsersLoaded(true);
+                setUsersLoading(false);
+                return;
+            }
             const { users: list } = await api.users.list();
             setUsers(list || []);
             setUsersLoaded(true);
@@ -159,6 +187,17 @@ export function Admin({ user }: Props) {
     async function loadTrades(status: string, page: number) {
         setTradesLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                await new Promise(r => setTimeout(r, 300));
+                const filtered = status === 'all'
+                    ? DEMO_ADMIN_TRADES
+                    : DEMO_ADMIN_TRADES.filter(t => t.status === status);
+                setTrades(filtered as any);
+                setTradesTotal(filtered.length);
+                setTradesLoaded(true);
+                setTradesLoading(false);
+                return;
+            }
             const data = await api.admin.getTrades(status, page);
             setTrades(data.trades || []);
             setTradesTotal(data.total || 0);
@@ -352,33 +391,45 @@ export function Admin({ user }: Props) {
                                 <span>{d.chatMessages?.length || 0} msgs</span>
                             </div>
                             <div className="custom-scrollbar" style={{ backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', height: 140, overflowY: 'scroll', padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {d.chatMessages?.length === 0 ? (
-                                    <div className="text-muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontStyle: 'italic' }}>No messages yet.</div>
-                                ) : d.chatMessages?.map((msg: any, idx: number) => {
-                                    const isBuyer = msg.sender_role === 'buyer';
-                                    const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
-                                    const isMe = msg.telegram_id === user.telegram_id;
-                                    return (
-                                        <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
-                                            <div style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 2, padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
-                                                {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
-                                            </div>
-                                            <div style={{ padding: 8, borderRadius: 'var(--radius-md)', fontSize: 12, lineHeight: 1.3, backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88,28,135,0.4)' : 'rgba(255,255,255,0.05)'), color: isMe ? '#fff' : 'var(--text-primary)', border: isMe ? 'none' : '1px solid var(--border)', borderTopRightRadius: isMe ? 0 : 'var(--radius-md)', borderTopLeftRadius: !isMe ? 0 : 'var(--radius-md)' }}>
-                                                {msg.image_url ? (
-                                                    <div className="flex-col" style={{ gap: 4 }}>
-                                                        <img src={msg.image_url} alt="Proof" style={{ maxWidth: 140, borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                        {msg.message && <p>{msg.message}</p>}
+                                {(() => {
+                                    const otherLatestTs = (d.chatMessages || [])
+                                        .filter((m: any) => m.telegram_id !== user?.telegram_id)
+                                        .reduce((latest: string, m: any) => (m.created_at > latest ? m.created_at : latest), '');
+
+                                    return d.chatMessages?.length === 0 ? (
+                                        <div className="text-muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontStyle: 'italic' }}>No messages yet.</div>
+                                    ) : d.chatMessages?.map((msg: any, idx: number) => {
+                                        const isBuyer = msg.sender_role === 'buyer';
+                                        const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
+                                        const isMe = msg.telegram_id === user.telegram_id;
+                                        const isSeen = otherLatestTs && msg.created_at <= otherLatestTs;
+                                        return (
+                                            <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
+                                                <div style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 2, padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
+                                                    {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
+                                                </div>
+                                                <div style={{ padding: 8, borderRadius: 'var(--radius-md)', fontSize: 12, lineHeight: 1.3, backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88,28,135,0.4)' : 'rgba(255,255,255,0.05)'), color: isMe ? '#fff' : 'var(--text-primary)', border: isMe ? 'none' : '1px solid var(--border)', borderTopRightRadius: isMe ? 0 : 'var(--radius-md)', borderTopLeftRadius: !isMe ? 0 : 'var(--radius-md)' }}>
+                                                    {msg.image_url ? (
+                                                        <div className="flex-col" style={{ gap: 4 }}>
+                                                            <img src={msg.image_url} alt="Proof" style={{ maxWidth: 140, borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                            {msg.message && <p>{msg.message}</p>}
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
+                                                    )}
+                                                    <div style={{ fontSize: 7, opacity: 0.7, textAlign: 'right', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                                                        <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        {isMe && (
+                                                            <span style={{ color: isSeen ? '#93c5fd' : 'inherit', fontWeight: 'bold' }}>
+                                                                {isSeen ? ' ✓✓' : ' ✓'}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
-                                                )}
-                                                <div style={{ fontSize: 7, opacity: 0.5, textAlign: 'right', marginTop: 4 }}>
-                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    });
+                                })()}
                                 <div ref={el => { chatEndRefs.current[d.id] = el; }} />
                             </div>
                             <div className="flex" style={{ gap: 8 }}>
