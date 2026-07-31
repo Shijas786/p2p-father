@@ -391,45 +391,45 @@ export function Admin({ user }: Props) {
                                 <span>{d.chatMessages?.length || 0} msgs</span>
                             </div>
                             <div className="custom-scrollbar" style={{ backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', height: 140, overflowY: 'scroll', padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {(() => {
-                                    const otherLatestTs = (d.chatMessages || [])
-                                        .filter((m: any) => m.telegram_id !== user?.telegram_id)
+                                {d.chatMessages?.length === 0 ? (
+                                    <div className="text-muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontStyle: 'italic' }}>No messages yet.</div>
+                                ) : d.chatMessages?.map((msg: any, idx: number) => {
+                                    const isBuyer = msg.sender_role === 'buyer';
+                                    const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
+                                    const isMe = msg.telegram_id === user.telegram_id;
+
+                                    // Find latest response from anyone other than sender of this message
+                                    const senderId = msg.telegram_id || msg.user_id;
+                                    const latestOtherTs = (d.chatMessages || [])
+                                        .filter((m: any) => (m.telegram_id || m.user_id) !== senderId)
                                         .reduce((latest: string, m: any) => (m.created_at > latest ? m.created_at : latest), '');
 
-                                    return d.chatMessages?.length === 0 ? (
-                                        <div className="text-muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontStyle: 'italic' }}>No messages yet.</div>
-                                    ) : d.chatMessages?.map((msg: any, idx: number) => {
-                                        const isBuyer = msg.sender_role === 'buyer';
-                                        const isAdmin = msg.sender_role === 'admin' || user?.admin_ids?.includes(msg.telegram_id);
-                                        const isMe = msg.telegram_id === user.telegram_id;
-                                        const isSeen = otherLatestTs && msg.created_at <= otherLatestTs;
-                                        return (
-                                            <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
-                                                <div style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 2, padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
-                                                    {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
-                                                </div>
-                                                <div style={{ padding: 8, borderRadius: 'var(--radius-md)', fontSize: 12, lineHeight: 1.3, backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88,28,135,0.4)' : 'rgba(255,255,255,0.05)'), color: isMe ? '#fff' : 'var(--text-primary)', border: isMe ? 'none' : '1px solid var(--border)', borderTopRightRadius: isMe ? 0 : 'var(--radius-md)', borderTopLeftRadius: !isMe ? 0 : 'var(--radius-md)' }}>
-                                                    {msg.image_url ? (
-                                                        <div className="flex-col" style={{ gap: 4 }}>
-                                                            <img src={msg.image_url} alt="Proof" style={{ maxWidth: 140, borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                            {msg.message && <p>{msg.message}</p>}
-                                                        </div>
-                                                    ) : (
-                                                        <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
-                                                    )}
-                                                    <div style={{ fontSize: 7, opacity: 0.7, textAlign: 'right', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-                                                        <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                        {isMe && (
-                                                            <span style={{ color: isSeen ? '#93c5fd' : 'inherit', fontWeight: 'bold' }}>
-                                                                {isSeen ? ' ✓✓' : ' ✓'}
-                                                            </span>
-                                                        )}
+                                    const isSeen = latestOtherTs && msg.created_at <= latestOtherTs;
+
+                                    return (
+                                        <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
+                                            <div style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 2, padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
+                                                {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
+                                            </div>
+                                            <div style={{ padding: 8, borderRadius: 'var(--radius-md)', fontSize: 12, lineHeight: 1.3, backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88,28,135,0.4)' : 'rgba(255,255,255,0.05)'), color: isMe ? '#fff' : 'var(--text-primary)', border: isMe ? 'none' : '1px solid var(--border)', borderTopRightRadius: isMe ? 0 : 'var(--radius-md)', borderTopLeftRadius: !isMe ? 0 : 'var(--radius-md)' }}>
+                                                {msg.image_url ? (
+                                                    <div className="flex-col" style={{ gap: 4 }}>
+                                                        <img src={msg.image_url} alt="Proof" style={{ maxWidth: 140, borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                        {msg.message && <p>{msg.message}</p>}
                                                     </div>
+                                                ) : (
+                                                    <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
+                                                )}
+                                                <div style={{ fontSize: 7, opacity: 0.7, textAlign: 'right', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                                                    <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span style={{ color: isSeen ? '#60a5fa' : 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>
+                                                        {isSeen ? ' ✓✓' : ' ✓'}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        );
-                                    });
-                                })()}
+                                        </div>
+                                    );
+                                })}
                                 <div ref={el => { chatEndRefs.current[d.id] = el; }} />
                             </div>
                             <div className="flex" style={{ gap: 8 }}>
