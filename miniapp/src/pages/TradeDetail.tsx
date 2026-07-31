@@ -75,6 +75,11 @@ export function TradeDetail({ user }: Props) {
     const [flowingStep, setFlowingStep] = useState<number | null>(null);
     const prevStepIdx = useRef<number>(-1);
 
+    // Feature 3 & 5 & 6 state
+    const [counterpartTyping, setCounterpartTyping] = useState(false);
+    const [lightboxZoom, setLightboxZoom] = useState(1);
+    const [lightboxRotation, setLightboxRotation] = useState(0);
+
     // Wagmi Hooks
     const { writeContractAsync } = useWriteContract();
     // const { chain: walletChain } = useAccount(); // Still needed for some UI perhaps, but useChainId for logic
@@ -204,12 +209,14 @@ export function TradeDetail({ user }: Props) {
             setTrade(data);
 
             const { messages: msgs } = await api.trades.getMessages(id);
-            // Play sound for new messages from counterparty
-            if (msgs.length > messages.length) {
-                const latest = msgs[msgs.length - 1];
-                if (latest.user_id !== user.id) {
-                    sounds.play('notification');
-                }
+            // Feature 5: Typing indicator — brief animation when counterpart sends a new message
+            const newMsgs = msgs.slice(messages.length);
+            const hasNewCounterpartMsg = newMsgs.some((m: any) => m.user_id !== user?.id && m.type !== 'system');
+            if (hasNewCounterpartMsg) {
+                sounds.play('notification');
+                setCounterpartTyping(true);
+                await new Promise(r => setTimeout(r, 700));
+                setCounterpartTyping(false);
             }
             setMessages(msgs);
         } catch (err) {
@@ -624,6 +631,11 @@ export function TradeDetail({ user }: Props) {
 
     // Use order details during initiation
     const disp = trade || order;
+
+    // Feature 3: Precompute latest counterpart message timestamp for read receipts
+    const counterpartLatestTs = messages
+        .filter((m: any) => m.user_id !== user?.id && m.type !== 'system')
+        .reduce((latest: string, m: any) => (m.created_at > latest ? m.created_at : latest), '');
 
     return (
         <div className="page animate-in">
@@ -1167,14 +1179,22 @@ export function TradeDetail({ user }: Props) {
                                                     </div>
                                                     {/* Image message */}
                                                     {m.type === 'image' && m.image_url && (
-                                                        <div className="msg-image" onClick={() => setFullscreenImage(m.image_url)}>
+                                                        <div className="msg-image" onClick={() => { setFullscreenImage(m.image_url); setLightboxZoom(1); setLightboxRotation(0); }}>
                                                             <img src={m.image_url} alt="Payment proof" />
                                                             <div className="msg-image-label">📸 Tap to view</div>
                                                         </div>
                                                     )}
                                                     {/* Text message */}
                                                     {m.message && <div className="msg-text">{m.message}</div>}
-                                                    <div className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    <div className="msg-time">
+                                                        {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {/* Feature 3: Read Receipts */}
+                                                        {isMine && (
+                                                            <span className={`msg-status${counterpartLatestTs && m.created_at <= counterpartLatestTs ? ' seen' : ''}`}>
+                                                                {counterpartLatestTs && m.created_at <= counterpartLatestTs ? ' ✓✓' : ' ✓'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Me Avatar (right side) */}
@@ -1194,6 +1214,14 @@ export function TradeDetail({ user }: Props) {
                                     </div>
                                 );
                             })}
+                            {/* Feature 5: Typing Indicator */}
+                            {counterpartTyping && (
+                                <div className="chat-typing">
+                                    <div className="chat-typing-bubble">
+                                        <span /><span /><span />
+                                    </div>
+                                </div>
+                            )}
                             <div ref={chatEndRef} />
                         </div>
 
@@ -1236,10 +1264,22 @@ export function TradeDetail({ user }: Props) {
                 )}
 
                 {/* Fullscreen Image Viewer */}
+                {/* Feature 6: Enhanced Image Lightbox */}
                 {fullscreenImage && (
                     <div className="chat-fullscreen" onClick={() => setFullscreenImage(null)}>
-                        <img src={fullscreenImage} alt="Full size" />
-                        <button className="chat-fullscreen-close">✕ Close</button>
+                        <div className="lightbox-toolbar" onClick={e => e.stopPropagation()}>
+                            <button className="lightbox-btn" onClick={() => setLightboxZoom(z => Math.min(z + 0.5, 4))}>🔍+</button>
+                            <button className="lightbox-btn" onClick={() => setLightboxZoom(z => Math.max(z - 0.5, 0.5))}>🔍−</button>
+                            <button className="lightbox-btn" onClick={() => setLightboxRotation(r => (r + 90) % 360)}>↻</button>
+                            <a className="lightbox-btn" href={fullscreenImage} download="trade-evidence.jpg" onClick={e => e.stopPropagation()}>💾</a>
+                        </div>
+                        <img
+                            src={fullscreenImage}
+                            alt="Full size"
+                            style={{ transform: `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`, transition: 'transform 0.2s ease' }}
+                            onClick={e => e.stopPropagation()}
+                        />
+                        <button className="chat-fullscreen-close" onClick={() => setFullscreenImage(null)}>✕ Close</button>
                     </div>
                 )}
             </div>

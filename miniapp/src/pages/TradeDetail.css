@@ -615,3 +615,114 @@
 .verification-steps {
     margin: 32px 0 !important; /* More space around steps */
 }
+
+/* ══════════════════════════════════════════════════
+   Feature 3: Read Receipts
+   ══════════════════════════════════════════════════ */
+.msg-status {
+    display: inline-block;
+    margin-left: 3px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: -1.5px;
+    vertical-align: middle;
+}
+
+.msg-status.seen {
+    color: #0ecb81;
+}
+
+/* ══════════════════════════════════════════════════
+   Feature 5: Typing Indicator
+   ══════════════════════════════════════════════════ */
+.chat-typing {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 2px 4px;
+    animation: fadeInUp 0.2s ease;
+}
+
+.chat-typing-bubble {
+    background: #2b2f36;
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.chat-typing-bubble span {
+    width: 6px;
+    height: 6px;
+    background: #848e9c;
+    border-radius: 50%;
+    display: inline-block;
+    animation: typingBounce 1.2s ease-in-out infinite;
+}
+
+.chat-typing-bubble span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.chat-typing-bubble span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ══════════════════════════════════════════════════
+   Feature 6: Enhanced Image Lightbox Toolbar
+   ══════════════════════════════════════════════════ */
+.lightbox-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lightbox-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #eaecef;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.lightbox-btn:active {
+    background: rgba(255, 255, 255, 0.22);
+    transform: scale(0.96);
+}
