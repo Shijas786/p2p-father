@@ -60,12 +60,58 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         setPrivacyMode(Boolean(user?.hide_group_handle));
     }, [user?.hide_group_handle]);
 
+    // KYC State
+    const [kycData, setKycData] = useState<{
+        kyc_status: 'unverified' | 'pending' | 'approved' | 'rejected';
+        is_verified: boolean;
+        kyc_verified_at: string | null;
+        country: string | null;
+        document_type: string | null;
+    } | null>(null);
+    const [kycLoading, setKycLoading] = useState(false);
+
+    useEffect(() => {
+        loadKycStatus();
+    }, []);
+
+    async function loadKycStatus() {
+        try {
+            const data = await api.kyc.getStatus();
+            setKycData(data);
+        } catch (err) {
+            console.warn('KYC status check failed:', err);
+        }
+    }
+
+    async function startKyc() {
+        haptic('medium');
+        setKycLoading(true);
+        try {
+            const res = await api.kyc.start();
+            haptic('success');
+            if (res.url) {
+                if (window.Telegram?.WebApp?.openLink) {
+                    window.Telegram.WebApp.openLink(res.url);
+                } else {
+                    window.open(res.url, '_blank');
+                }
+                setTimeout(loadKycStatus, 3000);
+            }
+        } catch (err: any) {
+            haptic('error');
+            alert('KYC Start Error: ' + err.message);
+        } finally {
+            setKycLoading(false);
+        }
+    }
+
     // Accordion State
     const [isPaymentMethodsExpanded, setIsPaymentMethodsExpanded] = useState(false);
 
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -325,6 +371,68 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <div className="prof-nav-sub" style={{ fontSize: '12px', color: '#848e9c' }}>Unlock quests & earn USDC</div>
                     </div>
                     <span className="prof-nav-chevron">›</span>
+                </div>
+
+                {/* 1.8 Didit Identity Verification (KYC) */}
+                <div className="prof-nav-item" style={{
+                    background: kycData?.is_verified
+                        ? 'linear-gradient(45deg, rgba(14, 203, 129, 0.12), transparent)'
+                        : kycData?.kyc_status === 'pending'
+                            ? 'linear-gradient(45deg, rgba(245, 158, 11, 0.12), transparent)'
+                            : 'linear-gradient(45deg, rgba(37, 103, 255, 0.12), transparent)',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    display: 'flex',
+                    alignItems: 'center'
+                }}>
+                    <div style={{ fontSize: '24px', marginRight: '16px' }}>
+                        {kycData?.is_verified ? '🛡️' : kycData?.kyc_status === 'pending' ? '🟡' : '🆔'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div className="prof-nav-text" style={{
+                            color: kycData?.is_verified ? '#0ecb81' : kycData?.kyc_status === 'pending' ? '#f59e0b' : '#3b82f6',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                        }}>
+                            Identity Verification (KYC)
+                            {kycData?.is_verified && <span style={{ fontSize: 9, background: 'rgba(14,203,129,0.2)', padding: '2px 6px', borderRadius: 10, color: '#0ecb81' }}>VERIFIED</span>}
+                        </div>
+                        <div className="prof-nav-sub" style={{ fontSize: '11px', color: '#848e9c', marginTop: 2 }}>
+                            {kycData?.is_verified
+                                ? `Verified Document · 100% Trust Badge`
+                                : kycData?.kyc_status === 'pending'
+                                    ? 'Verification in progress... Tap to refresh'
+                                    : 'Instant ID + Liveness check (Didit)'}
+                        </div>
+                    </div>
+                    {kycData?.is_verified ? (
+                        <span style={{ fontSize: 12, color: '#0ecb81', fontWeight: 'bold' }}>✅ Active</span>
+                    ) : (
+                        <button
+                            className="prof-save-btn"
+                            style={{
+                                fontSize: 11,
+                                padding: '6px 12px',
+                                borderRadius: 16,
+                                background: kycData?.kyc_status === 'pending' ? 'rgba(245,158,11,0.2)' : '#2567ff',
+                                color: '#fff',
+                                border: 'none',
+                                cursor: 'pointer'
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (kycData?.kyc_status === 'pending') {
+                                    loadKycStatus();
+                                } else {
+                                    startKyc();
+                                }
+                            }}
+                            disabled={kycLoading}
+                        >
+                            {kycLoading ? 'Starting...' : kycData?.kyc_status === 'pending' ? 'Refresh' : 'Verify'}
+                        </button>
+                    )}
                 </div>
 
                 {/* 2. Payment Methods (Expanded) */}

@@ -2248,6 +2248,159 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  DIDIT KYC INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+
+router.post("/kyc/start", validateInitData, async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const apiKey = env.DIDIT_API_KEY || "DIDIT_KEY_REDACTED";
+        const workflowId = env.DIDIT_WORKFLOW_ID || "b42c44f7-17c0-45ff-a068-09820bcd578b";
+
+        const response = await fetch("https://verification.didit.me/v3/session/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey
+            },
+            body: JSON.stringify({
+                workflow_id: workflowId,
+                vendor_data: user.id
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error("[DIDIT] Session creation failed:", errBody);
+            return res.status(500).json({ error: "Failed to create KYC session with Didit" });
+        }
+
+        const data = await response.json();
+
+        const supabase = (db as any).getClient();
+        await supabase
+            .from("users")
+            .update({
+                kyc_status: "pending",
+                kyc_session_id: data.session_id
+            })
+            .eq("id", user.id);
+
+        res.json({
+            success: true,
+            url: data.url,
+            session_id: data.session_id,
+            status: "pending"
+        });
+    } catch (err: any) {
+        console.error("[KYC] Start error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get("/kyc/status", validateInitData, async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+
+        const supabase = (db as any).getClient();
+        const { data: dbUser } = await supabase
+            .from("users")
+            .select("kyc_status, kyc_session_id, is_verified, kyc_verified_at, kyc_country, kyc_document_type")
+            .eq("id", user.id)
+            .single();
+
+        let kycStatus = dbUser?.kyc_status || (dbUser?.is_verified ? "approved" : "unverified");
+
+        if (kycStatus === "pending" && dbUser?.kyc_session_id) {
+            try {
+                const apiKey = env.DIDIT_API_KEY || "DIDIT_KEY_REDACTED";
+                const checkRes = await fetch(`https://verification.didit.me/v3/session/${dbUser.kyc_session_id}/decision/`, {
+                    headers: { "x-api-key": apiKey }
+                });
+                if (checkRes.ok) {
+                    const decisionData = await checkRes.json();
+                    const statusStr = (decisionData.status || decisionData.decision?.status || "").toLowerCase();
+
+                    if (statusStr === "approved") {
+                        kycStatus = "approved";
+                        const doc = decisionData.id_verification?.[0] || {};
+                        await supabase
+                            .from("users")
+                            .update({
+                                kyc_status: "approved",
+                                is_verified: true,
+                                kyc_verified_at: new Date().toISOString(),
+                                kyc_country: doc.issuing_country || null,
+                                kyc_document_type: doc.document_type || null
+                            })
+                            .eq("id", user.id);
+                    } else if (statusStr === "declined" || statusStr === "rejected") {
+                        kycStatus = "rejected";
+                        await supabase
+                            .from("users")
+                            .update({ kyc_status: "rejected" })
+                            .eq("id", user.id);
+                    }
+                }
+            } catch (err) {
+                console.warn("[KYC] Failed to check Didit live status:", err);
+            }
+        }
+
+        res.json({
+            kyc_status: kycStatus,
+            is_verified: kycStatus === "approved" || !!dbUser?.is_verified,
+            kyc_verified_at: dbUser?.kyc_verified_at || null,
+            country: dbUser?.kyc_country || null,
+            document_type: dbUser?.kyc_document_type || null
+        });
+    } catch (err: any) {
+        console.error("[KYC] Status error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/kyc/webhook", async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        console.log("[DIDIT WEBHOOK] Received event:", body.event || body.type, "Session:", body.session_id);
+
+        const userId = body.vendor_data;
+        const statusStr = (body.status || body.decision?.status || "").toLowerCase();
+        const supabase = (db as any).getClient();
+
+        if (userId && statusStr === "approved") {
+            const doc = body.id_verification?.[0] || {};
+            await supabase
+                .from("users")
+                .update({
+                    kyc_status: "approved",
+                    is_verified: true,
+                    kyc_verified_at: new Date().toISOString(),
+                    kyc_country: doc.issuing_country || null,
+                    kyc_document_type: doc.document_type || null
+                })
+                .eq("id", userId);
+            console.log(`[DIDIT WEBHOOK] ✅ User ${userId} successfully KYC verified!`);
+        } else if (userId && (statusStr === "declined" || statusStr === "rejected")) {
+            await supabase
+                .from("users")
+                .update({ kyc_status: "rejected" })
+                .eq("id", userId);
+            console.log(`[DIDIT WEBHOOK] ❌ User ${userId} KYC rejected.`);
+        }
+
+        res.json({ received: true });
+    } catch (err: any) {
+        console.error("[DIDIT WEBHOOK] Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  BAGS.FM STATS
 // ═══════════════════════════════════════════════════════════════
 

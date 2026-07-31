@@ -383,4 +383,19 @@ export const api = {
             member_since: string;
         }>(`/users/${userId}/profile`),
     },
+
+    // ---- KYC (Didit) ----
+    kyc: {
+        start: () => request<{ success: boolean; url: string; session_id: string; status: string }>('/kyc/start', {
+            method: 'POST',
+        }),
+        getStatus: () => request<{
+            kyc_status: 'unverified' | 'pending' | 'approved' | 'rejected';
+            is_verified: boolean;
+            kyc_verified_at: string | null;
+            country: string | null;
+            document_type: string | null;
+        }>('/kyc/status'),
+    },
 };
+

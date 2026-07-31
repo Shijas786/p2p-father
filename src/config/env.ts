@@ -71,6 +71,10 @@ const envSchema = z.object({
     POLYMARKET_BUILDER_API_KEY: z.string().optional(),
     POLYMARKET_BUILDER_SECRET: z.string().optional(),
     POLYMARKET_BUILDER_PASSPHRASE: z.string().optional(),
+
+    // Didit KYC
+    DIDIT_API_KEY: z.string().default("DIDIT_KEY_REDACTED"),
+    DIDIT_WORKFLOW_ID: z.string().default("b42c44f7-17c0-45ff-a068-09820bcd578b"),
 });
 
 const parsed = envSchema.safeParse(process.env);
