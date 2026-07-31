@@ -1604,6 +1604,97 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN STATS — Rich live metrics for admin dashboard
+// ═══════════════════════════════════════════════════════════════
+router.get("/admin/stats", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const supabase = (db as any).getClient();
+        const oneDayAgo = new Date(Date.now() - 86_400_000).toISOString();
+
+        const [baseStats, activeTrades, todayTrades] = await Promise.all([
+            db.getStats(),
+            supabase
+                .from("trades")
+                .select("id", { count: "exact" })
+                .in("status", ["in_escrow", "fiat_sent", "fiat_confirmed"]),
+            supabase
+                .from("trades")
+                .select("amount")
+                .eq("status", "completed")
+                .gte("created_at", oneDayAgo),
+        ]);
+
+        const volumeToday = (todayTrades.data || []).reduce(
+            (sum: number, t: any) => sum + (parseFloat(t.amount) || 0),
+            0
+        );
+
+        res.json({
+            total_users:     baseStats.total_users,
+            total_trades:    baseStats.total_trades,
+            completed_trades: baseStats.completed_trades,
+            active_orders:   baseStats.active_orders,
+            active_trades:   activeTrades.count || 0,
+            active_disputes: baseStats.active_disputes,
+            total_volume:    baseStats.total_volume_generic,
+            total_fees:      baseStats.total_fees_amount,
+            volume_today:    volumeToday,
+        });
+    } catch (err: any) {
+        console.error("[ADMIN] Stats error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN TRADES — All trades list with status filter & pagination
+// ═══════════════════════════════════════════════════════════════
+router.get("/admin/trades", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(401).json({ error: "User not found" });
+        const isAdmin = env.ADMIN_IDS.includes(Number(user.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+
+        const status   = (req.query.status as string) || "all";
+        const page     = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+        const pageSize = 25;
+
+        let query = supabase
+            .from("trades")
+            .select(
+                "id, amount, token, chain, status, created_at, fiat_amount, rate, " +
+                "seller:users!trades_seller_id_fkey(username, first_name), " +
+                "buyer:users!trades_buyer_id_fkey(username, first_name)",
+                { count: "exact" }
+            )
+            .order("created_at", { ascending: false })
+            .range((page - 1) * pageSize, page * pageSize - 1);
+
+        if (status !== "all") {
+            query = query.eq("status", status);
+        }
+
+        const { data, count, error } = await query;
+        if (error) throw error;
+
+        res.json({ trades: data || [], total: count || 0, page, pageSize });
+    } catch (err: any) {
+        console.error("[ADMIN] Trades list error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);

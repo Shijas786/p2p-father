@@ -339,7 +339,17 @@ export const api = {
                 method: 'POST',
                 body: JSON.stringify({ message }),
             }),
+        getStats: () => request<{
+            total_users: number; total_trades: number; completed_trades: number;
+            active_orders: number; active_trades: number; active_disputes: number;
+            total_volume: number; total_fees: number; volume_today: number;
+        }>('/admin/stats'),
+        getTrades: (status = 'all', page = 1) =>
+            request<{ trades: any[]; total: number; page: number; pageSize: number }>(
+                `/admin/trades?status=${status}&page=${page}`
+            ),
     },
+
 
     // ---- Users ----
     users: {

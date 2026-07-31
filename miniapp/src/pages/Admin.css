@@ -1,0 +1,388 @@
+/* ══════════════════════════════════════════════════════════
+   Admin Panel — Mobile-first styles for Telegram mini-app
+   ══════════════════════════════════════════════════════════ */
+
+.admin-page {
+    padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ── Tab Bar ─────────────────────────────────────────────── */
+.admin-tab-bar {
+    display: flex;
+    align-items: stretch;
+    background: rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-shrink: 0;
+}
+
+.admin-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 4px 8px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 18px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    min-height: 52px;
+}
+
+.admin-tab .tab-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.admin-tab.active { color: #0ecb81; }
+
+.admin-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 12%; right: 12%;
+    height: 2px;
+    background: #0ecb81;
+    border-radius: 2px 2px 0 0;
+}
+
+.admin-tab-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 18px);
+    background: #f6465d;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+/* ── Tab Content Panels ──────────────────────────────────── */
+.admin-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Stats Tab ───────────────────────────────────────────── */
+.admin-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.admin-stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 14px 14px 0 0;
+}
+
+.admin-stat-card.green::before  { background: #0ecb81; }
+.admin-stat-card.blue::before   { background: #3b82f6; }
+.admin-stat-card.orange::before { background: #f59e0b; }
+.admin-stat-card.red::before    { background: #f6465d; }
+.admin-stat-card.purple::before { background: #a78bfa; }
+.admin-stat-card.teal::before   { background: #14b8a6; }
+
+.admin-stat-icon { font-size: 20px; line-height: 1; }
+
+.admin-stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #eaecef;
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.admin-stat-label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+.admin-stat-refresh {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    justify-content: flex-end;
+}
+
+.admin-live-dot {
+    width: 6px; height: 6px;
+    background: #0ecb81;
+    border-radius: 50%;
+    animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── Users Tab ───────────────────────────────────────────── */
+.admin-search {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #eaecef;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.admin-search:focus { border-color: rgba(14, 203, 129, 0.4); }
+.admin-search::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+.admin-user-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.admin-user-card.expanded { border-color: rgba(14, 203, 129, 0.25); }
+
+.admin-user-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.admin-user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    overflow: hidden;
+}
+
+.admin-user-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover; border-radius: 50%;
+}
+
+.admin-user-info { flex: 1; min-width: 0; }
+
+.admin-user-name {
+    font-size: 13px; font-weight: 700; color: #eaecef;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.admin-user-sub { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+
+.admin-user-badge {
+    font-size: 9px; font-weight: 800;
+    padding: 2px 7px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.badge-lv1 { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+.badge-lv2 { background: rgba(14,203,129,0.12);  color: #0ecb81; }
+.badge-lv3 { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.badge-lv4 { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+.badge-lv5 { background: rgba(246,70,93,0.12);   color: #f6465d; }
+
+.admin-user-detail {
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    animation: expandIn 0.15s ease;
+}
+
+@keyframes expandIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.admin-user-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding-top: 10px;
+}
+
+.admin-user-stat {
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 8px 4px;
+}
+
+.admin-user-stat-val {
+    font-size: 14px; font-weight: 800;
+    color: #eaecef; font-family: monospace;
+}
+
+.admin-user-stat-lbl {
+    font-size: 9px; color: rgba(255,255,255,0.35);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px;
+}
+
+/* ── Trades Tab ──────────────────────────────────────────── */
+.admin-status-pills {
+    display: flex; gap: 6px;
+    overflow-x: auto; padding-bottom: 2px;
+    scrollbar-width: none; -ms-overflow-style: none;
+}
+.admin-status-pills::-webkit-scrollbar { display: none; }
+
+.admin-status-pill {
+    flex-shrink: 0;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.45);
+    background: transparent;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.admin-status-pill.active {
+    background: rgba(14,203,129,0.12);
+    border-color: rgba(14,203,129,0.3);
+    color: #0ecb81;
+}
+
+.admin-trade-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.admin-trade-card.expanded { border-color: rgba(255,255,255,0.14); }
+
+.admin-trade-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.admin-trade-amount { flex: 1; min-width: 0; }
+
+.admin-trade-amt-main {
+    font-size: 14px; font-weight: 800; color: #eaecef; font-family: monospace;
+}
+
+.admin-trade-amt-sub {
+    font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.admin-trade-status-badge {
+    font-size: 9px; font-weight: 800;
+    padding: 3px 8px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0;
+}
+
+.status-completed           { background: rgba(14,203,129,0.12);  color: #0ecb81; }
+.status-in_escrow           { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.status-fiat_sent           { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+.status-fiat_confirmed      { background: rgba(14,203,129,0.08);  color: #0ecb81; }
+.status-waiting_for_escrow  { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+.status-disputed            { background: rgba(246,70,93,0.12);   color: #f6465d; }
+.status-cancelled           { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
+
+.admin-trade-detail {
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    animation: expandIn 0.15s ease;
+}
+
+.admin-trade-meta { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; }
+
+.admin-trade-meta-row { display: flex; justify-content: space-between; align-items: center; }
+
+.admin-trade-meta-label {
+    font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.admin-trade-meta-value { font-size: 11px; color: rgba(255,255,255,0.75); font-family: monospace; }
+
+/* ── Pagination ──────────────────────────────────────────── */
+.admin-pagination {
+    display: flex; align-items: center;
+    justify-content: center; gap: 12px;
+    padding: 8px 0 4px;
+}
+
+.admin-pagination button {
+    padding: 6px 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+}
+
+.admin-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.admin-pagination-info { font-size: 11px; color: rgba(255,255,255,0.35); }
+
+/* ── Shared ──────────────────────────────────────────────── */
+.admin-section-title {
+    font-size: 10px; font-weight: 700;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;
+}
+
+.admin-empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.25); font-size: 13px; }
+.admin-empty-icon { font-size: 36px; margin-bottom: 10px; }
