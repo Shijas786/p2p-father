@@ -74,8 +74,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         loadKycStatus();
     }, []);
 
-    const [kycModalUrl, setKycModalUrl] = useState<string | null>(null);
-
     async function loadKycStatus() {
         try {
             if (!isTelegramEnvironment()) {
@@ -117,13 +115,17 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             if (!isTelegramEnvironment()) {
                 await new Promise(r => setTimeout(r, 400));
                 haptic('success');
-                setKycModalUrl('https://verify.didit.me/session/lY9kM9UHxM3c');
+                window.open('https://verify.didit.me/session/lY9kM9UHxM3c', '_blank');
                 return;
             }
             const res = await api.kyc.start();
             haptic('success');
             if (res.url) {
-                setKycModalUrl(res.url);
+                if (window.Telegram?.WebApp?.openLink) {
+                    window.Telegram.WebApp.openLink(res.url);
+                } else {
+                    window.open(res.url, '_blank');
+                }
                 setTimeout(loadKycStatus, 3000);
             }
         } catch (err: any) {
@@ -735,86 +737,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             <div className="text-center" style={{ opacity: 0.3, fontSize: '10px', padding: '12px 0 4px' }}>
                 Build Version: {APP_VERSION}
             </div>
-
-            {/* ═══ In-App KYC Verification Overlay Modal ═══ */}
-            {kycModalUrl && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: 999999,
-                    background: '#0b0e11',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}>
-                    {/* Modal Top Nav Bar */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        background: '#181a20',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 800, color: '#f0b90b' }}>P2PFather</span>
-                            <span style={{ color: '#848e9c', fontSize: '12px' }}>• Identity Verification</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                                onClick={() => window.open(kycModalUrl, '_blank')}
-                                style={{
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                                    color: '#b7bdc6',
-                                    padding: '5px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                External ↗
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setKycModalUrl(null);
-                                    loadKycStatus();
-                                }}
-                                style={{
-                                    background: 'rgba(240, 185, 11, 0.15)',
-                                    border: 'none',
-                                    color: '#f0b90b',
-                                    padding: '5px 12px',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                ✕ Done
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Embedded Didit Verification Iframe */}
-                    <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%' }}>
-                        <iframe
-                            src={kycModalUrl}
-                            title="Identity Verification"
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none',
-                                background: '#0b0e11'
-                            }}
-                            allow="camera *; microphone *; display-capture *"
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
