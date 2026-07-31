@@ -95,6 +95,21 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }
     }
 
+    async function handlePendingClick() {
+        haptic('medium');
+        try {
+            const data = await api.kyc.getStatus();
+            setKycData(data);
+            if (data?.kyc_status === 'pending' && !data?.is_verified) {
+                if (window.confirm('Verification is currently pending. Would you like to resume or restart verification now?')) {
+                    startKyc();
+                }
+            }
+        } catch (err) {
+            startKyc();
+        }
+    }
+
     async function startKyc() {
         haptic('medium');
         setKycLoading(true);
@@ -312,7 +327,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                             ) : kycData?.kyc_status === 'pending' ? (
                                 <button
                                     className="prof-kyc-badge pending"
-                                    onClick={loadKycStatus}
+                                    onClick={handlePendingClick}
                                     style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
