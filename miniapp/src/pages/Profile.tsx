@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { haptic } from '../lib/telegram';
+import { haptic, isTelegramEnvironment } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
 import './Profile.css';
 
@@ -76,6 +76,16 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
     async function loadKycStatus() {
         try {
+            if (!isTelegramEnvironment()) {
+                setKycData({
+                    kyc_status: user?.is_verified ? 'approved' : 'unverified',
+                    is_verified: Boolean(user?.is_verified),
+                    kyc_verified_at: null,
+                    country: null,
+                    document_type: null
+                });
+                return;
+            }
             const data = await api.kyc.getStatus();
             setKycData(data);
         } catch (err) {
@@ -87,6 +97,13 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         haptic('medium');
         setKycLoading(true);
         try {
+            if (!isTelegramEnvironment()) {
+                await new Promise(r => setTimeout(r, 400));
+                haptic('success');
+                // Open test session URL in browser dev mode
+                window.open('https://verify.didit.me/session/lY9kM9UHxM3c', '_blank');
+                return;
+            }
             const res = await api.kyc.start();
             haptic('success');
             if (res.url) {

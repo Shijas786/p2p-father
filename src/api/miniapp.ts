@@ -2279,14 +2279,18 @@ router.post("/kyc/start", validateInitData, async (req: Request, res: Response) 
 
         const data = await response.json();
 
-        const supabase = (db as any).getClient();
-        await supabase
-            .from("users")
-            .update({
-                kyc_status: "pending",
-                kyc_session_id: data.session_id
-            })
-            .eq("id", user.id);
+        try {
+            const supabase = (db as any).getClient();
+            await supabase
+                .from("users")
+                .update({
+                    kyc_status: "pending",
+                    kyc_session_id: data.session_id
+                })
+                .eq("id", user.id);
+        } catch (dbErr) {
+            console.warn("[KYC] Could not update DB kyc_status (column may be missing):", dbErr);
+        }
 
         res.json({
             success: true,
