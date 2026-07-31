@@ -322,8 +322,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '5px',
-                                    padding: '5px 12px',
+                                    padding: '5px 14px',
                                     borderRadius: '12px',
                                     background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
                                     boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
@@ -334,7 +333,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     cursor: 'pointer'
                                 }}
                             >
-                                <span>🛡️</span> {kycLoading ? 'Starting...' : 'Verify'}
+                                {kycLoading ? 'Starting...' : 'Verify'}
                             </button>
                         )}
 
@@ -433,68 +432,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         <div className="prof-nav-sub" style={{ fontSize: '12px', color: '#848e9c' }}>Unlock quests & earn USDC</div>
                     </div>
                     <span className="prof-nav-chevron">›</span>
-                </div>
-
-                {/* 1.8 Didit Identity Verification (KYC) */}
-                <div className="prof-nav-item" style={{
-                    background: kycData?.is_verified
-                        ? 'linear-gradient(45deg, rgba(14, 203, 129, 0.12), transparent)'
-                        : kycData?.kyc_status === 'pending'
-                            ? 'linear-gradient(45deg, rgba(245, 158, 11, 0.12), transparent)'
-                            : 'linear-gradient(45deg, rgba(37, 103, 255, 0.12), transparent)',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    display: 'flex',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ fontSize: '24px', marginRight: '16px' }}>
-                        {kycData?.is_verified ? '🛡️' : kycData?.kyc_status === 'pending' ? '🟡' : '🆔'}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div className="prof-nav-text" style={{
-                            color: kycData?.is_verified ? '#0ecb81' : kycData?.kyc_status === 'pending' ? '#f59e0b' : '#3b82f6',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6
-                        }}>
-                            Identity Verification (KYC)
-                            {kycData?.is_verified && <span style={{ fontSize: 9, background: 'rgba(14,203,129,0.2)', padding: '2px 6px', borderRadius: 10, color: '#0ecb81' }}>VERIFIED</span>}
-                        </div>
-                        <div className="prof-nav-sub" style={{ fontSize: '11px', color: '#848e9c', marginTop: 2 }}>
-                            {kycData?.is_verified
-                                ? `Verified Document · 100% Trust Badge`
-                                : kycData?.kyc_status === 'pending'
-                                    ? 'Verification in progress... Tap to refresh'
-                                    : 'Instant ID + Liveness check (Didit)'}
-                        </div>
-                    </div>
-                    {kycData?.is_verified ? (
-                        <span style={{ fontSize: 12, color: '#0ecb81', fontWeight: 'bold' }}>✅ Active</span>
-                    ) : (
-                        <button
-                            className="prof-save-btn"
-                            style={{
-                                fontSize: 11,
-                                padding: '6px 12px',
-                                borderRadius: 16,
-                                background: kycData?.kyc_status === 'pending' ? 'rgba(245,158,11,0.2)' : '#2567ff',
-                                color: '#fff',
-                                border: 'none',
-                                cursor: 'pointer'
-                            }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (kycData?.kyc_status === 'pending') {
-                                    loadKycStatus();
-                                } else {
-                                    startKyc();
-                                }
-                            }}
-                            disabled={kycLoading}
-                        >
-                            {kycLoading ? 'Starting...' : kycData?.kyc_status === 'pending' ? 'Refresh' : 'Verify'}
-                        </button>
-                    )}
                 </div>
 
                 {/* 2. Payment Methods (Expanded) */}
