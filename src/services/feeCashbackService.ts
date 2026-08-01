@@ -46,15 +46,25 @@ export class FeeCashbackService {
             console.log(`[FEE CASHBACK] Qualifying VIP Trade found for @${vipConfig.username}!`);
             console.log(`[FEE CASHBACK] Trade Amount: ${tradeAmount} ${trade.token} | Rebate (0.25%): ${cashbackAmount} ${trade.token}`);
 
+            // Build explorer transaction link if available
+            let txLinkSection = "";
+            if (trade.release_tx_hash && trade.release_tx_hash.startsWith("0x")) {
+                const explorerUrl = trade.chain === "base"
+                    ? `https://basescan.org/tx/${trade.release_tx_hash}`
+                    : `https://bscscan.com/tx/${trade.release_tx_hash}`;
+                txLinkSection = `\n🔗 <b>Transaction Link:</b> <a href="${explorerUrl}">View on ${trade.chain === "base" ? "Basescan" : "BscScan"}</a>\n`;
+            }
+
             // Notify VIP User via Telegram Bot if available
             try {
                 if (orderCreator.telegram_id && bot) {
                     await bot.api.sendMessage(
                         Number(orderCreator.telegram_id),
                         `🎁 <b>VIP Fee Cashback Credited!</b>\n\n` +
-                        `You received a <b>${cashbackAmount.toFixed(4)} ${trade.token}</b> (0.25%) fee rebate for Trade #${trade.id.slice(0, 8)}.\n\n` +
+                        `You received a <b>${cashbackAmount.toFixed(4)} ${trade.token}</b> (0.25%) fee rebate for Trade #${trade.id.slice(0, 8)}.\n` +
+                        `${txLinkSection}\n` +
                         `Thank you for trading with P2PFather! 🚀`,
-                        { parse_mode: "HTML" }
+                        { parse_mode: "HTML", link_preview_options: { is_disabled: true } }
                     );
                 }
             } catch (notifyErr: any) {
