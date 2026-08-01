@@ -22,9 +22,9 @@ export const VIP_FEE_CONFIGS: VIPUserConfig[] = [
  * Helper to check if an order/trade qualifies for VIP fee cashback
  */
 export function getQualifyingVIPConfig(
-    userTelegramId: string | number | undefined,
-    username: string | undefined,
-    orderCreatedAt: string | number | Date | undefined
+    userTelegramId: string | number | undefined | null,
+    username: string | undefined | null,
+    orderCreatedAt: string | number | Date | undefined | null
 ): VIPUserConfig | null {
     if (!userTelegramId && !username) return null;
 
