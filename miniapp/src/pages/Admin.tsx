@@ -89,8 +89,12 @@ export function Admin({ user }: Props) {
     const [tradesTotal, setTradesTotal]   = useState(0);
     const [expandedTrade, setExpandedTrade] = useState<string | null>(null);
 
-    // Load disputes on mount
-    useEffect(() => { loadDisputes(); }, []);
+    // Load live trades & disputes on mount and auto-refresh every 10s
+    useEffect(() => {
+        loadDisputes();
+        const interval = setInterval(loadDisputes, 10_000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Lazy load other tabs
     useEffect(() => {
@@ -105,6 +109,13 @@ export function Admin({ user }: Props) {
         const interval = setInterval(loadStats, 30_000);
         return () => clearInterval(interval);
     }, [activeTab]);
+
+    // Trades auto-refresh every 10s while on trades tab
+    useEffect(() => {
+        if (activeTab !== 'trades') return;
+        const interval = setInterval(() => loadTrades(tradesStatus, tradesPage), 10_000);
+        return () => clearInterval(interval);
+    }, [activeTab, tradesStatus, tradesPage]);
 
     // Auto-scroll dispute chats
     useEffect(() => {
@@ -284,7 +295,7 @@ export function Admin({ user }: Props) {
         return (
             <div className="admin-tab-bar">
                 {([
-                    { key: 'disputes', icon: '⚠️', label: 'Disputes', badge: disputes.length },
+                    { key: 'disputes', icon: '⚡', label: 'Live Trades', badge: disputes.length },
                     { key: 'stats',    icon: '📊', label: 'Stats',    badge: 0 },
                     { key: 'users',    icon: '👤', label: 'Users',    badge: 0 },
                     { key: 'trades',   icon: '📋', label: 'Trades',   badge: 0 },
@@ -660,6 +671,40 @@ export function Admin({ user }: Props) {
                                                     <span className="admin-trade-meta-label">Date</span>
                                                     <span className="admin-trade-meta-value">{new Date(t.created_at).toLocaleString()}</span>
                                                 </div>
+                                                {t.on_chain_trade_id && (
+                                                    <div className="admin-trade-meta-row">
+                                                        <span className="admin-trade-meta-label">On-Chain ID</span>
+                                                        <span className="admin-trade-meta-value">#{t.on_chain_trade_id}</span>
+                                                    </div>
+                                                )}
+                                                {t.release_tx_hash && t.release_tx_hash.startsWith('0x') && (
+                                                    <div className="admin-trade-meta-row">
+                                                        <span className="admin-trade-meta-label">Release Tx</span>
+                                                        <a 
+                                                            href={t.chain === 'base' ? `https://basescan.org/tx/${t.release_tx_hash}` : `https://bscscan.com/tx/${t.release_tx_hash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="admin-trade-meta-value"
+                                                            style={{ color: '#60a5fa', textDecoration: 'underline' }}
+                                                        >
+                                                            View on {t.chain === 'base' ? 'Basescan' : 'BscScan'} ↗
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {t.escrow_tx_hash && t.escrow_tx_hash.startsWith('0x') && (
+                                                    <div className="admin-trade-meta-row">
+                                                        <span className="admin-trade-meta-label">Escrow Tx</span>
+                                                        <a 
+                                                            href={t.chain === 'base' ? `https://basescan.org/tx/${t.escrow_tx_hash}` : `https://bscscan.com/tx/${t.escrow_tx_hash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="admin-trade-meta-value"
+                                                            style={{ color: '#60a5fa', textDecoration: 'underline' }}
+                                                        >
+                                                            View on {t.chain === 'base' ? 'Basescan' : 'BscScan'} ↗
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}

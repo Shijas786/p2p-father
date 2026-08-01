@@ -1609,7 +1609,7 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
         const { data: disputes } = await supabase
             .from("trades")
             .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id, phone_number, trust_score), buyer:users!trades_buyer_id_fkey(username, first_name, trust_score), payment_proofs(utr)")
-            .eq("status", "disputed")
+            .in("status", ["disputed", "in_escrow", "fiat_sent", "waiting_for_escrow"])
             .order("created_at", { ascending: false });
 
         res.json({ disputes: disputes || [] });
@@ -1687,7 +1687,7 @@ router.get("/admin/trades", async (req: Request, res: Response) => {
         let query = supabase
             .from("trades")
             .select(
-                "id, amount, token, chain, status, created_at, fiat_amount, rate, " +
+                "id, amount, token, chain, status, created_at, fiat_amount, rate, escrow_tx_hash, release_tx_hash, buyer_custom_address, on_chain_trade_id, " +
                 "seller:users!trades_seller_id_fkey(username, first_name), " +
                 "buyer:users!trades_buyer_id_fkey(username, first_name)",
                 { count: "exact" }
