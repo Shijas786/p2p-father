@@ -42,6 +42,11 @@ export interface User {
     trust_score: number;
     tier: "standard" | "silver" | "gold" | "vip";
     is_verified: boolean;
+    kyc_status?: string | null;
+    kyc_session_id?: string | null;
+    kyc_document_type?: string | null;
+    kyc_country?: string | null;
+    kyc_verified_at?: string | null;
     is_banned: boolean;
     receive_address: string | null;
     cdm_bank_number: string | null;
