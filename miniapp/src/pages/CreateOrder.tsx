@@ -38,6 +38,7 @@ export function CreateOrder() {
     const [isAdvancedSettingsExpanded, setIsAdvancedSettingsExpanded] = useState(false);
     const [excludeSearchQuery, setExcludeSearchQuery] = useState('');
     const [newTradersOnly, setNewTradersOnly] = useState(false);
+    const [requireKyc, setRequireKyc] = useState(false);
 
     useEffect(() => {
         api.users.list().then(data => {
@@ -411,6 +412,7 @@ export function CreateOrder() {
                 allowed_dealers: allowedDealerUsernames.join(',') || undefined,
                 expires_in: expiryMinutes,
                 new_traders_only: newTradersOnly,
+                require_kyc: requireKyc,
             });
 
             haptic('success');
@@ -645,6 +647,31 @@ export function CreateOrder() {
                             
                             {isAdvancedSettingsExpanded && (
                                 <div style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', borderRadius: '0 0 8px 8px', animation: 'slideDown 0.2s ease-out' }}>
+                                    {/* KYC Verified Only Toggle */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>KYC Verified Only</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Only traders with verified identity</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { haptic('selection'); setRequireKyc(!requireKyc); }}
+                                            style={{
+                                                background: requireKyc ? '#f0b90b' : 'rgba(255,255,255,0.1)',
+                                                color: requireKyc ? '#000' : '#fff',
+                                                border: 'none',
+                                                padding: '4px 10px',
+                                                borderRadius: '12px',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {requireKyc ? 'ON' : 'OFF'}
+                                        </button>
+                                    </div>
+
                                     {/* New Traders Only Toggle */}
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px' }}>
                                         <div>

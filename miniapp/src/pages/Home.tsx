@@ -242,11 +242,16 @@ export function Home({ user }: Props) {
 
                                         <div className="p2p-action-section">
                                             <div className="p2p-methods">
-                                                {order.payment_details?.new_traders_only && (
-                                                    <span className="p2p-method-tag" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                                                        🌱 NEW TRADERS
-                                                    </span>
-                                                )}
+                                                 {order.payment_details?.require_kyc && (
+                                                     <span className="p2p-method-tag" style={{ background: 'rgba(240, 185, 11, 0.12)', color: '#f0b90b', border: '1px solid rgba(240, 185, 11, 0.3)', fontWeight: 600 }}>
+                                                         🛡️ KYC REQ
+                                                     </span>
+                                                 )}
+                                                 {order.payment_details?.new_traders_only && (
+                                                     <span className="p2p-method-tag" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                                         🌱 NEW TRADERS
+                                                     </span>
+                                                 )}
                                                 {(order.payment_methods || []).map((m: string) => (
                                                     <span key={m} className="p2p-method-tag">{m}</span>
                                                 ))}
@@ -334,6 +339,12 @@ export function Home({ user }: Props) {
                                     <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>{confirmOrder.payment_details.note}</div>
                                 </div>
                             )}
+                            {confirmOrder.payment_details?.require_kyc && (
+                                <div style={{ margin: '10px 0 4px', background: 'rgba(240, 185, 11, 0.08)', border: '1px solid rgba(240, 185, 11, 0.25)', borderRadius: '10px', padding: '10px 12px' }}>
+                                    <div style={{ fontSize: '9px', color: '#f0b90b', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>🛡️ Identity Verification Required</div>
+                                    <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>This merchant requires KYC verification to trade.</div>
+                                </div>
+                            )}
                             {confirmOrder.payment_details?.new_traders_only && (
                                 <div style={{ margin: '10px 0 4px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', padding: '10px 12px' }}>
                                     <div style={{ fontSize: '9px', color: '#3b82f6', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>🌱 New Traders Only</div>
@@ -342,7 +353,13 @@ export function Home({ user }: Props) {
                             )}
                             <div className="p2p-modal-actions">
                                 <button className="p2p-modal-cancel" onClick={() => setConfirmOrder(null)}>Cancel</button>
-                                <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>
+                                {confirmOrder.payment_details?.require_kyc && !user?.is_verified ? (
+                                    <button className="p2p-modal-confirm" style={{ background: '#f0b90b', color: '#000', fontWeight: 700 }} onClick={() => { setConfirmOrder(null); navigate('/profile'); }}>
+                                        🛡️ Verify ID in Profile
+                                    </button>
+                                ) : (
+                                    <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>
+                                )}
                             </div>
                         </div>
                     </div>,

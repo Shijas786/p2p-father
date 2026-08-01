@@ -923,7 +923,8 @@ router.post("/orders", async (req: Request, res: Response) => {
                 note: note ? note.toString().slice(0, 200) : undefined,
                 excluded_dealers: resolvedDealerIds,
                 excluded_usernames: excludedUsernames,
-                new_traders_only: !!new_traders_only
+                new_traders_only: !!new_traders_only,
+                require_kyc: !!req.body.require_kyc
             },
         });
 
@@ -1058,6 +1059,15 @@ router.post("/trades", async (req: Request, res: Response) => {
             if ((user.completed_trades || 0) > 0) {
                 return res.status(400).json({
                     error: "This order is restricted to new traders only (0 completed trades)."
+                });
+            }
+        }
+
+        // Check if the order requires KYC verification
+        if (order.payment_details?.require_kyc) {
+            if (!user.is_verified && user.kyc_status !== "approved") {
+                return res.status(400).json({
+                    error: "This merchant requires Identity Verification (KYC). Please complete verification in your Profile before taking this order."
                 });
             }
         }

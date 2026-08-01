@@ -140,6 +140,7 @@ export const api = {
             allowed_dealers?: string;
             expires_in?: number;
             new_traders_only?: boolean;
+            require_kyc?: boolean;
         }) =>
             request<{ order: any }>('/orders', {
                 method: 'POST',
