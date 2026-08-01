@@ -308,64 +308,62 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                         {user?.username && <span className="prof-handle">@{user.username}</span>}
                     </div>
 
-                    {/* Binance-style Identity Verification Badge / CTA Button (Admin Testing Mode) */}
+                    {/* Binance-style Identity Verification Badge / CTA Button (Public Mode) */}
                     <div className="prof-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                        {user?.is_admin && (
-                            kycData?.is_verified ? (
-                                <div className="prof-kyc-badge verified" style={{
+                        {kycData?.is_verified ? (
+                            <div className="prof-kyc-badge verified" style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                background: 'rgba(14, 203, 129, 0.12)',
+                                border: '1px solid rgba(14, 203, 129, 0.3)',
+                                color: '#0ecb81',
+                                fontSize: '11px',
+                                fontWeight: 600
+                            }}>
+                                Verified
+                            </div>
+                        ) : kycData?.kyc_status === 'pending' ? (
+                            <button
+                                className="prof-kyc-badge pending"
+                                onClick={handlePendingClick}
+                                style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     padding: '3px 8px',
                                     borderRadius: '4px',
-                                    background: 'rgba(14, 203, 129, 0.12)',
-                                    border: '1px solid rgba(14, 203, 129, 0.3)',
-                                    color: '#0ecb81',
+                                    background: 'rgba(245, 158, 11, 0.12)',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                                    color: '#f59e0b',
                                     fontSize: '11px',
-                                    fontWeight: 600
-                                }}>
-                                    Verified
-                                </div>
-                            ) : kycData?.kyc_status === 'pending' ? (
-                                <button
-                                    className="prof-kyc-badge pending"
-                                    onClick={handlePendingClick}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        padding: '3px 8px',
-                                        borderRadius: '4px',
-                                        background: 'rgba(245, 158, 11, 0.12)',
-                                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                                        color: '#f59e0b',
-                                        fontSize: '11px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Pending...
-                                </button>
-                            ) : (
-                                <button
-                                    className="prof-kyc-btn binance-verify"
-                                    onClick={startKyc}
-                                    disabled={kycLoading}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        padding: '4px 10px',
-                                        borderRadius: '4px',
-                                        background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
-                                        boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
-                                        color: '#000',
-                                        fontSize: '11px',
-                                        fontWeight: 700,
-                                        border: 'none',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {kycLoading ? 'Starting...' : 'Verify'}
-                                </button>
-                            )
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Pending...
+                            </button>
+                        ) : (
+                            <button
+                                className="prof-kyc-btn binance-verify"
+                                onClick={startKyc}
+                                disabled={kycLoading}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '4px 10px',
+                                    borderRadius: '4px',
+                                    background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
+                                    boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
+                                    color: '#000',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {kycLoading ? 'Starting...' : 'Verify'}
+                            </button>
                         )}
 
                         <button className="prof-edit-socials-btn" style={{ marginTop: 0 }} onClick={() => { haptic('light'); setEditingSocials(!editingSocials); setMessage(''); }}>
