@@ -349,6 +349,10 @@ export const api = {
             request<{ trades: any[]; total: number; page: number; pageSize: number }>(
                 `/admin/trades?status=${status}&page=${page}`
             ),
+        toggleBanUser: (userId: string) =>
+            request<{ success: boolean; is_banned: boolean; message: string }>(`/admin/users/${userId}/toggle-ban`, {
+                method: 'POST'
+            }),
     },
 
 

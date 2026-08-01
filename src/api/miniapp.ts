@@ -811,6 +811,12 @@ router.post("/orders", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
+        if (user.is_banned) {
+            return res.status(403).json({
+                error: "⛔ Your account has been restricted from trading. Please contact @shijas for assistance."
+            });
+        }
+
         // Require at least one payment method set up
         if (!user.upi_id && !user.phone_number && !user.bank_account_number && !user.digital_rupee_id && !user.cdm_bank_number) {
             return res.status(400).json({
@@ -1030,6 +1036,12 @@ router.post("/trades", async (req: Request, res: Response) => {
     try {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "User not found" });
+
+        if (user.is_banned) {
+            return res.status(403).json({
+                error: "⛔ Your account has been restricted from trading. Please contact @shijas for assistance."
+            });
+        }
 
         const { order_id, amount } = req.body;
         if (!order_id) return res.status(400).json({ error: "Missing order_id" });
@@ -2533,13 +2545,41 @@ router.get("/users", async (req: Request, res: Response) => {
     try {
         const { data, error } = await (db as any).getClient()
             .from("users")
-            .select("id, username, first_name, photo_url, completed_trades")
+            .select("id, username, first_name, photo_url, completed_trades, is_banned")
             .not("username", "is", null)
             .order("completed_trades", { ascending: false });
 
         if (error) throw error;
         res.json({ users: data || [] });
     } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/admin/users/:userId/toggle-ban", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser) return res.status(401).json({ error: "User not found" });
+
+        const isAdmin = env.ADMIN_IDS.includes(Number(adminUser.telegram_id));
+        if (!isAdmin) return res.status(403).json({ error: "Admin only" });
+
+        const targetUserId = req.params.userId as string;
+        const targetUser = await db.getUserById(targetUserId);
+        if (!targetUser) return res.status(404).json({ error: "Target trader not found" });
+
+        const newBannedStatus = !targetUser.is_banned;
+        await db.updateUser(targetUserId, { is_banned: newBannedStatus } as any);
+
+        console.log(`[ADMIN] ${adminUser.username} ${newBannedStatus ? 'BANNED' : 'UNBANNED'} trader @${targetUser.username} (${targetUser.id})`);
+
+        res.json({
+            success: true,
+            is_banned: newBannedStatus,
+            message: `User @${targetUser.username || targetUser.first_name} is now ${newBannedStatus ? 'BANNED' : 'UNBANNED'}.`
+        });
+    } catch (err: any) {
+        console.error("[ADMIN] Toggle ban error:", err);
         res.status(500).json({ error: err.message });
     }
 });

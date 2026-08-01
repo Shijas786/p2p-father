@@ -79,6 +79,20 @@ export function Admin({ user }: Props) {
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
     const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
     const [profileLoading, setProfileLoading] = useState<Record<string, boolean>>({});
+    const [banningUser, setBanningUser] = useState<Record<string, boolean>>({});
+
+    async function handleToggleBanUser(userId: string) {
+        setBanningUser(prev => ({ ...prev, [userId]: true }));
+        try {
+            const res = await api.admin.toggleBanUser(userId);
+            haptic('warning');
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_banned: res.is_banned } : u));
+        } catch (err: any) {
+            alert('Failed to update ban status: ' + err.message);
+        } finally {
+            setBanningUser(prev => ({ ...prev, [userId]: false }));
+        }
+    }
 
     // ── Trades ──
     const [trades, setTrades]             = useState<any[]>([]);
@@ -559,7 +573,14 @@ export function Admin({ user }: Props) {
                                     }
                                 </div>
                                 <div className="admin-user-info">
-                                    <div className="admin-user-name">@{u.username || u.first_name || 'Unknown'}</div>
+                                    <div className="admin-user-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span>@{u.username || u.first_name || 'Unknown'}</span>
+                                        {u.is_banned && (
+                                            <span style={{ fontSize: 9, backgroundColor: '#f6465d', color: '#fff', padding: '1px 5px', borderRadius: 4, fontWeight: 'bold' }}>
+                                                ⛔ BANNED
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="admin-user-sub">{u.completed_trades || 0} trades</div>
                                 </div>
                                 <span className={`admin-user-badge ${levelBadge(lvl)}`}>{levelLabel(lvl)}</span>
@@ -598,6 +619,27 @@ export function Admin({ user }: Props) {
                                     ) : (
                                         <div style={{ paddingTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Could not load profile</div>
                                     )}
+                                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button
+                                            style={{
+                                                backgroundColor: u.is_banned ? 'rgba(16, 185, 129, 0.15)' : 'rgba(246, 70, 93, 0.15)',
+                                                color: u.is_banned ? '#10b981' : '#f6465d',
+                                                border: u.is_banned ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(246, 70, 93, 0.4)',
+                                                padding: '6px 14px',
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleBanUser(u.id);
+                                            }}
+                                            disabled={banningUser[u.id]}
+                                        >
+                                            {banningUser[u.id] ? 'Updating...' : u.is_banned ? '✅ UNBLOCK USER' : '⛔ BLOCK USER'}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

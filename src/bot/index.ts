@@ -501,7 +501,29 @@ function isAdmin(ctx: BotContext): boolean {
 //                     /start COMMAND
 // ═══════════════════════════════════════════════════════════════
 
-// 🛡️ Middleware: Restrict trading to Private Chats
+// 🛡️ Middleware: Block Banned Users from Bot Commands & Callbacks
+bot.use(async (ctx, next) => {
+    if (ctx.from) {
+        try {
+            const dbUser = await db.getUserByTelegramId(ctx.from.id);
+            if (dbUser && dbUser.is_banned) {
+                if (ctx.callbackQuery) {
+                    await ctx.answerCallbackQuery({
+                        text: "⛔ Your account has been restricted from trading. Contact @shijas",
+                        show_alert: true
+                    });
+                    return;
+                }
+                if (ctx.message?.text?.startsWith("/")) {
+                    await ctx.reply("⛔ Your account has been restricted from trading. Please contact @shijas for assistance.");
+                    return;
+                }
+            }
+        } catch { /* ignore */ }
+    }
+    await next();
+});
+
 // 🛡️ Middleware: Restrict trading to Private Chats + Deep Linking for Groups
 bot.use(async (ctx, next) => {
     if (ctx.chat && ctx.chat.type !== "private" && ctx.message?.text?.startsWith("/")) {
