@@ -1340,7 +1340,7 @@ bot.command("buy", async (ctx) => {
                 "",
                 orderList,
                 "",
-                "⚡ Trade safely on @P2PFatherBot",
+                "⚡ Trade safely on @P2p_fatherbot",
             ].join("\n"),
             { parse_mode: "Markdown", reply_markup: keyboard }
         );
@@ -1388,7 +1388,7 @@ bot.command("orders", async (ctx) => {
             });
         }
 
-        sections.push("⚡ Trade safely on @P2PFatherBot");
+        sections.push("⚡ Trade safely on @P2p_fatherbot");
 
         await ctx.reply(sections.join("\n"), { parse_mode: "HTML", reply_markup: keyboard });
     } catch (error) {
@@ -3797,7 +3797,7 @@ bot.on("message:text", async (ctx) => {
                             "╰─────────────────────────────╯",
                         ].join("\n");
                         const list = orders.map((o) => formatOrder(o)).join("\n\n");
-                        const footer = "\n⚡ Trade safely on @P2PFatherBot";
+                        const footer = "\n⚡ Trade safely on @P2p_fatherbot";
                         const fullMsg = `${header}\n\n${list}\n\n${footer}`;
 
                         try {

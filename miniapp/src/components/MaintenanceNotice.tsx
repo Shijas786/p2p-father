@@ -87,7 +87,7 @@ export const MaintenanceNotice: React.FC<MaintenanceNoticeProps> = ({ user, onRe
           </button>
           
           <a 
-            href="https://t.me/P2pFatherGroup" 
+            href="https://t.me/P2pFather0" 
             target="_blank" 
             rel="noopener noreferrer"
             className="maintenance-btn secondary-btn"

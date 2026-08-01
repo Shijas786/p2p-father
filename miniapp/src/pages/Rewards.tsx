@@ -144,7 +144,7 @@ export function Rewards({ user, onSwitchWallet }: { user: any, onSwitchWallet: (
             <button 
               className="claim-btn btn-secondary" 
               onClick={() => {
-                const inviteLink = `https://t.me/P2PFatherBot/app?startapp=ref_${user?.id}`;
+                const inviteLink = `https://t.me/P2p_fatherbot/app?startapp=ref_${user?.id}`;
                 navigator.clipboard.writeText(inviteLink);
                 showToast("Referral link copied!", "success");
                 haptic('success');
