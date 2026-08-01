@@ -579,6 +579,21 @@ function shouldWelcome(userId: number, chatId: number): boolean {
     return true;
 }
 
+const WELCOME_TEMPLATES = [
+    (name: string) => `Hey ${name}, glad to have you on board! 🎩`,
+    (name: string) => `Welcome to P2PFather, ${name}! 🚀 Trade safe, trade smart.`,
+    (name: string) => `Yo ${name}! Welcome to the inner circle 🤝`,
+    (name: string) => `Welcome aboard ${name}! Ready for 100% escrow-secured trades? 💎`,
+    (name: string) => `Greetings ${name}! Great to see you in the community 🥂`,
+    (name: string) => `Welcome ${name}! Make yourself at home in our P2P trading hub 🔥`,
+    (name: string) => `Hey ${name}! Welcome to the family 🎩 Big trades ahead!`,
+    (name: string) => `Welcome ${name}! Fast, escrow-protected P2P exchange starts here ⚡`,
+    (name: string) => `Hey ${name}! Glad you joined us 🚀 Feel free to ask any questions!`,
+    (name: string) => `Welcome to the squad, ${name}! 🤝 Fast escrow at your fingertips.`,
+    (name: string) => `Welcome ${name}! 🎩 Glad to have another active trader in the group!`,
+    (name: string) => `Hey ${name}! Welcome aboard 🌟 Happy trading!`,
+];
+
 async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: string; username?: string; is_bot: boolean }) {
     try {
         if (user.is_bot) return;
@@ -590,7 +605,8 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         console.log(`[Welcome] Sending welcome message to user ${user.id} (${user.username || user.first_name}) in chat ${ctx.chat.id}`);
 
         const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
-        const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
+        const randomTemplate = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
+        const welcomeMsg = randomTemplate(welcomeNames);
 
         const sentMsg = await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
             parse_mode: "HTML"
