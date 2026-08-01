@@ -9,6 +9,7 @@ import { bridge } from "../services/bridge";
 import { wallet } from "../services/wallet";
 import { market } from "../services/market";
 import { polymarketRelayerService } from "../services/relayer";
+import { feeCashbackService } from "../services/feeCashbackService";
 import { groupManager } from "../utils/groupManager";
 import {
     formatOrder,
@@ -3087,6 +3088,9 @@ bot.on("callback_query:data", async (ctx) => {
                 const txHash = await escrow.release(trade.on_chain_trade_id!);
 
                 await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: txHash });
+
+                // Process VIP Fee Cashback (e.g. 0.25% rebate for @vip_trader on new ads)
+                feeCashbackService.processTradeFeeCashback(tradeId).catch(console.error);
 
                 await ctx.editMessageText(
                     [

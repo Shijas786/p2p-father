@@ -22,6 +22,7 @@ import { bridgeMonitor } from "../services/bridge-monitor";
 import { attemptedRedeems } from "../services/jobs";
 import { bot } from "../bot";
 import { redis } from "../services/redis";
+import { feeCashbackService } from "../services/feeCashbackService";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -1381,6 +1382,9 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         // Pass amount and other party ID for points calculation
         await db.completeUserTrade(trade.buyer_id, true, trade.amount, trade.seller_id);
         await db.completeUserTrade(trade.seller_id, true, trade.amount, trade.buyer_id);
+
+        // Process VIP Fee Cashback (e.g. 0.25% rebate for @vip_trader on new ads)
+        feeCashbackService.processTradeFeeCashback(trade.id).catch(console.error);
 
         res.json({ success: true, release_tx_hash: releaseTxHash });
 
