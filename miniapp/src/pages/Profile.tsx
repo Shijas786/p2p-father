@@ -315,16 +315,15 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 <div className="prof-kyc-badge verified" style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '4px 10px',
-                                    borderRadius: '12px',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
                                     background: 'rgba(14, 203, 129, 0.12)',
                                     border: '1px solid rgba(14, 203, 129, 0.3)',
                                     color: '#0ecb81',
                                     fontSize: '11px',
-                                    fontWeight: 700
+                                    fontWeight: 600
                                 }}>
-                                    <span>✅</span> Verified
+                                    Verified
                                 </div>
                             ) : kycData?.kyc_status === 'pending' ? (
                                 <button
@@ -333,18 +332,17 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '4px 10px',
-                                        borderRadius: '12px',
+                                        padding: '3px 8px',
+                                        borderRadius: '4px',
                                         background: 'rgba(245, 158, 11, 0.12)',
                                         border: '1px solid rgba(245, 158, 11, 0.3)',
                                         color: '#f59e0b',
                                         fontSize: '11px',
-                                        fontWeight: 700,
+                                        fontWeight: 600,
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    <span>🟡</span> Pending...
+                                    Pending...
                                 </button>
                             ) : (
                                 <button
@@ -354,13 +352,13 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                     style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
-                                        padding: '5px 14px',
-                                        borderRadius: '12px',
+                                        padding: '4px 10px',
+                                        borderRadius: '4px',
                                         background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
                                         boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
                                         color: '#000',
                                         fontSize: '11px',
-                                        fontWeight: 800,
+                                        fontWeight: 700,
                                         border: 'none',
                                         cursor: 'pointer'
                                     }}
