@@ -592,10 +592,20 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
         const welcomeNames = user.username ? `@${escapeHTML(user.username)}` : `<b>${escapeHTML(user.first_name)}</b>`;
         const welcomeMsg = `Hey ${welcomeNames}, glad to have you on board! 🎩`;
 
-        await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
+        const sentMsg = await ctx.api.sendMessage(ctx.chat.id, welcomeMsg, {
             parse_mode: "HTML"
         });
-        console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id}`);
+        console.log(`[Welcome] Text welcome sent successfully to ${ctx.chat.id} (Message ID: ${sentMsg.message_id})`);
+
+        // Auto-delete welcome message after 5 minutes (300,000ms) to keep group chat clean
+        setTimeout(async () => {
+            try {
+                await ctx.api.deleteMessage(ctx.chat.id, sentMsg.message_id);
+                console.log(`[Welcome] Auto-deleted welcome message ${sentMsg.message_id} in chat ${ctx.chat.id}`);
+            } catch (delErr: any) {
+                console.log(`[Welcome] Auto-delete skipped/failed for ${sentMsg.message_id} in ${ctx.chat.id}:`, delErr.message || delErr);
+            }
+        }, 5 * 60 * 1000);
     } catch (e: any) {
         console.error("Welcome new member function error:", e);
         logger.error("Welcome new member error", e);
