@@ -3,11 +3,16 @@ import { getQualifyingVIPConfig } from "../config/feeCashback";
 import { bot } from "../bot";
 
 export class FeeCashbackService {
+    private processedTrades = new Set<string>();
+
     /**
      * Checks if a trade qualifies for VIP fee cashback (e.g. 0.25% for @vip_trader on new ads)
      * and credits the fee rebate to the VIP user.
      */
     async processTradeFeeCashback(tradeId: string): Promise<void> {
+        if (this.processedTrades.has(tradeId)) return;
+        this.processedTrades.add(tradeId);
+
         try {
             const trade = await db.getTradeById(tradeId);
             if (!trade || !trade.order_id) return;
