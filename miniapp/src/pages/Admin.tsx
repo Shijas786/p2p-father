@@ -422,7 +422,7 @@ export function Admin({ user }: Props) {
                                                 )}
                                                 <div style={{ fontSize: 7, opacity: 0.7, textAlign: 'right', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
                                                     <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    <span style={{ color: isSeen ? '#60a5fa' : 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>
+                                                    <span style={{ color: isSeen ? '#0ecb81' : 'rgba(255,255,255,0.35)', fontWeight: 'bold', letterSpacing: '-1px' }}>
                                                         {isSeen ? ' ✓✓' : ' ✓'}
                                                     </span>
                                                 </div>
