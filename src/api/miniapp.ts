@@ -934,7 +934,8 @@ router.post("/orders", async (req: Request, res: Response) => {
         const orderWithUserData = {
             ...order,
             username: user.username || user.first_name || "anon",
-            trust_score: user.trust_score ?? 100
+            trust_score: user.trust_score ?? 100,
+            is_verified: Boolean(user.is_verified || user.kyc_status === 'approved')
         };
         import("../bot").then(({ broadcastAd }) => {
             broadcastAd(orderWithUserData, user).catch(console.error);

@@ -299,7 +299,9 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
 
     const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
     const emoji = order.type === "sell" ? "🔴" : "🟢";
-    const username = formatTraderDisplay(user?.username, user?.first_name, user?.hide_group_handle);
+    const isVerified = Boolean(user?.is_verified || user?.kyc_status === 'approved' || order?.is_verified);
+    const verifiedBadge = isVerified ? " [✅ Verified]" : "";
+    const username = formatTraderDisplay(user?.username, user?.first_name, user?.hide_group_handle) + verifiedBadge;
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
     const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
 
@@ -318,6 +320,10 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         chainLine,
         paymentLine,
     ];
+
+    if (order.payment_details?.require_kyc) {
+        lines.push(`🛡️ Requirement: <b>KYC Verified Only</b>`);
+    }
 
     const traderNote = order.payment_details?.note;
     if (traderNote) {

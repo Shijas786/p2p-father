@@ -204,6 +204,18 @@ export function Home({ user }: Props) {
                                             onClick={(e) => { e.stopPropagation(); haptic('light'); setShowProfileId(order.user_id); }}
                                         >
                                             <span className="p2p-username">{order.username || order.first_name || 'Anonymous'}</span>
+                                            {(order.is_verified || order.user?.is_verified) && (
+                                                <span style={{
+                                                    fontSize: '9px',
+                                                    padding: '1px 5px',
+                                                    borderRadius: '3px',
+                                                    background: 'rgba(14, 203, 129, 0.15)',
+                                                    border: '1px solid rgba(14, 203, 129, 0.3)',
+                                                    color: '#0ecb81',
+                                                    fontWeight: 600,
+                                                    marginLeft: '4px'
+                                                }}>Verified</span>
+                                            )}
                                             {order.trust_score >= 90 && <span className="p2p-verified-badge">💎</span>}
                                         </div>
                                         <div className="p2p-trader-stats">
