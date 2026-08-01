@@ -2267,8 +2267,12 @@ router.post("/kyc/start", validateInitData, async (req: Request, res: Response) 
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
-        const apiKey = env.DIDIT_API_KEY || "DIDIT_KEY_REDACTED";
-        const workflowId = env.DIDIT_WORKFLOW_ID || "b42c44f7-17c0-45ff-a068-09820bcd578b";
+        const apiKey = env.DIDIT_API_KEY;
+        const workflowId = env.DIDIT_WORKFLOW_ID;
+        if (!apiKey || !workflowId) {
+            console.error("[KYC] DIDIT_API_KEY or DIDIT_WORKFLOW_ID not configured");
+            return res.status(503).json({ error: "KYC service is not configured. Please contact support." });
+        }
 
         const response = await fetch("https://verification.didit.me/v3/session/", {
             method: "POST",
@@ -2331,7 +2335,8 @@ router.get("/kyc/status", validateInitData, async (req: Request, res: Response) 
 
         if (kycStatus === "pending" && dbUser?.kyc_session_id) {
             try {
-                const apiKey = env.DIDIT_API_KEY || "DIDIT_KEY_REDACTED";
+                const apiKey = env.DIDIT_API_KEY;
+                if (!apiKey) throw new Error("DIDIT_API_KEY not configured");
                 const checkRes = await fetch(`https://verification.didit.me/v3/session/${dbUser.kyc_session_id}/decision/`, {
                     headers: { "x-api-key": apiKey }
                 });
@@ -2386,8 +2391,21 @@ router.get("/kyc/status", validateInitData, async (req: Request, res: Response) 
 
 router.post("/kyc/webhook", async (req: Request, res: Response) => {
     try {
+        // ── Signature Verification ────────────────────────────────────
+        const webhookSecret = env.DIDIT_WEBHOOK_SECRET;
+        if (webhookSecret) {
+            const incoming = req.headers["x-webhook-secret"] || req.headers["x-didit-signature"] || "";
+            if (incoming !== webhookSecret) {
+                console.warn("[DIDIT WEBHOOK] ❌ Invalid webhook secret — request rejected");
+                return res.status(401).json({ error: "Unauthorized webhook" });
+            }
+        } else {
+            console.warn("[DIDIT WEBHOOK] ⚠️  DIDIT_WEBHOOK_SECRET not set — accepting all webhook calls (insecure!)");
+        }
+        // ─────────────────────────────────────────────────────────────
+
         const body = req.body;
-        console.log("[DIDIT WEBHOOK] Received event:", body.event || body.type, "Session:", body.session_id);
+        console.log("[DIDIT WEBHOOK] ✅ Received event:", body.event || body.type, "Session:", body.session_id);
 
         const userId = body.vendor_data;
         const statusStr = (body.status || body.decision?.status || "").toLowerCase();
