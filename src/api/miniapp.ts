@@ -2391,21 +2391,79 @@ router.get("/kyc/status", validateInitData, async (req: Request, res: Response) 
 
 router.post("/kyc/webhook", async (req: Request, res: Response) => {
     try {
-        // ── Signature Verification ────────────────────────────────────
         const webhookSecret = env.DIDIT_WEBHOOK_SECRET;
+        const body = req.body;
+        const timestamp = req.headers["x-timestamp"] as string;
+
+        // ── Didit HMAC-SHA256 Signature Verification ──────────────────
         if (webhookSecret) {
-            const incoming = req.headers["x-webhook-secret"] || req.headers["x-didit-signature"] || "";
-            if (incoming !== webhookSecret) {
-                console.warn("[DIDIT WEBHOOK] ❌ Invalid webhook secret — request rejected");
+            if (!timestamp) {
+                console.warn("[DIDIT WEBHOOK] ❌ Missing X-Timestamp header");
+                return res.status(401).json({ error: "Missing X-Timestamp" });
+            }
+
+            // Replay attack protection: reject requests older than 5 minutes
+            const now = Math.floor(Date.now() / 1000);
+            if (Math.abs(now - parseInt(timestamp, 10)) > 300) {
+                console.warn("[DIDIT WEBHOOK] ❌ Stale timestamp — possible replay attack");
+                return res.status(401).json({ error: "Stale timestamp" });
+            }
+
+            const sigV2 = req.headers["x-signature-v2"] as string;
+            const sigSimple = req.headers["x-signature-simple"] as string;
+
+            // Helper: sort object keys recursively + normalise whole floats to int
+            function shortenFloats(data: any): any {
+                if (Array.isArray(data)) return data.map(shortenFloats);
+                if (data !== null && typeof data === "object") {
+                    return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, shortenFloats(v)]));
+                }
+                if (typeof data === "number" && !Number.isInteger(data) && data % 1 === 0) return Math.trunc(data);
+                return data;
+            }
+            function sortKeys(obj: any): any {
+                if (Array.isArray(obj)) return obj.map(sortKeys);
+                if (obj !== null && typeof obj === "object") {
+                    return Object.keys(obj).sort().reduce((acc: any, k) => { acc[k] = sortKeys(obj[k]); return acc; }, {});
+                }
+                return obj;
+            }
+
+            let verified = false;
+
+            if (sigV2) {
+                // V2: HMAC-SHA256 of canonical sorted-key JSON
+                const canonical = JSON.stringify(sortKeys(shortenFloats(body)));
+                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical, "utf8").digest("hex");
+                const a = Buffer.from(expected, "utf8");
+                const b = Buffer.from(sigV2, "utf8");
+                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
+            }
+
+            if (!verified && sigSimple) {
+                // Simple: HMAC of "timestamp:session_id:status:webhook_type"
+                const canonical = [
+                    body.timestamp ?? "",
+                    body.session_id ?? "",
+                    body.status ?? "",
+                    body.webhook_type ?? "",
+                ].join(":");
+                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical).digest("hex");
+                const a = Buffer.from(expected, "utf8");
+                const b = Buffer.from(sigSimple, "utf8");
+                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
+            }
+
+            if (!verified) {
+                console.warn("[DIDIT WEBHOOK] ❌ Invalid HMAC signature — request rejected");
                 return res.status(401).json({ error: "Unauthorized webhook" });
             }
         } else {
-            console.warn("[DIDIT WEBHOOK] ⚠️  DIDIT_WEBHOOK_SECRET not set — accepting all webhook calls (insecure!)");
+            console.warn("[DIDIT WEBHOOK] ⚠️  DIDIT_WEBHOOK_SECRET not set — skipping signature check (insecure!)");
         }
         // ─────────────────────────────────────────────────────────────
 
-        const body = req.body;
-        console.log("[DIDIT WEBHOOK] ✅ Received event:", body.event || body.type, "Session:", body.session_id);
+        console.log("[DIDIT WEBHOOK] ✅ Verified event:", body.webhook_type || body.event, "Session:", body.session_id);
 
         const userId = body.vendor_data;
         const statusStr = (body.status || body.decision?.status || "").toLowerCase();
