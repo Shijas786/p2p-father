@@ -312,6 +312,12 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
 
+    const trustScore = user?.trust_score ?? 100;
+    const starEmoji = trustScore >= 90 ? "⭐" : "✨";
+    const avgMinutes = (order as any).avg_completion_minutes;
+    const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
+    const traderLine = `👤 Trader: ${username} ${starEmoji} ${trustScore.toFixed(0)}%${avgSpeedText}`;
+
     const lines = [
         header,
         "",
@@ -320,6 +326,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         totalLine,
         chainLine,
         paymentLine,
+        traderLine,
     ];
 
     if (order.payment_details?.require_kyc) {
@@ -4066,10 +4073,6 @@ const groupCommands = [
     { command: "ads", description: "Browse live P2P ads" },
     { command: "help", description: "How to use this bot" },
 ];
-
-// Register all commands for private chats
-bot.api.setMyCommands(privateCommands, { scope: { type: "all_private_chats" } })
-    .catch((err: any) => console.error("setMyCommands (private) error:", err));
 
 // Register minimal commands for group chats
 bot.api.setMyCommands(groupCommands, { scope: { type: "all_group_chats" } })
