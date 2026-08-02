@@ -914,11 +914,11 @@ bot.command(["start", "open"], async (ctx) => {
     const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
 
     const startKeyboard = new InlineKeyboard()
-        .webApp("📱 Open P2PFather App", miniAppUrl).row()
-        .text("🔍 Browse Ads", "ads:all")
+        .webApp("🚀 Launch P2PFather App", miniAppUrl).row()
+        .text("📊 Browse Live Ads", "ads:all")
         .text("👤 My Profile", "view_profile").row()
-        .text("🔑 My Wallet", "view_wallet")
-        .url("📖 User Guide", "https://p2pfather.com/guide");
+        .text("💼 My Wallet & Vault", "view_wallet")
+        .url("📚 User Guide & Help", "https://p2pfather.com/guide");
 
     // Send hero banner with the welcome text
     await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -2229,11 +2229,11 @@ bot.on("callback_query:data", async (ctx) => {
                         ].join("\n");
 
                         const startKeyboard = new InlineKeyboard()
-                            .webApp("📱 Open P2PFather App", miniAppUrl).row()
-                            .text("🔍 Browse Ads", "ads:all")
+                            .webApp("🚀 Launch P2PFather App", miniAppUrl).row()
+                            .text("📊 Browse Live Ads", "ads:all")
                             .text("👤 My Profile", "view_profile").row()
-                            .text("🔑 My Wallet", "view_wallet")
-                            .url("📖 User Guide", "https://p2pfather.com/guide");
+                            .text("💼 My Wallet & Vault", "view_wallet")
+                            .url("📚 User Guide & Help", "https://p2pfather.com/guide");
 
                         const bannerPath = path.join(process.cwd(), "assets/bot_logo.jpg");
                         await ctx.replyWithPhoto(new InputFile(bannerPath), {
@@ -2347,11 +2347,11 @@ bot.on("callback_query:data", async (ctx) => {
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp${cacheBuster}`;
             const startKeyboard = new InlineKeyboard()
-                .webApp("📱 Open P2PFather App", miniAppUrl).row()
-                .text("🔍 Browse Ads", "ads:all")
+                .webApp("🚀 Launch P2PFather App", miniAppUrl).row()
+                .text("📊 Browse Live Ads", "ads:all")
                 .text("👤 My Profile", "view_profile").row()
-                .text("🔑 My Wallet", "view_wallet")
-                .url("📖 User Guide", "https://p2pfather.com/guide");
+                .text("💼 My Wallet & Vault", "view_wallet")
+                .url("📚 User Guide & Help", "https://p2pfather.com/guide");
 
             await ctx.editMessageText(welcome, { parse_mode: "Markdown", reply_markup: startKeyboard });
             await ctx.answerCallbackQuery();
