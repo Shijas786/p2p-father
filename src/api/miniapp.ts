@@ -46,6 +46,34 @@ router.get("/system/status", async (req: Request, res: Response) => {
     });
 });
 
+// Adsgram Server-Side Reward Webhook (GET request sent from Adsgram server when reward event occurs)
+router.get("/adsgram/reward", async (req: Request, res: Response) => {
+    try {
+        const userId = req.query.userId || req.query.userid || req.query.user_id;
+        console.log(`[Adsgram Webhook] Received ad reward callback for Telegram ID: ${userId}`);
+
+        if (!userId) {
+            return res.status(400).json({ error: "Missing userId query parameter" });
+        }
+
+        const telegramId = parseInt(String(userId));
+        if (!isNaN(telegramId)) {
+            const user = await db.getUserByTelegramId(telegramId);
+            if (user) {
+                const currentPoints = parseFloat(user.points?.toString() || "0");
+                await db.updateUser(user.id, { points: currentPoints + 5 });
+                console.log(`[Adsgram Webhook] Credited +5 points to @${user.username || user.telegram_id}`);
+            }
+        }
+
+        return res.status(200).json({ success: true, message: "Reward processed" });
+    } catch (err: any) {
+        console.error("[Adsgram Webhook] Error processing reward:", err.message);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+
 
 
 function escapeHTML(str: string): string {
