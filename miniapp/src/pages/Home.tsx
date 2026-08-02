@@ -221,7 +221,14 @@ export function Home({ user }: Props) {
                                         <div className="p2p-trader-stats">
                                             <span className="p2p-stat-text">
                                                 {order.trust_score !== undefined && (
-                                                    <>Trade(s) {order.completed_trades || 0} | 👍 {order.trust_score}%</>
+                                                    <>
+                                                        Trade(s) {order.completed_trades || 0} | 👍 {order.trust_score}%
+                                                        {order.avg_completion_minutes && (
+                                                            <span style={{ marginLeft: '4px', color: '#f0b90b', fontWeight: 600 }}>
+                                                                | ⚡ ~{order.avg_completion_minutes}m avg
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </span>
                                         </div>

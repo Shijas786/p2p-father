@@ -22,16 +22,18 @@ export function formatOrder(order: Order, index?: number): string {
     const token = order.token || "USDC";
     const totalFiat = (available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 });
     
-    // Rating star logic
+    // Rating star & speed logic
     const trustScore = order.trust_score ?? 100;
     const starEmoji = trustScore >= 90 ? "⭐" : "✨";
+    const avgMinutes = (order as any).avg_completion_minutes;
+    const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
 
     return [
         `<b>${emoji} ${escapeHTML(formatTokenAmount(available, token))}</b>`,
         `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${escapeHTML(token)}`,
         `├ 💵 <b>Total</b>   ₹${escapeHTML(totalFiat)}`,
         `├ 📲 <b>Pay</b>     ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`,
-        `├ 👤 <b>Trader</b>  @${escapeHTML(order.username || "anon")} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%`,
+        `├ 👤 <b>Trader</b>  @${escapeHTML(order.username || "anon")} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
     ].join("\n");
 }
 

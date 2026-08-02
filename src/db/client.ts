@@ -775,6 +775,44 @@ class Database {
         };
     }
 
+    async getUserAvgCompletionMinutes(userId: string): Promise<number | null> {
+        try {
+            const db = this.getClient();
+            const { data: completedTrades } = await db
+                .from("trades")
+                .select("created_at, updated_at")
+                .eq("status", "completed")
+                .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+                .order("created_at", { ascending: false })
+                .limit(30);
+
+            if (!completedTrades || completedTrades.length === 0) {
+                return null;
+            }
+
+            let totalMinutes = 0;
+            let validCount = 0;
+
+            for (const t of completedTrades) {
+                if (t.created_at && t.updated_at) {
+                    const diffMs = new Date(t.updated_at).getTime() - new Date(t.created_at).getTime();
+                    const mins = diffMs / (1000 * 60);
+                    // Filter out abnormal outliers (> 24 hours or negative duration)
+                    if (mins > 0 && mins < 1440) {
+                        totalMinutes += mins;
+                        validCount++;
+                    }
+                }
+            }
+
+            if (validCount === 0) return null;
+            return Number((totalMinutes / validCount).toFixed(1));
+        } catch (err) {
+            console.error("[DB] Error calculating avg completion time:", err);
+            return null;
+        }
+    }
+
     async logDisputeResolution(resolution: Omit<AdminDisputeResolution, "id" | "created_at">): Promise<void> {
         const db = this.getClient();
         const { error } = await db.from("admin_dispute_resolutions").insert(resolution);

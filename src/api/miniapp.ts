@@ -761,12 +761,25 @@ router.get("/orders", async (req: Request, res: Response) => {
                     orders = orders.filter(o => !invalidIds.has(o.id));
 
                     // Optional: Trigger background cleanup for these invalid ads?
-                    // For now, just hide them. The background job will kill them eventually.
                 }
             }
         }
 
-        res.json({ orders });
+        // Attach trader average completion time to orders
+        const ordersWithAvgTime = await Promise.all(
+            orders.map(async o => {
+                let avgMinutes: number | null = null;
+                if (o.user_id) {
+                    avgMinutes = await db.getUserAvgCompletionMinutes(o.user_id);
+                }
+                return {
+                    ...o,
+                    avg_completion_minutes: avgMinutes
+                };
+            })
+        );
+
+        res.json({ orders: ordersWithAvgTime });
     } catch (err: any) {
         console.error("[MINIAPP] Orders error:", err);
         res.status(500).json({ error: err.message });
