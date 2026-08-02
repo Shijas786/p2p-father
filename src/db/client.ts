@@ -775,8 +775,15 @@ class Database {
         };
     }
 
+    private avgSpeedCache = new Map<string, { val: number | null; ts: number }>();
+
     async getUserAvgCompletionMinutes(userId: string): Promise<number | null> {
         try {
+            const cached = this.avgSpeedCache.get(userId);
+            if (cached && Date.now() - cached.ts < 60_000) {
+                return cached.val;
+            }
+
             const db = this.getClient();
             const { data: completedTrades } = await db
                 .from("trades")
@@ -787,6 +794,7 @@ class Database {
                 .limit(30);
 
             if (!completedTrades || completedTrades.length === 0) {
+                this.avgSpeedCache.set(userId, { val: null, ts: Date.now() });
                 return null;
             }
 
@@ -805,8 +813,13 @@ class Database {
                 }
             }
 
-            if (validCount === 0) return null;
-            return Number((totalMinutes / validCount).toFixed(1));
+            if (validCount === 0) {
+                this.avgSpeedCache.set(userId, { val: null, ts: Date.now() });
+                return null;
+            }
+            const avgMins = Math.max(0.1, Number((totalMinutes / validCount).toFixed(1)));
+            this.avgSpeedCache.set(userId, { val: avgMins, ts: Date.now() });
+            return avgMins;
         } catch (err) {
             console.error("[DB] Error calculating avg completion time:", err);
             return null;
