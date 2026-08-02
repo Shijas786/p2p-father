@@ -225,7 +225,7 @@ class Database {
         const db = this.getClient();
         let query = db
             .from("orders")
-            .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, photo_url)")
+            .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, photo_url, hide_group_handle)")
             .eq("status", "active")
             .order("rate", { ascending: type === "sell" })
             .limit(limit);
@@ -241,14 +241,30 @@ class Database {
         const { data, error } = await query;
         if (error) throw new Error(`Failed to get orders: ${error.message}`);
 
-        return (data || []).map((d: any) => ({
-            ...d,
-            username: d.users?.username || d.users?.first_name || "Unknown",
-            trust_score: d.users?.trust_score,
-            wallet_address: d.users?.wallet_address,
-            telegram_id: d.users?.telegram_id,
-            photo_url: d.users?.photo_url, // Added for manual avatar
-        })) as Order[];
+        return (data || []).map((d: any) => {
+            const isHidden = Boolean(d.users?.hide_group_handle);
+            let displayName = d.users?.username ? `@${d.users.username}` : (d.users?.first_name || "Trader");
+            if (isHidden) {
+                if (d.users?.username && d.users.username.length > 2) {
+                    displayName = `@${d.users.username.slice(0, 2)}***`;
+                } else if (d.users?.first_name && d.users.first_name.length > 2) {
+                    displayName = `${d.users.first_name.slice(0, 2)}***`;
+                } else {
+                    displayName = "Anonymous Trader";
+                }
+            }
+
+            return {
+                ...d,
+                username: displayName,
+                raw_username: isHidden ? undefined : d.users?.username,
+                hide_group_handle: isHidden,
+                trust_score: d.users?.trust_score,
+                wallet_address: d.users?.wallet_address,
+                telegram_id: d.users?.telegram_id,
+                photo_url: isHidden ? undefined : d.users?.photo_url,
+            };
+        }) as Order[];
     }
 
     async getOrderById(orderId: string): Promise<Order | null> {

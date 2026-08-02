@@ -302,7 +302,8 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const emoji = order.type === "sell" ? "🔴" : "🟢";
     const isVerified = Boolean(user?.is_verified || user?.kyc_status === 'approved' || order?.is_verified);
     const verifiedBadge = isVerified ? " [✅ Verified]" : "";
-    const username = formatTraderDisplay(user?.username, user?.first_name, user?.hide_group_handle) + verifiedBadge;
+    const hideHandle = Boolean(user?.hide_group_handle || order?.hide_group_handle);
+    const username = formatTraderDisplay(user?.username || order?.username, user?.first_name || order?.first_name, hideHandle) + verifiedBadge;
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
     const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
 

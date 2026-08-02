@@ -132,8 +132,10 @@ export function TraderProfile({ userId, onClose }: Props) {
                                 <span className="tp-mini-lbl">Rate</span>
                             </div>
                             <div className="tp-mini-stat">
-                                <span className="tp-mini-val">{profile.buy_count}B / {profile.sell_count}S</span>
-                                <span className="tp-mini-lbl">Buy/Sell</span>
+                                <span className="tp-mini-val" style={{ color: '#f0b90b' }}>
+                                    {profile.avg_completion_minutes ? `~${profile.avg_completion_minutes}m` : '⚡ Fast'}
+                                </span>
+                                <span className="tp-mini-lbl">Avg Speed</span>
                             </div>
                             <div className="tp-mini-stat wide">
                                 <span className="tp-mini-val">${profile.total_volume?.toLocaleString()}</span>

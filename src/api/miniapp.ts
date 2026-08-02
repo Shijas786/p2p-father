@@ -2641,6 +2641,9 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
         if (completedCount >= 50) level = 4;
         if (completedCount >= 100) level = 5;
 
+        const targetUserId = req.params.userId as string;
+        const avgMinutes = await db.getUserAvgCompletionMinutes(targetUserId);
+
         res.json({
             id: user.id,
             username: user.username,
@@ -2651,6 +2654,7 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
             sell_count: sellCount,
             total_volume: parseFloat(totalVolumeUsdt.toString()),
             completion_rate: completionRate,
+            avg_completion_minutes: avgMinutes,
             level,
             member_since: user.created_at,
         });
