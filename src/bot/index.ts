@@ -306,15 +306,14 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
     const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
 
-    const orderLine = `${emoji} ${username} ${actionVerb} ${amountStr}`;
+    const avgMinutes = (order as any).avg_completion_minutes;
+    const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
+    const orderLine = `${emoji} ${username}${avgSpeedText} ${actionVerb} ${amountStr}`;
+
     const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
     const totalLine = `🧾 Total: ₹${escapeHTML((displayAmount * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
     const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
-
-    const avgMinutes = (order as any).avg_completion_minutes;
-    const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
-    const traderLine = `👤 Trader: ${username}${avgSpeedText}`;
 
     const lines = [
         header,
@@ -324,7 +323,6 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         totalLine,
         chainLine,
         paymentLine,
-        traderLine,
     ];
 
     if (order.payment_details?.require_kyc) {
