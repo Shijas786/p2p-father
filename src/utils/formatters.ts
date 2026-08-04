@@ -33,7 +33,7 @@ export function formatOrder(order: Order, index?: number): string {
         `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${escapeHTML(token)}`,
         `├ 💵 <b>Total</b>   ₹${escapeHTML(totalFiat)}`,
         `├ 📲 <b>Pay</b>     ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`,
-        `├ 👤 <b>Trader</b>  @${escapeHTML(order.username || "anon")} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
+        `├ 👤 <b>Trader</b>  @${escapeHTML((order.username || "anon").replace(/^@/, ""))} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
     ].join("\n");
 }
 
