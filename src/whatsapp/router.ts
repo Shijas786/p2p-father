@@ -246,7 +246,16 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
             await showWelcomeScreen(sock, jid, msg);
             return;
         }
-        await reply(sock, jid, MAIN_MENU, msg);
+        await replyWithButtons(
+            sock,
+            jid,
+            MAIN_MENU,
+            [
+                { id: "/balance", label: "💰 Balance & Wallet" },
+                { id: "/ads",     label: "📊 Browse P2P Ads" },
+                { id: "/post",    label: "➕ Post New Ad" },
+            ]
+        );
         return;
     }
 
