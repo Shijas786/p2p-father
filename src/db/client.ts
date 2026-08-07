@@ -969,11 +969,12 @@ class Database {
         const { data: maxResult } = await db
             .from("users")
             .select("wallet_index")
+            .not("wallet_index", "is", null)
             .order("wallet_index", { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
-        const nextIndex = (maxResult?.wallet_index ?? 0) + 1;
+        const nextIndex = ((maxResult as any)?.wallet_index ?? 0) + 1;
 
         let walletAddress: string | null = null;
         try {
@@ -1015,7 +1016,7 @@ class Database {
             .from("whatsapp_states")
             .select("key, data")
             .eq("user_id", userId)
-            .single();
+            .maybeSingle();
         return data ?? null;
     }
 
