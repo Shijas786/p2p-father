@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS whatsapp_groups (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 4. WhatsApp Auth Session Persistence Table
+--    Saves WhatsApp login session across commits, redeploys, and server restarts
+CREATE TABLE IF NOT EXISTS whatsapp_auth (
+    filename   TEXT        PRIMARY KEY,
+    content    JSONB       NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================
 -- Security: Row Level Security Policies
 -- ============================================================
@@ -53,3 +61,10 @@ ALTER TABLE whatsapp_groups ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access to whatsapp_groups"
     ON whatsapp_groups FOR ALL
     USING (auth.role() = 'service_role');
+
+-- whatsapp_auth: only service role can manage
+ALTER TABLE whatsapp_auth ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access to whatsapp_auth"
+    ON whatsapp_auth FOR ALL
+    USING (auth.role() = 'service_role');
+

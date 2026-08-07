@@ -35,7 +35,47 @@ export function isWaConnected(): boolean {
     return isConnected;
 }
 
+import fs from "fs";
+import { db } from "../db/client";
+
+async function loadAuthFromSupabase(): Promise<void> {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) {
+            fs.mkdirSync(AUTH_DIR, { recursive: true });
+        }
+        const client = db.getClient();
+        const { data: rows, error } = await client.from("whatsapp_auth").select("filename, content");
+        if (error) return; // Table might not exist yet
+        if (rows && rows.length > 0) {
+            for (const row of rows) {
+                fs.writeFileSync(path.join(AUTH_DIR, row.filename), JSON.stringify(row.content));
+            }
+            console.log(`  💾 Restored ${rows.length} WhatsApp session keys from Supabase`);
+        }
+    } catch (_) {}
+}
+
+async function syncAuthToSupabase(): Promise<void> {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) return;
+        const files = fs.readdirSync(AUTH_DIR);
+        const client = db.getClient();
+        for (const file of files) {
+            if (file.endsWith(".json")) {
+                const content = JSON.parse(fs.readFileSync(path.join(AUTH_DIR, file), "utf-8"));
+                await client.from("whatsapp_auth").upsert(
+                    { filename: file, content, updated_at: new Date().toISOString() },
+                    { onConflict: "filename" }
+                );
+            }
+        }
+    } catch (_) {}
+}
+
 export async function initWhatsApp(): Promise<void> {
+    // 1. Restore auth state from Supabase before Baileys starts
+    await loadAuthFromSupabase();
+
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -78,8 +118,9 @@ export async function initWhatsApp(): Promise<void> {
             } else {
                 console.log("  ❌ WhatsApp logged out. Clearing auth keys and auto-generating fresh QR...");
                 try {
-                    const fs = await import("fs");
                     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    const client = db.getClient();
+                    await client.from("whatsapp_auth").delete().neq("filename", "");
                 } catch (_) {}
                 await new Promise((r) => setTimeout(r, 2000));
                 initWhatsApp();
@@ -91,11 +132,16 @@ export async function initWhatsApp(): Promise<void> {
             isConnected = true;
             const me = sock!.user;
             console.log(`  ✅ WhatsApp connected as: ${me?.name ?? "Unknown"} (+${me?.id.split(":")[0]})`);
+            // Sync credentials to Supabase as soon as connection opens
+            await syncAuthToSupabase();
         }
     });
 
-    // ── Persist credentials ───────────────────────────────────────────────────
-    sock.ev.on("creds.update", saveCreds);
+    // ── Persist credentials locally & sync to Supabase ────────────────────────
+    sock.ev.on("creds.update", async () => {
+        await saveCreds();
+        await syncAuthToSupabase();
+    });
 
     // ── Route incoming messages ───────────────────────────────────────────────
     sock.ev.on("messages.upsert", async (m) => {

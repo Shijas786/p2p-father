@@ -3,4 +3,4 @@ dist/
 .env
 *.log
 .DS_Store
-.env
+whatsapp_auth_keys/
