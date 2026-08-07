@@ -109,7 +109,7 @@ async function main() {
 
     // Mount API Routers
     app.use("/api/miniapp", miniappRouter);
-    app.use("/api", webhookRouter);
+    app.use("/api/webhook", webhookRouter);
 
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
