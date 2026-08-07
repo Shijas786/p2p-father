@@ -53,46 +53,44 @@ export async function replyWithButtons(
         formattedText += `\n\n👇 *Quick Options:*\n${optionLines.join("\n")}`;
     }
 
-    const nativeButtons = buttons.map((b) => ({
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-            display_text: b.label,
-            id: b.id,
-        }),
-    }));
-
     try {
-        // Send modern WhatsApp Business Native Flow interactive message (Baileys v6+)
-        await sock.sendMessage(jid, {
-            viewOnceMessage: {
-                message: {
-                    interactiveMessage: {
-                        body: { text: formattedText },
-                        footer: { text: footer },
-                        header: { title: "🤖 P2PFather", hasMediaAttachment: false },
-                        nativeFlowMessage: {
-                            buttons: nativeButtons,
-                        },
+        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
+        const msg = generateWAMessageFromContent(
+            jid,
+            {
+                viewOnceMessage: {
+                    message: {
+                        interactiveMessage: proto.Message.InteractiveMessage.create({
+                            body: proto.Message.InteractiveMessage.Body.create({
+                                text: formattedText,
+                            }),
+                            footer: proto.Message.InteractiveMessage.Footer.create({
+                                text: footer,
+                            }),
+                            header: proto.Message.InteractiveMessage.Header.create({
+                                title: "🤖 P2PFather",
+                                hasMediaAttachment: false,
+                            }),
+                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                                buttons: buttons.map((b) => ({
+                                    name: "quick_reply",
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: b.label,
+                                        id: b.id,
+                                    }),
+                                })),
+                            }),
+                        }),
                     },
                 },
             },
-        } as any);
-    } catch {
-        try {
-            // Fallback to legacy buttons
-            await sock.sendMessage(jid, {
-                text: formattedText,
-                footer,
-                buttons: buttons.map((b) => ({
-                    buttonId: b.id,
-                    buttonText: { displayText: b.label },
-                    type: 1,
-                })),
-                headerType: 1,
-            } as any);
-        } catch {
-            await sock.sendMessage(jid, { text: formattedText });
-        }
+            { userJid: sock.user?.id ?? jid }
+        );
+
+        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
+    } catch (err: any) {
+        console.warn("[WA] relayMessage failed, falling back to sendMessage:", err?.message);
+        await sock.sendMessage(jid, { text: formattedText });
     }
 }
 
