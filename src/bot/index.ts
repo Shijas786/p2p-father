@@ -269,9 +269,13 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
                     }
                 }
                 
-                if (availableGifs.length > 0) {
+                while (availableGifs.length > 0) {
                     const randomFile = availableGifs.pop()!;
-                    randomGifPath = path.join(gifDir, randomFile);
+                    const candidatePath = path.join(gifDir, randomFile);
+                    if (fs.existsSync(candidatePath)) {
+                        randomGifPath = candidatePath;
+                        break;
+                    }
                 }
             }
         } catch (err) {
