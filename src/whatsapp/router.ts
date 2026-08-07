@@ -94,6 +94,71 @@ export async function replyWithButtons(
     }
 }
 
+export async function replyWithCarousel(
+    sock: WASocket,
+    jid: string,
+    text: string,
+    cards: {
+        title: string;
+        body: string;
+        footer?: string;
+        buttons: { id: string; label: string }[];
+    }[]
+): Promise<void> {
+    try {
+        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
+        const msg = generateWAMessageFromContent(
+            jid,
+            {
+                viewOnceMessage: {
+                    message: {
+                        interactiveMessage: proto.Message.InteractiveMessage.create({
+                            body: proto.Message.InteractiveMessage.Body.create({ text }),
+                            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.create({
+                                cards: cards.map((c) => ({
+                                    header: proto.Message.InteractiveMessage.Header.create({
+                                        title: c.title,
+                                        hasMediaAttachment: false,
+                                    }),
+                                    body: proto.Message.InteractiveMessage.Body.create({
+                                        text: c.body,
+                                    }),
+                                    footer: proto.Message.InteractiveMessage.Footer.create({
+                                        text: c.footer || "P2PFather Exchange",
+                                    }),
+                                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                                        buttons: c.buttons.map((b) => ({
+                                            name: "quick_reply",
+                                            buttonParamsJson: JSON.stringify({
+                                                display_text: b.label,
+                                                id: b.id,
+                                            }),
+                                        })),
+                                    }),
+                                })),
+                            }),
+                        }),
+                    },
+                },
+            },
+            { userJid: sock.user?.id ?? jid }
+        );
+
+        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
+    } catch (err: any) {
+        console.warn("[WA] Carousel relayMessage failed, falling back to text:", err?.message);
+        let fallbackText = `${text}\n\n`;
+        cards.forEach((c, idx) => {
+            fallbackText += `*Card ${idx + 1}: ${c.title}*\n${c.body}\n`;
+            c.buttons.forEach((b) => {
+                fallbackText += `• ${b.label} → \`${b.id}\`\n`;
+            });
+            fallbackText += `\n`;
+        });
+        await sock.sendMessage(jid, { text: fallbackText.trim() });
+    }
+}
+
 // ── Step 1: Welcome Screen (first message to new WA users) ───────────────────
 async function showWelcomeScreen(
     sock: WASocket,
