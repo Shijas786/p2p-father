@@ -891,6 +891,26 @@ class Database {
             if (existing) return existing as User;
         } catch (_) {}
 
+        // Find next wallet index to satisfy NOT NULL constraints
+        let nextIndex = 1;
+        let walletAddress: string | null = null;
+        try {
+            const { data: maxResult } = await db
+                .from("users")
+                .select("wallet_index")
+                .not("wallet_index", "is", null)
+                .order("wallet_index", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (maxResult && (maxResult as any).wallet_index) {
+                nextIndex = (maxResult as any).wallet_index + 1;
+            }
+
+            const { wallet: walletSvc } = await import("../services/wallet");
+            walletAddress = walletSvc.deriveWallet(nextIndex).address;
+        } catch (_) {}
+
         // Synthetic negative telegram_id to satisfy DB NOT NULL/UNIQUE constraints for WA-only users
         const syntheticTelegramId = -Math.abs(parseInt(phone.slice(-9)) || Math.floor(Date.now() / 1000));
 
@@ -900,9 +920,9 @@ class Database {
             first_name:        `WA_${phone.slice(-4)}`,
             whatsapp_phone:    phone,
             preferred_channel: "whatsapp",
-            wallet_index:      null,
-            wallet_address:    null,
-            wallet_type:       null,
+            wallet_index:      nextIndex,
+            wallet_address:    walletAddress,
+            wallet_type:       walletAddress ? "bot" : null,
         };
 
         let { data: newUser, error } = await db
@@ -919,7 +939,7 @@ class Database {
         }
 
         if (error || !newUser) throw new Error(`Failed to create WhatsApp user: ${error?.message}`);
-        console.log(`[DB] Created WA-only user ${newUser.id} (no wallet — awaiting user choice)`);
+        console.log(`[DB] Created WA user ${newUser.id} with wallet ${walletAddress} (index=${nextIndex})`);
         return newUser as User;
     }
 
