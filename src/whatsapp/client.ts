@@ -86,7 +86,7 @@ export async function initWhatsApp(): Promise<void> {
         auth: state,
         getMessage: async () => ({ conversation: "P2PFather" }),
         browser: ["P2PFather Bot", "Chrome", "120.0.0"],
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         syncFullHistory: false,
     });
 
@@ -131,6 +131,9 @@ export async function initWhatsApp(): Promise<void> {
             isConnected = true;
             const me = sock!.user;
             console.log(`  ✅ WhatsApp connected as: ${me?.name ?? "Unknown"} (+${me?.id.split(":")[0]})`);
+            try {
+                await sock!.sendPresenceUpdate("available");
+            } catch (_) {}
             // Sync credentials to Supabase as soon as connection opens
             await syncAuthToSupabase();
         }
