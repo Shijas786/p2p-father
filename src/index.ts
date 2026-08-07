@@ -121,6 +121,10 @@ async function main() {
         res.redirect(302, "/miniapp/");
     });
     app.use("/miniapp", express.static(miniAppDist, staticOpts));
+    app.get(["/miniapp", "/miniapp/*"], (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(miniAppDist, "index.html"));
+    });
 
     // WhatsApp QR Code Web API & Interface (Secured via secret key)
     app.get("/api/wa-qr", async (req, res) => {
