@@ -58,31 +58,27 @@ export async function replyWithButtons(
         const msg = generateWAMessageFromContent(
             jid,
             {
-                viewOnceMessage: {
-                    message: {
-                        interactiveMessage: proto.Message.InteractiveMessage.create({
-                            body: proto.Message.InteractiveMessage.Body.create({
-                                text: formattedText,
+                interactiveMessage: proto.Message.InteractiveMessage.create({
+                    body: proto.Message.InteractiveMessage.Body.create({
+                        text: formattedText,
+                    }),
+                    footer: proto.Message.InteractiveMessage.Footer.create({
+                        text: footer,
+                    }),
+                    header: proto.Message.InteractiveMessage.Header.create({
+                        title: "🤖 P2PFather",
+                        hasMediaAttachment: false,
+                    }),
+                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                        buttons: buttons.map((b) => ({
+                            name: "quick_reply",
+                            buttonParamsJson: JSON.stringify({
+                                display_text: b.label,
+                                id: b.id,
                             }),
-                            footer: proto.Message.InteractiveMessage.Footer.create({
-                                text: footer,
-                            }),
-                            header: proto.Message.InteractiveMessage.Header.create({
-                                title: "🤖 P2PFather",
-                                hasMediaAttachment: false,
-                            }),
-                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                                buttons: buttons.map((b) => ({
-                                    name: "quick_reply",
-                                    buttonParamsJson: JSON.stringify({
-                                        display_text: b.label,
-                                        id: b.id,
-                                    }),
-                                })),
-                            }),
-                        }),
-                    },
-                },
+                        })),
+                    }),
+                }),
             },
             { userJid: sock.user?.id ?? jid }
         );
@@ -110,36 +106,32 @@ export async function replyWithCarousel(
         const msg = generateWAMessageFromContent(
             jid,
             {
-                viewOnceMessage: {
-                    message: {
-                        interactiveMessage: proto.Message.InteractiveMessage.create({
-                            body: proto.Message.InteractiveMessage.Body.create({ text }),
-                            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.create({
-                                cards: cards.map((c) => ({
-                                    header: proto.Message.InteractiveMessage.Header.create({
-                                        title: c.title,
-                                        hasMediaAttachment: false,
-                                    }),
-                                    body: proto.Message.InteractiveMessage.Body.create({
-                                        text: c.body,
-                                    }),
-                                    footer: proto.Message.InteractiveMessage.Footer.create({
-                                        text: c.footer || "P2PFather Exchange",
-                                    }),
-                                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                                        buttons: c.buttons.map((b) => ({
-                                            name: "quick_reply",
-                                            buttonParamsJson: JSON.stringify({
-                                                display_text: b.label,
-                                                id: b.id,
-                                            }),
-                                        })),
+                interactiveMessage: proto.Message.InteractiveMessage.create({
+                    body: proto.Message.InteractiveMessage.Body.create({ text }),
+                    carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.create({
+                        cards: cards.map((c) => ({
+                            header: proto.Message.InteractiveMessage.Header.create({
+                                title: c.title,
+                                hasMediaAttachment: false,
+                            }),
+                            body: proto.Message.InteractiveMessage.Body.create({
+                                text: c.body,
+                            }),
+                            footer: proto.Message.InteractiveMessage.Footer.create({
+                                text: c.footer || "P2PFather Exchange",
+                            }),
+                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                                buttons: c.buttons.map((b) => ({
+                                    name: "quick_reply",
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: b.label,
+                                        id: b.id,
                                     }),
                                 })),
                             }),
-                        }),
-                    },
-                },
+                        })),
+                    }),
+                }),
             },
             { userJid: sock.user?.id ?? jid }
         );
@@ -175,29 +167,25 @@ export async function replyWithList(
         const msg = generateWAMessageFromContent(
             jid,
             {
-                viewOnceMessage: {
-                    message: {
-                        interactiveMessage: proto.Message.InteractiveMessage.create({
-                            body: proto.Message.InteractiveMessage.Body.create({ text }),
-                            footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
-                            header: proto.Message.InteractiveMessage.Header.create({
-                                title: "🤖 P2PFather Menu",
-                                hasMediaAttachment: false,
-                            }),
-                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                                buttons: [
-                                    {
-                                        name: "single_select",
-                                        buttonParamsJson: JSON.stringify({
-                                            title: buttonTitle,
-                                            sections,
-                                        }),
-                                    },
-                                ],
-                            }),
-                        }),
-                    },
-                },
+                interactiveMessage: proto.Message.InteractiveMessage.create({
+                    body: proto.Message.InteractiveMessage.Body.create({ text }),
+                    footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
+                    header: proto.Message.InteractiveMessage.Header.create({
+                        title: "🤖 P2PFather Menu",
+                        hasMediaAttachment: false,
+                    }),
+                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                        buttons: [
+                            {
+                                name: "single_select",
+                                buttonParamsJson: JSON.stringify({
+                                    title: buttonTitle,
+                                    sections,
+                                }),
+                            },
+                        ],
+                    }),
+                }),
             },
             { userJid: sock.user?.id ?? jid }
         );
