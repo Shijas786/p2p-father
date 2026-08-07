@@ -421,7 +421,8 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         return;
     }
 
-    if (text === "/start" || text === "hi" || text === "hello" || text === "menu" || text === "") {
+    const isGreeting = ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help", ""].includes(text);
+    if (isGreeting) {
         await (db as any).clearWhatsappState(user.id);
         // New user with no wallet yet — show welcome screen
         if (!user.wallet_address) {
@@ -644,7 +645,16 @@ Check balance first: /balance 💰`,
                     await reply(sock, jid, `🤖 ${intent.response}\n\nType /start to see all commands.`, msg);
                     return;
                 }
-                await reply(sock, jid, MAIN_MENU, msg);
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    MAIN_MENU,
+                    [
+                        { id: "/balance", label: "💰 Balance & Wallet" },
+                        { id: "/ads",     label: "📊 Browse P2P Ads" },
+                        { id: "/post",    label: "➕ Post New Ad" },
+                    ]
+                );
                 return;
             }
             // For any other known intent, show the AI's response and the menu
