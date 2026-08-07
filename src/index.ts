@@ -107,6 +107,10 @@ async function main() {
     // JSON body parser
     app.use(express.json());
 
+    // Mount API Routers
+    app.use("/api", miniappRouter);
+    app.use("/api", webhookRouter);
+
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
     const noCacheHeaders = (res: any) => {
