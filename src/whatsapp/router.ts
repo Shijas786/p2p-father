@@ -232,7 +232,15 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
     }
 
     // ── Route by command ──────────────────────────────────────────────────────
+    // ── Global Reset / Cancel Command ─────────────────────────────────────────
+    if (text === "/cancel" || text === "cancel" || text === "cancel_trade") {
+        await (db as any).clearWhatsappState(user.id);
+        await reply(sock, jid, "❌ Action cancelled.\n\nType /start to view main menu.", msg);
+        return;
+    }
+
     if (text === "/start" || text === "hi" || text === "hello" || text === "menu" || text === "") {
+        await (db as any).clearWhatsappState(user.id);
         // New user with no wallet yet — show welcome screen
         if (!user.wallet_address) {
             await showWelcomeScreen(sock, jid, msg);

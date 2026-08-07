@@ -76,7 +76,13 @@ export async function initWhatsApp(): Promise<void> {
                 console.log("  🔄 Reconnecting WhatsApp...");
                 initWhatsApp();
             } else {
-                console.log("  ❌ WhatsApp logged out. Delete whatsapp_auth_keys/ and restart to re-scan QR.");
+                console.log("  ❌ WhatsApp logged out. Clearing auth keys and auto-generating fresh QR...");
+                try {
+                    const fs = await import("fs");
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                } catch (_) {}
+                await new Promise((r) => setTimeout(r, 2000));
+                initWhatsApp();
             }
         }
 
