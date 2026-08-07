@@ -88,7 +88,7 @@ class AIService {
                 model: env.OPENAI_MODEL || "gpt-5-nano",
                 messages,
                 response_format: { type: "json_object" },
-                max_tokens: 300,
+                max_completion_tokens: 300,
                 temperature: 0.3,
             });
 

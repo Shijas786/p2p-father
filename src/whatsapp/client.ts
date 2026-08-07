@@ -148,14 +148,10 @@ export async function initWhatsApp(): Promise<void> {
     // ── Route incoming messages ───────────────────────────────────────────────
     sock.ev.on("messages.upsert", async (m) => {
         for (const msg of m.messages) {
-            if (!msg.message) continue;
+            if (!msg.message || msg.key?.fromMe) continue;
             const jid = msg.key.remoteJid || "";
-            const isGroup = jid.endsWith("@g.us");
 
-            // Ignore bot's own messages in group chats to prevent infinite loops
-            if (isGroup && msg.key?.fromMe) continue;
-
-            console.log(`[WA] 📩 Received message from ${jid} (fromMe=${msg.key?.fromMe})`);
+            console.log(`[WA] 📩 Received message from ${jid}`);
             try {
                 await routeMessage(sock!, msg);
             } catch (err) {
