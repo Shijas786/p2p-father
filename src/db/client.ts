@@ -111,7 +111,7 @@ class Database {
             .from("users")
             .select("*")
             .eq("telegram_id", telegramId)
-            .single();
+            .maybeSingle();
         return data as User | null;
     }
 
@@ -121,7 +121,7 @@ class Database {
             .from("users")
             .select("*")
             .eq("wallet_index", walletIndex)
-            .single();
+            .maybeSingle();
         return data as User | null;
     }
 
@@ -131,7 +131,7 @@ class Database {
             .from("users")
             .select("*")
             .eq("id", userId)
-            .single();
+            .maybeSingle();
         return data as User | null;
     }
 

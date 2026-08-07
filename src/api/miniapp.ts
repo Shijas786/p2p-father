@@ -337,21 +337,27 @@ router.post("/auth", async (req: Request, res: Response) => {
             tgUser.first_name
         );
 
-        // If user has no wallet yet (new user with bot wallet), derive one
+        // If user has no wallet yet, derive one safely
         if (!user.wallet_address && ((user as any).wallet_type === 'bot' || !(user as any).wallet_type)) {
             try {
-                const derived = wallet.deriveWallet(user.wallet_index);
+                let walletIndex = user.wallet_index;
+                if (!walletIndex || walletIndex <= 0) {
+                    walletIndex = await db.getNextWalletIndex();
+                }
+                const derived = wallet.deriveWallet(walletIndex);
                 await db.updateUser(user.id, {
+                    wallet_index: walletIndex,
                     wallet_address: derived.address,
                     wallet_type: 'bot',
                 } as any);
+                user.wallet_index = walletIndex;
                 user.wallet_address = derived.address;
                 (user as any).wallet_type = 'bot';
-                console.log(`[AUTH] Derived bot wallet for user ${user.id}: ${derived.address}`);
+                console.log(`[AUTH] Derived bot wallet for user ${user.id}: ${derived.address} (index=${walletIndex})`);
             } catch (walletErr: any) {
                 console.error("[AUTH] Failed to derive wallet:", walletErr);
             }
-        } // Fix: Missing closing brace for the if statement
+        }
 
         // Count qualified invites
         const supabaseClient = db.getClient();
