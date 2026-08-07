@@ -145,11 +145,40 @@ export async function initWhatsApp(): Promise<void> {
         await syncAuthToSupabase();
     });
 
+const processedMessageIds = new Set<string>();
+const lastResponseTimes = new Map<string, number>();
+
+function isRateLimited(jid: string): boolean {
+    const now = Date.now();
+    const lastTime = lastResponseTimes.get(jid) || 0;
+    if (now - lastTime < 2000) { // 2 second minimum cooldown per user
+        return true;
+    }
+    lastResponseTimes.set(jid, now);
+    return false;
+}
+
     // ── Route incoming messages ───────────────────────────────────────────────
     sock.ev.on("messages.upsert", async (m) => {
         for (const msg of m.messages) {
             if (!msg.message || msg.key?.fromMe) continue;
+            const msgId = msg.key?.id;
+            if (msgId && processedMessageIds.has(msgId)) {
+                continue; // Skip duplicate message retry
+            }
+            if (msgId) {
+                processedMessageIds.add(msgId);
+                if (processedMessageIds.size > 10000) {
+                    const firstItem = processedMessageIds.values().next().value;
+                    if (firstItem) processedMessageIds.delete(firstItem);
+                }
+            }
+
             const jid = msg.key.remoteJid || "";
+            if (isRateLimited(jid)) {
+                console.warn(`[WA] ⚠️ Rate limiting message from ${jid} (cooldown active)`);
+                continue;
+            }
 
             console.log(`[WA] 📩 Received message from ${jid}`);
             try {
