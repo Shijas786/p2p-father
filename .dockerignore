@@ -1,6 +1,13 @@
 node_modules
 miniapp/node_modules
+dist
+miniapp/dist
 .env
 .git
 .github
 *.log
+*.zip
+scratch
+cache
+rescuevault
+
