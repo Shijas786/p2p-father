@@ -943,6 +943,25 @@ class Database {
         return newUser as User;
     }
 
+    /** Safely fetch the next available HD wallet index */
+    async getNextWalletIndex(): Promise<number> {
+        const db = this.getClient();
+        try {
+            const { data: maxResult } = await db
+                .from("users")
+                .select("wallet_index")
+                .not("wallet_index", "is", null)
+                .order("wallet_index", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (maxResult && (maxResult as any).wallet_index) {
+                return (maxResult as any).wallet_index + 1;
+            }
+        } catch (_) {}
+        return 1;
+    }
+
     /** Derive and assign a brand-new wallet to an existing wallet-less WA user */
     async assignWalletToWaUser(userId: string): Promise<User> {
         const db = this.getClient();

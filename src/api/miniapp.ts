@@ -590,9 +590,15 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const derived = wallet.deriveWallet(user.wallet_index);
+        let walletIndex = user.wallet_index;
+        if (!walletIndex || walletIndex <= 0) {
+            walletIndex = await db.getNextWalletIndex();
+        }
+
+        const derived = wallet.deriveWallet(walletIndex);
 
         await db.updateUser(user.id, {
+            wallet_index: walletIndex,
             wallet_address: derived.address,
             wallet_type: 'bot',
             receive_address: null, // Clear any custom receive address from previous wallet
