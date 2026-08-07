@@ -109,7 +109,6 @@ async function main() {
 
     // Mount API Routers
     app.use("/api/miniapp", miniappRouter);
-    app.use("/api", miniappRouter);
     app.use("/api", webhookRouter);
 
     // Serve Mini App frontend — NUCLEAR NO CACHING
