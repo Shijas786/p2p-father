@@ -121,7 +121,7 @@ async function main() {
         res.redirect(302, "/miniapp/");
     });
     app.use("/miniapp", express.static(miniAppDist, staticOpts));
-    app.get(["/miniapp", "/miniapp/*"], (req, res) => {
+    app.get(/^\/miniapp(?:\/.*)?$/, (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
