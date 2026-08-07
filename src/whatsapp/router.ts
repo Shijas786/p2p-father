@@ -54,39 +54,9 @@ export async function replyWithButtons(
     }
 
     try {
-        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
-        const msg = generateWAMessageFromContent(
-            jid,
-            {
-                interactiveMessage: proto.Message.InteractiveMessage.create({
-                    body: proto.Message.InteractiveMessage.Body.create({
-                        text: formattedText,
-                    }),
-                    footer: proto.Message.InteractiveMessage.Footer.create({
-                        text: footer,
-                    }),
-                    header: proto.Message.InteractiveMessage.Header.create({
-                        title: "🤖 P2PFather",
-                        hasMediaAttachment: false,
-                    }),
-                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                        buttons: buttons.map((b) => ({
-                            name: "quick_reply",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: b.label,
-                                id: b.id,
-                            }),
-                        })),
-                    }),
-                }),
-            },
-            { userJid: sock.user?.id ?? jid }
-        );
-
-        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
-    } catch (err: any) {
-        console.warn("[WA] relayMessage failed, falling back to sendMessage:", err?.message);
         await sock.sendMessage(jid, { text: formattedText });
+    } catch (err: any) {
+        console.error("[WA] sendMessage failed:", err?.message);
     }
 }
 
@@ -102,52 +72,17 @@ export async function replyWithCarousel(
     }[]
 ): Promise<void> {
     try {
-        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
-        const msg = generateWAMessageFromContent(
-            jid,
-            {
-                interactiveMessage: proto.Message.InteractiveMessage.create({
-                    body: proto.Message.InteractiveMessage.Body.create({ text }),
-                    carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.create({
-                        cards: cards.map((c) => ({
-                            header: proto.Message.InteractiveMessage.Header.create({
-                                title: c.title,
-                                hasMediaAttachment: false,
-                            }),
-                            body: proto.Message.InteractiveMessage.Body.create({
-                                text: c.body,
-                            }),
-                            footer: proto.Message.InteractiveMessage.Footer.create({
-                                text: c.footer || "P2PFather Exchange",
-                            }),
-                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                                buttons: c.buttons.map((b) => ({
-                                    name: "quick_reply",
-                                    buttonParamsJson: JSON.stringify({
-                                        display_text: b.label,
-                                        id: b.id,
-                                    }),
-                                })),
-                            }),
-                        })),
-                    }),
-                }),
-            },
-            { userJid: sock.user?.id ?? jid }
-        );
-
-        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
-    } catch (err: any) {
-        console.warn("[WA] Carousel relayMessage failed, falling back to text:", err?.message);
-        let fallbackText = `${text}\n\n`;
+        let formattedText = `${text}\n\n`;
         cards.forEach((c, idx) => {
-            fallbackText += `*Card ${idx + 1}: ${c.title}*\n${c.body}\n`;
+            formattedText += `*Card ${idx + 1}: ${c.title}*\n${c.body}\n`;
             c.buttons.forEach((b) => {
-                fallbackText += `• ${b.label} → \`${b.id}\`\n`;
+                formattedText += `• ${b.label} → \`${b.id}\`\n`;
             });
-            fallbackText += `\n`;
+            formattedText += `\n`;
         });
-        await sock.sendMessage(jid, { text: fallbackText.trim() });
+        await sock.sendMessage(jid, { text: formattedText.trim() });
+    } catch (err: any) {
+        console.error("[WA] Carousel sendMessage failed:", err?.message);
     }
 }
 
@@ -163,44 +98,16 @@ export async function replyWithList(
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
     try {
-        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
-        const msg = generateWAMessageFromContent(
-            jid,
-            {
-                interactiveMessage: proto.Message.InteractiveMessage.create({
-                    body: proto.Message.InteractiveMessage.Body.create({ text }),
-                    footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
-                    header: proto.Message.InteractiveMessage.Header.create({
-                        title: "🤖 P2PFather Menu",
-                        hasMediaAttachment: false,
-                    }),
-                    nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                        buttons: [
-                            {
-                                name: "single_select",
-                                buttonParamsJson: JSON.stringify({
-                                    title: buttonTitle,
-                                    sections,
-                                }),
-                            },
-                        ],
-                    }),
-                }),
-            },
-            { userJid: sock.user?.id ?? jid }
-        );
-
-        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
-    } catch (err: any) {
-        console.warn("[WA] List relayMessage failed, falling back to text:", err?.message);
-        let fallbackText = `${text}\n\n*${buttonTitle}*\n`;
+        let formattedText = `${text}\n\n*${buttonTitle}*\n`;
         sections.forEach((s) => {
-            fallbackText += `\n📌 *${s.title}*\n`;
+            formattedText += `\n📌 *${s.title}*\n`;
             s.rows.forEach((r) => {
-                fallbackText += `• *${r.title}* → \`${r.id}\`${r.description ? ` (${r.description})` : ""}\n`;
+                formattedText += `• *${r.title}* → \`${r.id}\`${r.description ? ` (${r.description})` : ""}\n`;
             });
         });
-        await sock.sendMessage(jid, { text: fallbackText.trim() });
+        await sock.sendMessage(jid, { text: formattedText.trim() });
+    } catch (err: any) {
+        console.error("[WA] List sendMessage failed:", err?.message);
     }
 }
 
