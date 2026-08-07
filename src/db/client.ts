@@ -857,13 +857,21 @@ class Database {
 
     /** Find user by their WhatsApp phone number (digits only, no +) */
     async getUserByWhatsappPhone(phone: string): Promise<User | null> {
-        const db = this.getClient();
-        const { data } = await db
-            .from("users")
-            .select("*")
-            .eq("whatsapp_phone", phone)
-            .single();
-        return data as User | null;
+        try {
+            const db = this.getClient();
+            const { data, error } = await db
+                .from("users")
+                .select("*")
+                .eq("whatsapp_phone", phone)
+                .maybeSingle();
+            if (error) {
+                console.warn(`[DB] getUserByWhatsappPhone warning: ${error.message}`);
+                return null;
+            }
+            return data as User | null;
+        } catch {
+            return null;
+        }
     }
 
     /**
@@ -873,32 +881,41 @@ class Database {
     async getOrCreateUserByPhone(phone: string): Promise<User> {
         const db = this.getClient();
 
-        const { data: existing } = await db
-            .from("users")
-            .select("*")
-            .eq("whatsapp_phone", phone)
-            .single();
+        try {
+            const { data: existing } = await db
+                .from("users")
+                .select("*")
+                .eq("whatsapp_phone", phone)
+                .maybeSingle();
 
-        if (existing) return existing as User;
+            if (existing) return existing as User;
+        } catch (_) {}
 
-        // Create user WITHOUT a wallet — wallet assigned only after user
-        // explicitly chooses: "Link Telegram" or "Create New Wallet"
-        const { data: newUser, error } = await db
+        const insertPayload: Record<string, any> = {
+            telegram_id:       null,
+            username:          null,
+            first_name:        `WA_${phone.slice(-4)}`,
+            whatsapp_phone:    phone,
+            preferred_channel: "whatsapp",
+            wallet_index:      null,
+            wallet_address:    null,
+            wallet_type:       null,
+        };
+
+        let { data: newUser, error } = await db
             .from("users")
-            .insert({
-                telegram_id:       null,
-                username:          null,
-                first_name:        `WA_${phone.slice(-4)}`,
-                whatsapp_phone:    phone,
-                preferred_channel: "whatsapp",
-                wallet_index:      null,
-                wallet_address:    null,
-                wallet_type:       null,
-            })
+            .insert(insertPayload)
             .select()
             .single();
 
-        if (error) throw new Error(`Failed to create WhatsApp user: ${error.message}`);
+        if (error && error.message.includes("preferred_channel")) {
+            delete insertPayload.preferred_channel;
+            const retry = await db.from("users").insert(insertPayload).select().single();
+            newUser = retry.data;
+            error = retry.error;
+        }
+
+        if (error || !newUser) throw new Error(`Failed to create WhatsApp user: ${error?.message}`);
         console.log(`[DB] Created WA-only user ${newUser.id} (no wallet — awaiting user choice)`);
         return newUser as User;
     }
