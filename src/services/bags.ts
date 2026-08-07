@@ -53,7 +53,9 @@ export class BagsService {
                 liquidity: parseFloat(data.liquidity || "0"),
             };
         } catch (error: any) {
-            console.error(`[BagsService] Error fetching pool state for ${mint}:`, error.message);
+            if (process.env.NODE_ENV === "development") {
+                console.debug(`[BagsService] Pool state not available for ${mint}:`, error.message);
+            }
             return null;
         }
     }
@@ -75,7 +77,9 @@ export class BagsService {
 
             return parseFloat(response.data.total_fees || "0");
         } catch (error: any) {
-            console.error(`[BagsService] Error fetching lifetime fees for ${mint}:`, error.message);
+            if (process.env.NODE_ENV === "development") {
+                console.debug(`[BagsService] Lifetime fees not available for ${mint}:`, error.message);
+            }
             return 0;
         }
     }
