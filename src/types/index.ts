@@ -40,6 +40,7 @@ export interface User {
     trade_count: number;
     completed_trades: number;
     trust_score: number;
+    security_pin?: string;
     tier: "standard" | "silver" | "gold" | "vip";
     is_verified: boolean;
     kyc_status?: string | null;
@@ -67,6 +68,9 @@ export interface User {
     polymarket_passphrase?: string;
     polymarket_approved?: boolean;
     deposit_wallet_address?: string;
+    whatsapp_phone?: string | null;
+    whatsapp_id?: string | null;
+    preferred_channel?: 'telegram' | 'whatsapp' | 'both';
 }
 
 export interface BankDetails {

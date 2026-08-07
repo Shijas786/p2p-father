@@ -402,5 +402,21 @@ export const api = {
             document_type: string | null;
         }>('/kyc/status'),
     },
+
+    // ---- WhatsApp ----
+    whatsapp: {
+        getLinkCode: () => request<{
+            code: string;
+            expires_in_seconds: number;
+            wa_bot_number: string;
+            wa_link: string;
+        }>('/whatsapp/link-code', { method: 'POST' }),
+        updatePreference: (channel: 'telegram' | 'whatsapp' | 'both') => request<{
+            success: boolean;
+            preferred_channel: string;
+        }>('/whatsapp/preference', { method: 'PUT', body: JSON.stringify({ channel }) }),
+        unlink: () => request<{ success: boolean; user: any }>('/whatsapp/unlink', { method: 'POST' }),
+    },
 };
+
 

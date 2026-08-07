@@ -1,0 +1,111 @@
+.layout-chooser-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Lilita One', cursive;
+}
+
+.layout-chooser-header {
+  padding: 16px;
+  background: #111;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #333;
+}
+
+.layout-chooser-header h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+.layout-chooser-header p {
+  margin: 0;
+  color: #ffcc00;
+  font-size: 18px;
+}
+
+.layout-chooser-image-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+}
+
+.layout-mockup-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.layout-chooser-footer {
+  padding: 20px;
+  background: #111;
+  border-top: 2px solid #333;
+}
+
+.layout-chooser-title {
+  color: #fff;
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 16px;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+.layout-chooser-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chooser-nav-btn {
+  background: #444;
+  color: #fff;
+  border: 2px solid #222;
+  border-radius: 8px;
+  font-family: 'Lilita One', cursive;
+  font-size: 24px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #222;
+}
+
+.chooser-nav-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #222;
+}
+
+.chooser-select-btn {
+  flex: 1;
+  background: #54e346;
+  color: #fff;
+  border: 3px solid #000;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Lilita One', cursive;
+  font-size: 20px;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  box-shadow: 0 6px 0 #2da122;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.chooser-select-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 #2da122;
+}

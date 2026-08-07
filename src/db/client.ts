@@ -850,6 +850,302 @@ class Database {
             throw new Error(`Failed to log dispute resolution: ${error.message}`);
         }
     }
+
+    // ═══════════════════════════════════════
+    //          WHATSAPP INTEGRATION
+    // ═══════════════════════════════════════
+
+    /** Find user by their WhatsApp phone number (digits only, no +) */
+    async getUserByWhatsappPhone(phone: string): Promise<User | null> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("users")
+            .select("*")
+            .eq("whatsapp_phone", phone)
+            .single();
+        return data as User | null;
+    }
+
+    /**
+     * Get or create a user who started with WhatsApp (no Telegram).
+     * Uses phone as the unique identifier and derives a wallet.
+     */
+    async getOrCreateUserByPhone(phone: string): Promise<User> {
+        const db = this.getClient();
+
+        const { data: existing } = await db
+            .from("users")
+            .select("*")
+            .eq("whatsapp_phone", phone)
+            .single();
+
+        if (existing) return existing as User;
+
+        // Create user WITHOUT a wallet — wallet assigned only after user
+        // explicitly chooses: "Link Telegram" or "Create New Wallet"
+        const { data: newUser, error } = await db
+            .from("users")
+            .insert({
+                telegram_id:       null,
+                username:          null,
+                first_name:        `WA_${phone.slice(-4)}`,
+                whatsapp_phone:    phone,
+                preferred_channel: "whatsapp",
+                wallet_index:      null,
+                wallet_address:    null,
+                wallet_type:       null,
+            })
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to create WhatsApp user: ${error.message}`);
+        console.log(`[DB] Created WA-only user ${newUser.id} (no wallet — awaiting user choice)`);
+        return newUser as User;
+    }
+
+    /** Derive and assign a brand-new wallet to an existing wallet-less WA user */
+    async assignWalletToWaUser(userId: string): Promise<User> {
+        const db = this.getClient();
+
+        const { data: maxResult } = await db
+            .from("users")
+            .select("wallet_index")
+            .order("wallet_index", { ascending: false })
+            .limit(1)
+            .single();
+
+        const nextIndex = (maxResult?.wallet_index ?? 0) + 1;
+
+        let walletAddress: string | null = null;
+        try {
+            const { wallet: walletSvc } = await import("../services/wallet");
+            walletAddress = walletSvc.deriveWallet(nextIndex).address;
+        } catch {
+            throw new Error("Failed to derive wallet");
+        }
+
+        const { data: updated, error } = await db
+            .from("users")
+            .update({ wallet_index: nextIndex, wallet_address: walletAddress, wallet_type: "bot" })
+            .eq("id", userId)
+            .select()
+            .single();
+
+        if (error || !updated) throw new Error("Failed to assign wallet");
+        console.log(`[DB] Assigned wallet ${walletAddress} (index=${nextIndex}) to WA user ${userId}`);
+        return updated as User;
+    }
+
+    // ── WhatsApp Conversation State ──────────────────────────────────────────
+
+    /** Save a transient conversation state for a user (replaces any existing state) */
+    async setWhatsappState(userId: string, key: string, data: Record<string, any>): Promise<void> {
+        const db = this.getClient();
+        await db.from("whatsapp_states").upsert({
+            user_id:    userId,
+            key,
+            data,
+            updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+    }
+
+    /** Get the current conversation state for a user */
+    async getWhatsappState(userId: string): Promise<{ key: string; data: Record<string, any> } | null> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("whatsapp_states")
+            .select("key, data")
+            .eq("user_id", userId)
+            .single();
+        return data ?? null;
+    }
+
+    /** Clear conversation state after a flow completes */
+    async clearWhatsappState(userId: string): Promise<void> {
+        const db = this.getClient();
+        await db.from("whatsapp_states").delete().eq("user_id", userId);
+    }
+
+    // ── WhatsApp Account Linking ──────────────────────────────────────────────
+
+    /** Generate a 6-digit OTP for account linking */
+    async createWhatsappLinkCode(userId: string): Promise<string> {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const db = this.getClient();
+        await db.from("whatsapp_states").upsert({
+            user_id: userId,
+            key: "LINK_CODE",
+            data: { code, expires_at: Date.now() + 10 * 60 * 1000 },
+            updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+        return code;
+    }
+
+    /** Verify link code provided on WhatsApp and link phone to user account (handles account merging) */
+    async linkWhatsappByCode(phone: string, inputCode: string): Promise<User | null> {
+        const db = this.getClient();
+
+        // Find state matching the OTP code
+        const { data: states } = await db
+            .from("whatsapp_states")
+            .select("user_id, data")
+            .eq("key", "LINK_CODE");
+
+        if (!states) return null;
+
+        const match = states.find((s: any) => s.data?.code === inputCode && s.data?.expires_at > Date.now());
+        if (!match) return null;
+
+        const targetUserId = match.user_id; // The Telegram user's ID
+
+        // ── Check for a standalone WA-only account with this phone ────────────
+        const { data: waOnlyUser } = await db
+            .from("users")
+            .select("*")
+            .eq("whatsapp_phone", phone)
+            .maybeSingle();
+
+        if (waOnlyUser && waOnlyUser.id !== targetUserId) {
+            // ── MERGE: Transfer trades and orders from WA account → Telegram account ──
+            try {
+                await db.from("orders").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id);
+            } catch (_) {}
+            try {
+                await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", waOnlyUser.id);
+            } catch (_) {}
+            try {
+                await db.from("trades").update({ seller_id: targetUserId }).eq("seller_id", waOnlyUser.id);
+            } catch (_) {}
+
+            // ── If Telegram user has no wallet yet, inherit the WA wallet ─────
+            const { data: telegramUser } = await db
+                .from("users")
+                .select("wallet_address, wallet_index")
+                .eq("id", targetUserId)
+                .single();
+
+            if (!telegramUser?.wallet_address && waOnlyUser.wallet_address) {
+                await db.from("users").update({
+                    wallet_address: waOnlyUser.wallet_address,
+                    wallet_index:   waOnlyUser.wallet_index,
+                    wallet_type:    "bot",
+                }).eq("id", targetUserId);
+
+                console.log(`[LINK] Inherited WA wallet ${waOnlyUser.wallet_address} → Telegram user ${targetUserId}`);
+            }
+
+            // ── Delete the orphaned WA-only user row ──────────────────────────
+            await db.from("whatsapp_states").delete().eq("user_id", waOnlyUser.id);
+            await db.from("users").delete().eq("id", waOnlyUser.id);
+
+            console.log(`[LINK] Merged WA-only user ${waOnlyUser.id} into Telegram user ${targetUserId}`);
+        }
+
+        // ── Update Telegram user with the linked phone ────────────────────────
+        const { data: updatedUser, error } = await db
+            .from("users")
+            .update({
+                whatsapp_phone:    phone,
+                preferred_channel: "both",
+                updated_at:        new Date().toISOString(),
+            })
+            .eq("id", targetUserId)
+            .select()
+            .single();
+
+        if (error || !updatedUser) return null;
+
+        // Clear link code state
+        await db.from("whatsapp_states").delete().eq("user_id", targetUserId);
+
+        return updatedUser as User;
+    }
+
+    /** Unlink WhatsApp account from user profile */
+    async unlinkWhatsapp(userId: string): Promise<void> {
+        const db = this.getClient();
+        await db
+            .from("users")
+            .update({
+                whatsapp_phone: null,
+                preferred_channel: "telegram",
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", userId);
+    }
+
+    // ── WhatsApp Group Registry ───────────────────────────────────────────────
+
+    /** Register a WhatsApp group JID for ad broadcasts (idempotent) */
+    async registerBroadcastGroup(groupJid: string, groupName: string): Promise<void> {
+        const db = this.getClient();
+        await db.from("whatsapp_groups").upsert(
+            { group_jid: groupJid, group_name: groupName, active: true, updated_at: new Date().toISOString() },
+            { onConflict: "group_jid" }
+        );
+    }
+
+    /** Get all active groups registered for broadcasting */
+    async getRegisteredBroadcastGroups(): Promise<{ group_jid: string; group_name: string }[]> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("whatsapp_groups")
+            .select("group_jid, group_name")
+            .eq("active", true);
+        return data ?? [];
+    }
+
+    // ── Additional helpers needed by WA handlers (new — not duplicates) ────────
+
+    async getOrdersByUserId(userId: string): Promise<any[]> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("orders")
+            .select("*")
+            .eq("user_id", userId)
+            .in("status", ["active", "paused"])
+            .order("created_at", { ascending: false })
+            .limit(20);
+        return data ?? [];
+    }
+
+    async pauseOrder(orderId: string, userId: string): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db
+            .from("orders")
+            .update({ status: "paused" })
+            .eq("id", orderId)
+            .eq("user_id", userId);
+        if (error) throw new Error(error.message);
+    }
+
+    async getActiveTradesForUser(userId: string): Promise<any[]> {
+        const db = this.getClient();
+        const { data } = await db
+            .from("trades")
+            .select("*")
+            .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+            .not("status", "in", '("completed","cancelled","refunded","expired")')
+            .order("created_at", { ascending: false })
+            .limit(10);
+        return data ?? [];
+    }
+
+    async cancelTrade(tradeId: string, userId: string): Promise<void> {
+        const db = this.getClient();
+        const { error } = await db
+            .from("trades")
+            .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+            .eq("id", tradeId)
+            .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
+        if (error) throw new Error(error.message);
+    }
+
+    async getAllUsers(): Promise<User[]> {
+        const db = this.getClient();
+        const { data } = await db.from("users").select("*");
+        return (data ?? []) as User[];
+    }
 }
 
 export const db = new Database();

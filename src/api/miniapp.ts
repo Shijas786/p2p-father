@@ -100,6 +100,11 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
     const initData = req.headers["x-telegram-init-data"] as string;
 
     if (!initData) {
+        if (env.NODE_ENV === "development" || process.env.NODE_ENV !== "production") {
+            // Local Dev Mode Fallback User
+            req.telegramUser = { id: 12345, first_name: "Developer", username: "dev_user" };
+            return next();
+        }
         console.warn(`[AUTH] ❌ Missing initData`);
         return res.status(401).json({ error: "Please open this app through the Telegram bot" });
     }
@@ -1345,7 +1350,10 @@ router.post("/trades/:id/confirm-payment", async (req: Request, res: Response) =
         await db.updateTrade(req.params.id as string, {
             status: "fiat_sent",
             fiat_sent_at: new Date().toISOString() as any,
-            auto_release_at: new Date(Date.now() + parseInt(env.AUTO_RELEASE_SECONDS) * 1000).toISOString() as any,
+            // ⚠️ POLICY: Auto-release is DISABLED.
+            // Crypto is ONLY released by Admin verification on Telegram.
+            // auto_release_at is intentionally left null.
+            auto_release_at: null,
         });
 
         // Note: We no longer sync 'markFiatSent' on-chain from the backend.
@@ -2053,6 +2061,64 @@ router.get("/profile", async (req: Request, res: Response) => {
                 is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id))
             }
         });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Generate WhatsApp Link Code for MiniApp UI ─────────────────────────────
+router.post("/whatsapp/link-code", async (req: Request, res: Response) => {
+    try {
+        const telegramUser = req.telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        let user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user) {
+            user = await db.getOrCreateUser(telegramUser as any);
+        }
+        if (!user) return res.status(4404).json({ error: "User not found" });
+
+        const code = await db.createWhatsappLinkCode(user.id);
+        const waBotNumber = process.env.WA_BOT_NUMBER || "";
+
+        res.json({
+            code,
+            expires_in_seconds: 600,
+            wa_bot_number: waBotNumber,
+            wa_link: `https://wa.me/${waBotNumber}?text=${encodeURIComponent(`/link ${code}`)}`,
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Update Notification Preference ───────────────────────────────────────
+router.put("/whatsapp/preference", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const { channel } = req.body; // 'telegram' | 'whatsapp' | 'both'
+        if (!['telegram', 'whatsapp', 'both'].includes(channel)) {
+            return res.status(400).json({ error: "Invalid channel preference" });
+        }
+
+        await db.updateUser(user.id, { preferred_channel: channel } as any);
+        res.json({ success: true, preferred_channel: channel });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Unlink WhatsApp Account ───────────────────────────────────────────────
+router.post("/whatsapp/unlink", async (req: Request, res: Response) => {
+    try {
+        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        await db.unlinkWhatsapp(user.id);
+        const updatedUser = await db.getUserById(user.id);
+        res.json({ success: true, user: updatedUser });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

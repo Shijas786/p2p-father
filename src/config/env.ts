@@ -22,6 +22,7 @@ const envSchema = z.object({
 
     // OpenAI
     OPENAI_API_KEY: z.string().default(""),
+    OPENAI_MODEL: z.string().default("gpt-5-nano"),
     GEMINI_API_KEY: z.string().default(""),
 
     // Supabase
@@ -47,6 +48,10 @@ const envSchema = z.object({
     SCROLL_RPC_URL: z.string().default("https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER"),
     USDC_ADDRESS: addressSchema.default("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
     USDT_ADDRESS: addressSchema.default("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"), // Axelar Wrapped USDT
+
+    // WhatsApp
+    WA_BOT_NUMBER: z.string().default(""),
+    WA_ADMIN_SECRET: z.string().default(""),
 
     // Redis
     REDIS_URL: z.string().default(""),

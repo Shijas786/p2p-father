@@ -794,6 +794,29 @@ bot.command(["start", "open"], async (ctx) => {
         }
     }
 
+    // Deep link from WhatsApp: guide user to link their WA account
+    if (payload === "linkwa") {
+        const user = await ensureUser(ctx);
+        const profileUrl = "https://p2pfather.com/miniapp/profile";
+        const keyboard = new InlineKeyboard()
+            .webApp("⚙️ Open Profile → Link WA", profileUrl);
+
+        if (user.whatsapp_phone) {
+            await ctx.reply(
+                `✅ *WhatsApp Already Linked!*\n\nYour WhatsApp number \`+${user.whatsapp_phone}\` is already connected to this account\\.`,
+                { parse_mode: "Markdown" }
+            );
+        } else {
+            await ctx.reply(
+                `🔗 *Link Your WhatsApp Account*\n\n` +
+                `Tap the button below to open your Profile, then tap *"Link WA"* to get your 6\\-digit code\\.\n\n` +
+                `Send that code in the WhatsApp bot chat to complete linking\\.`,
+                { parse_mode: "Markdown", reply_markup: keyboard }
+            );
+        }
+        return;
+    }
+
     // 3. Referral deep link
     if (payload && payload.startsWith("ref_") && ctx.from) {
         const referrerTelegramId = parseInt(payload.replace("ref_", ""));
@@ -1072,6 +1095,47 @@ bot.command("phone", async (ctx) => {
 
     if (cleaned.length >= 10) {
         await db.updateUser(user.id, { phone_number: cleaned });
+
+        // ── Production: auto-merge WA-only account if phone matches ──────────
+        try {
+            const { data: waUser } = await (db as any).getClient()
+                .from("users")
+                .select("*")
+                .eq("whatsapp_phone", cleaned)
+                .maybeSingle();
+
+            if (waUser && waUser.id !== user.id) {
+                // Migrate orders and trades
+                await (db as any).getClient().from("orders").update({ user_id: user.id }).eq("user_id", waUser.id);
+                await (db as any).getClient().from("trades").update({ buyer_id: user.id }).eq("buyer_id", waUser.id);
+                await (db as any).getClient().from("trades").update({ seller_id: user.id }).eq("seller_id", waUser.id);
+
+                // Inherit WA wallet if Telegram user has none
+                if (!user.wallet_address && waUser.wallet_address) {
+                    await db.updateUser(user.id, {
+                        wallet_address: waUser.wallet_address,
+                        wallet_index:   waUser.wallet_index,
+                    } as any);
+                }
+
+                // Link the WA phone and clean up the old WA-only row
+                await db.updateUser(user.id, { whatsapp_phone: cleaned, preferred_channel: "both" } as any);
+                await (db as any).getClient().from("whatsapp_states").delete().eq("user_id", waUser.id);
+                await (db as any).getClient().from("users").delete().eq("id", waUser.id);
+
+                await ctx.reply(
+                    `✅ Phone number updated: \`${escapeMarkdown(cleaned)}\`\n\n` +
+                    `🔗 *WhatsApp account automatically linked!*\n` +
+                    `Your existing WhatsApp history and wallet have been merged into this account.`,
+                    { parse_mode: "Markdown" }
+                );
+                return;
+            }
+        } catch (e) {
+            // Auto-merge failed silently — non-critical, user can still link via OTP
+            console.error("[BOT] Auto WA merge failed:", e);
+        }
+
         await ctx.reply(`✅ Phone number updated: \`${escapeMarkdown(cleaned)}\``, { parse_mode: "Markdown" });
         return;
     }
@@ -1628,6 +1692,29 @@ bot.command("profile", async (ctx) => {
             `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
         ].join("\n"),
         { parse_mode: "Markdown" }
+    );
+});
+
+bot.command("link", async (ctx) => {
+    const user = await ensureUser(ctx);
+    const code = await db.createWhatsappLinkCode(user.id);
+    const waBotNumber = process.env.WA_BOT_NUMBER || "";
+
+    const waLinkUrl = `https://wa.me/${waBotNumber}?text=${encodeURIComponent(`/link ${code}`)}`;
+
+    const kb = new InlineKeyboard()
+        .url("📱 Open WhatsApp & Link Now", waLinkUrl);
+
+    await ctx.reply(
+        [
+            "📱 *Link Your Account to WhatsApp*",
+            "",
+            `Your 6-digit OTP code is: \`${code}\``,
+            "_(Valid for 10 minutes)_",
+            "",
+            "👉 *Tap the button below* to open WhatsApp and link instantly, or manually send `/link " + code + "` to the WhatsApp bot.",
+        ].join("\n"),
+        { parse_mode: "Markdown", reply_markup: kb }
     );
 });
 

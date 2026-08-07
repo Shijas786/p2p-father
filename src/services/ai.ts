@@ -9,30 +9,31 @@ Your mission is to help users trade crypto safely and easily.
 🌍 **Persona**: Helpful, direct, and safety-first. Use emojis!
 🗣️ **Languages**: Fluent in **English**, **Malayalam**, and **Manglish**. Reply in the same language the user uses.
 🛡️ **Safety Rule**: ALWAYS remind sellers: "Check your BANK APP before releasing crypto. SMS can be fake." (In Malayalam: "Bank app check cheyyathe crypto release cheyyaruth!")
-⛔ **Scope**: Only discuss P2P trading, crypto rates, and wallet management.
+⛔ **Scope**: Only discuss P2P trading and wallet management. Do NOT discuss or quote crypto market prices, rates, or news — always redirect rate questions to the live orderbook (/ads).
    If off-topic, say: "Enikku P2P trading mathrame ariyu! 🚀" (I only know P2P trading).
 
 📘 **Guidance**: If the user seems confused, explain how the bot works:
-   - "Use /newad to Buy/Sell"
-   - "Use /mytrades to see active trades"
-   - "Use /wallet to check funds"
+   - "Use /post to Buy/Sell"
+   - "Use /trades to see active trades"
+   - "Use /balance to check funds"
 
 🧠 **Capabilities**:
 1. CREATE_SELL_ORDER — User wants to sell crypto (e.g., "sell 50 USDC")
 2. CREATE_BUY_ORDER — User wants to buy crypto (e.g., "buy 100 USDC")
-3. VIEW_ORDERS — User wants to see market or listings (e.g., "show ads", "sell ads", "buy ads", "rates"). Params: { type: "sell" | "buy" | null }
+3. VIEW_ORDERS — User wants to see market or listings (e.g., "show ads", "sell ads", "buy ads", "rates", "what rate", "enthu rate"). Params: { type: "sell" | "buy" | null }
 4. MATCH_ORDER — User wants to accept a deal
 5. CONFIRM_PAYMENT — Buyer says they paid
 6. CONFIRM_RECEIPT — Seller says they received money
 7. BRIDGE_TOKENS — User mentions bridging/cross-chain
-8. CHECK_BALANCE — User asks about wallet/funds
+8. CHECK_BALANCE — User asks about wallet/funds (e.g., "my balance", "kithaanu", "bakki", "how much usdt")
 9. CHECK_STATUS — User asks "what happened to my trade?"
-10. SEND_CRYPTO — User wants to send/transfer crypto
+10. SEND_CRYPTO — User wants to send/transfer/withdraw crypto
 11. DISPUTE — User mentions scam, fraud, or issue
-12. HELP — User is confused
+12. HELP — User is confused or asks how to use the bot
 13. PROFILE — User asks "who am I" or "my stats"
-14. MARKET_NEWS — User wants latest market updates, prices, or news (e.g., "what's the news?", "crypto rates today", "market update")
-15. UNKNOWN — Nonsense or off-topic
+14. UNKNOWN — Nonsense or off-topic
+
+⚠️ **Rate/Price questions**: If user asks about crypto prices, exchange rates, or market news — always return VIEW_ORDERS and tell them to check the live orderbook. Never make up numbers.
 
 🔢 **Parameter Extraction**:
 - "Selling 100 USDC at 88" → { token: "USDC", amount: 100, rate: 88, chain: "base" }
@@ -84,7 +85,7 @@ class AIService {
             ];
 
             const result = await client.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: env.OPENAI_MODEL || "gpt-5-nano",
                 messages,
                 response_format: { type: "json_object" },
                 max_tokens: 300,
@@ -137,7 +138,7 @@ Expected: ₹${expectedAmount} to ${expectedReceiver}.
 Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, receiverMatch, tamperingDetected, confidence, reasoning }`;
 
             const result = await client.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: env.OPENAI_MODEL || "gpt-5-nano",
                 messages: [
                     {
                         role: "user",
@@ -160,7 +161,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
     }
 
     /**
-     * AI-assisted dispute analysis
+     * AI-assisted dispute summary for Human Admins (Human Admin makes final decision)
      */
     async analyzeDispute(context: {
         tradeAmount: number;
@@ -174,35 +175,8 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
         reason: string;
         evidence: string[];
     }) {
-        try {
-            const client = this.getClient();
-
-            const prompt = `You are a fair P2P dispute arbitrator. Analyze the evidence and recommend a resolution.
-Consider timestamps, payment proofs, user history, trade terms.
-
-Trade: ${context.tradeAmount} USDC / ₹${context.fiatAmount}
-Buyer: ${context.buyerName} (${context.buyerTrades} trades, ${context.buyerTrustScore}% trust)
-Seller: ${context.sellerName} (${context.sellerTrades} trades, ${context.sellerTrustScore}% trust)
-Dispute reason: ${context.reason}
-Evidence summary: ${context.evidence.join("\n")}
-
-Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "needs_admin", confidence, reasoning }`;
-
-            const result = await client.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [
-                    { role: "system", content: "You are a fair P2P dispute arbitrator. Always respond in JSON." },
-                    { role: "user", content: prompt },
-                ],
-                response_format: { type: "json_object" },
-                max_tokens: 500,
-            });
-
-            return JSON.parse(result.choices[0]?.message?.content || "{}");
-        } catch (error) {
-            console.error("AI dispute error:", error);
-            return { recommendation: "needs_admin", confidence: 0, reasoning: "AI analysis failed" };
-        }
+        // Human admin always makes final decision
+        return { recommendation: "needs_admin", confidence: 1.0, reasoning: "Human admin review required for financial dispute safety." };
     }
 
     /**
@@ -211,7 +185,7 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
     async generateText(prompt: string, modelType: "flash" | "pro" = "flash"): Promise<string> {
         try {
             const client = this.getClient();
-            const model = "gpt-4o-mini";
+            const model = env.OPENAI_MODEL || "gpt-5-nano";
 
             const result = await client.chat.completions.create({
                 model,
@@ -315,8 +289,9 @@ Respond with JSON: { recommendation: "release_to_buyer" | "refund_to_seller" | "
             return { intent: "PROFILE", confidence: 0.6, params: {}, response: "Here's your profile." };
         }
 
-        if (/\b(news|market|rates?|price|update|today|happening)\b/.test(lower)) {
-            return { intent: "MARKET_NEWS", confidence: 0.7, params: {}, response: "Fetching the latest market updates..." };
+        if (/\b(news|market|rates?|price|update|today|happening|enthu rate|rate und|rate aano)\b/.test(lower)) {
+            // Redirect to live orderbook — never make up rate numbers
+            return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: null }, response: "Check the live P2P orderbook for the best rates! 📊" };
         }
 
         return {

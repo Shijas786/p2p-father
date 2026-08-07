@@ -70,6 +70,24 @@ async function main() {
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
+    // Start WhatsApp Bot (Baileys)
+    if (!process.env.NO_WHATSAPP) {
+        try {
+            console.log("  📱 Starting WhatsApp bot (Baileys)...");
+            const { initWhatsApp, getSock } = await import("./whatsapp/client");
+            const { setBroadcastSock } = await import("./whatsapp/handlers/group");
+            await initWhatsApp();
+            // Give Baileys 2s to connect before registering sock for broadcasts
+            setTimeout(() => {
+                try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
+            }, 2000);
+        } catch (err: any) {
+            console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
+        }
+    } else {
+        console.log("  🚫 WhatsApp disabled by NO_WHATSAPP env var.");
+    }
+
 
     console.log("");
 
@@ -89,10 +107,6 @@ async function main() {
     // JSON body parser
     app.use(express.json());
 
-    // Serve static files from public folder
-    // Uses process.cwd() to be safe across dev/prod (Docker)
-    app.use(express.static(path.join(process.cwd(), "public")));
-
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
     const noCacheHeaders = (res: any) => {
@@ -102,16 +116,143 @@ async function main() {
         res.setHeader("Surrogate-Control", "no-store");
     };
     const staticOpts = { setHeaders: noCacheHeaders, etag: false, lastModified: false };
-    app.use("/app", express.static(miniAppDist, staticOpts));
-
-    // NEW PATH — bypasses CDN cache entirely (fresh URL = no cached version)
+    // Redirect /app to /miniapp/ for clean, fresh asset loading
+    app.get(/^\/app(?:\/.*)?$/, (req, res) => {
+        res.redirect(302, "/miniapp/");
+    });
     app.use("/miniapp", express.static(miniAppDist, staticOpts));
 
-    // Mount Mini App API
-    app.use("/api/miniapp", miniappRouter);
+    // WhatsApp QR Code Web API & Interface (Secured via secret key)
+    app.get("/api/wa-qr", async (req, res) => {
+        try {
+            const secret = req.query.secret as string;
+            if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+                return res.status(403).json({ error: "Unauthorized access" });
+            }
+            const { getLatestQr, isWaConnected } = await import("./whatsapp/client");
+            const QRCode = await import("qrcode");
+            const qrStr = getLatestQr();
+            let qrDataUrl: string | null = null;
+            if (qrStr) {
+                qrDataUrl = await QRCode.toDataURL(qrStr, { margin: 2, width: 250 });
+            }
+            res.json({
+                connected: isWaConnected(),
+                qr: qrDataUrl,
+            });
+        } catch (e) {
+            res.json({ connected: false, qr: null });
+        }
+    });
 
-    // Mount Webhook API for external integrations
-    app.use("/api/webhook", webhookRouter);
+    app.get("/wa-qr", (req, res) => {
+        const secret = (req.query.secret as string) || "";
+        if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+            return res.status(403).send(`
+                <body style="background:#0b0e14;color:#ff4d4d;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+                    <div style="text-align:center;background:rgba(255,255,255,0.05);padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);">
+                        <h1 style="margin-bottom:10px;">🔒 403 Access Denied</h1>
+                        <p style="color:#8a99ad;">Invalid or missing secret key. Access to WhatsApp QR pairing is restricted.</p>
+                    </div>
+                </body>
+            `);
+        }
+
+        res.setHeader("Content-Type", "text/html");
+        res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2PFather — WhatsApp Bot Connection</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #0b0e14; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px); border-radius: 24px; padding: 36px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #25D366, #128C7E); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { font-size: 14px; color: #8a99ad; margin-bottom: 24px; }
+        .qr-box { background: #fff; padding: 12px; border-radius: 16px; display: flex; align-items: center; justify-content: center; min-height: 250px; min-width: 250px; margin: 0 auto 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        img { display: block; width: 230px; height: 230px; border-radius: 8px; }
+        .status { font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 50px; background: rgba(255,255,255,0.08); color: #fff; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #eab308; animation: pulse 1.5s infinite; }
+        .dot.connected { background: #22c55e; animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .instructions { font-size: 13px; color: #8a99ad; line-height: 1.6; text-align: left; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; margin-top: 20px; }
+        .instructions ol { padding-left: 18px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="title">📲 Connect WhatsApp Bot</div>
+        <div class="subtitle">Scan this QR code with WhatsApp to pair P2PFather</div>
+        <div class="qr-box">
+            <img id="qr-img" style="display:none;" alt="WhatsApp QR Code" />
+            <div id="loader" style="color: #666; font-size: 14px;">Loading QR code...</div>
+        </div>
+        <div class="status" id="status">
+            <span class="dot" id="dot"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+        <div class="instructions">
+            <strong>How to link:</strong>
+            <ol style="margin-top: 6px;">
+                <li>Open <b>WhatsApp</b> on your phone</li>
+                <li>Tap <b>Settings ⚙️</b> → <b>Linked Devices</b></li>
+                <li>Tap <b>Link a Device</b> and point camera here</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const secret = new URLSearchParams(window.location.search).get('secret') || '';
+        async function updateQr() {
+            try {
+                const res = await fetch('/api/wa-qr?secret=' + encodeURIComponent(secret));
+                if (res.status === 403) {
+                    document.getElementById('loader').innerText = "🔒 403 Unauthorized Secret";
+                    document.getElementById('status-text').innerText = "Access Denied";
+                    return;
+                }
+                const data = await res.json();
+                const statusText = document.getElementById('status-text');
+                const dot = document.getElementById('dot');
+                const qrImg = document.getElementById('qr-img');
+                const loader = document.getElementById('loader');
+
+                if (data.connected) {
+                    statusText.innerText = "WhatsApp Connected!";
+                    statusText.style.color = "#22c55e";
+                    dot.className = "dot connected";
+                    loader.innerText = "✅ Bot Online & Active!";
+                    loader.style.display = "block";
+                    loader.style.color = "#22c55e";
+                    loader.style.fontWeight = "bold";
+                    qrImg.style.display = "none";
+                } else if (data.qr) {
+                    statusText.innerText = "Waiting for scan...";
+                    dot.className = "dot";
+                    qrImg.src = data.qr;
+                    qrImg.style.display = "block";
+                    loader.style.display = "none";
+                } else {
+                    statusText.innerText = "Initializing WhatsApp...";
+                    loader.innerText = "Generating fresh QR...";
+                    loader.style.display = "block";
+                    qrImg.style.display = "none";
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        updateQr();
+        setInterval(updateQr, 2500);
+    </script>
+</body>
+</html>`);
+    });
+
+    // Serve static files from public folder
+    app.use(express.static(path.join(process.cwd(), "public")));
 
     // API Stats Endpoint (Consumed by the frontend)
     app.get("/api/stats", async (req, res) => {
@@ -275,22 +416,17 @@ async function main() {
     // Health Check (Koyeb needs a 200 OK)
     app.get("/health", (req, res) => res.send("OK"));
 
-    // Check server public IP
-    app.get('/ip', async (req, res) => {
-        try {
-            const r = await fetch('https://api.ipify.org?format=json');
-            res.json(await r.json());
-        } catch (e) {
-            res.status(500).json({ error: "Failed to fetch IP" });
-        }
+    // Debug dist files
+    app.get('/debug-dist', (req, res) => {
+        const fs = require('fs');
+        const distFiles = fs.existsSync(miniAppDist) ? fs.readdirSync(miniAppDist) : [];
+        const assetsPath = path.join(miniAppDist, "assets");
+        const assetFiles = fs.existsSync(assetsPath) ? fs.readdirSync(assetsPath).filter((f: string) => f.startsWith("index")) : [];
+        res.json({ miniAppDist, distFiles, assetFiles });
     });
 
-    // Mini App SPA fallback — also set no-cache headers
-    app.get(/^\/app(?:\/.*)?$/, (req, res) => {
-        noCacheHeaders(res);
-        res.sendFile(path.join(miniAppDist, "index.html"));
-    });
-    app.get(/^\/miniapp(?:\/.*)?$/, (req, res) => {
+    // Mini App SPA fallback — exclude /assets/ so missing JS/CSS returns 404 instead of HTML
+    app.get(/^\/(?:app|miniapp)(?!\/assets\/)(?:\/.*)?$/, (req, res) => {
         noCacheHeaders(res);
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
