@@ -44,16 +44,29 @@ export async function replyWithButtons(
     buttons: { id: string; label: string }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
-    await sock.sendMessage(jid, {
-        text,
-        footer,
-        buttons: buttons.map((b) => ({
-            buttonId: b.id,
-            buttonText: { displayText: b.label },
-            type: 1,
-        })),
-        headerType: 1,
-    } as any);
+    let formattedText = text;
+    if (buttons && buttons.length > 0) {
+        const optionLines = buttons.map((b, i) => {
+            const cmd = b.id.startsWith("/") ? b.id : "`" + b.id + "`";
+            return `${i + 1}️⃣ *${b.label}* → reply \`${i + 1}\` or tap ${cmd}`;
+        });
+        formattedText += `\n\n👇 *Quick Options:*\n${optionLines.join("\n")}`;
+    }
+
+    try {
+        await sock.sendMessage(jid, {
+            text: formattedText,
+            footer,
+            buttons: buttons.map((b) => ({
+                buttonId: b.id,
+                buttonText: { displayText: b.label },
+                type: 1,
+            })),
+            headerType: 1,
+        } as any);
+    } catch {
+        await sock.sendMessage(jid, { text: formattedText });
+    }
 }
 
 // ── Step 1: Welcome Screen (first message to new WA users) ───────────────────
@@ -236,6 +249,28 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
     if (text === "/cancel" || text === "cancel" || text === "cancel_trade") {
         await (db as any).clearWhatsappState(user.id);
         await reply(sock, jid, "❌ Action cancelled.\n\nType /start to view main menu.", msg);
+        return;
+    }
+
+    // ── Number Shortcuts (1, 2, 3, 4, 5) ──────────────────────────────────────
+    if (text === "1" || text === "1️⃣") {
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
+        return;
+    }
+    if (text === "2" || text === "2️⃣") {
+        await handleAdCommand(sock, msg, jid, user, "/ads");
+        return;
+    }
+    if (text === "3" || text === "3️⃣") {
+        await handleAdCommand(sock, msg, jid, user, "/post");
+        return;
+    }
+    if (text === "4" || text === "4️⃣") {
+        await handleTradeCommand(sock, msg, jid, user, "/trades");
+        return;
+    }
+    if (text === "5" || text === "5️⃣") {
+        await handleAdCommand(sock, msg, jid, user, "/my_ads");
         return;
     }
 
