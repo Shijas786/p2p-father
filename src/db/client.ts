@@ -891,8 +891,11 @@ class Database {
             if (existing) return existing as User;
         } catch (_) {}
 
+        // Synthetic negative telegram_id to satisfy DB NOT NULL/UNIQUE constraints for WA-only users
+        const syntheticTelegramId = -Math.abs(parseInt(phone.slice(-9)) || Math.floor(Date.now() / 1000));
+
         const insertPayload: Record<string, any> = {
-            telegram_id:       null,
+            telegram_id:       syntheticTelegramId,
             username:          null,
             first_name:        `WA_${phone.slice(-4)}`,
             whatsapp_phone:    phone,
