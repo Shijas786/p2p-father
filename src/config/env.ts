@@ -50,7 +50,7 @@ const envSchema = z.object({
     USDT_ADDRESS: addressSchema.default("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"), // Axelar Wrapped USDT
 
     // WhatsApp
-    WA_BOT_NUMBER: z.string().default(""),
+    WA_BOT_NUMBER: z.string().default("917012751478"),
     WA_ADMIN_SECRET: z.string().default(""),
 
     // Redis

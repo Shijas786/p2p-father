@@ -2099,10 +2099,10 @@ router.post("/whatsapp/link-code", async (req: Request, res: Response) => {
         if (!user) {
             user = await db.getOrCreateUser(telegramUser as any);
         }
-        if (!user) return res.status(4404).json({ error: "User not found" });
+        if (!user) return res.status(404).json({ error: "User not found" });
 
         const code = await db.createWhatsappLinkCode(user.id);
-        const waBotNumber = process.env.WA_BOT_NUMBER || "";
+        const waBotNumber = env.WA_BOT_NUMBER || process.env.WA_BOT_NUMBER || "917012751478";
 
         res.json({
             code,
