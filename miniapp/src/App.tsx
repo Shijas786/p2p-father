@@ -309,15 +309,18 @@ function AppInner() {
       <WalletSelector
         onSelectBot={() => {
           setConnecting(true);
+          console.log('[P2P] User clicked Bot Wallet. Connecting...');
           api.wallet.connectBot()
             .then(() => refreshUser())
             .then(() => {
               setWalletMode('bot');
               setWalletChosen(true);
               setConnecting(false);
+              console.log('[P2P] Bot Wallet connected & user refreshed successfully!');
             })
             .catch(err => {
-              console.error(err);
+              console.error('[P2P] Error connecting Bot Wallet:', err);
+              alert("Bot Wallet Connection Error: " + (err.message || String(err)));
               setConnecting(false);
             });
         }}

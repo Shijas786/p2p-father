@@ -103,9 +103,10 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         if (env.NODE_ENV === "development" || process.env.NODE_ENV !== "production") {
             // Local Dev Mode Fallback User
             req.telegramUser = { id: 12345, first_name: "Developer", username: "dev_user" };
+            console.log(`[MINIAPP-AUTH] 🟢 [DEV] Bypassing initData check for dev user 12345`);
             return next();
         }
-        console.warn(`[AUTH] ❌ Missing initData`);
+        console.warn(`[MINIAPP-AUTH] ❌ Missing x-telegram-init-data header on ${req.method} ${req.url}`);
         return res.status(401).json({ error: "Please open this app through the Telegram bot" });
     }
 
@@ -130,6 +131,7 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
             .digest("hex");
 
         if (calculatedHash !== hash) {
+            console.warn(`[MINIAPP-AUTH] ❌ Hash validation failed for req: ${req.method} ${req.url}`);
             return res.status(401).json({ error: "Invalid init data hash" });
         }
 
@@ -139,18 +141,21 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         }
 
         if (!req.telegramUser) {
+            console.warn(`[MINIAPP-AUTH] ❌ User object missing in initData`);
             return res.status(401).json({ error: "User data missing from init data" });
         }
 
         const authDate = parseInt(params.get("auth_date") || "0");
         const now = Math.floor(Date.now() / 1000);
         if (now - authDate > 86400 && env.NODE_ENV !== "development") {
+            console.warn(`[MINIAPP-AUTH] ❌ InitData expired for user ${req.telegramUser.id} (age=${now - authDate}s)`);
             return res.status(401).json({ error: "Auth data expired" });
         }
 
+        console.log(`[MINIAPP-AUTH] 🟢 Authenticated user: ${req.telegramUser.id} (@${req.telegramUser.username || "no_username"}) on ${req.method} ${req.url}`);
         next();
-    } catch (err) {
-        console.error("[MINIAPP] Auth error:", err);
+    } catch (err: any) {
+        console.error(`[MINIAPP-AUTH] 💥 Exception during initData validation on ${req.method} ${req.url}:`, err.message);
         return res.status(401).json({ error: "Authentication failed" });
     }
 }
@@ -593,12 +598,17 @@ router.post("/wallet/connect", async (req: Request, res: Response) => {
 
 router.post("/wallet/bot", async (req: Request, res: Response) => {
     try {
+        console.log(`[MINIAPP-WALLET] 📥 /wallet/bot requested by Telegram user: ${req.telegramUser?.id}`);
         const user = await db.getUserByTelegramId(req.telegramUser!.id);
-        if (!user) return res.status(404).json({ error: "User not found" });
+        if (!user) {
+            console.warn(`[MINIAPP-WALLET] ❌ /wallet/bot user not found for Telegram ID: ${req.telegramUser?.id}`);
+            return res.status(404).json({ error: "User not found" });
+        }
 
         let walletIndex = user.wallet_index;
         if (!walletIndex || walletIndex <= 0) {
             walletIndex = await db.getNextWalletIndex();
+            console.log(`[MINIAPP-WALLET] ℹ️ Auto-assigned new wallet index: ${walletIndex} for user ${user.id}`);
         }
 
         const derived = wallet.deriveWallet(walletIndex);
@@ -610,9 +620,10 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
             receive_address: null, // Clear any custom receive address from previous wallet
         } as any);
 
+        console.log(`[MINIAPP-WALLET] 🟢 Successfully set Bot Wallet ${derived.address} (index=${walletIndex}) for user ${user.id}`);
         res.json({ success: true, address: derived.address });
     } catch (err: any) {
-        console.error("[MINIAPP] Switch to bot error:", err);
+        console.error("[MINIAPP-WALLET] 💥 Switch to bot error:", err);
         res.status(500).json({ error: err.message });
     }
 });
