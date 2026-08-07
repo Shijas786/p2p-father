@@ -159,6 +159,63 @@ export async function replyWithCarousel(
     }
 }
 
+export async function replyWithList(
+    sock: WASocket,
+    jid: string,
+    text: string,
+    buttonTitle: string,
+    sections: {
+        title: string;
+        rows: { id: string; title: string; description?: string }[];
+    }[],
+    footer = "P2PFather Escrow Exchange"
+): Promise<void> {
+    try {
+        const { generateWAMessageFromContent, proto } = await import("@whiskeysockets/baileys");
+        const msg = generateWAMessageFromContent(
+            jid,
+            {
+                viewOnceMessage: {
+                    message: {
+                        interactiveMessage: proto.Message.InteractiveMessage.create({
+                            body: proto.Message.InteractiveMessage.Body.create({ text }),
+                            footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
+                            header: proto.Message.InteractiveMessage.Header.create({
+                                title: "🤖 P2PFather Menu",
+                                hasMediaAttachment: false,
+                            }),
+                            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                                buttons: [
+                                    {
+                                        name: "single_select",
+                                        buttonParamsJson: JSON.stringify({
+                                            title: buttonTitle,
+                                            sections,
+                                        }),
+                                    },
+                                ],
+                            }),
+                        }),
+                    },
+                },
+            },
+            { userJid: sock.user?.id ?? jid }
+        );
+
+        await sock.relayMessage(jid, msg.message!, { messageId: msg.key.id! });
+    } catch (err: any) {
+        console.warn("[WA] List relayMessage failed, falling back to text:", err?.message);
+        let fallbackText = `${text}\n\n*${buttonTitle}*\n`;
+        sections.forEach((s) => {
+            fallbackText += `\n📌 *${s.title}*\n`;
+            s.rows.forEach((r) => {
+                fallbackText += `• *${r.title}* → \`${r.id}\`${r.description ? ` (${r.description})` : ""}\n`;
+            });
+        });
+        await sock.sendMessage(jid, { text: fallbackText.trim() });
+    }
+}
+
 // ── Step 1: Welcome Screen (first message to new WA users) ───────────────────
 async function showWelcomeScreen(
     sock: WASocket,
