@@ -40,35 +40,34 @@ import { db } from "../db/client";
 
 async function loadAuthFromSupabase(): Promise<void> {
     try {
-        if (!fs.existsSync(AUTH_DIR)) {
-            fs.mkdirSync(AUTH_DIR, { recursive: true });
+        if (fs.existsSync(AUTH_DIR)) {
+            // Clean local directory of any stale session keys
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         }
+        fs.mkdirSync(AUTH_DIR, { recursive: true });
+
         const client = db.getClient();
-        const { data: rows, error } = await client.from("whatsapp_auth").select("filename, content");
+        const { data: rows, error } = await client.from("whatsapp_auth").select("filename, content").eq("filename", "creds.json");
         if (error) return; // Table might not exist yet
         if (rows && rows.length > 0) {
             for (const row of rows) {
                 fs.writeFileSync(path.join(AUTH_DIR, row.filename), JSON.stringify(row.content));
             }
-            console.log(`  💾 Restored ${rows.length} WhatsApp session keys from Supabase`);
+            console.log(`  💾 Restored WhatsApp master creds.json from Supabase`);
         }
     } catch (_) {}
 }
 
 async function syncAuthToSupabase(): Promise<void> {
     try {
-        if (!fs.existsSync(AUTH_DIR)) return;
-        const files = fs.readdirSync(AUTH_DIR);
+        const credsPath = path.join(AUTH_DIR, "creds.json");
+        if (!fs.existsSync(credsPath)) return;
+        const content = JSON.parse(fs.readFileSync(credsPath, "utf-8"));
         const client = db.getClient();
-        for (const file of files) {
-            if (file.endsWith(".json")) {
-                const content = JSON.parse(fs.readFileSync(path.join(AUTH_DIR, file), "utf-8"));
-                await client.from("whatsapp_auth").upsert(
-                    { filename: file, content, updated_at: new Date().toISOString() },
-                    { onConflict: "filename" }
-                );
-            }
-        }
+        await client.from("whatsapp_auth").upsert(
+            { filename: "creds.json", content, updated_at: new Date().toISOString() },
+            { onConflict: "filename" }
+        );
     } catch (_) {}
 }
 
