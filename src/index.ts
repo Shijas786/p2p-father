@@ -108,6 +108,7 @@ async function main() {
     app.use(express.json());
 
     // Mount API Routers
+    app.use("/api/miniapp", miniappRouter);
     app.use("/api", miniappRouter);
     app.use("/api", webhookRouter);
 
