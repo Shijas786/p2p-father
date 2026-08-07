@@ -149,7 +149,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
                     },
                 ],
                 response_format: { type: "json_object" },
-                max_tokens: 500,
+                max_completion_tokens: 500,
             });
 
             const text = result.choices[0]?.message?.content;
@@ -190,7 +190,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             const result = await client.chat.completions.create({
                 model,
                 messages: [{ role: "user", content: prompt }],
-                max_tokens: 1000,
+                max_completion_tokens: 1000,
             });
 
             return result.choices[0]?.message?.content || "";
