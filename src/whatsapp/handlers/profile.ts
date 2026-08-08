@@ -28,9 +28,30 @@ export async function handleProfileCommand(
 ): Promise<void> {
     const lowerText = text.toLowerCase().trim();
 
-    // ─── /profile — Display Profile & Payment Methods ─────────────────────────
-    if (lowerText === "/profile" || lowerText === "profile") {
-        await showProfileCard(sock, jid, user, msg);
+    // ─── /profile or Page 1 — Display Profile & Payment Methods ────────────────
+    if (lowerText === "/profile" || lowerText === "profile" || lowerText === "profile_page_1") {
+        await showProfilePage1(sock, jid, user, msg);
+        return;
+    }
+
+    // ─── Page 2 — Display Trade History & Account Sync ────────────────────────
+    if (lowerText === "profile_page_2") {
+        await showProfilePage2(sock, jid, user, msg);
+        return;
+    }
+
+    // ─── Edit Payments Menu Callback ──────────────────────────────────────────
+    if (lowerText === "edit_payments_menu") {
+        await replyWithButtons(
+            sock,
+            jid,
+            `💳 *EDIT PAYMENT DETAILS*\n\nWhich payment method do you want to set or update?`,
+            [
+                { id: "set_upi",    label: "📱 Set UPI ID" },
+                { id: "set_bank",   label: "🏦 Set Bank Details" },
+                { id: "/profile",   label: "🔙 Back to Profile" },
+            ]
+        );
         return;
     }
 
@@ -81,7 +102,7 @@ export async function handleProfileCommand(
     // Check if user tapped Back or Cancel
     if (lowerText === "back" || lowerText === "cancel" || lowerText === "/profile" || lowerText === "profile") {
         await (db as any).clearWhatsappState(user.id);
-        await showProfileCard(sock, jid, user, msg);
+        await showProfilePage1(sock, jid, user, msg);
         return;
     }
 
@@ -99,10 +120,10 @@ export async function handleProfileCommand(
         await replyWithButtons(
             sock,
             jid,
-            `✅ *UPI ID SAVED!*\n\nYour UPI ID is set to: \`${upiId}\`\n\nIt will now be automatically displayed to buyers/sellers during trades.`,
+            `✅ *UPI ID SAVED!*\n\nYour UPI ID is set to: \`${upiId}\``,
             [
                 { id: "/post",    label: "➕ Post New Ad" },
-                { id: "/profile", label: "👤 View Profile" },
+                { id: "/profile", label: "🔙 Back to Profile" },
             ]
         );
         return;
@@ -138,7 +159,7 @@ export async function handleProfileCommand(
             `✅ *BANK DETAILS SAVED!*\n\n• *Bank:* ${bankName}\n• *Account:* \`${accountNumber}\`\n• *IFSC:* \`${ifsc}\``,
             [
                 { id: "/post",    label: "➕ Post New Ad" },
-                { id: "/profile", label: "👤 View Profile" },
+                { id: "/profile", label: "🔙 Back to Profile" },
             ]
         );
         return;
@@ -161,15 +182,15 @@ export async function handleProfileCommand(
             `✅ *DIGITAL E-RUPEE ID SAVED!*\n\nYour e-Rupee VPA is set to: \`${eRupeeId}\``,
             [
                 { id: "/post",    label: "➕ Post New Ad" },
-                { id: "/profile", label: "👤 View Profile" },
+                { id: "/profile", label: "🔙 Back to Profile" },
             ]
         );
         return;
     }
 }
 
-/** Render user profile with payment methods, trade history, and Telegram link status using 2 split button cards */
-async function showProfileCard(
+/** Render Profile Page 1: Profile & Payment Details + Single-line Navigation */
+async function showProfilePage1(
     sock: WASocket,
     jid: string,
     user: User,
@@ -186,45 +207,49 @@ async function showProfileCard(
         ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
         : "❌ Not linked (Tap /link to connect)";
 
-    // Card 1: Profile & Payment Details + 3 Native Payment Buttons
-    const profileText = `👤 *YOUR P2PFATHER PROFILE*
+    const profileText = `👤 *YOUR P2PFATHER PROFILE* (Page 1/2)
 
 • *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}
 • *Telegram Sync:* ${tgLinkStatus}
 • *P2P Wallet:* \`${user.wallet_address || "N/A"}\`
+
+💳 *CURRENT PAYMENT DETAILS*
+📱 *UPI ID:* ${upiDisplay}
+🏦 *Bank Account:* ${bankDisplay}
+🏛️ *Bank IFSC:* ${ifscDisplay}
+📲 *Digital e-Rupee:* ${eRupeeDisplay}`;
+
+    await replyWithButtons(sock, jid, profileText, [
+        { id: "edit_payments_menu", label: "📱 Edit Payments" },
+        { id: "profile_page_2",     label: "▶️ Next Page" },
+        { id: "/start",             label: "🏠 Main Menu" },
+    ]);
+}
+
+/** Render Profile Page 2: Trade History & Account Sync + Single-line Navigation */
+async function showProfilePage2(
+    sock: WASocket,
+    jid: string,
+    user: User,
+    msg: IWebMessageInfo
+): Promise<void> {
+    const tgLinkStatus = user.telegram_id
+        ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
+        : "❌ Not linked (Tap /link to connect)";
+
+    const actionsText = `⚡ *TRADE HISTORY & SYNC* (Page 2/2)
 
 📊 *ORDER & TRADE HISTORY*
 • *Completed Trades:* ${user.completed_trades ?? 0}
 • *Trust Score:* ⭐ ${user.trust_score ?? 100}%
 • *Total Volume:* $${((user as any).total_volume ?? 0).toFixed(2)} USDT
 
-💳 *CURRENT PAYMENT DETAILS*
-📱 *UPI ID:* ${upiDisplay}
-🏦 *Bank Account:* ${bankDisplay}
-🏛️ *Bank IFSC:* ${ifscDisplay}
-📲 *Digital e-Rupee:* ${eRupeeDisplay}
-
-_Tap below to set or update payment details:_`;
-
-    await replyWithButtons(sock, jid, profileText, [
-        { id: "set_upi",    label: "📱 Set UPI ID" },
-        { id: "set_bank",   label: "🏦 Set Bank Details" },
-        { id: "set_erupee", label: "📲 Set e-Rupee" },
-    ]);
-
-    // Small delay between cards for clean chat flow
-    await new Promise((r) => setTimeout(r, 600));
-
-    // Card 2: Account Actions & Sync + 3 Native Action Buttons
-    const actionsText = `⚡ *QUICK ACTIONS & ACCOUNT SYNC*
-
-• *Trade History:* View active & completed P2P trades
-• *Telegram Sync:* Connect Telegram & MiniApp account
-• *Deposit Wallet:* View deposit address & QR code`;
+✈️ *TELEGRAM & MINIAPP SYNC*
+• Status: ${tgLinkStatus}`;
 
     await replyWithButtons(sock, jid, actionsText, [
-        { id: "/trades",  label: "📜 Trade History" },
-        { id: "/link",    label: "✈️ Link Telegram" },
-        { id: "/deposit", label: "📥 Deposit QR" },
+        { id: "/trades",        label: "📜 Trade History" },
+        { id: "profile_page_1", label: "🔙 Prev Page" },
+        { id: "/start",         label: "🏠 Main Menu" },
     ]);
 }
