@@ -120,10 +120,15 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
                 ]
             );
 
-            // Alert Seller
+            // Alert Seller with interactive action buttons
             const seller = await db.getUserById(sellerId);
             if (seller) {
-                await sendUserAlert(seller, `🤝 *TRADE MATCHED!* Buyer has initiated trade for ${trade.amount} USDT (₹${trade.fiat_amount}). Awaiting payment.`);
+                await sendUserAlert(
+                    seller,
+                    `🤝 *TRADE MATCHED!* Buyer has initiated trade for ${trade.amount} USDT (₹${trade.fiat_amount}). Awaiting payment.`,
+                    undefined,
+                    [{ id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" }]
+                );
             }
 
         } catch (err: any) {
@@ -183,14 +188,18 @@ The seller has been notified to check their bank account/UPI.`,
                 ]
             );
 
-            // Notify seller with instant Confirm Release button
+            // Notify seller with instant 1-tap Confirm Release & Dispute buttons
             const seller = await db.getUserById(trade.seller_id);
             if (seller) {
-                await sendUserAlert(seller, `💸 *PAYMENT SENT BY BUYER!*
-
-Buyer marked ₹${trade.fiat_amount} as sent via ${trade.payment_method}.
-
-Please verify your bank account and tap below to release:`);
+                await sendUserAlert(
+                    seller,
+                    `💸 *PAYMENT SENT BY BUYER!*\n\nBuyer marked ₹${trade.fiat_amount} as sent via ${trade.payment_method}.\n\nPlease verify your bank account/UPI app:`,
+                    undefined,
+                    [
+                        { id: `/release_${trade.id}`, label: "🔓 Confirm Release" },
+                        { id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" },
+                    ]
+                );
             }
 
         } catch (err) {
