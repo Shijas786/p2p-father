@@ -294,27 +294,17 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build native quick_reply buttons (max 3, WhatsApp limit)
-	type nativeBtn struct {
-		Name             string          `json:"name"`
-		ButtonParamsJson string          `json:"buttonParamsJson"`
-	}
-	type btnParams struct {
-		DisplayText string `json:"display_text"`
-		ID          string `json:"id"`
-	}
-
-	nativeBtns := make([]nativeBtn, 0)
+	nativeFlowBtns := make([]*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton, 0)
 	for i, btn := range req.Buttons {
 		if i >= 3 {
 			break
 		}
-		paramsJSON, _ := json.Marshal(btnParams{DisplayText: btn.Label, ID: btn.ID})
-		nativeBtns = append(nativeBtns, nativeBtn{
-			Name:             "quick_reply",
-			ButtonParamsJson: string(paramsJSON),
+		paramsJSON, _ := json.Marshal(map[string]string{"display_text": btn.Label, "id": btn.ID})
+		nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+			Name:             proto.String("quick_reply"),
+			ButtonParamsJson: proto.String(string(paramsJSON)),
 		})
 	}
-	nativeBtnsJSON, _ := json.Marshal(nativeBtns)
 
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
@@ -324,7 +314,7 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
 					MessageVersion: proto.Int32(1),
-					ButtonsJson:    proto.String(string(nativeBtnsJSON)),
+					Buttons:        nativeFlowBtns,
 				},
 			},
 		},
