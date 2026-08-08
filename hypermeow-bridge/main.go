@@ -302,7 +302,7 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		paramsJSON, _ := json.Marshal(map[string]string{"display_text": btn.Label, "id": btn.ID})
 		nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
 			Name:             proto.String("quick_reply"),
-			ButtonParamsJson: proto.String(string(paramsJSON)),
+			ButtonParamsJSON: proto.String(string(paramsJSON)),
 		})
 	}
 
