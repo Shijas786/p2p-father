@@ -16,7 +16,7 @@ COPY . .
 
 # 4. Build Go Hypermeow bridge
 WORKDIR /app/hypermeow-bridge
-RUN CGO_ENABLED=1 go build -o hypermeow-bridge main.go
+RUN go mod tidy && CGO_ENABLED=1 go build -o hypermeow-bridge main.go
 
 # 5. Build miniapp
 WORKDIR /app/miniapp
