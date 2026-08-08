@@ -72,9 +72,9 @@ var (
 )
 
 func main() {
-	port := os.Getenv("PORT")
+	port := os.Getenv("HYPERMEOW_PORT")
 	if port == "" {
-		port = "8081"
+		port = "8085"
 	}
 	webhookURL = os.Getenv("WEBHOOK_URL")
 	if webhookURL == "" {
