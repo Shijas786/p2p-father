@@ -57,6 +57,22 @@ ${balanceLines}
 📊 *To trade:* /ads`;
 }
 
+export function formatTraderContact(user: any): string {
+    if (!user) return "Verified Trader";
+    const parts: string[] = [];
+    if (user.whatsapp_phone || user.phone_number) {
+        const phone = String(user.whatsapp_phone || user.phone_number).replace("+", "").trim();
+        if (phone) parts.push(`@${phone}`);
+    }
+    if (user.username) {
+        parts.push(`@${user.username}`);
+    }
+    if (parts.length > 0) {
+        return parts.join(" (") + (parts.length > 1 ? ")" : "");
+    }
+    return user.first_name ? user.first_name : "Verified Trader";
+}
+
 export function fmtDepositAddress(user: User): string {
     const address = user.wallet_address ?? "Contact support";
     return `📥 *DEPOSIT CRYPTO*
@@ -80,7 +96,7 @@ export function fmtOrderList(orders: any[], type: string): string {
     }
 
     const lines = orders.map((o, i) => {
-        const traderName = o.users?.username ? `@${o.users.username}` : (o.users?.first_name ?? "Trader");
+        const traderName = formatTraderContact(o.users);
         const trust = o.users?.trust_score ?? 0;
         const payMethods = (o.payment_methods ?? []).join(", ");
         const link = waLink(`trade_ad_${o.id}`);
@@ -189,7 +205,7 @@ Support: @P2PFatherSupport`;
 // ─── Group Live Ad Broadcast ──────────────────────────────────────────────────
 export function fmtGroupAdBroadcast(order: any): string {
     const type = order.type === "sell" ? "🟢 *SELLING USDT*" : "🔴 *BUYING USDT*";
-    const trader = order.users?.username ? `@${order.users.username}` : "Verified Trader";
+    const trader = formatTraderContact(order.users);
     const trust = order.users?.trust_score ?? 0;
     const payMethods = (order.payment_methods ?? []).join(", ");
     const link = waLink(`trade_ad_${order.id}`);
@@ -220,7 +236,7 @@ export function fmtGroupLiveAds(orders: any[], type: "buy" | "sell" | "all"): st
             : "📊 *P2PFATHER LIVE ORDERBOOK*";
 
     const lines = orders.slice(0, 5).map((o, i) => {
-        const trader = o.users?.username ? `@${o.users.username}` : "Trader";
+        const trader = formatTraderContact(o.users);
         const link = waLink(`trade_ad_${o.id}`);
         return `${i + 1}. *₹${o.rate}* | ₹${o.min_amount}–${o.max_amount} | ${(o.payment_methods ?? []).join("/")} — ${trader}\n   👉 ${link}`;
     });
