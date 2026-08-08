@@ -309,8 +309,7 @@ _Please top up your vault by sending USDT to your deposit address before creatin
                 [
                     { id: "ad_pay_upi",    label: "📱 UPI (GPay/PhonePe)" },
                     { id: "ad_pay_imps",   label: "🏦 Bank Transfer / IMPS" },
-                    { id: "ad_pay_cdm",    label: "🏧 CDM Cash Deposit" },
-                    { id: "ad_pay_erupee", label: "📲 Digital e-Rupee" },
+                    { id: "ad_pay_more",   label: "▶️ More (CDM / e-Rupee)" },
                 ]
             );
             return;
@@ -318,9 +317,24 @@ _Please top up your vault by sending USDT to your deposit address before creatin
 
         // ── Step 5: Payment ───────────────────────────────────────────────────
         case "PAYMENT": {
+            if (text.includes("more") || text === "ad_pay_more") {
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `💳 *MORE PAYMENT METHODS*\n\nSelect your preferred option:`,
+                    [
+                        { id: "ad_pay_cdm",    label: "🏧 CDM Cash Deposit" },
+                        { id: "ad_pay_erupee", label: "📲 Digital e-Rupee" },
+                        { id: "ad_pay_all",    label: "🔄 All Payment Methods" },
+                    ]
+                );
+                return;
+            }
+
             let methods: string[] = [];
-            if (text.includes("cdm"))      methods.push("CDM");
-            else if (text.includes("erupee")) methods.push("DIGITAL_RUPEE");
+            if (text.includes("cdm"))            methods.push("CDM");
+            else if (text.includes("erupee"))    methods.push("DIGITAL_RUPEE");
+            else if (text.includes("all"))        methods = ["UPI", "IMPS", "BANK", "CDM", "DIGITAL_RUPEE"];
             else if (text.includes("imps") || text.includes("bank")) methods.push("BANK");
             else methods.push("UPI");
 
