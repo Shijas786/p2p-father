@@ -2629,33 +2629,8 @@ router.post("/kyc/webhook", async (req: Request, res: Response) => {
     }
 });
 
-// ═══════════════════════════════════════════════════════════════
-//  BAGS.FM STATS
-// ═══════════════════════════════════════════════════════════════
 
-router.get("/bags/stats", async (req: Request, res: Response) => {
-    try {
-        const { bags } = await import("../services/bags");
-        const mint = env.BAGS_TOKEN_MINT;
 
-        if (!mint || mint === "REPLACE_WITH_SOLANA_MINT_ADDRESS") {
-            return res.json({ error: "Mint address not configured" });
-        }
-
-        const stats = await bags.getConsolidatedStats(mint);
-        if (!stats) {
-            return res.status(404).json({ error: "Token pool not found on Bags.fm" });
-        }
-
-        res.json({
-            ...stats,
-            mint
-        });
-    } catch (e) {
-        console.error("Bags API Error:", e);
-        res.status(500).json({ error: "Failed to fetch Bags.fm stats" });
-    }
-});
 
 router.get("/users", async (req: Request, res: Response) => {
     try {

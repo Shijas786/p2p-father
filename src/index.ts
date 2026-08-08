@@ -274,7 +274,6 @@ async function main() {
                 active_orders: stats.active_orders,
                 fee_percentage: env.FEE_PERCENTAGE,
                 fee_bps: parseInt(env.FEE_BPS),
-                bags: null
             });
         } catch (e) {
             console.error("API Error:", e);
