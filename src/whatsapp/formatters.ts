@@ -17,19 +17,11 @@ export function waLink(text: string): string {
 }
 
 // ─── Main Menu ────────────────────────────────────────────────────────────────
-const DIVIDER = "━━━━━━━━━━━━━━━━━━━━";
-export const MAIN_MENU = `🤖 *P2PFather — Crypto P2P Exchange*
+export const MAIN_MENU = `🎩 *P2PFATHER — INSTANT P2P CRYPTO EXCHANGE*
 
-${DIVIDER}
-1️⃣ 💰 Balance & Wallet
-2️⃣ 📊 Browse P2P Ads
-3️⃣ ➕ Post New Ad
-4️⃣ 📋 My Active Trades
-5️⃣ 📋 My Ads
-${DIVIDER}
-Also: /deposit · /send · /profile · /help
+Welcome to Kerala's pioneer non-custodial P2P escrow network. 
 
-_Reply with a number 1–5 or type any command ↓_`;
+Select an action below to get started:`;
 
 // ─── Wallet ───────────────────────────────────────────────────────────────────
 export function fmtWalletBalance(

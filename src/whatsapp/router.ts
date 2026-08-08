@@ -3,13 +3,14 @@
  */
 
 import type { WASocket, IWebMessageInfo, WAMessage } from "./types";
+import type { User } from "../types";
 import { db } from "../db/client";
 import { handleWalletCommand } from "./handlers/wallet";
 import { handleAdCommand } from "./handlers/ads";
 import { handleTradeCommand } from "./handlers/trade";
 import { handleProfileCommand } from "./handlers/profile";
 import { handleGroupMention } from "./handlers/group";
-import { MAIN_MENU } from "./formatters";
+import { MAIN_MENU, formatTraderContact } from "./formatters";
 import { ai } from "../services/ai";
 import { env } from "../config/env";
 import { evolutionClient } from "./evolutionClient";
@@ -450,16 +451,7 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
             await showWelcomeScreen(sock, jid, msg);
             return;
         }
-        await replyWithButtons(
-            sock,
-            jid,
-            MAIN_MENU,
-            [
-                { id: "/balance", label: "💰 Balance & Wallet" },
-                { id: "/ads",     label: "📊 Browse P2P Ads" },
-                { id: "/post",    label: "➕ Post New Ad" },
-            ]
-        );
+        await sendTwoMessageMainMenu(sock, jid, msg, user);
         return;
     }
 
@@ -759,5 +751,56 @@ Check balance first: /balance 💰`,
         jid,
         `❓ I didn't understand that.\n\nType /start to see the main menu.`,
         msg
+    );
+}
+
+/** Renders a stacked 2-message 6-button main menu dashboard */
+export async function sendTwoMessageMainMenu(
+    sock: WASocket,
+    jid: string,
+    msg: IWebMessageInfo,
+    user: User
+): Promise<void> {
+    const handle = formatTraderContact(user);
+    const walletAddr = user.wallet_address
+        ? `\`${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}\``
+        : "Not created";
+
+    const topMessageText =
+`🎩 *P2PFATHER — INSTANT P2P CRYPTO EXCHANGE*
+
+Welcome back, *${handle}*! 🛡️
+
+• *Vault Wallet:* ${walletAddr}
+• *Networks:* Base & BSC (USDT)
+• *Security:* 100% Smart-Contract Escrow
+
+Choose an action from the menu below:`;
+
+    // Message 1 (Frame 1: 3 Buttons)
+    await replyWithButtons(
+        sock,
+        jid,
+        topMessageText,
+        [
+            { id: "/balance", label: "💰 Balance & Vault" },
+            { id: "/ads",     label: "📊 Browse P2P Ads" },
+            { id: "/post",    label: "➕ Post New Ad" },
+        ]
+    );
+
+    // Short 250ms gap so messages arrive stacked seamlessly
+    await new Promise((r) => setTimeout(r, 250));
+
+    // Message 2 (Frame 2: 3 Buttons)
+    await replyWithButtons(
+        sock,
+        jid,
+        `⚡ *QUICK ACCOUNT ACTIONS & TRADES*`,
+        [
+            { id: "/trades",  label: "📜 Active Trades" },
+            { id: "/my_ads",  label: "📋 My Ads" },
+            { id: "/profile", label: "👤 My Profile" },
+        ]
     );
 }
