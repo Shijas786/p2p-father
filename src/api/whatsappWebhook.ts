@@ -50,8 +50,25 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
         const event = body.event || body.type;
 
         // ── Hypermeow (Go bridge) webhook ──────────────────────────────────────
-        // Payload: { jid, text, sender, pushName }
+        // Payload: { jid, text, sender, pushName, audioBase64 }
         if (body.jid && body.text !== undefined && !event) {
+            let messageText = body.text;
+
+            // If incoming message is a voice note with audioBase64
+            if (body.audioBase64 || body.text === "[VOICE_NOTE]") {
+                try {
+                    const audioBuffer = Buffer.from(body.audioBase64, "base64");
+                    const { ai } = await import("../services/ai");
+                    const transcribed = await ai.transcribeAudio(audioBuffer);
+                    if (transcribed) {
+                        messageText = transcribed;
+                        console.log(`[WA-Webhook] 🎙️ Transcribed WhatsApp voice note for ${body.jid}: "${transcribed}"`);
+                    }
+                } catch (err: any) {
+                    console.error("[WA-Webhook] Voice note transcription failed:", err?.message || err);
+                }
+            }
+
             const normalizedMsg: IWebMessageInfo = {
                 key: {
                     remoteJid: body.jid,
@@ -59,8 +76,8 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                     id: `hm_${Date.now()}`,
                 },
                 message: {
-                    conversation: body.text,
-                    extendedTextMessage: { text: body.text },
+                    conversation: messageText,
+                    extendedTextMessage: { text: messageText },
                 },
                 pushName: body.pushName || "",
             };

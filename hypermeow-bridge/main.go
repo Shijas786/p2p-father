@@ -66,10 +66,11 @@ type SendListReq struct {
 }
 
 type WebhookPayload struct {
-	JID      string `json:"jid"`
-	Text     string `json:"text"`
-	Sender   string `json:"sender"`
-	PushName string `json:"pushName"`
+	JID         string `json:"jid"`
+	Text        string `json:"text"`
+	Sender      string `json:"sender"`
+	PushName    string `json:"pushName"`
+	AudioBase64 string `json:"audioBase64,omitempty"`
 }
 
 var (
@@ -648,6 +649,18 @@ func eventHandler(evt interface{}) {
 			}
 		}
 
+		var audioBase64 string
+		if text == "" && v.Message.GetAudioMessage() != nil {
+			audioBytes, err := client.Download(v.Message.GetAudioMessage())
+			if err == nil && len(audioBytes) > 0 {
+				audioBase64 = base64.StdEncoding.EncodeToString(audioBytes)
+				text = "[VOICE_NOTE]"
+				fmt.Printf("[Hypermeow Message] Received voice note from sender=%s (bytes=%d)\n", v.Info.Sender.String(), len(audioBytes))
+			} else {
+				fmt.Printf("[Hypermeow Message] Failed to download audio message: %v\n", err)
+			}
+		}
+
 		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, text)
 
 		if text == "" {
@@ -656,10 +669,11 @@ func eventHandler(evt interface{}) {
 		}
 
 		payload := WebhookPayload{
-			JID:      v.Info.Chat.String(),
-			Text:     text,
-			Sender:   v.Info.Sender.String(),
-			PushName: v.Info.PushName,
+			JID:         v.Info.Chat.String(),
+			Text:        text,
+			Sender:      v.Info.Sender.String(),
+			PushName:    v.Info.PushName,
+			AudioBase64: audioBase64,
 		}
 		body, _ := json.Marshal(payload)
 		fmt.Printf("[Hypermeow Webhook] POST %s payload=%s\n", webhookURL, string(body))
