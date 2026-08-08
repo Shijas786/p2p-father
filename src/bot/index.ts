@@ -3693,6 +3693,38 @@ bot.on("callback_query:data", async (ctx) => {
 //              NATURAL LANGUAGE HANDLER (AI)
 // ═══════════════════════════════════════════════════════════════
 
+// 🎙️ Voice Note DM Handler — OpenAI Whisper transcribes voice notes sent directly to Bot DM
+bot.on("message:voice", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    try {
+        await ctx.replyWithChatAction("typing").catch(() => {});
+        const file = await ctx.getFile();
+        if (!file.file_path) return;
+
+        const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+        const axios = (await import("axios")).default;
+        const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+        const voiceBuffer = Buffer.from(response.data);
+
+        const { ai } = await import("../services/ai");
+        const transcribedText = await ai.transcribeAudio(voiceBuffer);
+
+        if (!transcribedText) {
+            await ctx.reply("🎙️ Couldn't transcribe your voice note. Please try speaking clearly or send a text message.");
+            return;
+        }
+
+        const user = await ensureUser(ctx);
+        const parsed = await ai.parseIntent(transcribedText);
+
+        const replyMsg = `🎙️ *Voice Note:* "${escapeMarkdown(transcribedText)}"\n\n${escapeMarkdown(parsed.response || "I processed your request!")}`;
+        await ctx.reply(replyMsg, { parse_mode: "Markdown" });
+    } catch (err: any) {
+        console.error("[Bot] Voice note processing error:", err?.message || err);
+        await ctx.reply("❌ Failed to process voice note. Please try again.");
+    }
+});
+
 bot.on("message:text", async (ctx) => {
     await ctx.replyWithChatAction("typing").catch(() => { });
     const text = ctx.message.text;
