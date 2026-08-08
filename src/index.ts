@@ -9,7 +9,6 @@ import axios from "axios";
 import { miniappRouter } from "./api/miniapp";
 import { webhookRouter } from "./api/webhook";
 import { whatsappWebhookRouter } from "./api/whatsappWebhook";
-import { mcpRouter } from "./api/mcpRouter";
 import { evolutionClient } from "./whatsapp/evolutionClient";
 import { customHttpsAgent } from "./services/polymarket";
 
@@ -110,7 +109,6 @@ async function main() {
     app.use("/api/miniapp", miniappRouter);
     app.use("/api/webhook", webhookRouter);
     app.use("/api/whatsapp", whatsappWebhookRouter);
-    app.use("/api/mcp", mcpRouter);
 
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
