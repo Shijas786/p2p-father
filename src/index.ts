@@ -70,8 +70,8 @@ async function main() {
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
-    // Start WhatsApp Bot (Baileys)
-    if (!process.env.NO_WHATSAPP) {
+    // Start WhatsApp Bot (Baileys) - Only if explicitly enabled via ENABLE_WHATSAPP=true
+    if (process.env.ENABLE_WHATSAPP === "true") {
         try {
             console.log("  📱 Starting WhatsApp bot (Baileys)...");
             const { initWhatsApp, getSock } = await import("./whatsapp/client");
@@ -85,7 +85,7 @@ async function main() {
             console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
         }
     } else {
-        console.log("  🚫 WhatsApp disabled by NO_WHATSAPP env var.");
+        console.log("  🚫 WhatsApp bot is DISCONNECTED.");
     }
 
 
