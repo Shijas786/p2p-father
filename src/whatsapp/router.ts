@@ -658,6 +658,37 @@ Or check your balance first with /balance 💰`,
         }
     }
 
+    // ── Active Trade Chat Mediator Relay ──────────────────────────────────────
+    if (!text.startsWith("/") && !text.startsWith("!")) {
+        try {
+            const activeTrades = await db.getActiveTradesForUser(user.id);
+            if (activeTrades.length > 0) {
+                const currentTrade = activeTrades[0];
+                const isBuyer = currentTrade.buyer_id === user.id;
+                const counterpartyId = isBuyer ? currentTrade.seller_id : currentTrade.buyer_id;
+                const counterparty = await db.getUserById(counterpartyId);
+
+                if (counterparty) {
+                    const roleLabel = isBuyer ? "BUYER" : "SELLER";
+                    const relayMessage = `💬 *TRADE CHAT [Trade #${currentTrade.id.slice(0, 8)}]*\n*From ${roleLabel}:*\n"${text}"`;
+
+                    const { sendUserAlert } = await import("../services/notifier");
+                    await sendUserAlert(counterparty, relayMessage);
+
+                    await reply(
+                        sock,
+                        jid,
+                        `💬 *Message delivered to ${isBuyer ? "Seller" : "Buyer"}!*`,
+                        msg
+                    );
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error("[WA-TradeChat] Error in relaying trade message:", err);
+        }
+    }
+
     // ── AI-powered natural language guide (private DM only) ───────────────────
     if (env.OPENAI_API_KEY) {
         try {
