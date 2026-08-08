@@ -312,7 +312,7 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             return;
         }
 
-        // ── Step 5: Payment → Confirm & Create ───────────────────────────────
+        // ── Step 5: Payment → Confirm & Select Publish Target ───────────────
         case "PAYMENT": {
             let methods: string[] = [];
             if (text.includes("upi"))  methods.push("UPI");
@@ -329,7 +329,7 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             await replyWithButtons(
                 sock,
                 jid,
-                `📋 *CONFIRM YOUR AD*
+                `📋 *CONFIRM & PUBLISH AD*
 
 • *Type:* ${draft.type!.toUpperCase()} USDT
 • *Token:* USDT (${draft.chain!.toUpperCase()})
@@ -338,16 +338,17 @@ _Please top up your vault by sending USDT to your deposit address before creatin
 • *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
 • *Payment:* ${methods.join(", ")}
 
-Tap ✅ Publish to go live!`,
+Where do you want to publish this ad? 👇`,
                 [
-                    { id: "ad_confirm_yes", label: "✅ Publish Ad" },
-                    { id: "ad_confirm_no",  label: "❌ Cancel" },
+                    { id: "ad_pub_both", label: "🌐 Publish on Both (WA + TG)" },
+                    { id: "ad_pub_wa",   label: "📲 WhatsApp Groups Only" },
+                    { id: "ad_pub_tg",   label: "✈️ Telegram Groups Only" },
                 ]
             );
             return;
         }
 
-        // ── Final: Publish ────────────────────────────────────────────────────
+        // ── Final: Publish to Selected Channel(s) ──────────────────────────────
         case "CONFIRM": {
             if (text.includes("no") || text.includes("cancel")) {
                 await (db as any).clearWhatsappState(user.id);
@@ -355,49 +356,69 @@ Tap ✅ Publish to go live!`,
                 return;
             }
 
-            if (text.includes("yes") || text.includes("confirm") || text.includes("publish")) {
-                try {
-                    const order = await db.createOrder({
-                        user_id:         user.id,
-                        type:            draft.type as any,
-                        token:           draft.token!,
-                        chain:           draft.chain!,
-                        amount:          draft.max_amount!,
-                        min_amount:      draft.min_amount!,
-                        max_amount:      draft.max_amount!,
-                        rate:            draft.rate!,
-                        fiat_currency:   "INR",
-                        payment_methods: draft.payment_methods as any[],
-                        status:          "active",
-                        filled_amount:   0,
-                        payment_details: {},
-                    });
+            try {
+                const orderAmount = draft.amount || draft.max_amount || 100;
+                const totalFiat = Math.round(orderAmount * (draft.rate || 0));
 
-                    await (db as any).clearWhatsappState(user.id);
+                const order = await db.createOrder({
+                    user_id:         user.id,
+                    type:            draft.type as any,
+                    token:           draft.token!,
+                    chain:           draft.chain!,
+                    amount:          orderAmount,
+                    min_amount:      100,
+                    max_amount:      totalFiat,
+                    rate:            draft.rate!,
+                    fiat_currency:   "INR",
+                    payment_methods: draft.payment_methods as any[],
+                    status:          "active",
+                    filled_amount:   0,
+                    payment_details: {},
+                });
 
-                    await replyWithButtons(
-                        sock,
-                        jid,
-                        `🎉 *AD PUBLISHED!*
+                await (db as any).clearWhatsappState(user.id);
+
+                const pubWa = lower.includes("wa") || lower.includes("both") || lower.includes("publish");
+                const pubTg = lower.includes("tg") || lower.includes("both");
+
+                let channelText = "🌐 Both WhatsApp & Telegram";
+                if (pubWa && !pubTg) channelText = "📲 WhatsApp Groups";
+                if (pubTg && !pubWa) channelText = "✈️ Telegram Groups";
+
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `🎉 *AD PUBLISHED SUCCESSFULLY!*
 
 Your ${draft.type!.toUpperCase()} ad is now LIVE!
+• *Amount:* ${orderAmount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
 • *Rate:* ₹${draft.rate} / USDT
-• *Limits:* ₹${draft.min_amount} – ₹${draft.max_amount}
-• *Payment:* ${draft.payment_methods!.join(", ")}
+• *Published To:* ${channelText}
 
 Traders can now find and trade with you! 🚀`,
-                        [
-                            { id: "/my_ads",  label: "📋 My Ads" },
-                            { id: "/ads",     label: "📊 Browse Ads" },
-                        ]
-                    );
+                    [
+                        { id: "/my_ads",  label: "📋 My Ads" },
+                        { id: "/ads",     label: "📊 Browse Ads" },
+                    ]
+                );
 
-                    // Broadcast to WhatsApp groups
-                    await broadcastNewAdToGroups({ ...order, users: { username: user.username } });
+                // Broadcast to selected channels
+                const fullOrder = { ...order, users: user };
 
-                } catch (err) {
-                    await reply(sock, jid, "❌ Failed to create ad. Please try again.", msg);
+                if (pubWa) {
+                    await broadcastNewAdToGroups(fullOrder);
                 }
+                if (pubTg) {
+                    try {
+                        const { broadcastAd } = await import("../../bot");
+                        await broadcastAd(fullOrder, user);
+                    } catch (e: any) {
+                        console.error("[WA-AdPost] Telegram broadcast error:", e.message);
+                    }
+                }
+
+            } catch (err: any) {
+                await reply(sock, jid, `❌ Failed to create ad: ${err?.message || err}`, msg);
             }
             return;
         }
