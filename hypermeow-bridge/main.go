@@ -417,6 +417,7 @@ func eventHandler(evt interface{}) {
 		if v.Info.IsFromMe {
 			return
 		}
+
 		text := v.Message.GetConversation()
 		if text == "" {
 			text = v.Message.GetExtendedTextMessage().GetText()
@@ -427,7 +428,28 @@ func eventHandler(evt interface{}) {
 		if text == "" {
 			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowID()
 		}
+		// Handle interactive button tap (NativeFlowMessage response)
 		if text == "" {
+			nfr := v.Message.GetInteractiveResponseMessage().GetNativeFlowResponseMessage()
+			if nfr != nil {
+				paramsJSON := nfr.GetParamsJSON()
+				// Try to extract "id" field from params JSON
+				var params map[string]interface{}
+				if err := json.Unmarshal([]byte(paramsJSON), &params); err == nil {
+					if id, ok := params["id"].(string); ok && id != "" {
+						text = id
+					}
+				}
+				if text == "" {
+					text = paramsJSON
+				}
+			}
+		}
+
+		fmt.Printf("[Hypermeow Message] from=%s jid=%s text=%q\n", v.Info.Sender.String(), v.Info.Chat.String(), text)
+
+		if text == "" {
+			fmt.Printf("[Hypermeow Message] IGNORED — empty text (msgType=%T)\n", v.Message)
 			return
 		}
 
@@ -438,11 +460,14 @@ func eventHandler(evt interface{}) {
 			PushName: v.Info.PushName,
 		}
 		body, _ := json.Marshal(payload)
+		fmt.Printf("[Hypermeow Webhook] POST %s payload=%s\n", webhookURL, string(body))
 		resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			fmt.Printf("[Hypermeow Webhook Error] %v\n", err)
 			return
 		}
+		fmt.Printf("[Hypermeow Webhook] Response status: %d\n", resp.StatusCode)
 		resp.Body.Close()
 	}
 }
+
