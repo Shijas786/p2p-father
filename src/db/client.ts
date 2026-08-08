@@ -922,7 +922,7 @@ class Database {
             preferred_channel: "whatsapp",
             wallet_index:      nextIndex,
             wallet_address:    null,
-            wallet_type:       null,
+            wallet_type:       "bot",
         };
 
         let { data: newUser, error } = await db
