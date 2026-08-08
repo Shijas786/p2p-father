@@ -7,6 +7,7 @@ import { db } from "../db/client";
 import { handleWalletCommand } from "./handlers/wallet";
 import { handleAdCommand } from "./handlers/ads";
 import { handleTradeCommand } from "./handlers/trade";
+import { handleProfileCommand } from "./handlers/profile";
 import { handleGroupMention } from "./handlers/group";
 import { MAIN_MENU } from "./formatters";
 import { ai } from "../services/ai";
@@ -612,6 +613,17 @@ Or check your balance first with /balance 💰`,
         return;
     }
 
+    if (
+        text.startsWith("/profile") ||
+        text === "profile" ||
+        text === "set_upi" ||
+        text === "set_bank" ||
+        text === "set_erupee"
+    ) {
+        await handleProfileCommand(sock, msg, jid, user, text);
+        return;
+    }
+
     // Unknown — check if user has pending state and re-route
     const state = await (db as any).getWhatsappState(user.id);
     if (state) {
@@ -625,6 +637,14 @@ Or check your balance first with /balance 💰`,
         }
         if (state.key === "AWAITING_WITHDRAW_PIN") {
             await handleWalletCommand(sock, msg, jid, senderPhone, user, text);
+            return;
+        }
+        if (
+            state.key === "AWAITING_UPI_INPUT" ||
+            state.key === "AWAITING_BANK_INPUT" ||
+            state.key === "AWAITING_ERUPEE_INPUT"
+        ) {
+            await handleProfileCommand(sock, msg, jid, user, text);
             return;
         }
     }

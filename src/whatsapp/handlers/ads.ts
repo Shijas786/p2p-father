@@ -11,6 +11,7 @@ import { env } from "../../config/env";
 import { reply, replyWithButtons, replyWithList } from "../router";
 import { fmtOrderList, fmtMyAds } from "../formatters";
 import { broadcastNewAdToGroups } from "./group";
+import { hasPaymentMethods } from "./profile";
 
 /** Multi-step Post Ad flow state machine */
 type AdStep = "TYPE" | "TOKEN" | "RATE" | "LIMITS" | "PAYMENT" | "CONFIRM";
