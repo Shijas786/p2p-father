@@ -137,14 +137,26 @@ async function main() {
                 return res.status(403).json({ error: "Unauthorized access" });
             }
 
+            const { hypermeowClient } = await import("./whatsapp/hypermeowClient");
+            if (hypermeowClient.isConfigured()) {
+                const health = await hypermeowClient.checkHealth();
+                res.json({
+                    connected: health.connected,
+                    qr: null,
+                    provider: "hypermeow",
+                });
+                return;
+            }
+
             if (evolutionClient.isConfigured()) {
-                const conn = await evolutionClient.fetchConnectionState();
-                const evoQr = conn.connected ? null : await evolutionClient.fetchQrCode();
-                return res.json({
-                    connected: conn.connected,
+                const evoState = await evolutionClient.fetchConnectionState();
+                const evoQr = await evolutionClient.fetchQrCode();
+                res.json({
+                    connected: evoState.connected,
                     qr: evoQr,
                     provider: "evolution",
                 });
+                return;
             }
 
             const { getLatestQr, isWaConnected } = await import("./whatsapp/client");
