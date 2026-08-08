@@ -168,7 +168,7 @@ export async function handleProfileCommand(
     }
 }
 
-/** Render user profile with payment methods, trade history, and Telegram link status */
+/** Render user profile with payment methods, trade history, and Telegram link status using 2 split button cards */
 async function showProfileCard(
     sock: WASocket,
     jid: string,
@@ -186,6 +186,7 @@ async function showProfileCard(
         ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
         : "❌ Not linked (Tap /link to connect)";
 
+    // Card 1: Profile & Payment Details + 3 Native Payment Buttons
     const profileText = `👤 *YOUR P2PFATHER PROFILE*
 
 • *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}
@@ -197,38 +198,33 @@ async function showProfileCard(
 • *Trust Score:* ⭐ ${user.trust_score ?? 100}%
 • *Total Volume:* $${((user as any).total_volume ?? 0).toFixed(2)} USDT
 
-💳 *PAYMENT DETAILS*
+💳 *CURRENT PAYMENT DETAILS*
 📱 *UPI ID:* ${upiDisplay}
 🏦 *Bank Account:* ${bankDisplay}
 🏛️ *Bank IFSC:* ${ifscDisplay}
 📲 *Digital e-Rupee:* ${eRupeeDisplay}
 
-_Select an option below to manage payment details, view trades, or link Telegram:_`;
+_Tap below to set or update payment details:_`;
 
-    const sections = [
-        {
-            title: "💳 PAYMENT DETAILS",
-            rows: [
-                { id: "set_upi",    title: "📱 Set / Edit UPI ID",           description: user.upi_id ? `Current: ${user.upi_id}` : "Add your UPI VPA" },
-                { id: "set_bank",   title: "🏦 Set / Edit Bank Details",     description: user.bank_account_number ? `Account: ${user.bank_account_number}` : "Add Account & IFSC" },
-                { id: "set_erupee", title: "📲 Set / Edit Digital e-Rupee", description: user.digital_rupee_id ? `VPA: ${user.digital_rupee_id}` : "Add e-Rupee VPA" },
-            ],
-        },
-        {
-            title: "📜 HISTORY & ACCOUNT SYNC",
-            rows: [
-                { id: "/trades",  title: "📜 My Trade History",     description: "View active and completed trades" },
-                { id: "/link",    title: "✈️ Link Telegram Account", description: user.telegram_id ? "Already linked to Telegram" : "Sync Telegram & MiniApp" },
-                { id: "/deposit", title: "📥 Deposit Address & QR",  description: "Get deposit QR code & EVM address" },
-            ],
-        },
-    ];
+    await replyWithButtons(sock, jid, profileText, [
+        { id: "set_upi",    label: "📱 Set UPI ID" },
+        { id: "set_bank",   label: "🏦 Set Bank Details" },
+        { id: "set_erupee", label: "📲 Set e-Rupee" },
+    ]);
 
-    await replyWithList(
-        sock,
-        jid,
-        profileText,
-        "⚙️ Manage Profile & Payments",
-        sections
-    );
+    // Small delay between cards for clean chat flow
+    await new Promise((r) => setTimeout(r, 600));
+
+    // Card 2: Account Actions & Sync + 3 Native Action Buttons
+    const actionsText = `⚡ *QUICK ACTIONS & ACCOUNT SYNC*
+
+• *Trade History:* View active & completed P2P trades
+• *Telegram Sync:* Connect Telegram & MiniApp account
+• *Deposit Wallet:* View deposit address & QR code`;
+
+    await replyWithButtons(sock, jid, actionsText, [
+        { id: "/trades",  label: "📜 Trade History" },
+        { id: "/link",    label: "✈️ Link Telegram" },
+        { id: "/deposit", label: "📥 Deposit QR" },
+    ]);
 }
