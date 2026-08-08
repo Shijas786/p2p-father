@@ -551,16 +551,27 @@ Select an option below to start trading 👇`,
             if (counterpartyId) {
                 const counterparty = await db.getUserById(counterpartyId);
                 if (counterparty) {
+                    const trade = await db.getTradeById(tradeId);
                     const shortId = tradeId.slice(0, 5).toUpperCase();
+
+                    const isCounterpartySeller = trade?.seller_id === counterparty.id;
+
+                    const alertButtons: { id: string; label: string }[] = [
+                        { id: `/chat_${tradeId}`, label: "💬 Reply in Chat" },
+                    ];
+
+                    if (isCounterpartySeller && (trade?.status === "in_escrow" || trade?.status === "fiat_sent")) {
+                        alertButtons.push({ id: `/release_${tradeId}`, label: "🔓 Confirm Release" });
+                    }
+
+                    alertButtons.push({ id: "/trades", label: "📜 Active Trades" });
+
                     const { sendUserAlert } = await import("../services/notifier");
                     await sendUserAlert(
                         counterparty,
                         `💬 *TRADE CHAT (#PF-${shortId})*\n\n*${formatTraderContact(user)}:* ${text}`,
                         undefined,
-                        [
-                            { id: `/chat_${tradeId}`, label: "💬 Reply in Chat" },
-                            { id: "/trades",          label: "📜 Active Trades" },
-                        ]
+                        alertButtons.slice(0, 3)
                     );
                     await reply(sock, jid, "✅ Message delivered to counterparty!", msg);
                     return;
