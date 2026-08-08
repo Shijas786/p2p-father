@@ -469,7 +469,7 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
 
     // ── Wallet Setup: new WA user chooses how to get a wallet ─────────────────
     if (text === "wa_setup_link_telegram") {
-        const botUsername = process.env.TELEGRAM_BOT_USERNAME || "P2PFatherBot";
+        const botUsername = process.env.TELEGRAM_BOT_USERNAME || "P2p_fatherbot";
         const botLink = `https://t.me/${botUsername}?start=linkwa`;
         await reply(
             sock,
