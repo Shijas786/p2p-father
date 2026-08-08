@@ -327,16 +327,23 @@ export async function routeMessage(
     const senderJid = (isGroup ? msg.key.participant : jid) ?? "";
     const senderPhone = senderJid.split("@")[0];
 
-    // ── Group: only respond if @mentioned ────────────────────────────────────
+    // ── Group: respond if @mentioned or keyword triggered ────────────────────
     if (isGroup) {
         const botJid = getBotJid(sock);
         const mentionedJids: string[] =
             (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid as string[]) ?? [];
+        const lowerText = text.toLowerCase();
         const isMentioned =
-            mentionedJids.includes(botJid) ||
-            text.includes("@bot") ||
-            text.startsWith("!p2p") ||
-            text.startsWith("!ads");
+            mentionedJids.length > 0 ||
+            lowerText.includes("@bot") ||
+            lowerText.includes("p2p") ||
+            lowerText.includes("father") ||
+            lowerText.includes("ads") ||
+            lowerText.includes("rate") ||
+            lowerText.includes("buy") ||
+            lowerText.includes("sell") ||
+            lowerText.startsWith("!p2p") ||
+            lowerText.startsWith("!ads");
 
         if (!isMentioned) return;
 
