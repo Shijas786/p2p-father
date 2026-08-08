@@ -14,6 +14,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
+	waBinary "go.mau.fi/whatsmeow/binary"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	waTypes "go.mau.fi/whatsmeow/types"
@@ -322,6 +323,7 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Build message proto
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
 			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
@@ -336,8 +338,42 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	_, err = client.SendMessage(context.Background(), jid, msg)
+	// Build the biz relay node required for WhatsApp to render native_flow buttons.
+	// Without this, WhatsApp ignores the interactive message and times out.
+	bizNode := waBinary.Node{
+		Tag: "biz",
+		Content: []waBinary.Node{
+			{
+				Tag: "interactive",
+				Attrs: waBinary.Attrs{
+					"type": "native_flow",
+					"v":    "1",
+				},
+				Content: []waBinary.Node{
+					{
+						Tag: "native_flow",
+						Attrs: waBinary.Attrs{
+							"v":    "9",
+							"name": "mixed",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// For DMs also add a bot node; groups only need the biz node.
+	isGroup := jid.Server == "g.us"
+	additionalNodes := []waBinary.Node{bizNode}
+	if !isGroup {
+		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
+	}
+
+	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
+		AdditionalNodes: &additionalNodes,
+	})
 	if err != nil {
+		fmt.Printf("[SendButtons] Interactive failed (%v), falling back to plain text\n", err)
 		// Fallback: send as numbered plain text
 		fallbackText := req.Text + "\n\n━━━━━━━━━━━━━━━━━━━━"
 		nums := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
