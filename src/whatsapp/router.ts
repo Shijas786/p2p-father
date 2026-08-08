@@ -53,8 +53,14 @@ export async function replyWithButtons(
     buttons: { id: string; label: string }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    // ── WhatsApp hard limit: quick_reply supports max 3 buttons ──────────────
+    const nativeButtons = buttons.slice(0, 3);
+    if (buttons.length > 3) {
+        console.warn(`[WA] replyWithButtons: ${buttons.length} buttons requested — truncating to 3 for native quick_reply. Use replyWithList() for >3 options.`);
+    }
+
     // ── Try native interactive buttons (max 3, WhatsApp limitation) ──────────
-    if (buttons && buttons.length > 0 && buttons.length <= 3) {
+    if (nativeButtons.length > 0) {
         try {
             await sock.sendMessage(jid, {
                 interactiveMessage: {
@@ -62,7 +68,8 @@ export async function replyWithButtons(
                     footer: { text: footer },
                     header: { hasMediaAttachment: false },
                     nativeFlowMessage: {
-                        buttons: buttons.map((b) => ({
+                        messageVersion: 1,
+                        buttons: nativeButtons.map((b) => ({
                             name: "quick_reply",
                             buttonParamsJson: JSON.stringify({
                                 display_text: b.label,
@@ -80,7 +87,7 @@ export async function replyWithButtons(
 
     // ── Fallback: numbered text options (always works) ────────────────────────
     let formattedText = text;
-    if (buttons && buttons.length > 0) {
+    if (buttons.length > 0) {
         const divider = "━━━━━━━━━━━━━━━━━━━━";
         const optionLines = buttons.map((b, i) => {
             const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"][i] ?? `${i + 1}.`;
@@ -135,19 +142,53 @@ export async function replyWithList(
     }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    // ── Try native single_select list picker (unlimited rows, DM only) ────────
     try {
-        const divider = "━━━━━━━━━━━━━━━━━━━━";
-        let formattedText = `${text}\n\n${divider}\n📋 *${buttonTitle}*\n`;
-        let rowCounter = 1;
-        sections.forEach((s) => {
-            formattedText += `\n📌 *${s.title}*\n`;
-            s.rows.forEach((r) => {
-                const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][rowCounter - 1] ?? `${rowCounter}.`;
-                formattedText += `${num} *${r.title}*${r.description ? ` — _${r.description}_` : ""}\n`;
-                rowCounter++;
-            });
+        await sock.sendMessage(jid, {
+            interactiveMessage: {
+                body: { text },
+                footer: { text: footer },
+                header: { hasMediaAttachment: false },
+                nativeFlowMessage: {
+                    messageVersion: 1,
+                    buttons: [
+                        {
+                            name: "single_select",
+                            buttonParamsJson: JSON.stringify({
+                                title: buttonTitle,
+                                sections: sections.map((s) => ({
+                                    title: s.title,
+                                    rows: s.rows.map((r) => ({
+                                        id: r.id,
+                                        title: r.title,
+                                        description: r.description ?? "",
+                                    })),
+                                })),
+                            }),
+                        },
+                    ],
+                },
+            },
+        } as any);
+        return;
+    } catch (err: any) {
+        console.warn("[WA] Native list failed, falling back to text:", err?.message);
+    }
+
+    // ── Fallback: formatted text list (always works) ──────────────────────────
+    const divider = "━━━━━━━━━━━━━━━━━━━━";
+    let formattedText = `${text}\n\n${divider}\n📋 *${buttonTitle}*\n`;
+    let rowCounter = 1;
+    sections.forEach((s) => {
+        formattedText += `\n📌 *${s.title}*\n`;
+        s.rows.forEach((r) => {
+            const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][rowCounter - 1] ?? `${rowCounter}.`;
+            formattedText += `${num} *${r.title}*${r.description ? ` — _${r.description}_` : ""}\n`;
+            rowCounter++;
         });
-        formattedText += `\n${divider}\n_${footer}_`;
+    });
+    formattedText += `\n${divider}\n_${footer}_`;
+    try {
         await sock.sendMessage(jid, { text: formattedText.trim() });
     } catch (err: any) {
         console.error("[WA] List sendMessage failed:", err?.message);

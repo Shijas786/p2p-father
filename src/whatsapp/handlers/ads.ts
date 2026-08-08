@@ -6,7 +6,7 @@
 import type { WASocket, proto } from "@whiskeysockets/baileys";
 import type { User } from "../../types";
 import { db } from "../../db/client";
-import { reply, replyWithButtons } from "../router";
+import { reply, replyWithButtons, replyWithList } from "../router";
 import { fmtOrderList, fmtMyAds } from "../formatters";
 import { broadcastNewAdToGroups } from "./group";
 
@@ -31,22 +31,76 @@ export async function handleAdCommand(
     user: User,
     text: string
 ): Promise<void> {
-    // ─── /ads — Browse live ads ───────────────────────────────────────────────
+    // ─── /ads — Browse live ads ─────────────────────────────────────────────────
     if (text === "/ads" || text.startsWith("/ads ")) {
         const typeFilter = text.includes("buy") ? "buy" : text.includes("sell") ? "sell" : undefined;
-
-        const orders = await db.getActiveOrders(typeFilter, "USDT", 5);
+        const orders = await db.getActiveOrders(typeFilter, "USDT", 8);
         const label = typeFilter ?? "all";
 
-        await replyWithButtons(
+        if (orders.length === 0) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `📊 *No active ${typeFilter?.toUpperCase() ?? ""} ads right now.*\n\nBe the first to post an ad!`,
+                [
+                    { id: "/ads sell", label: "🟢 SELL Ads" },
+                    { id: "/ads buy",  label: "🔴 BUY Ads"  },
+                    { id: "/post",     label: "➕ Post My Ad" },
+                ]
+            );
+            return;
+        }
+
+        // Group ads into sections by type for single_select list
+        const sellAds = (orders as any[]).filter((o) => o.type === "sell");
+        const buyAds  = (orders as any[]).filter((o) => o.type === "buy");
+
+        const sections: { title: string; rows: { id: string; title: string; description: string }[] }[] = [];
+
+        if (sellAds.length > 0) {
+            sections.push({
+                title: "🟢 SELL USDT — Buy from these traders",
+                rows: sellAds.map((o) => {
+                    const trader = o.users?.username ? `@${o.users.username}` : (o.users?.first_name ?? "Trader");
+                    const trust  = o.users?.trust_score ?? 0;
+                    const pay    = (o.payment_methods ?? []).join("/");
+                    return {
+                        id:          `trade_ad_${o.id}`,
+                        title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
+                        description: `Limits: ₹${o.min_amount}–${o.max_amount} • ${pay}`,
+                    };
+                }),
+            });
+        }
+
+        if (buyAds.length > 0) {
+            sections.push({
+                title: "🔴 BUY USDT — Sell to these traders",
+                rows: buyAds.map((o) => {
+                    const trader = o.users?.username ? `@${o.users.username}` : (o.users?.first_name ?? "Trader");
+                    const trust  = o.users?.trust_score ?? 0;
+                    const pay    = (o.payment_methods ?? []).join("/");
+                    return {
+                        id:          `trade_ad_${o.id}`,
+                        title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
+                        description: `Limits: ₹${o.min_amount}–${o.max_amount} • ${pay}`,
+                    };
+                }),
+            });
+        }
+
+        const headerText = label === "buy"
+            ? "📊 *LIVE BUY ADS — Sell your USDT*"
+            : label === "sell"
+                ? "📊 *LIVE SELL ADS — Buy USDT*"
+                : "📊 *P2PFATHER LIVE ORDERBOOK*";
+
+        await replyWithList(
             sock,
             jid,
-            fmtOrderList(orders as any, label === "all" ? "sell" : label),
-            [
-                { id: "/ads sell", label: "🟢 SELL Ads" },
-                { id: "/ads buy",  label: "🔴 BUY Ads" },
-                { id: "/post",     label: "➕ Post My Ad" },
-            ]
+            `${headerText}\n\nTap an ad to start an escrow-protected trade 🔒`,
+            "💼 Select an Ad to Trade",
+            sections
         );
         return;
     }
