@@ -2764,11 +2764,15 @@ import path from 'path';
 
 (async () => {
     try {
+        const scratchDir = path.join(__dirname, '../../scratch');
+        if (!fs.existsSync(scratchDir)) {
+            fs.mkdirSync(scratchDir, { recursive: true });
+        }
         const fetchRes = await fetch("https://gamma-api.polymarket.com/events?limit=5&active=true&closed=false");
         const json = await fetchRes.json();
-        fs.writeFileSync(path.join(__dirname, '../../scratch/gamma.json'), JSON.stringify(json, null, 2));
-    } catch (e) {
-        console.error("Failed to write gamma.json", e);
+        fs.writeFileSync(path.join(scratchDir, 'gamma.json'), JSON.stringify(json, null, 2));
+    } catch (_) {
+        // Non-fatal scratch file write fallback
     }
 })();
 
