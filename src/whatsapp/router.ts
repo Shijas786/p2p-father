@@ -556,9 +556,13 @@ Select an option below to start trading 👇`,
         text.startsWith("/deposit") ||
         text.startsWith("/send") ||
         text.startsWith("/withdraw") ||
+        text.startsWith("/vault_deposit") ||
+        text.startsWith("vault_deposit") ||
+        text.startsWith("confirm_vault_dep_") ||
+        text.startsWith("confirm_wd_") ||
         /\b(balance|wallet|funds|my usdt|check balance|how much usdt|kithaanu|enthaanu balance|balance aano|bakki undu)\b/.test(lowerText)
     ) {
-        await handleWalletCommand(sock, msg, jid, senderPhone, user, text.includes("/deposit") ? "/deposit" : text.includes("/send") ? "/send" : text.includes("/withdraw") ? "/withdraw" : "/balance");
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, text);
         return;
     }
 

@@ -79,24 +79,92 @@ export async function handleWalletCommand(
         return;
     }
 
+    // ─── /vault_deposit or [📥 Move to Vault] ─────────────────────────────────
+    if (text.startsWith("/vault_deposit") || text === "vault_deposit") {
+        const parts = text.split(/\s+/);
+        const amount = parseFloat(parts[1] || "50");
+        const chain = (parts[2] || "bsc").toLowerCase();
+
+        if (isNaN(amount) || amount <= 0) {
+            await reply(sock, jid, "❌ Reply format: `/vault_deposit <amount> <chain>` (e.g. `/vault_deposit 100 bsc`)", msg);
+            return;
+        }
+
+        await replyWithButtons(
+            sock,
+            jid,
+            `🔒 *CONFIRM VAULT TOP-UP*
+
+• *Amount:* ${amount} USDT (${chain.toUpperCase()})
+• *Target:* P2PFather Smart Contract Escrow Vault
+
+Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
+            [
+                { id: `confirm_vault_dep_${amount}_${chain}`, label: "✅ Lock to Vault" },
+                { id: "/balance",                           label: "❌ Cancel" },
+            ]
+        );
+        return;
+    }
+
+    // ─── confirm_vault_dep_<amount>_<chain> ──────────────────────────────────
+    if (text.startsWith("confirm_vault_dep_")) {
+        const parts = text.replace("confirm_vault_dep_", "").split("_");
+        const amountStr = parts[0] || "50";
+        const chainKey = (parts[1] || "bsc").toLowerCase();
+
+        try {
+            await reply(sock, jid, "⏳ Locking funds into Smart Contract Vault... Please wait.", msg);
+
+            const { wallet } = await import("../../services/wallet");
+            const { env } = await import("../../config/env");
+
+            let tokenAddress = env.USDT_ADDRESS;
+            if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+
+            const txHash = await wallet.depositToVault(user.wallet_index, amountStr, tokenAddress, chainKey as any);
+
+            const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `🎉 *VAULT TOP-UP SUCCESSFUL!*
+
+• *Amount Locked:* ${amountStr} USDT
+• *Chain:* ${chainKey.toUpperCase()}
+• *Tx Hash:* \`${txHash}\`
+🔗 *Explorer:* ${explorerBase}${txHash}
+
+Your vault is ready for P2P trading! 🚀`,
+                [
+                    { id: "/post",    label: "➕ Post SELL Ad" },
+                    { id: "/balance", label: "💰 View Vault Balance" },
+                ]
+            );
+        } catch (err: any) {
+            await reply(sock, jid, `❌ Vault Top-Up failed: ${err?.message || err}`, msg);
+        }
+        return;
+    }
+
     // ─── /send or /withdraw ───────────────────────────────────────────────────
     if (text.startsWith("/send") || text.startsWith("/withdraw")) {
-        // Parse: /send 0x1234...abcd 50 USDT bsc
         const parts = text.split(/\s+/);
 
         if (parts.length < 4) {
             await replyWithButtons(
                 sock,
                 jid,
-                `📤 *SEND / WITHDRAW CRYPTO*
+                `📤 *WITHDRAW / SEND CRYPTO*
 
-To send, reply in this format:
-\`/send <address> <amount> <token> <chain>\`
+To withdraw, reply in this format:
+\`/withdraw <address> <amount> USDT <chain>\`
 
 *Example:*
-\`/send 0x742d35Cc6634... 50 USDT bsc\`
+\`/withdraw 0x742d35Cc6634... 50 USDT bsc\`
 
-Supported tokens: USDT
 Supported chains: BSC, Polygon, Base`,
                 [{ id: "/balance", label: "💰 Check Balance" }]
             );
@@ -113,84 +181,71 @@ Supported chains: BSC, Polygon, Base`,
             return;
         }
 
-        // Confirm step (PIN-like — ask for 4-digit PIN)
-        await reply(
+        // Direct 1-tap confirmation step
+        await replyWithButtons(
             sock,
             jid,
             `📤 *CONFIRM WITHDRAWAL*
 
-• *To:* \`${toAddress.slice(0, 10)}...${toAddress.slice(-4)}\`
+• *To:* \`${toAddress}\`
 • *Amount:* ${amount} ${token} (${chain.toUpperCase()})
 • *Fee:* Covered by P2PFather Relayer
 
-⚠️ Please enter your *4-digit security PIN* to confirm:
-_(Set your PIN at /profile if not set)_`,
-            msg
+Proceed to execute on-chain transfer?`,
+            [
+                { id: `confirm_wd_${toAddress}_${amount}_${chain}`, label: "✅ Confirm Withdrawal" },
+                { id: "/balance",                                    label: "❌ Cancel" },
+            ]
         );
-
-        await (db as any).setWhatsappState(user.id, "AWAITING_WITHDRAW_PIN", {
-            to_address: toAddress,
-            amount,
-            token,
-            chain,
-        });
         return;
     }
 
-    // ─── Handle state: AWAITING_WITHDRAW_PIN ──────────────────────────────────
-    const state = await (db as any).getWhatsappState(user.id);
-    if (state?.key === "AWAITING_WITHDRAW_PIN") {
-        const pin = text.trim();
+    // ─── confirm_wd_<address>_<amount>_<chain> ────────────────────────────────
+    if (text.startsWith("confirm_wd_")) {
+        const raw = text.replace("confirm_wd_", "");
+        const parts = raw.split("_");
 
-        // Require PIN to be set
-        if (!user.security_pin) {
-            await (db as any).clearWhatsappState(user.id);
-            await reply(sock, jid, "❌ No security PIN set on your account. Set one in the MiniApp Profile before sending crypto.", msg);
-            return;
-        }
+        const toAddress = parts[0];
+        const amountStr = parts[1] || "10";
+        const chainKey  = (parts[2] || "bsc").toLowerCase();
 
-        if (user.security_pin !== pin) {
-            await reply(sock, jid, "❌ Incorrect 4-digit security PIN. Please try again:", msg);
-            return;
-        }
-
-        const data = state.data;
         try {
             await reply(sock, jid, "⏳ Executing withdrawal... Please wait.", msg);
 
-            // Resolve token address by chain
             const { wallet } = await import("../../services/wallet");
             const { env } = await import("../../config/env");
 
-            const chainKey = (data.chain ?? "bsc").toLowerCase();
-            let tokenAddress: string;
-            if (chainKey === "bsc") {
-                tokenAddress = "0x55d398326f99059fF775485246999027B3197955"; // BSC USDT
-            } else if (chainKey === "polygon") {
-                tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // Polygon USDT
-            } else {
-                tokenAddress = env.USDT_ADDRESS; // Base USDT
-            }
+            let tokenAddress = env.USDT_ADDRESS;
+            if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
 
             const txHash = await wallet.sendToken(
                 user.wallet_index,
-                data.to_address,
-                data.amount,
+                toAddress,
+                amountStr,
                 tokenAddress,
                 chainKey as any
             );
 
-            await (db as any).clearWhatsappState(user.id);
+            const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
 
-            await reply(
+            await replyWithButtons(
                 sock,
                 jid,
-                `✅ *WITHDRAWAL SUCCESSFUL!* 🎉\n\n• *To:* \`${data.to_address}\`\n• *Amount:* ${data.amount} ${data.token}\n• *Chain:* ${chainKey.toUpperCase()}\n• *Tx Hash:* \`${txHash}\``,
-                msg
+                `🎉 *WITHDRAWAL SUCCESSFUL!*
+
+• *To:* \`${toAddress}\`
+• *Amount:* ${amountStr} USDT
+• *Chain:* ${chainKey.toUpperCase()}
+• *Tx Hash:* \`${txHash}\`
+🔗 *Explorer:* ${explorerBase}${txHash}`,
+                [
+                    { id: "/balance", label: "💰 View Balance" },
+                    { id: "/profile", label: "👤 View Profile" },
+                ]
             );
         } catch (err: any) {
-            await (db as any).clearWhatsappState(user.id);
-            await reply(sock, jid, `❌ Withdrawal failed: ${err.message || "Insufficient balance or gas"}`, msg);
+            await reply(sock, jid, `❌ Withdrawal failed: ${err?.message || "Insufficient balance"}`, msg);
         }
         return;
     }
