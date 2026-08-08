@@ -729,10 +729,12 @@ Or check your balance first with /balance 💰`,
     // ── AI-powered natural language guide (private DM only) ───────────────────
     if (env.OPENAI_API_KEY) {
         try {
+            console.log(`[WA-AI] Parsing intent for text: "${lowerText}" (user=${senderPhone})`);
             const intent = await ai.parseIntent(lowerText);
+            console.log(`[WA-AI] Intent: ${intent.intent} | Params: ${JSON.stringify(intent.params ?? {})}`);
 
             // Route known intents to handlers
-            if (intent.intent === "CHECK_BALANCE") {
+            if (intent.intent === "CHECK_BALANCE" || intent.intent === "WALLET_BALANCE") {
                 await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
                 return;
             }
@@ -755,6 +757,35 @@ Check balance first: /balance 💰`,
             }
             if (intent.intent === "VIEW_ORDERS") {
                 await handleAdCommand(sock, msg, jid, user, "/ads");
+                return;
+            }
+            if (intent.intent === "VIEW_MY_ADS") {
+                await handleAdCommand(sock, msg, jid, user, "/my_ads");
+                return;
+            }
+            if (intent.intent === "VIEW_TRADES") {
+                await handleTradeCommand(sock, msg, jid, user, "/trades");
+                return;
+            }
+            // 🛡️ Ad creation: show confirmation card before executing
+            if (intent.intent === "CREATE_SELL_ORDER" || intent.intent === "CREATE_BUY_ORDER") {
+                const isSell = intent.intent === "CREATE_SELL_ORDER";
+                const typeLabel = isSell ? "🟢 SELL USDT" : "🔴 BUY USDT";
+                const amount = intent.params?.amount || 50;
+                const chain = (intent.params?.chain || "bsc").toUpperCase();
+                const rate = intent.params?.rate || 90;
+
+                console.log(`[WA-AI] 💬 Sending ad confirmation preview: ${intent.intent} amount=${amount} chain=${chain} rate=${rate}`);
+
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `🎙️ *VOICE COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* ${chain}\n• *Rate:* ₹${rate} / USDT\n\nTap ✅ to publish this ad to the P2P marketplace:`,
+                    [
+                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}`, label: "✅ Confirm & Publish" },
+                        { id: "/start", label: "❌ Cancel" },
+                    ]
+                );
                 return;
             }
             if (intent.intent === "HELP" || intent.intent === "UNKNOWN") {
@@ -780,7 +811,8 @@ Check balance first: /balance 💰`,
                 await reply(sock, jid, `🤖 ${intent.response}\n\nType /start to see all commands.`, msg);
                 return;
             }
-        } catch (_) {
+        } catch (err: any) {
+            console.error(`[WA-AI] AI intent parsing failed for "${lowerText}":`, err?.message || err);
             // AI failed — fallthrough to default
         }
     }
