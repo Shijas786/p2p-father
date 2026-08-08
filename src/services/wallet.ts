@@ -20,6 +20,13 @@ const ESCROW_ABI = [
 
 type Chain = 'base' | 'bsc' | 'polygon' | 'mainnet' | 'arbitrum' | 'optimism' | 'avalanche' | 'linea' | 'scroll';
 
+function withTimeout<T>(promise: Promise<T>, ms = 3000, fallback: T): Promise<T> {
+    return Promise.race([
+        promise,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+    ]);
+}
+
 class WalletService {
     private providers: Record<string, ethers.Provider | null> = {
         base: null, bsc: null, polygon: null, mainnet: null, 
@@ -65,13 +72,22 @@ class WalletService {
     // ═══════════════════════════════════════
 
     async getBalances(address: string) {
+        if (!address) {
+            return {
+                eth: "0.0", usdc: "0.0", usdt: "0.0", bnb: "0.0",
+                bsc_usdc: "0.0", bsc_usdt: "0.0", pol: "0.0", pusd: "0.0",
+                vault_usdc: "0.0", vault_usdt: "0.0", vault_bnb: "0.0",
+                vault_bsc_usdc: "0.0", vault_bsc_usdt: "0.0", address: null,
+            };
+        }
+
         const baseProvider = this.getProvider('base');
         const bscProvider = this.getProvider('bsc');
         const polProvider = this.getProvider('polygon');
 
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
         const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
-        const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+        const pusdAddress = (env as any).PUSD_ADDRESS || "0x0000000000000000000000000000000000000000";
 
         // 🚀 Parallel RPC execution using Promise.all for instant response
         const [
@@ -80,19 +96,19 @@ class WalletService {
             polBal, pusdBal,
             vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt
         ] = await Promise.all([
-            baseProvider.getBalance(address).catch(() => 0n),
-            this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6).catch(() => "0.0"),
-            this.getTokenBalance(address, env.USDT_ADDRESS, 'base', 6).catch(() => "0.0"),
-            bscProvider.getBalance(address).catch(() => 0n),
-            this.getTokenBalance(address, bscUsdc, 'bsc', 18).catch(() => "0.0"),
-            this.getTokenBalance(address, bscUsdt, 'bsc', 18).catch(() => "0.0"),
-            polProvider.getBalance(address).catch(() => 0n),
-            this.getTokenBalance(address, pusdAddress, 'polygon', 18).catch(() => "0.0"),
-            this.getVaultBalance(address, env.USDC_ADDRESS, 'base').catch(() => "0.0"),
-            this.getVaultBalance(address, env.USDT_ADDRESS, 'base').catch(() => "0.0"),
-            this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc').catch(() => "0.0"),
-            this.getVaultBalance(address, bscUsdc, 'bsc').catch(() => "0.0"),
-            this.getVaultBalance(address, bscUsdt, 'bsc').catch(() => "0.0")
+            withTimeout(baseProvider.getBalance(address), 3000, 0n),
+            withTimeout(this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6), 3000, "0.0"),
+            withTimeout(this.getTokenBalance(address, env.USDT_ADDRESS, 'base', 6), 3000, "0.0"),
+            withTimeout(bscProvider.getBalance(address), 3000, 0n),
+            withTimeout(this.getTokenBalance(address, bscUsdc, 'bsc', 18), 3000, "0.0"),
+            withTimeout(this.getTokenBalance(address, bscUsdt, 'bsc', 18), 3000, "0.0"),
+            withTimeout(polProvider.getBalance(address), 3000, 0n),
+            withTimeout(this.getTokenBalance(address, pusdAddress, 'polygon', 18), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, env.USDC_ADDRESS, 'base'), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, env.USDT_ADDRESS, 'base'), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc'), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, bscUsdc, 'bsc'), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, bscUsdt, 'bsc'), 3000, "0.0")
         ]);
 
         return {

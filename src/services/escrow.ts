@@ -110,20 +110,25 @@ class EscrowService {
     async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         try {
             const contract = this.getEscrowContract(chain);
-            const balance: bigint = await contract.balances(userAddress, tokenAddress);
+
+            // 3.5s timeout wrapper to prevent slow RPC providers from stalling ad creation
+            const balancePromise = contract.balances(userAddress, tokenAddress) as Promise<bigint>;
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("RPC read timeout")), 3500)
+            );
+
+            const balance: bigint = await Promise.race([balancePromise, timeoutPromise]);
 
             let decimals = 18;
             if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
                 decimals = 6;
             } else if (chain === 'bsc' && tokenAddress !== "0x0000000000000000000000000000000000000000") {
-                // BSC tokens (USDC/USDT) are 18 decimals, BNB is also 18.
-                // If there's ever a 6 decimal token on BSC, add it here.
                 decimals = 18;
             }
 
             return ethers.formatUnits(balance, decimals);
-        } catch (err) {
-            console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err);
+        } catch (err: any) {
+            console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err?.message || err);
             return "0";
         }
     }
