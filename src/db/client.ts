@@ -966,16 +966,21 @@ class Database {
     async assignWalletToWaUser(userId: string): Promise<User> {
         const db = this.getClient();
 
-        // Check if user already has a pre-assigned wallet_index
+        // Check if user already has a wallet_address assigned
         const { data: existingUser } = await db
             .from("users")
-            .select("wallet_index")
+            .select("*")
             .eq("id", userId)
             .maybeSingle();
 
+        if (existingUser && existingUser.wallet_address) {
+            console.log(`[DB] User ${userId} already has wallet ${existingUser.wallet_address}, preserving existing wallet.`);
+            return existingUser as User;
+        }
+
         let nextIndex = existingUser?.wallet_index;
 
-        if (!nextIndex) {
+        if (nextIndex === undefined || nextIndex === null) {
             const { data: maxResult } = await db
                 .from("users")
                 .select("wallet_index")
