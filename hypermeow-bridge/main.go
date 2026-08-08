@@ -81,13 +81,14 @@ func main() {
 		webhookURL = "http://localhost:3000/api/whatsapp/webhook"
 	}
 
+	ctx := context.Background()
 	dbLog := waLog.Stdout("Database", "INFO", true)
-	container, err := sqlstore.New("sqlite3", "file:hypermeow.db?_foreign_keys=on", dbLog)
+	container, err := sqlstore.New(ctx, "sqlite3", "file:hypermeow.db?_foreign_keys=on", dbLog)
 	if err != nil {
 		log.Fatalf("Failed to initialize SQLite store: %v", err)
 	}
 
-	deviceStore, err := container.GetFirstDevice()
+	deviceStore, err := container.GetFirstDevice(ctx)
 	if err != nil {
 		log.Fatalf("Failed to get device store: %v", err)
 	}
@@ -97,7 +98,7 @@ func main() {
 	client.AddEventHandler(eventHandler)
 
 	if client.Store.ID == nil {
-		qrChan, _ := client.GetQRChannel(context.Background())
+		qrChan, _ := client.GetQRChannel(ctx)
 		err = client.Connect()
 		if err != nil {
 			log.Fatalf("Failed to connect: %v", err)
@@ -192,7 +193,11 @@ func handleSendText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = client.SendMessage(context.Background(), jid, client.BuildTextMessage(req.Text))
+	msg := &waProto.Message{
+		Conversation: proto.String(req.Text),
+	}
+
+	_, err = client.SendMessage(context.Background(), jid, msg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to send text: %v", err), http.StatusInternalServerError)
 		return
@@ -223,7 +228,7 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 	buttons := make([]*waProto.ButtonsMessage_Button, 0)
 	for _, btn := range req.Buttons {
 		buttons = append(buttons, &waProto.ButtonsMessage_Button{
-			ButtonId: proto.String(btn.ID),
+			ButtonID: proto.String(btn.ID),
 			ButtonText: &waProto.ButtonsMessage_Button_ButtonText{
 				DisplayText: proto.String(btn.Label),
 			},
@@ -273,7 +278,7 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		rows := make([]*waProto.ListMessage_Row, 0)
 		for _, r := range sec.Rows {
 			rows = append(rows, &waProto.ListMessage_Row{
-				RowId:       proto.String(r.ID),
+				RowID:       proto.String(r.ID),
 				Title:       proto.String(r.Title),
 				Description: proto.String(r.Description),
 			})
@@ -314,10 +319,10 @@ func eventHandler(evt interface{}) {
 			text = v.Message.GetExtendedTextMessage().GetText()
 		}
 		if text == "" {
-			text = v.Message.GetButtonsResponseMessage().GetSelectedButtonId()
+			text = v.Message.GetButtonsResponseMessage().GetSelectedButtonID()
 		}
 		if text == "" {
-			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowId()
+			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowID()
 		}
 		if text == "" {
 			return
