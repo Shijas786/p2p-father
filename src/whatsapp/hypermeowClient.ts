@@ -5,7 +5,7 @@
 
 import axios from "axios";
 
-const HYPERMEOW_URL = process.env.HYPERMEOW_URL || "http://localhost:8081";
+const HYPERMEOW_URL = process.env.HYPERMEOW_URL || "http://localhost:8085";
 
 export class HypermeowClient {
     private baseUrl: string;
