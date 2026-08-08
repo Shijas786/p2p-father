@@ -84,7 +84,7 @@ export async function initWhatsApp(): Promise<void> {
         version,
         logger,
         auth: state,
-        getMessage: async () => ({ conversation: "P2PFather" }),
+        getMessage: async () => undefined,
         browser: ["P2PFather Bot", "Chrome", "120.0.0"],
         markOnlineOnConnect: true,
         syncFullHistory: false,
