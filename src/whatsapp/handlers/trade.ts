@@ -47,34 +47,88 @@ export async function handleTradeCommand(
         }
 
         // Determine buyer/seller roles
-        const isBuyer = order.type === "sell"; // If ad is SELL, the initiator is the BUYER
-        const sellerUserId  = isBuyer ? order.user_id : user.id;
-        const buyerUserId   = isBuyer ? user.id : order.user_id;
+        const isBuyer = order.type === "sell";
+        const totalFiat = Math.round((order.amount || 0) * (order.rate || 0));
 
         await replyWithButtons(
             sock,
             jid,
             `💱 *TRADE PREVIEW*
 
-• *Type:* ${isBuyer ? "You BUY USDT" : "You SELL USDT"}
+• *Action:* ${isBuyer ? "You BUY USDT" : "You SELL USDT"}
+• *Amount:* ${order.amount} ${order.token || "USDT"}
 • *Rate:* ₹${order.rate} / USDT
-• *Min:* ₹${order.min_amount} | *Max:* ₹${order.max_amount}
-• *Payment:* ${(order.payment_methods ?? []).join(", ")}
+• *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
+• *Payment Method:* ${(order.payment_methods ?? []).join(", ") || "UPI"}
 
-Enter the fiat amount (₹) you want to trade:
-_(e.g. type \`5000\` for ₹5,000 → ${(5000 / order.rate).toFixed(2)} USDT)_`,
-            [{ id: `cancel_preview_${orderId}`, label: "❌ Cancel" }]
+_Tap Confirm to lock escrow on-chain and proceed:_`,
+            [
+                { id: `confirm_trade_${orderId}`, label: "✅ Confirm Trade" },
+                { id: "/start",                  label: "❌ Cancel" },
+            ]
         );
+        return;
+    }
 
-        // Save pending trade initiation state
-        await (db as any).setWhatsappState(user.id, "AWAITING_TRADE_AMOUNT", {
-            order_id:      orderId,
-            buyer_user_id: buyerUserId,
-            seller_user_id: sellerUserId,
-            is_buyer:      isBuyer,
-            rate:          order.rate,
-            payment_method: (order.payment_methods ?? [])[0] ?? "UPI",
-        });
+    // ─── confirm_trade_<orderId> — User taps Confirm Trade ────────────────────
+    if (text.startsWith("confirm_trade_")) {
+        const orderId = text.replace("confirm_trade_", "").trim();
+        let order: any;
+        try {
+            order = await db.getOrderById(orderId);
+        } catch {
+            await reply(sock, jid, "❌ Ad not found.", msg);
+            return;
+        }
+
+        if (!order || order.status !== "active") {
+            await reply(sock, jid, "❌ This ad is no longer active.", msg);
+            return;
+        }
+
+        const isBuyer = order.type === "sell";
+        const buyerId = isBuyer ? user.id : order.user_id;
+        const sellerId = isBuyer ? order.user_id : user.id;
+
+        try {
+            // Lock trade in DB & Escrow
+            const trade = await db.createTrade({
+                order_id: order.id,
+                buyer_id: buyerId,
+                seller_id: sellerId,
+                amount: order.amount,
+                rate: order.rate,
+                fiat_amount: Math.round(order.amount * order.rate),
+                payment_method: (order.payment_methods ?? [])[0] ?? "UPI",
+                chain: order.chain || "base",
+                status: "pending_payment",
+            } as any);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `🤝 *TRADE MATCHED & ESCROW LOCKED!*
+
+• *Trade ID:* \`${trade.id.slice(0, 8)}\`
+• *Amount:* ${trade.amount} USDT
+• *Pay Fiat:* ₹${trade.fiat_amount} via ${(trade as any).payment_method}
+
+⚠️ *Buyer:* Pay to the seller's payment details, then tap *Payment Sent*.`,
+                [
+                    { id: `/paid_${trade.id}`,    label: "💳 Payment Sent" },
+                    { id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" },
+                ]
+            );
+
+            // Alert Seller
+            const seller = await db.getUserById(sellerId);
+            if (seller) {
+                await sendUserAlert(seller, `🤝 *TRADE MATCHED!* Buyer has initiated trade for ${trade.amount} USDT (₹${trade.fiat_amount}). Awaiting payment.`);
+            }
+
+        } catch (err: any) {
+            await reply(sock, jid, `❌ Failed to initiate trade: ${err?.message || err}`, msg);
+        }
         return;
     }
 
@@ -118,21 +172,25 @@ _(e.g. type \`5000\` for ₹5,000 → ${(5000 / order.rate).toFixed(2)} USDT)_`,
                 fiat_sent_at: new Date().toISOString(),
             });
 
-            await reply(
+            await replyWithButtons(
                 sock,
                 jid,
                 `✅ *Payment Marked as Sent!*
 
-The seller has been notified to check their bank account/UPI.
-
-⏳ If seller doesn't release within 30 minutes, you can tap /dispute_${trade.id} to escalate to admins.`,
-                msg
+The seller has been notified to check their bank account/UPI.`,
+                [
+                    { id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" },
+                ]
             );
 
-            // Notify seller on WhatsApp/Telegram
+            // Notify seller with instant Confirm Release button
             const seller = await db.getUserById(trade.seller_id);
             if (seller) {
-                await sendUserAlert(seller, fmtPaymentMarked(trade));
+                await sendUserAlert(seller, `💸 *PAYMENT SENT BY BUYER!*
+
+Buyer marked ₹${trade.fiat_amount} as sent via ${trade.payment_method}.
+
+Please verify your bank account and tap below to release:`);
             }
 
         } catch (err) {
@@ -141,10 +199,10 @@ The seller has been notified to check their bank account/UPI.
         return;
     }
 
-    // ─── /release_<tradeId> — Seller releases crypto (with PIN) ──────────────
-    if (text.startsWith("/release_")) {
-        const tradeId = text.replace("/release_", "").trim();
-        const trade   = await db.getTradeById(tradeId);
+    // ─── /release_<tradeId> — Seller releases crypto directly (Instant, No PIN) ─
+    if (text.startsWith("/release_") || text.startsWith("confirm_release_")) {
+        const tradeId = text.replace("/release_", "").replace("confirm_release_", "").trim();
+        const trade = await db.getTradeById(tradeId);
 
         if (!trade) {
             await reply(sock, jid, "❌ Trade not found.", msg);
@@ -161,145 +219,8 @@ The seller has been notified to check their bank account/UPI.
             return;
         }
 
-        // Ask for PIN before releasing
-        await reply(
-            sock,
-            jid,
-            `🔓 *CONFIRM CRYPTO RELEASE*
-
-You are about to release *${trade.amount} USDT* to the buyer.
-
-⚠️ Only proceed if you confirmed receiving *₹${trade.fiat_amount}* in your bank/UPI.
-
-Enter your *4-digit security PIN* to confirm release:`,
-            msg
-        );
-
-        await (db as any).setWhatsappState(user.id, "AWAITING_RELEASE_PIN", { trade_id: tradeId });
-        return;
-    }
-
-    // ─── /dispute_<tradeId> — Open dispute (requires 30m wait or issue) ──────
-    if (text.startsWith("/dispute_")) {
-        const tradeId = text.replace("/dispute_", "").trim();
-        const trade   = await db.getTradeById(tradeId);
-
-        if (!trade) {
-            await reply(sock, jid, "❌ Trade not found.", msg);
-            return;
-        }
-
-        // Check 30-minute rule
-        const createdAt = new Date(trade.created_at).getTime();
-        const minutesElapsed = (Date.now() - createdAt) / (1000 * 60);
-
-        if (minutesElapsed < 30 && trade.status !== "fiat_sent") {
-            const remaining = Math.ceil(30 - minutesElapsed);
-            await reply(
-                sock,
-                jid,
-                `⏳ *Dispute Cooldown Active*
-
-Disputes can be raised after *30 minutes* if there is an issue.
-Please wait *${remaining} more minute(s)* or contact the counterparty.`,
-                msg
-            );
-            return;
-        }
-
         try {
-            await db.updateTrade(tradeId, { status: "disputed", dispute_reason: "Raised via WhatsApp bot" });
-
-            // Sync dispute on-chain if contract trade
-            if (trade.on_chain_trade_id) {
-                try {
-                    await escrow.raiseDispute(trade.on_chain_trade_id, "Dispute via WA Bot", trade.chain as any);
-                } catch (e: any) {
-                    console.error("[WA] On-chain dispute error:", e.message);
-                }
-            }
-
-            await reply(sock, jid, fmtDisputeOpened(trade), msg);
-
-            // Notify counterparty
-            const otherUserId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
-            const otherUser   = await db.getUserById(otherUserId);
-            if (otherUser) {
-                await sendUserAlert(otherUser, `⚠️ *DISPUTE OPENED* on Trade \`${trade.id.slice(0, 8)}\` by counterparty. Admin team is reviewing.`);
-            }
-
-            // PING Telegram Admins with decision resolution buttons
-            await alertAdminsDisputeOpened(trade);
-
-        } catch (err) {
-            await reply(sock, jid, "❌ Failed to open dispute. Contact @P2PFatherSupport", msg);
-        }
-        return;
-    }
-
-
-    // ─── /cancel_<tradeId> ────────────────────────────────────────────────────
-    if (text.startsWith("/cancel_")) {
-        const tradeId = text.replace("/cancel_", "").trim();
-        try {
-            await db.cancelTrade(tradeId, user.id);
-            await reply(sock, jid, "❌ Trade cancelled successfully.", msg);
-        } catch (err) {
-            await reply(sock, jid, "❌ Cannot cancel this trade. Contact support.", msg);
-        }
-    }
-
-    // ─── Handle state: fiat amount input for trade initiation ─────────────────
-    const state = await (db as any).getWhatsappState(user.id);
-    if (state?.key === "AWAITING_TRADE_AMOUNT") {
-        const fiatAmount = parseFloat(text);
-        if (isNaN(fiatAmount) || fiatAmount <= 0) {
-            await reply(sock, jid, "❌ Enter a valid ₹ amount (e.g. `5000`)", msg);
-            return;
-        }
-
-        const data = state.data;
-        const usdtAmount = fiatAmount / data.rate;
-
-        await replyWithButtons(
-            sock,
-            jid,
-            `📋 *CONFIRM TRADE*
-
-• *You ${data.is_buyer ? "BUY" : "SELL"}:* ${usdtAmount.toFixed(2)} USDT
-• *You pay:* ₹${fiatAmount}
-• *Rate:* ₹${data.rate}
-• *Payment:* ${data.payment_method}
-
-Proceed to lock escrow?`,
-            [
-                { id: `confirm_trade_${data.order_id}_${fiatAmount}`, label: "✅ Lock Escrow" },
-                { id: "cancel_trade", label: "❌ Cancel" },
-            ]
-        );
-        return;
-    }
-
-    // ─── Handle state: Security PIN verification for crypto release ────────────
-    if (state?.key === "AWAITING_RELEASE_PIN") {
-        const pin = text.trim();
-        const tradeId = state.data?.trade_id;
-        const trade = await db.getTradeById(tradeId);
-
-        if (!trade) {
-            await reply(sock, jid, "❌ Trade session expired.", msg);
-            await (db as any).clearWhatsappState(user.id);
-            return;
-        }
-
-        // Verify PIN (if set on user account)
-        if (user.security_pin && user.security_pin !== pin) {
-            await reply(sock, jid, "❌ Incorrect 4-digit security PIN. Please try again:", msg);
-            return;
-        }
-
-        try {
-            await reply(sock, jid, "⏳ Releasing funds on blockchain... Please wait.", msg);
+            await reply(sock, jid, "⏳ Releasing funds on-chain... Please wait.", msg);
 
             let txHash = trade.escrow_tx_hash || "0x_relayer_release";
             if (trade.on_chain_trade_id) {
@@ -312,30 +233,74 @@ Proceed to lock escrow?`,
             }
 
             await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: txHash });
-            await (db as any).clearWhatsappState(user.id);
 
-            await reply(
-                sock,
-                jid,
-                `✅ *CRYPTO RELEASED SUCCESSFULLY!* 🎉
+            const chain = (trade.chain || "base").toLowerCase();
+            const explorerBase = chain === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
+            const txLink = txHash && txHash.startsWith("0x") ? `${explorerBase}${txHash}` : null;
 
-*Trade ID:* \`${trade.id.slice(0, 8)}\`
-*Amount Released:* ${trade.amount} ${trade.token}
+            let completionText = fmtTradeReleased({ ...trade, release_tx_hash: txHash });
+            if (txLink) {
+                completionText += `\n\n🔗 *Transaction Explorer:* ${txLink}`;
+            }
 
-Thank you for trading on P2PFather!`,
-                msg
-            );
+            await reply(sock, jid, completionText, msg);
 
-            // Notify buyer
+            // Notify buyer with TX Link
             const buyer = await db.getUserById(trade.buyer_id);
             if (buyer) {
-                await sendUserAlert(buyer, `🎉 *USDT RECEIVED!* \n\nSeller released *${trade.amount} USDT* for Trade \`${trade.id.slice(0, 8)}\`. Funds are in your wallet!`);
+                await sendUserAlert(buyer, completionText);
             }
 
         } catch (err) {
             await reply(sock, jid, "❌ Release failed. Contact @P2PFatherSupport", msg);
         }
         return;
+    }
+
+    // ─── /dispute_<tradeId> — Open dispute ────────────────────────────────────
+    if (text.startsWith("/dispute_")) {
+        const tradeId = text.replace("/dispute_", "").trim();
+        const trade   = await db.getTradeById(tradeId);
+
+        if (!trade) {
+            await reply(sock, jid, "❌ Trade not found.", msg);
+            return;
+        }
+
+        try {
+            await db.updateTrade(tradeId, { status: "disputed", dispute_reason: "Raised via WhatsApp bot" });
+
+            if (trade.on_chain_trade_id) {
+                try {
+                    await escrow.raiseDispute(trade.on_chain_trade_id, "Dispute via WA Bot", trade.chain as any);
+                } catch (e: any) {
+                    console.error("[WA] On-chain dispute error:", e.message);
+                }
+            }
+
+            await reply(sock, jid, fmtDisputeOpened(trade), msg);
+
+            const otherUserId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+            const otherUser   = await db.getUserById(otherUserId);
+            if (otherUser) {
+                await sendUserAlert(otherUser, `⚠️ *DISPUTE OPENED* on Trade \`${trade.id.slice(0, 8)}\` by counterparty. Admin team is reviewing.`);
+            }
+
+        } catch (err) {
+            await reply(sock, jid, "❌ Failed to open dispute. Contact @P2PFatherSupport", msg);
+        }
+        return;
+    }
+
+    // ─── /cancel_<tradeId> ────────────────────────────────────────────────────
+    if (text.startsWith("/cancel_")) {
+        const tradeId = text.replace("/cancel_", "").trim();
+        try {
+            await db.cancelTrade(tradeId, user.id);
+            await reply(sock, jid, "❌ Trade cancelled successfully.", msg);
+        } catch (err) {
+            await reply(sock, jid, "❌ Cannot cancel this trade. Contact support.", msg);
+        }
     }
 }
 
