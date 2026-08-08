@@ -3696,18 +3696,29 @@ bot.on("callback_query:data", async (ctx) => {
 // 🎙️ Voice Note DM Handler — OpenAI Whisper transcribes voice notes sent directly to Bot DM
 bot.on("message:voice", async (ctx) => {
     if (ctx.chat.type !== "private") return;
+    const userId = ctx.from?.id;
+    const username = ctx.from?.username || ctx.from?.first_name || "unknown";
+    console.log(`[Bot:Voice] 🎙️ Voice note received from user ${userId} (@${username})`);
     try {
         await ctx.replyWithChatAction("typing").catch(() => {});
+
         const file = await ctx.getFile();
-        if (!file.file_path) return;
+        if (!file.file_path) {
+            console.warn(`[Bot:Voice] ⚠️ No file_path returned for voice note from user ${userId}`);
+            return;
+        }
+        console.log(`[Bot:Voice] 📥 Fetching voice file: ${file.file_path} (${file.file_size ?? "??"} bytes)`);
 
         const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
         const axios = (await import("axios")).default;
         const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
         const voiceBuffer = Buffer.from(response.data);
+        console.log(`[Bot:Voice] ✅ Downloaded ${voiceBuffer.length} bytes from Telegram`);
 
         const { ai } = await import("../services/ai");
+        console.log(`[Bot:Voice] 🤖 Sending to Whisper for transcription...`);
         const transcribedText = await ai.transcribeAudio(voiceBuffer);
+        console.log(`[Bot:Voice] 📝 Whisper result: "${transcribedText || "(empty)"}"`);
 
         if (!transcribedText) {
             await ctx.reply("🎙️ Couldn't transcribe your voice note. Please try speaking clearly or send a text message.");
@@ -3715,7 +3726,9 @@ bot.on("message:voice", async (ctx) => {
         }
 
         const user = await ensureUser(ctx);
+        console.log(`[Bot:Voice] 🧠 Parsing intent for: "${transcribedText}"`);
         const parsed = await ai.parseIntent(transcribedText);
+        console.log(`[Bot:Voice] 🎯 Intent: ${parsed.intent} | Params: ${JSON.stringify(parsed.params ?? {})}`);
 
         // 🛡️ Financial & Ad Creation Safety: Always require explicit confirmation before execution
         if (parsed.intent === "CREATE_SELL_ORDER" || parsed.intent === "CREATE_BUY_ORDER") {
@@ -3724,6 +3737,8 @@ bot.on("message:voice", async (ctx) => {
             const amount = parsed.params?.amount || 50;
             const chain = (parsed.params?.chain || "bsc").toUpperCase();
             const rate = parsed.params?.rate || 90;
+
+            console.log(`[Bot:Voice] 💬 Sending confirmation preview for ${parsed.intent} — amount=${amount}, chain=${chain}, rate=${rate}`);
 
             const { InlineKeyboard } = await import("grammy");
             const kb = new InlineKeyboard()
@@ -3744,10 +3759,12 @@ Proceed to publish this ad to the P2P marketplace?`,
             return;
         }
 
+        console.log(`[Bot:Voice] 💬 Replying with AI response for intent: ${parsed.intent}`);
         const replyMsg = `🎙️ *Voice Note:* "${escapeMarkdown(transcribedText)}"\n\n${escapeMarkdown(parsed.response || "I processed your request!")}`;
         await ctx.reply(replyMsg, { parse_mode: "Markdown" });
+        console.log(`[Bot:Voice] ✅ Voice note fully handled for user ${userId}`);
     } catch (err: any) {
-        console.error("[Bot] Voice note processing error:", err?.message || err);
+        console.error(`[Bot:Voice] ❌ Voice note processing error for user ${userId}:`, err?.message || err);
         await ctx.reply("❌ Failed to process voice note. Please try again.");
     }
 });
