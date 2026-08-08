@@ -112,28 +112,13 @@ export async function handleAdCommand(
         return;
     }
 
-    // ─── /my_ads — View own ads ───────────────────────────────────────────────
-    if (text === "/my_ads") {
-        const myOrders = await db.getOrdersByUserId(user.id);
-        if (myOrders.length === 0) {
-            await replyWithButtons(sock, jid, "📋 *You have no active ads.*\n\nPost one now with /post 🚀", [
-                { id: "/post", label: "➕ Post New Ad" },
-                { id: "/ads",  label: "📊 Browse Ads" },
-            ]);
-            return;
+    // ─── /my_ads — View own ads with 1-card-per-ad paginated navigation ──────
+    if (text === "/my_ads" || text.startsWith("my_ads_page_")) {
+        let pageIndex = 0;
+        if (text.startsWith("my_ads_page_")) {
+            pageIndex = parseInt(text.replace("my_ads_page_", ""), 10) || 0;
         }
-
-        const firstAd = myOrders[0];
-        await replyWithButtons(
-            sock,
-            jid,
-            fmtMyAds(myOrders as any),
-            [
-                { id: `/delete_${firstAd.id.slice(0, 8)}`, label: "🗑️ Delete Ad" },
-                { id: `/pause_${firstAd.id.slice(0, 8)}`,  label: "⏸️ Pause Ad" },
-                { id: "/post",                             label: "➕ Post New Ad" },
-            ]
-        );
+        await showMyAdCard(sock, jid, msg, user, pageIndex);
         return;
     }
 
@@ -566,4 +551,58 @@ Traders can now find and trade with you! 🚀`,
             return;
         }
     }
+}
+
+/** Renders 1 dedicated card per ad on /my_ads with dedicated Delete/Pause quick-reply buttons */
+export async function showMyAdCard(
+    sock: WASocket,
+    jid: string,
+    msg: IWebMessageInfo,
+    user: User,
+    pageIndex: number = 0
+): Promise<void> {
+    const myOrders = await db.getOrdersByUserId(user.id);
+    if (myOrders.length === 0) {
+        await replyWithButtons(sock, jid, "📋 *You have no active ads.*\n\nPost one now with /post 🚀", [
+            { id: "/post", label: "➕ Post New Ad" },
+            { id: "/ads",  label: "📊 Browse Ads" },
+        ]);
+        return;
+    }
+
+    const safeIndex = Math.max(0, Math.min(pageIndex, myOrders.length - 1));
+    const ad = myOrders[safeIndex];
+    const shortId = ad.id.slice(0, 8);
+    const totalFiat = Math.round((ad.amount || 0) * (ad.rate || 0));
+    const statusStr = ad.status === "active" ? "🟢 ACTIVE" : `⏸ ${ad.status.toUpperCase()}`;
+
+    const cardText =
+`📋 *YOUR P2P AD (${safeIndex + 1} of ${myOrders.length})*
+
+• *Type:* ${ad.type.toUpperCase()} USDT
+• *Rate:* ₹${ad.rate} / USDT
+• *Amount:* ${ad.amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
+• *Status:* ${statusStr}
+• *Chain:* ${(ad.chain || "BSC").toUpperCase()}
+• *Payment:* ${(ad.payment_methods ?? []).join(", ") || "UPI"}
+• *Ad ID:* \`${shortId}\`
+
+👉 Shortcuts: \`/del_${shortId}\` | \`/pause_${shortId}\``;
+
+    const buttons: { id: string; label: string }[] = [
+        { id: `/delete_${shortId}`, label: "🗑️ Delete This Ad" },
+        { id: `/pause_${shortId}`,  label: "⏸️ Pause This Ad" },
+    ];
+
+    if (myOrders.length > 1) {
+        if (safeIndex < myOrders.length - 1) {
+            buttons.push({ id: `my_ads_page_${safeIndex + 1}`, label: "▶️ Next Ad" });
+        } else {
+            buttons.push({ id: "my_ads_page_0", label: "⏮️ First Ad" });
+        }
+    } else {
+        buttons.push({ id: "/post", label: "➕ Post New Ad" });
+    }
+
+    await replyWithButtons(sock, jid, cardText, buttons);
 }

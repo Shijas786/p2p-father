@@ -597,8 +597,10 @@ Or check your balance first with /balance 💰`,
         text.startsWith("/ads") ||
         text.startsWith("/post") ||
         text.startsWith("/my_ads") ||
-        text.startsWith("/delete_ad_") ||
-        text.startsWith("/pause_ad_") ||
+        text.startsWith("my_ads_page_") ||
+        text.startsWith("/delete") ||
+        text.startsWith("/del_") ||
+        text.startsWith("/pause") ||
         text.startsWith("ad_type_") ||
         text.startsWith("ad_token_") ||
         text.startsWith("ad_pay_") ||
