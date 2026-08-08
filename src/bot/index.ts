@@ -3717,6 +3717,33 @@ bot.on("message:voice", async (ctx) => {
         const user = await ensureUser(ctx);
         const parsed = await ai.parseIntent(transcribedText);
 
+        // 🛡️ Financial & Ad Creation Safety: Always require explicit confirmation before execution
+        if (parsed.intent === "CREATE_SELL_ORDER" || parsed.intent === "CREATE_BUY_ORDER") {
+            const isSell = parsed.intent === "CREATE_SELL_ORDER";
+            const typeLabel = isSell ? "🟢 SELL USDT" : "🔴 BUY USDT";
+            const amount = parsed.params?.amount || 50;
+            const chain = (parsed.params?.chain || "bsc").toUpperCase();
+            const rate = parsed.params?.rate || 90;
+
+            const { InlineKeyboard } = await import("grammy");
+            const kb = new InlineKeyboard()
+                .text("✅ Confirm & Publish", `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}`).row()
+                .text("❌ Cancel", "menu");
+
+            await ctx.reply(
+`🎙️ *VOICE COMMAND PREVIEW*
+
+• *Action:* ${typeLabel}
+• *Amount:* ${amount} USDT
+• *Network:* ${chain}
+• *Rate:* ₹${rate} / USDT
+
+Proceed to publish this ad to the P2P marketplace?`,
+                { parse_mode: "Markdown", reply_markup: kb }
+            );
+            return;
+        }
+
         const replyMsg = `🎙️ *Voice Note:* "${escapeMarkdown(transcribedText)}"\n\n${escapeMarkdown(parsed.response || "I processed your request!")}`;
         await ctx.reply(replyMsg, { parse_mode: "Markdown" });
     } catch (err: any) {
