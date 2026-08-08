@@ -1,4 +1,4 @@
-import { ethers, JsonRpcProvider, FallbackProvider, Network } from "ethers";
+import { ethers, JsonRpcProvider, Network } from "ethers";
 import { env } from "../config/env";
 
 const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER";
@@ -18,36 +18,23 @@ const BSC_RPCS = [
     "https://bsc-dataseed1.defibit.io",
 ].filter(Boolean);
 
-const providerCache: Record<string, ethers.FallbackProvider | ethers.JsonRpcProvider> = {};
+const providerCache: Record<string, ethers.JsonRpcProvider> = {};
 
 /**
- * Creates a low-latency provider with staticNetwork enabled.
- * Static network mode prevents 'failed to detect network' startup delays/errors.
+ * Creates a low-latency JsonRpcProvider with staticNetwork: true enabled.
+ * Static network mode eliminates startup 'failed to detect network' errors completely.
  */
-export function getFastProvider(chain: 'base' | 'bsc' | string = 'base'): ethers.FallbackProvider | ethers.JsonRpcProvider {
+export function getFastProvider(chain: 'base' | 'bsc' | string = 'base'): ethers.JsonRpcProvider {
     if (providerCache[chain]) {
         return providerCache[chain];
     }
 
     const chainId = chain === 'base' ? 8453 : (chain === 'bsc' ? 56 : 1);
     const rpcList = chain === 'base' ? BASE_RPCS : (chain === 'bsc' ? BSC_RPCS : BASE_RPCS);
+    const primaryUrl = rpcList[0] || (chain === 'base' ? env.BASE_RPC_URL : env.BSC_RPC_URL);
     const staticNet = Network.from(chainId);
 
-    try {
-        const configs = rpcList.map((url, i) => ({
-            provider: new JsonRpcProvider(url, staticNet, { staticNetwork: staticNet }),
-            priority: i + 1,
-            stallTimeout: 2500,
-            weight: 1,
-        }));
-
-        const fallback = new FallbackProvider(configs, staticNet, { quorum: 1 });
-        providerCache[chain] = fallback;
-        return fallback;
-    } catch (_) {
-        const primaryUrl = rpcList[0];
-        const single = new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: staticNet });
-        providerCache[chain] = single;
-        return single;
-    }
+    const provider = new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: true });
+    providerCache[chain] = provider;
+    return provider;
 }
