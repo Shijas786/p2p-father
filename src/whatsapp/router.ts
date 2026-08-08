@@ -234,20 +234,18 @@ async function showWelcomeScreen(
         jid,
         `👋 *Welcome to P2PFather!* 🇮🇳
 
-P2PFather is a *safe, fast, and trusted crypto P2P exchange* built for the Indian market.
+P2PFather is India's premier *smart-contract P2P exchange* for safe crypto trading.
 
 💱 *Buy & Sell USDT* peer-to-peer with UPI, IMPS, and bank transfers
-🔒 *Smart Contract Escrow* — your funds are always protected
-⚡ *Instant Matching* — trade with verified traders in seconds
+🔒 *Escrow Protection* — your funds are locked safely on-chain
+⚡ *Instant Matching* — trade directly with verified traders
 🌐 *Multi-Chain* — BSC, Polygon, and Base supported
-📊 *Live Orderbook* — real-time buy/sell ads from verified traders
 
-_No middlemen. No hidden fees. Just safe P2P crypto trading._
-
-To get started, create your wallet or learn how it works 👇`,
+Choose how you'd like to get started 👇`,
         [
-            { id: "wa_guide",         label: "📖 How It Works" },
-            { id: "wa_create_wallet", label: "💳 Create Wallet" },
+            { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
+            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram" },
+            { id: "wa_guide",              label: "📖 How It Works" },
         ]
     );
 }
@@ -278,11 +276,12 @@ Seller verifies payment in their bank app ✅ → releases USDT from escrow → 
 *5️⃣ Dispute Protection*
 If anything goes wrong, our admin team reviews evidence and resolves within 24 hours. Escrow protects both sides.
 
-🔒 *Your funds are NEVER held by us — only by the smart contract.*
+🔒 *Your funds are NEVER held by us — only by smart contracts.*
 
-Ready to start? Create your wallet below 👇`,
+Ready to get started? Select an option below 👇`,
         [
-            { id: "wa_create_wallet", label: "💳 Create Wallet" },
+            { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
+            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram" },
         ]
     );
 }
@@ -308,8 +307,8 @@ New to P2PFather? We'll create a fresh crypto wallet for you right here on Whats
 
 _Already have a 6-digit link code from Telegram? Just send it here!_`,
         [
-            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram Account" },
-            { id: "wa_setup_newwallet",     label: "✨ New Wallet" },
+            { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
+            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram" },
         ]
     );
 }
@@ -490,28 +489,36 @@ _Code is valid for 10 minutes._`,
 
     if (text === "wa_setup_newwallet") {
         try {
-            await reply(sock, jid, "⏳ Creating your wallet...", msg);
+            await reply(sock, jid, "⏳ Generating your secure multi-chain wallet...", msg);
             const updatedUser = await (db as any).assignWalletToWaUser(user.id);
-            // Update local user object
             user = updatedUser;
+
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *WALLET CREATED!*
+                `🎉 *WALLET CREATED SUCCESSFULLY!*
 
-Your P2PFather wallet is ready 🎉
+Your P2PFather multi-chain crypto wallet is ready 🎉
 
-• *Address:* \`${updatedUser.wallet_address?.slice(0, 10)}...${updatedUser.wallet_address?.slice(-4)}\`
-• Supports USDT on BSC, Polygon, Base
+💳 *Wallet Address:*
+\`${updatedUser.wallet_address}\`
 
-You can now deposit, trade, and withdraw.`,
+🌐 *Supported Blockchains:*
+• Base (USDC & USDT)
+• Polygon (USDT)
+• BSC (USDT)
+
+🔒 *Security Note:* Your wallet is protected by smart-contract escrow. You can deposit, trade, or withdraw anytime.
+
+Select an option below to start trading 👇`,
                 [
                     { id: "/deposit", label: "📥 Deposit USDT" },
                     { id: "/ads",     label: "📊 Browse P2P Ads" },
+                    { id: "/post",    label: "➕ Post New Ad" },
                 ]
             );
         } catch (err: any) {
-            await reply(sock, jid, "❌ Failed to create wallet. Please try again or contact support.", msg);
+            await reply(sock, jid, "❌ Failed to create wallet. Please try again or type /start.", msg);
         }
         return;
     }

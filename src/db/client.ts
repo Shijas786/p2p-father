@@ -920,9 +920,9 @@ class Database {
             first_name:        `WA_${phone.slice(-4)}`,
             whatsapp_phone:    phone,
             preferred_channel: "whatsapp",
-            wallet_index:      nextIndex,
-            wallet_address:    walletAddress,
-            wallet_type:       walletAddress ? "bot" : null,
+            wallet_index:      null,
+            wallet_address:    null,
+            wallet_type:       null,
         };
 
         let { data: newUser, error } = await db
@@ -939,7 +939,7 @@ class Database {
         }
 
         if (error || !newUser) throw new Error(`Failed to create WhatsApp user: ${error?.message}`);
-        console.log(`[DB] Created WA user ${newUser.id} with wallet ${walletAddress} (index=${nextIndex})`);
+        console.log(`[DB] Created unassigned WA user record for ${newUser.id} (phone=${phone})`);
         return newUser as User;
     }
 
