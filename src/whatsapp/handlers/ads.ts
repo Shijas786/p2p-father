@@ -574,7 +574,6 @@ export async function showMyAdCard(
     const ad = myOrders[safeIndex];
     const shortId = ad.id.slice(0, 8);
     const totalFiat = Math.round((ad.amount || 0) * (ad.rate || 0));
-    const statusStr = ad.status === "active" ? "🟢 ACTIVE" : `⏸ ${ad.status.toUpperCase()}`;
 
     const cardText =
 `📋 *YOUR P2P AD (${safeIndex + 1} of ${myOrders.length})*
@@ -582,16 +581,16 @@ export async function showMyAdCard(
 • *Type:* ${ad.type.toUpperCase()} USDT
 • *Rate:* ₹${ad.rate} / USDT
 • *Amount:* ${ad.amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
-• *Status:* ${statusStr}
+• *Status:* 🟢 ACTIVE
 • *Chain:* ${(ad.chain || "BSC").toUpperCase()}
 • *Payment:* ${(ad.payment_methods ?? []).join(", ") || "UPI"}
 • *Ad ID:* \`${shortId}\`
 
-👉 Shortcuts: \`/del_${shortId}\` | \`/pause_${shortId}\``;
+👉 Shortcut: \`/delete_${shortId}\``;
 
     const buttons: { id: string; label: string }[] = [
         { id: `/delete_${shortId}`, label: "🗑️ Delete This Ad" },
-        { id: `/pause_${shortId}`,  label: "⏸️ Pause This Ad" },
+        { id: "/post",              label: "➕ Post New Ad" },
     ];
 
     if (myOrders.length > 1) {
@@ -601,7 +600,7 @@ export async function showMyAdCard(
             buttons.push({ id: "my_ads_page_0", label: "⏮️ First Ad" });
         }
     } else {
-        buttons.push({ id: "/post", label: "➕ Post New Ad" });
+        buttons.push({ id: "/ads", label: "📊 Browse Ads" });
     }
 
     await replyWithButtons(sock, jid, cardText, buttons);

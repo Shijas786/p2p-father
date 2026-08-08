@@ -142,14 +142,13 @@ export function fmtMyAds(orders: Order[]): string {
     }
 
     const lines = orders.map((o, i) => {
-        const status = o.status === "active" ? "🟢 Active" : `⏸ ${o.status.toUpperCase()}`;
         const shortId = o.id.slice(0, 8);
         const totalFiat = Math.round((o.amount || 0) * (o.rate || 0));
 
-        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / USDT | ${status}
+        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / USDT | 🟢 ACTIVE
    • Amount: ${o.amount} ${o.token} (Total: ₹${totalFiat.toLocaleString("en-IN")})
    • Chain: ${(o.chain || "BSC").toUpperCase()} | Payment: ${(o.payment_methods ?? []).join(", ") || "UPI"}
-   👉 Delete: \`/delete_${shortId}\` | Pause: \`/pause_${shortId}\``;
+   👉 Delete: \`/delete_${shortId}\``;
     });
 
     return `📋 *YOUR P2P ADS*\n\n${lines.join("\n\n")}`;
