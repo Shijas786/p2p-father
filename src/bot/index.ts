@@ -73,8 +73,13 @@ async function safeEditMessage(ctx: BotContext, text: string, extra: any = {}) {
             console.warn(`[Bot] safeEditMessage: User deactivated/blocked (${msg})`);
             return;
         }
-        // Fallback to regular reply if edit fails for other reasons (e.g. message is not modified)
-        console.warn("[Bot] safeEditMessage failing, falling back to ctx.reply:", msg);
+        if (msg.includes("there is no text in the message to edit")) {
+            try {
+                await ctx.editMessageCaption({ caption: text, parse_mode: extra?.parse_mode, reply_markup: extra?.reply_markup });
+                return;
+            } catch (_) {}
+        }
+        // Fallback to regular reply if edit fails for other reasons (e.g. message is photo or not modified)
         await ctx.reply(text, extra).catch(() => {});
     }
 }
