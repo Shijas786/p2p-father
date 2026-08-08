@@ -129,7 +129,11 @@ func main() {
 	}
 	webhookURL = os.Getenv("WEBHOOK_URL")
 	if webhookURL == "" {
-		webhookURL = "http://localhost:3000/api/whatsapp/webhook"
+		nodePort := os.Getenv("PORT")
+		if nodePort == "" {
+			nodePort = "8000"
+		}
+		webhookURL = "http://localhost:" + nodePort + "/api/whatsapp/webhook"
 	}
 
 	ctx := context.Background()
