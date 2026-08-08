@@ -616,6 +616,8 @@ Or check your balance first with /balance 💰`,
     if (
         text.startsWith("/profile") ||
         text === "profile" ||
+        text.startsWith("profile_page_") ||
+        text === "edit_payments_menu" ||
         text === "set_upi" ||
         text === "set_bank" ||
         text === "set_erupee"
