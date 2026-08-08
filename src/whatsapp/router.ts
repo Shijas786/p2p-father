@@ -550,6 +550,7 @@ Select an option below to start trading 👇`,
         text.startsWith("/withdraw") ||
         text.startsWith("/vault_deposit") ||
         text.startsWith("vault_deposit") ||
+        text.startsWith("vdep_chain_") ||
         text.startsWith("confirm_vault_dep_") ||
         text.startsWith("confirm_wd_") ||
         /\b(balance|wallet|funds|my usdt|check balance|how much usdt|kithaanu|enthaanu balance|balance aano|bakki undu)\b/.test(lowerText)

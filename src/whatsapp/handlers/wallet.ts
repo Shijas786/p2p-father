@@ -97,16 +97,106 @@ export async function handleWalletCommand(
         return;
     }
 
-    // ─── /vault_deposit or [📥 Move to Vault] ─────────────────────────────────
+    // ─── /vault_deposit or [🔒 Lock to Vault] ─────────────────────────────────
     if (text.startsWith("/vault_deposit") || text === "vault_deposit") {
         const parts = text.split(/\s+/);
-        const amount = parseFloat(parts[1] || "50");
-        const chain = (parts[2] || "bsc").toLowerCase();
 
-        if (isNaN(amount) || amount <= 0) {
-            await reply(sock, jid, "❌ Reply format: `/vault_deposit <amount> <chain>` (e.g. `/vault_deposit 100 bsc`)", msg);
+        let bscUsdt = "0.00", baseUsdt = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                bscUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                baseUsdt = (parseFloat(bals.usdt || "0")).toFixed(2);
+            }
+        } catch (_) {}
+
+        // If amount was provided in text command (e.g. /vault_deposit 100 bsc)
+        if (parts.length >= 2 && !isNaN(parseFloat(parts[1]))) {
+            const amount = parseFloat(parts[1]);
+            const chain = (parts[2] || "bsc").toLowerCase();
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `🔒 *CONFIRM VAULT TOP-UP*
+
+• *Wallet Balance:* ${bscUsdt} BSC-USDT | ${baseUsdt} Base-USDT
+• *Top-Up Amount:* ${amount} USDT (${chain.toUpperCase()})
+• *Target:* P2PFather Smart Contract Escrow Vault
+
+Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
+                [
+                    { id: `confirm_vault_dep_${amount}_${chain}`, label: "✅ Lock to Vault" },
+                    { id: "/deposit",                           label: "📥 Deposit First" },
+                    { id: "/balance",                           label: "❌ Cancel" },
+                ]
+            );
             return;
         }
+
+        // Interactive wizard: Step 1 — Ask user for amount input
+        await (db as any).setWhatsappState(user.id, "AWAITING_VAULT_DEP_AMOUNT", {});
+        await replyWithButtons(
+            sock,
+            jid,
+            `🔒 *VAULT TOP-UP*
+
+• *Wallet Balance:* ${bscUsdt} BSC-USDT | ${baseUsdt} Base-USDT
+
+Please reply to this message with the *USDT amount* you want to move into your Smart Contract Escrow Vault:
+_(Example: 10 or 50 or 100)_`,
+            [
+                { id: "/deposit", label: "📥 Deposit First" },
+                { id: "/balance", label: "❌ Cancel" },
+            ]
+        );
+        return;
+    }
+
+    // ─── State: AWAITING_VAULT_DEP_AMOUNT ─────────────────────────────────────
+    const walletState = await (db as any).getWhatsappState(user.id);
+    if (walletState?.key === "AWAITING_VAULT_DEP_AMOUNT") {
+        const amountStr = text.trim();
+        const amount = parseFloat(amountStr);
+
+        if (isNaN(amount) || amount <= 0) {
+            await reply(sock, jid, "❌ Invalid amount. Please enter a valid number (e.g. 10 or 50):", msg);
+            return;
+        }
+
+        await (db as any).clearWhatsappState(user.id);
+
+        let bscUsdt = "0.00", baseUsdt = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                bscUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                baseUsdt = (parseFloat(bals.usdt || "0")).toFixed(2);
+            }
+        } catch (_) {}
+
+        await replyWithButtons(
+            sock,
+            jid,
+            `🔒 *SELECT NETWORK FOR TOP-UP (${amount} USDT)*
+
+• *Wallet Balance:* ${bscUsdt} BSC-USDT | ${baseUsdt} Base-USDT
+
+Select the network to move funds from:`,
+            [
+                { id: `vdep_chain_${amount}_bsc`,  label: "USDT (BSC)" },
+                { id: `vdep_chain_${amount}_base`, label: "USDT (Base)" },
+                { id: "/balance",                 label: "❌ Cancel" },
+            ]
+        );
+        return;
+    }
+
+    // ─── vdep_chain_<amount>_<chain> ─────────────────────────────────────────
+    if (text.startsWith("vdep_chain_")) {
+        const parts = text.replace("vdep_chain_", "").split("_");
+        const amountStr = parts[0] || "10";
+        const chainKey = (parts[1] || "bsc").toLowerCase();
 
         let bscUsdt = "0.00", baseUsdt = "0.00";
         try {
@@ -123,25 +213,16 @@ export async function handleWalletCommand(
             `🔒 *CONFIRM VAULT TOP-UP*
 
 • *Wallet Balance:* ${bscUsdt} BSC-USDT | ${baseUsdt} Base-USDT
-• *Top-Up Amount:* ${amount} USDT (${chain.toUpperCase()})
+• *Top-Up Amount:* ${amountStr} USDT (${chainKey.toUpperCase()})
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             [
-                { id: `confirm_vault_dep_${amount}_${chain}`, label: "✅ Lock to Vault" },
-                { id: "/deposit",                           label: "📥 Deposit First" },
-                { id: "/balance",                           label: "❌ Cancel" },
+                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: "✅ Lock to Vault" },
+                { id: "/deposit",                                  label: "📥 Deposit First" },
+                { id: "/balance",                                  label: "❌ Cancel" },
             ]
         );
-
-        await new Promise((r) => setTimeout(r, 250));
-
-        // Message 2: Universal Navigation Bar
-        await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
-            { id: "/start",   label: "🏠 Main Menu" },
-            { id: "/profile", label: "👤 My Profile" },
-            { id: "/ads",     label: "📊 Browse Ads" },
-        ]);
         return;
     }
 
