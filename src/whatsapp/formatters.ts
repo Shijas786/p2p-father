@@ -17,20 +17,19 @@ export function waLink(text: string): string {
 }
 
 // ─── Main Menu ────────────────────────────────────────────────────────────────
+const DIVIDER = "━━━━━━━━━━━━━━━━━━━━";
 export const MAIN_MENU = `🤖 *P2PFather — Crypto P2P Exchange*
 
-*What would you like to do?*
+${DIVIDER}
+1️⃣ 💰 Balance & Wallet
+2️⃣ 📊 Browse P2P Ads
+3️⃣ ➕ Post New Ad
+4️⃣ 📋 My Active Trades
+5️⃣ 📋 My Ads
+${DIVIDER}
+Also: /deposit · /send · /profile · /help
 
-💰 /balance — Check wallet balance
-📥 /deposit — Get your deposit address & QR
-📤 /send — Withdraw / send crypto
-📊 /ads — Browse live P2P ads
-➕ /post — Post a new Buy or Sell Ad
-📋 /trades — View your active trades
-👤 /profile — Your trader profile
-❓ /help — Help & support
-
-_Tap any command or type it below ↓_`;
+_Reply with a number 1–5 or type any command ↓_`;
 
 // ─── Wallet ───────────────────────────────────────────────────────────────────
 export function fmtWalletBalance(

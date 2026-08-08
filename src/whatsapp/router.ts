@@ -13,6 +13,15 @@ import { ai } from "../services/ai";
 import { env } from "../config/env";
 
 function extractText(msg: proto.IWebMessageInfo): string {
+    // interactiveResponseMessage: fired when user taps a native nativeFlow button
+    const nativeTap = (msg.message?.interactiveResponseMessage as any)
+        ?.nativeFlowResponseMessage?.paramsJson;
+    if (nativeTap) {
+        try {
+            const parsed = JSON.parse(nativeTap);
+            if (parsed?.id) return String(parsed.id).trim();
+        } catch { /* ignore */ }
+    }
     return (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -44,15 +53,41 @@ export async function replyWithButtons(
     buttons: { id: string; label: string }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
-    let formattedText = text;
-    if (buttons && buttons.length > 0) {
-        const optionLines = buttons.map((b, i) => {
-            const cmd = b.id.startsWith("/") ? b.id : "`" + b.id + "`";
-            return `${i + 1}️⃣ *${b.label}* → reply \`${i + 1}\` or tap ${cmd}`;
-        });
-        formattedText += `\n\n👇 *Quick Options:*\n${optionLines.join("\n")}`;
+    // ── Try native interactive buttons (max 3, WhatsApp limitation) ──────────
+    if (buttons && buttons.length > 0 && buttons.length <= 3) {
+        try {
+            await sock.sendMessage(jid, {
+                interactiveMessage: {
+                    body: { text },
+                    footer: { text: footer },
+                    header: { hasMediaAttachment: false },
+                    nativeFlowMessage: {
+                        buttons: buttons.map((b) => ({
+                            name: "quick_reply",
+                            buttonParamsJson: JSON.stringify({
+                                display_text: b.label,
+                                id: b.id,
+                            }),
+                        })),
+                    },
+                },
+            } as any);
+            return;
+        } catch (err: any) {
+            console.warn("[WA] Native buttons failed, falling back to text:", err?.message);
+        }
     }
 
+    // ── Fallback: numbered text options (always works) ────────────────────────
+    let formattedText = text;
+    if (buttons && buttons.length > 0) {
+        const divider = "━━━━━━━━━━━━━━━━━━━━";
+        const optionLines = buttons.map((b, i) => {
+            const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"][i] ?? `${i + 1}.`;
+            return `${num} ${b.label}`;
+        });
+        formattedText += `\n\n${divider}\n💬 *Reply with a number to continue:*\n${optionLines.join("\n")}\n${divider}\n_${footer}_`;
+    }
     try {
         await sock.sendMessage(jid, { text: formattedText });
     } catch (err: any) {
@@ -72,14 +107,17 @@ export async function replyWithCarousel(
     }[]
 ): Promise<void> {
     try {
-        let formattedText = `${text}\n\n`;
+        const divider = "━━━━━━━━━━━━━━━━━━━━";
+        let formattedText = `${text}\n\n${divider}\n`;
         cards.forEach((c, idx) => {
-            formattedText += `*Card ${idx + 1}: ${c.title}*\n${c.body}\n`;
-            c.buttons.forEach((b) => {
-                formattedText += `• ${b.label} → \`${b.id}\`\n`;
-            });
+            const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"][idx] ?? `${idx + 1}.`;
+            formattedText += `${num} *${c.title}*\n_${c.body}_\n`;
+            if (c.buttons.length > 0) {
+                formattedText += `   👉 Reply \`${c.buttons[0].id}\` to select\n`;
+            }
             formattedText += `\n`;
         });
+        formattedText += divider;
         await sock.sendMessage(jid, { text: formattedText.trim() });
     } catch (err: any) {
         console.error("[WA] Carousel sendMessage failed:", err?.message);
@@ -98,13 +136,18 @@ export async function replyWithList(
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
     try {
-        let formattedText = `${text}\n\n*${buttonTitle}*\n`;
+        const divider = "━━━━━━━━━━━━━━━━━━━━";
+        let formattedText = `${text}\n\n${divider}\n📋 *${buttonTitle}*\n`;
+        let rowCounter = 1;
         sections.forEach((s) => {
             formattedText += `\n📌 *${s.title}*\n`;
             s.rows.forEach((r) => {
-                formattedText += `• *${r.title}* → \`${r.id}\`${r.description ? ` (${r.description})` : ""}\n`;
+                const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][rowCounter - 1] ?? `${rowCounter}.`;
+                formattedText += `${num} *${r.title}*${r.description ? ` — _${r.description}_` : ""}\n`;
+                rowCounter++;
             });
         });
+        formattedText += `\n${divider}\n_${footer}_`;
         await sock.sendMessage(jid, { text: formattedText.trim() });
     } catch (err: any) {
         console.error("[WA] List sendMessage failed:", err?.message);
