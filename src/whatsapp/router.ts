@@ -163,12 +163,12 @@ export async function replyWithList(
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
     if (hypermeowClient.isConfigured()) {
-        await hypermeowClient.sendList(jid, text, buttonTitle, sections);
-        return;
+        const ok = await hypermeowClient.sendList(jid, text, buttonTitle, sections);
+        if (ok) return;
     }
     if (evolutionClient.isConfigured()) {
-        await evolutionClient.sendList(jid, text, buttonTitle, sections, footer);
-        return;
+        const ok = await evolutionClient.sendList(jid, text, buttonTitle, sections, footer);
+        if (ok) return;
     }
 
     // ── Try native single_select list picker (unlimited rows, DM only) ────────

@@ -507,21 +507,71 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 
 	msg := &waProto.Message{
 		ListMessage: &waProto.ListMessage{
-			Title:       proto.String(req.Title),
-			ButtonText:  proto.String(req.ButtonText),
-			ListType:    waProto.ListMessage_SINGLE_SELECT.Enum(),
-			Sections:    sections,
+			Title:      proto.String(req.Title),
+			ButtonText: proto.String(req.ButtonText),
+			ListType:   waProto.ListMessage_SINGLE_SELECT.Enum(),
+			Sections:   sections,
 		},
 	}
 
-	_, err = client.SendMessage(context.Background(), jid, msg)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to send list: %v", err), http.StatusInternalServerError)
+	bizNode := waBinary.Node{
+		Tag: "biz",
+		Content: []waBinary.Node{
+			{
+				Tag: "interactive",
+				Attrs: waBinary.Attrs{"type": "native_flow", "v": "1"},
+				Content: []waBinary.Node{
+					{Tag: "native_flow", Attrs: waBinary.Attrs{"v": "9", "name": "mixed"}},
+				},
+			},
+		},
+	}
+	isGroup := jid.Server == "g.us"
+	additionalNodes := []waBinary.Node{bizNode}
+	if !isGroup {
+		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
+	}
+
+	// Attempt 1: ListMessage with AdditionalNodes
+	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
+		AdditionalNodes: &additionalNodes,
+	})
+	if err == nil {
+		fmt.Println("[SendList] Attempt 1 SUCCESS")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+		return
+	}
+	fmt.Printf("[SendList] Attempt 1 FAILED: %v\n", err)
+
+	// Attempt 2: Clean Plain-Text Menu Fallback
+	fmt.Println("[SendList] Attempt 2: sending plain-text list menu fallback")
+	fallbackText := req.Title + "\n\n━━━━━━━━━━━━━━━━━━━━"
+	for _, sec := range req.Sections {
+		if sec.Title != "" {
+			fallbackText += "\n\n* " + sec.Title + " *"
+		}
+		for _, r := range sec.Rows {
+			fallbackText += fmt.Sprintf("\n• *%s*", r.Title)
+			if r.Description != "" {
+				fallbackText += fmt.Sprintf("\n  └ %s", r.Description)
+			}
+			fallbackText += fmt.Sprintf("\n  👉 Send: `%s`", r.ID)
+		}
+	}
+	fallbackText += "\n━━━━━━━━━━━━━━━━━━━━"
+
+	fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
+	_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
+	if err2 != nil {
+		fmt.Printf("[SendList] Attempt 2 FAILED: %v\n", err2)
+		http.Error(w, fmt.Sprintf("all list send attempts failed: %v / %v", err, err2), http.StatusInternalServerError)
 		return
 	}
 
+	fmt.Println("[SendList] Attempt 2 SUCCESS (plain text list fallback sent)")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
 }
 
 func eventHandler(evt interface{}) {
