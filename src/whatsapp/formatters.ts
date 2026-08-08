@@ -194,15 +194,22 @@ Problem? → /dispute_${trade.id}
 _Do NOT release until you confirm the money arrived!_`;
 }
 
-export function fmtTradeReleased(trade: Trade): string {
-    return `🎉 *TRADE COMPLETED!*
+export function fmtTradeReleased(trade: any): string {
+    const amount = trade.amount || trade.buyer_receives || 0;
+    const token = trade.token || "USDT";
+    const totalFiat = Math.round(amount * (trade.rate || 0));
+    const chain = (trade.chain || "base").toUpperCase();
+    const seller = trade.seller_name || "Seller";
+    const buyer = trade.buyer_name || "Buyer";
 
-✅ ${trade.buyer_receives} USDT sent to buyer's wallet.
-• *TX Hash:* \`${(trade.release_tx_hash ?? "").slice(0, 20)}...\`
+    return `🎉 *Trade Completed!*
 
-Thank you for trading on P2PFather! 🙏
+*${seller}* sold *${amount} ${token}* to *${buyer}*
+💰 Deal: ₹${totalFiat.toLocaleString("en-IN")}
+🔗 Chain: ${chain}
 
-Rate your experience: /review_${trade.id}`;
+✅ Escrowed & settled on-chain
+⚡ Trade safe with P2PFather`;
 }
 
 export function fmtDisputeOpened(trade: Trade): string {
@@ -218,22 +225,38 @@ Trade \`${trade.id.slice(0, 8)}\` is now under admin review.
 Support: @P2PFatherSupport`;
 }
 
-// ─── Group Live Ad Broadcast ──────────────────────────────────────────────────
+// ─── Group Live Ad Broadcast (Exact Telegram Style) ───────────────────────────
 export function fmtGroupAdBroadcast(order: any): string {
-    const type = order.type === "sell" ? "🟢 *SELLING USDT*" : "🔴 *BUYING USDT*";
+    const isSell = order.type === "sell";
+    const header = isSell ? "📢 *New SELL Ad!*" : "📢 *New BUY Ad!*";
+    const emoji = isSell ? "🔴" : "🟢";
+
     const trader = formatTraderContact(order.users);
-    const trust = order.users?.trust_score ?? 0;
-    const payMethods = (order.payment_methods ?? []).join(", ");
-    const limits = formatOrderLimits(order);
+    const isVerified = order.users?.is_verified || order.users?.kyc_status === 'approved';
+    const verifiedBadge = isVerified ? " [✅ Verified]" : "";
+    const actionVerb = isSell ? "wants to sell" : "wants to buy";
+
+    const amount = order.amount || 0;
+    const rate = order.rate || 0;
+    const token = order.token || "USDT";
+    const totalFiat = Math.round(amount * rate);
+    const chain = (order.chain || "base").toUpperCase();
+    const payMethods = (order.payment_methods ?? []).join(", ") || "UPI";
     const link = waLink(`trade_ad_${order.id}`);
 
-    return `🔥 *LIVE P2P AD — P2PFATHER*
+    const orderLine = `${emoji} *${trader}*${verifiedBadge} ${actionVerb} *${amount} ${token}*`;
+    const rateLine = `💰 Rate: ₹${rate.toLocaleString()}/${token}`;
+    const totalLine = `🧾 Total: ₹${totalFiat.toLocaleString("en-IN")}`;
+    const chainLine = `🔗 Chain: ${chain}`;
+    const paymentLine = `💳 Payment: ${payMethods}`;
 
-${type}
-• *Rate:* ₹${order.rate} / USDT
-• *Limits:* ${limits}
-• *Payment:* ${payMethods}
-• *Trader:* ${trader} (${trust}% ⭐)
+    return `${header}
+
+${orderLine}
+${rateLine}
+${totalLine}
+${chainLine}
+${paymentLine}
 
 👉 *Start Trade in Private DM:*
 ${link}
