@@ -1,9 +1,9 @@
 /**
  * TypeScript REST Client for Hypermeow Go WhatsApp Bridge
+ * Supports text, native quick_reply buttons, and native single_select list pickers.
  */
 
 import axios from "axios";
-import { env } from "../config/env";
 
 const HYPERMEOW_URL = process.env.HYPERMEOW_URL || "http://localhost:8081";
 
@@ -18,10 +18,13 @@ export class HypermeowClient {
         return Boolean(process.env.HYPERMEOW_URL);
     }
 
-    public async checkHealth(): Promise<{ connected: boolean }> {
+    public async checkHealth(): Promise<{ connected: boolean; engine?: string }> {
         try {
             const res = await axios.get(`${this.baseUrl}/health`, { timeout: 3000 });
-            return { connected: Boolean(res.data?.connected) };
+            return {
+                connected: Boolean(res.data?.connected),
+                engine: res.data?.engine
+            };
         } catch {
             return { connected: false };
         }
@@ -37,6 +40,44 @@ export class HypermeowClient {
             return res.status === 200;
         } catch (err: any) {
             console.error(`[HypermeowClient] SendText error for ${jid}:`, err?.message || err);
+            return false;
+        }
+    }
+
+    public async sendButtons(
+        jid: string,
+        text: string,
+        buttons: { id: string; label: string }[],
+        footer = "P2PFather Escrow Exchange"
+    ): Promise<boolean> {
+        try {
+            const res = await axios.post(
+                `${this.baseUrl}/send-buttons`,
+                { jid, text, footer, buttons: buttons.slice(0, 3) },
+                { timeout: 8000 }
+            );
+            return res.status === 200;
+        } catch (err: any) {
+            console.error(`[HypermeowClient] SendButtons error for ${jid}:`, err?.message || err);
+            return false;
+        }
+    }
+
+    public async sendList(
+        jid: string,
+        title: string,
+        buttonText: string,
+        sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
+    ): Promise<boolean> {
+        try {
+            const res = await axios.post(
+                `${this.baseUrl}/send-list`,
+                { jid, title, buttonText, sections },
+                { timeout: 8000 }
+            );
+            return res.status === 200;
+        } catch (err: any) {
+            console.error(`[HypermeowClient] SendList error for ${jid}:`, err?.message || err);
             return false;
         }
     }

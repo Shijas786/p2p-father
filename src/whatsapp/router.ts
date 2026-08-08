@@ -12,6 +12,7 @@ import { MAIN_MENU } from "./formatters";
 import { ai } from "../services/ai";
 import { env } from "../config/env";
 import { evolutionClient } from "./evolutionClient";
+import { hypermeowClient } from "./hypermeowClient";
 
 function extractText(msg: proto.IWebMessageInfo): string {
     // interactiveResponseMessage: fired when user taps a native nativeFlow button
@@ -43,6 +44,10 @@ export async function reply(
     text: string,
     quoted?: proto.IWebMessageInfo
 ): Promise<void> {
+    if (hypermeowClient.isConfigured()) {
+        await hypermeowClient.sendText(jid, text);
+        return;
+    }
     if (evolutionClient.isConfigured()) {
         await evolutionClient.sendText(jid, text);
         return;
@@ -58,6 +63,10 @@ export async function replyWithButtons(
     buttons: { id: string; label: string }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    if (hypermeowClient.isConfigured()) {
+        await hypermeowClient.sendButtons(jid, text, buttons, footer);
+        return;
+    }
     if (evolutionClient.isConfigured()) {
         await evolutionClient.sendButtons(jid, text, buttons, footer);
         return;
@@ -152,6 +161,10 @@ export async function replyWithList(
     }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    if (hypermeowClient.isConfigured()) {
+        await hypermeowClient.sendList(jid, text, buttonTitle, sections);
+        return;
+    }
     if (evolutionClient.isConfigured()) {
         await evolutionClient.sendList(jid, text, buttonTitle, sections, footer);
         return;
