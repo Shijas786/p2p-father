@@ -74,6 +74,9 @@ var (
 )
 
 func startQRFlow() {
+	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" {
+		return
+	}
 	qrMutex.Lock()
 	if qrActive {
 		qrMutex.Unlock()
@@ -132,7 +135,7 @@ func main() {
 	ctx := context.Background()
 	dbLog := waLog.Stdout("Database", "INFO", true)
 	var err error
-	container, err = sqlstore.New(ctx, "sqlite3", "file:hypermeow.db?_foreign_keys=on", dbLog)
+	container, err = sqlstore.New(ctx, "sqlite3", "file:hypermeow.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
 	if err != nil {
 		log.Fatalf("Failed to initialize SQLite store: %v", err)
 	}
