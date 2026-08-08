@@ -245,17 +245,22 @@ async function handleAdCreationFlow(
                         await replyWithButtons(
                             sock,
                             jid,
-                            `❌ *INSUFFICIENT ESCROW VAULT BALANCE*
+                            `🤖 *AI VAULT ASSISTANT*
 
-To post a *SELL Ad*, you must first deposit USDT into your P2PFather Smart Contract Vault.
+❌ *INSUFFICIENT ESCROW VAULT BALANCE*
 
-💳 *Wallet:* \`${user.wallet_address}\`
+To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract Escrow Vault so buyers can trade safely.
+
+💳 *Deposit Address:* \`${user.wallet_address}\`
 🔒 *Vault Balance:* 0.00 USDT
 
-_Please top up your vault by sending USDT to your deposit address before creating a SELL ad._`,
+*Quick 2-Step Vault Top-Up:*
+1. Tap *[📥 Deposit USDT]* to get your deposit QR code.
+2. Send USDT (BSC or Base) to your address, then tap *[🔒 Lock to Vault]*.`,
                             [
-                                { id: "/deposit", label: "📥 Deposit USDT" },
-                                { id: "/profile", label: "🔙 Back to Profile" },
+                                { id: "/deposit",        label: "📥 Deposit USDT" },
+                                { id: "vault_deposit",   label: "🔒 Lock to Vault" },
+                                { id: "/profile",        label: "👤 View Profile" },
                             ]
                         );
                         return;
@@ -272,11 +277,11 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2 of 5: Select token & chain:`,
+                `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2: Select Token & Network (Base or BSC):`,
                 [
-                    { id: "ad_token_usdt_bsc",     label: "USDT (BSC)" },
-                    { id: "ad_token_usdt_base",     label: "USDT (Base)" },
-                    { id: "ad_cancel",              label: "🔙 Cancel" },
+                    { id: "ad_token_usdt_bsc",  label: "USDT (BSC)" },
+                    { id: "ad_token_usdt_base", label: "USDT (Base)" },
+                    { id: "/profile",           label: "🔙 Cancel" },
                 ]
             );
             return;

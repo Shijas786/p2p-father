@@ -207,11 +207,15 @@ async function showProfilePage1(
         ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
         : "❌ Not linked (Tap /link to connect)";
 
+    const isKyc = Boolean(user.is_verified || user.kyc_status === 'approved');
+    const badge = isKyc ? " [🛡️ KYC Verified]" : "";
+
     const profileText = `👤 *YOUR P2PFATHER PROFILE* (Page 1/2)
 
-• *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}
+• *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}${badge}
 • *Telegram Sync:* ${tgLinkStatus}
 • *P2P Wallet:* \`${user.wallet_address || "N/A"}\`
+• *Networks:* Base & BSC
 
 💳 *CURRENT PAYMENT DETAILS*
 📱 *UPI ID:* ${upiDisplay}
@@ -221,8 +225,8 @@ async function showProfilePage1(
 
     await replyWithButtons(sock, jid, profileText, [
         { id: "edit_payments_menu", label: "📱 Edit Payments" },
+        { id: "vault_deposit",      label: "🔒 Lock to Vault" },
         { id: "profile_page_2",     label: "▶️ Next Page" },
-        { id: "/start",             label: "🏠 Main Menu" },
     ]);
 }
 
