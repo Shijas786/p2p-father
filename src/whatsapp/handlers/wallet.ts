@@ -108,20 +108,40 @@ export async function handleWalletCommand(
             return;
         }
 
+        let bscUsdt = "0.00", baseUsdt = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                bscUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                baseUsdt = (parseFloat(bals.usdt || "0")).toFixed(2);
+            }
+        } catch (_) {}
+
         await replyWithButtons(
             sock,
             jid,
             `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Amount:* ${amount} USDT (${chain.toUpperCase()})
+• *Wallet Balance:* ${bscUsdt} BSC-USDT | ${baseUsdt} Base-USDT
+• *Top-Up Amount:* ${amount} USDT (${chain.toUpperCase()})
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             [
                 { id: `confirm_vault_dep_${amount}_${chain}`, label: "✅ Lock to Vault" },
+                { id: "/deposit",                           label: "📥 Deposit First" },
                 { id: "/balance",                           label: "❌ Cancel" },
             ]
         );
+
+        await new Promise((r) => setTimeout(r, 250));
+
+        // Message 2: Universal Navigation Bar
+        await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+            { id: "/start",   label: "🏠 Main Menu" },
+            { id: "/profile", label: "👤 My Profile" },
+            { id: "/ads",     label: "📊 Browse Ads" },
+        ]);
         return;
     }
 
