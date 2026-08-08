@@ -7,35 +7,28 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 
 WORKDIR /app
 
-# 2. Cache main project npm dependencies
+# 2. Install main project npm dependencies
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
-# 3. Cache miniapp npm dependencies
-WORKDIR /app/miniapp
-COPY miniapp/package*.json ./
-RUN npm install --legacy-peer-deps
-
-# 4. Cache Go bridge module dependencies
-WORKDIR /app/hypermeow-bridge
-RUN go mod init hypermeow-bridge || true
-RUN go get go.mau.fi/whatsmeow@v0.0.0-20260806224404-e277b766ab33 github.com/mattn/go-sqlite3 google.golang.org/protobuf && go mod tidy
-
-# 5. Copy full codebase (changes below this line won't re-download dependencies!)
-WORKDIR /app
+# 3. Copy full codebase
 COPY . .
 
-# 6. Build binaries & bundles
+# 4. Build Go Hypermeow bridge
 WORKDIR /app/hypermeow-bridge
-RUN CGO_ENABLED=1 go build -o hypermeow-bridge main.go
+RUN rm -f go.mod go.sum && go mod init hypermeow-bridge && go get go.mau.fi/whatsmeow@v0.0.0-20260806224404-e277b766ab33 && go get github.com/mattn/go-sqlite3 && go get google.golang.org/protobuf && go mod tidy && CGO_ENABLED=1 go build -o hypermeow-bridge main.go
 
+# 5. Build miniapp
 WORKDIR /app/miniapp
+RUN rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
 RUN npm run build
 
+# 6. Build backend Express app
 WORKDIR /app
 RUN npm run build
 RUN chmod +x start.sh
 
 EXPOSE 8000
 CMD ["/bin/sh", "/app/start.sh"]
+
 
