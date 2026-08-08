@@ -16,7 +16,7 @@ COPY . .
 
 # Build Go Hypermeow bridge with go mod tidy
 WORKDIR /app/hypermeow-bridge
-RUN rm -f go.mod go.sum && go mod init hypermeow-bridge && go get go.mau.fi/whatsmeow && go get github.com/mattn/go-sqlite3 && go get google.golang.org/protobuf && go mod tidy && CGO_ENABLED=1 go build -o hypermeow-bridge main.go
+RUN rm -f go.mod go.sum && go mod init hypermeow-bridge && go get go.mau.fi/whatsmeow@v0.0.0-20260806224404-e277b766ab33 && go get github.com/mattn/go-sqlite3 && go get google.golang.org/protobuf && go mod tidy && CGO_ENABLED=1 go build -o hypermeow-bridge main.go
 
 # Build the miniapp
 WORKDIR /app/miniapp

@@ -73,28 +73,16 @@ var (
 	qrActive   bool
 )
 
-// resolveJID converts @lid JIDs to @s.whatsapp.net using the contact store.
-// WhatsApp now sends messages from @lid JIDs on new clients; we must resolve
-// them to the real phone JID before sending replies.
+// resolveJID converts @lid JIDs to @s.whatsapp.net before sending.
+// WhatsApp newer clients use @lid format; whatsmeow needs @s.whatsapp.net to send.
 func resolveJID(rawJID string) (waTypes.JID, error) {
 	jid, err := waTypes.ParseJID(rawJID)
 	if err != nil {
 		return waTypes.JID{}, fmt.Errorf("invalid JID: %w", err)
 	}
-	if jid.Server == "lid" && client != nil {
-		// Try to resolve via contact store
-		phone, err := client.Store.ContactStore.GetAllContacts()
-		if err == nil {
-			for contactJID := range phone {
-				if contactJID.User == jid.User && contactJID.Server == "s.whatsapp.net" {
-					fmt.Printf("[JID Resolve] %s → %s\n", rawJID, contactJID.String())
-					return contactJID, nil
-				}
-			}
-		}
-		// Fallback: convert @lid to @s.whatsapp.net directly (works on newer WhatsApp)
+	if jid.Server == "lid" {
 		jid.Server = "s.whatsapp.net"
-		fmt.Printf("[JID Resolve] LID fallback: %s → %s\n", rawJID, jid.String())
+		fmt.Printf("[JID Resolve] @lid → @s.whatsapp.net: %s\n", jid.String())
 	}
 	return jid, nil
 }
