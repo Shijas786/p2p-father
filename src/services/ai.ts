@@ -112,7 +112,6 @@ class AIService {
                 messages,
                 response_format: { type: "json_object" },
                 max_completion_tokens: 300,
-                temperature: 0.3,
             });
 
             const content = result.choices[0]?.message?.content;
