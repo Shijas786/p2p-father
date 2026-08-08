@@ -9,6 +9,7 @@ import { wallet } from "../../services/wallet";
 import { db } from "../../db/client";
 import { reply, replyWithButtons } from "../router";
 import { fmtWalletBalance, fmtDepositAddress } from "../formatters";
+import { hypermeowClient } from "../hypermeowClient";
 import QRCode from "qrcode";
 
 export async function handleWalletCommand(
@@ -57,26 +58,23 @@ export async function handleWalletCommand(
         }
 
         try {
-            // Generate QR code as buffer
-            const qrBuffer = await QRCode.toBuffer(user.wallet_address, {
-                errorCorrectionLevel: "M",
-                type: "png",
-                width: 400,
-            });
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${user.wallet_address}`;
 
-            // Send QR image first
-            await sock.sendMessage(jid, {
-                image: qrBuffer,
-                caption: `📥 *Your P2PFather Deposit QR*\n\nScan to send USDT to: \`${user.wallet_address}\``,
-            });
+            // Send QR image first via Hypermeow
+            await hypermeowClient.sendImage(
+                jid,
+                qrImageUrl,
+                `📥 *Your P2PFather Deposit QR*\n\nScan to send USDT / USDC to:\n\`${user.wallet_address}\``
+            );
 
-            // Then send instructions with buttons
+            // Then send instructions with interactive buttons
             await replyWithButtons(sock, jid, fmtDepositAddress(user), [
                 { id: "/balance", label: "💰 Check Balance" },
                 { id: "/ads",     label: "📊 Trade Now" },
+                { id: "/post",    label: "➕ Post New Ad" },
             ]);
         } catch (err) {
-            await reply(sock, jid, `📥 *Your Deposit Address:*\n\n\`\`\`${user.wallet_address}\`\`\`\n\nSend USDT on BSC, Polygon, or Base only.`, msg);
+            await reply(sock, jid, fmtDepositAddress(user), msg);
         }
         return;
     }

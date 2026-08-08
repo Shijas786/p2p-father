@@ -7,15 +7,42 @@
 import { Router } from "express";
 import { routeMessage } from "../whatsapp/router";
 import type { WASocket, IWebMessageInfo } from "../whatsapp/types";
+import { hypermeowClient } from "../whatsapp/hypermeowClient";
+import { setBroadcastSock } from "../whatsapp/handlers/group";
 
 export const whatsappWebhookRouter = Router();
 
-/** Stub socket — Hypermeow handles all outgoing sends via HTTP */
+/** Active stub socket connected to Hypermeow REST client */
 const stubSock: WASocket = {
     user: { id: "917012751478:0@s.whatsapp.net" },
-    sendMessage: async () => {},
-    groupMetadata: async () => ({ subject: "Unknown" }),
+    sendMessage: async (jid: string, content: any) => {
+        try {
+            if (content.image) {
+                // Generate QR code URL or image URL for WhatsApp
+                let imageUrl = "";
+                if (typeof content.image === "string") {
+                    imageUrl = content.image;
+                } else if (Buffer.isBuffer(content.image)) {
+                    // Buffer image (e.g. QRCode buffer) — convert to data URI or fallback URL
+                    const base64 = content.image.toString("base64");
+                    imageUrl = `data:image/png;base64,${base64}`;
+                }
+                const caption = content.caption || "";
+                if (imageUrl) {
+                    await hypermeowClient.sendImage(jid, imageUrl, caption);
+                }
+            } else if (content.text) {
+                await hypermeowClient.sendText(jid, content.text);
+            }
+        } catch (err: any) {
+            console.error(`[WA-StubSocket] Error sending message to ${jid}:`, err?.message || err);
+        }
+    },
+    groupMetadata: async () => ({ subject: "P2PFather Group" }),
 };
+
+// Register stub socket for group live ad broadcasting
+setBroadcastSock(stubSock);
 
 whatsappWebhookRouter.post("/webhook", async (req, res) => {
     try {

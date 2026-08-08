@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +23,12 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
 )
+
+type SendImageReq struct {
+	JID      string `json:"jid"`
+	ImageURL string `json:"imageUrl"`
+	Caption  string `json:"caption"`
+}
 
 type SendTextReq struct {
 	JID  string `json:"jid"`
@@ -180,6 +187,7 @@ func main() {
 	mux.HandleFunc("/qr", handleGetQR)
 	mux.HandleFunc("/logout", handleLogout)
 	mux.HandleFunc("/send-text", handleSendText)
+	mux.HandleFunc("/send-image", handleSendImage)
 	mux.HandleFunc("/send-buttons", handleSendButtons)
 	mux.HandleFunc("/send-list", handleSendList)
 
@@ -280,6 +288,67 @@ func handleSendText(w http.ResponseWriter, r *http.Request) {
 	_, err = client.SendMessage(context.Background(), jid, msg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to send text: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+}
+
+func handleSendImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req SendImageReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jid, err := resolveJID(req.JID)
+	if err != nil {
+		http.Error(w, "Invalid JID format", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch image bytes from ImageURL
+	resp, err := http.Get(req.ImageURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to download image: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to read image bytes: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	uploaded, err := client.Upload(context.Background(), data, whatsmeow.MediaImage)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to upload media to WhatsApp: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	msg := &waProto.Message{
+		ImageMessage: &waProto.ImageMessage{
+			URL:           proto.String(uploaded.URL),
+			DirectPath:    proto.String(uploaded.DirectPath),
+			MediaKey:      uploaded.MediaKey,
+			FileSHA256:    uploaded.FileSHA256,
+			FileEncSHA256: uploaded.FileEncSHA256,
+			FileLength:    proto.Uint64(uploaded.FileLength),
+			Mimetype:      proto.String("image/png"),
+			Caption:       proto.String(req.Caption),
+		},
+	}
+
+	_, err = client.SendMessage(context.Background(), jid, msg)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to send image: %v", err), http.StatusInternalServerError)
 		return
 	}
 
