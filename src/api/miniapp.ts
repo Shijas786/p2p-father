@@ -346,7 +346,7 @@ router.post("/auth", async (req: Request, res: Response) => {
         if (!user.wallet_address && ((user as any).wallet_type === 'bot' || !(user as any).wallet_type)) {
             try {
                 let walletIndex = user.wallet_index;
-                if (!walletIndex || walletIndex <= 0) {
+                if (walletIndex === undefined || walletIndex === null || walletIndex < 0) {
                     walletIndex = await db.getNextWalletIndex();
                 }
                 const derived = wallet.deriveWallet(walletIndex);
@@ -606,7 +606,7 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
         }
 
         let walletIndex = user.wallet_index;
-        if (!walletIndex || walletIndex <= 0) {
+        if (walletIndex === undefined || walletIndex === null || walletIndex < 0) {
             walletIndex = await db.getNextWalletIndex();
             console.log(`[MINIAPP-WALLET] ℹ️ Auto-assigned new wallet index: ${walletIndex} for user ${user.id}`);
         }
