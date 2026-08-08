@@ -58,26 +58,11 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
             if (body.audioBase64 || body.text === "[VOICE_NOTE]") {
                 try {
                     const audioBuffer = Buffer.from(body.audioBase64, "base64");
-                    const { ai } = await import("../services/ai");
-                    const transcribed = await ai.transcribeAudio(audioBuffer);
+                    const { waAi } = await import("../services/wa-ai");
+                    const transcribed = await waAi.transcribeVoice(audioBuffer);
                     if (transcribed) {
-                        // Normalize common Whisper mishearings — WA-specific, keeps ai.ts untouched
-                        // Whisper phonetically confuses these in short voice clips
-                        const normalized = transcribed
-                            .replace(/\blive\s+arts?\b/gi, "live ads")    // "live arts" → "live ads"
-                            .replace(/\bshow\s+arts?\b/gi, "show ads")    // "show arts" → "show ads"
-                            .replace(/\bpost\s+arts?\b/gi, "post ads")    // "post arts" → "post ads"
-                            .replace(/\bmy\s+arts?\b/gi, "my ads")        // "my arts"   → "my ads"
-                            .replace(/\bour\s+tea\b/gi, "ads")            // "our tea"   → "ads"
-                            .replace(/\bUSD\s+tea\b/gi, "USDT")           // "USD tea"   → "USDT"
-                            .replace(/\bUSD\s+t\b/gi, "USDT")             // "USD T"     → "USDT"
-                            .replace(/\bwalled?\b/gi, "wallet")           // "walled"    → "wallet"
-                            .replace(/\bbalence\b/gi, "balance");         // typo fix
-                        messageText = normalized;
+                        messageText = transcribed;
                         console.log(`[WA-Webhook] 🎙️ Transcribed WhatsApp voice note for ${body.jid}: "${transcribed}"`);
-                        if (normalized !== transcribed) {
-                            console.log(`[WA-Webhook] 🔧 Normalized: "${normalized}"`);
-                        }
                     }
                 } catch (err: any) {
                     console.error("[WA-Webhook] Voice note transcription failed:", err?.message || err);

@@ -11,7 +11,7 @@ import { handleTradeCommand } from "./handlers/trade";
 import { handleProfileCommand } from "./handlers/profile";
 import { handleGroupMention } from "./handlers/group";
 import { MAIN_MENU, formatTraderContact } from "./formatters";
-import { ai } from "../services/ai";
+import { waAi as ai } from "../services/wa-ai";
 import { env } from "../config/env";
 import { hypermeowClient } from "./hypermeowClient";
 
