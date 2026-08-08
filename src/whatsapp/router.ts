@@ -11,6 +11,7 @@ import { handleGroupMention } from "./handlers/group";
 import { MAIN_MENU } from "./formatters";
 import { ai } from "../services/ai";
 import { env } from "../config/env";
+import { evolutionClient } from "./evolutionClient";
 
 function extractText(msg: proto.IWebMessageInfo): string {
     // interactiveResponseMessage: fired when user taps a native nativeFlow button
@@ -42,6 +43,10 @@ export async function reply(
     text: string,
     quoted?: proto.IWebMessageInfo
 ): Promise<void> {
+    if (evolutionClient.isConfigured()) {
+        await evolutionClient.sendText(jid, text);
+        return;
+    }
     const opts = quoted ? { quoted: quoted as WAMessage } : undefined;
     await sock.sendMessage(jid, { text }, opts);
 }
@@ -53,6 +58,11 @@ export async function replyWithButtons(
     buttons: { id: string; label: string }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    if (evolutionClient.isConfigured()) {
+        await evolutionClient.sendButtons(jid, text, buttons, footer);
+        return;
+    }
+
     // ── WhatsApp hard limit: quick_reply supports max 3 buttons ──────────────
     const nativeButtons = buttons.slice(0, 3);
     if (buttons.length > 3) {
@@ -142,6 +152,11 @@ export async function replyWithList(
     }[],
     footer = "P2PFather Escrow Exchange"
 ): Promise<void> {
+    if (evolutionClient.isConfigured()) {
+        await evolutionClient.sendList(jid, text, buttonTitle, sections, footer);
+        return;
+    }
+
     // ── Try native single_select list picker (unlimited rows, DM only) ────────
     try {
         await sock.sendMessage(jid, {

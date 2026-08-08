@@ -8,6 +8,8 @@ import axios from "axios";
 
 import { miniappRouter } from "./api/miniapp";
 import { webhookRouter } from "./api/webhook";
+import { whatsappWebhookRouter } from "./api/whatsappWebhook";
+import { evolutionClient } from "./whatsapp/evolutionClient";
 import { customHttpsAgent } from "./services/polymarket";
 
 async function main() {
@@ -106,6 +108,7 @@ async function main() {
     // Mount API Routers
     app.use("/api/miniapp", miniappRouter);
     app.use("/api/webhook", webhookRouter);
+    app.use("/api/whatsapp", whatsappWebhookRouter);
 
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
@@ -133,6 +136,17 @@ async function main() {
             if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
                 return res.status(403).json({ error: "Unauthorized access" });
             }
+
+            if (evolutionClient.isConfigured()) {
+                const conn = await evolutionClient.fetchConnectionState();
+                const evoQr = conn.connected ? null : await evolutionClient.fetchQrCode();
+                return res.json({
+                    connected: conn.connected,
+                    qr: evoQr,
+                    provider: "evolution",
+                });
+            }
+
             const { getLatestQr, isWaConnected } = await import("./whatsapp/client");
             const QRCode = await import("qrcode");
             const qrStr = getLatestQr();
@@ -143,9 +157,10 @@ async function main() {
             res.json({
                 connected: isWaConnected(),
                 qr: qrDataUrl,
+                provider: "baileys",
             });
         } catch (e) {
-            res.json({ connected: false, qr: null });
+            res.json({ connected: false, qr: null, provider: "unknown" });
         }
     });
 
