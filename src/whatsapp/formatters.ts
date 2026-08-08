@@ -73,22 +73,30 @@ export function formatOrderLimits(order: any): string {
 
 export function formatTraderContact(user: any): string {
     if (!user) return "Verified Trader";
-    const parts: string[] = [];
-    if (user.whatsapp_phone || user.phone_number) {
-        const phone = String(user.whatsapp_phone || user.phone_number).replace("+", "").trim();
-        if (phone) parts.push(`@${phone}`);
-    }
-    if (user.username) {
-        parts.push(`@${user.username}`);
-    }
 
     const isKyc = Boolean(user.is_verified || user.kyc_status === 'approved');
     const badge = isKyc ? " [🛡️ KYC Verified]" : "";
 
-    if (parts.length > 0) {
-        return parts.join(" (") + (parts.length > 1 ? ")" : "") + badge;
+    // 1. Prefer Username
+    if (user.username) {
+        return `@${user.username}${badge}`;
     }
-    return (user.first_name ? user.first_name : "Verified Trader") + badge;
+
+    // 2. Prefer First Name
+    if (user.first_name) {
+        return `${user.first_name}${badge}`;
+    }
+
+    // 3. Fallback: Masked Phone Number (e.g. @9181*******0)
+    const phone = String(user.whatsapp_phone || user.phone_number || "").replace("+", "").trim();
+    if (phone && phone.length >= 7) {
+        const prefix = phone.slice(0, 4);
+        const suffix = phone.slice(-1);
+        const stars = "*".repeat(Math.max(3, phone.length - 5));
+        return `@${prefix}${stars}${suffix}${badge}`;
+    }
+
+    return `Verified Trader${badge}`;
 }
 
 export function fmtDepositAddress(user: User): string {
