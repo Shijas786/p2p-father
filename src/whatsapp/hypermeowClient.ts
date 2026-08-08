@@ -1,6 +1,6 @@
 /**
  * TypeScript REST Client for Hypermeow Go WhatsApp Bridge
- * Supports text, native quick_reply buttons, and native single_select list pickers.
+ * Supports text, native quick_reply buttons, native single_select list pickers, and live QR retrieval.
  */
 
 import axios from "axios";
@@ -27,6 +27,15 @@ export class HypermeowClient {
             };
         } catch {
             return { connected: false };
+        }
+    }
+
+    public async getQrCode(): Promise<string | null> {
+        try {
+            const res = await axios.get(`${this.baseUrl}/qr`, { timeout: 3000 });
+            return res.data?.qr || null;
+        } catch {
+            return null;
         }
     }
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -63,8 +64,12 @@ type WebhookPayload struct {
 	PushName string `json:"pushName"`
 }
 
-var client *whatsmeow.Client
-var webhookURL string
+var (
+	client     *whatsmeow.Client
+	webhookURL string
+	latestQR   string
+	qrMutex    sync.Mutex
+)
 
 func main() {
 	port := os.Getenv("PORT")
@@ -97,13 +102,23 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to connect: %v", err)
 		}
-		for evt := range qrChan {
-			if evt.Event == "code" {
-				fmt.Printf("[Hypermeow QR Code] Scan this: %s\n", evt.Code)
-			} else {
-				fmt.Printf("[Hypermeow Status] %s\n", evt.Event)
+		go func() {
+			for evt := range qrChan {
+				if evt.Event == "code" {
+					qrMutex.Lock()
+					latestQR = evt.Code
+					qrMutex.Unlock()
+					fmt.Printf("[Hypermeow QR Code] Scan this: %s\n", evt.Code)
+				} else {
+					if evt.Event == "success" {
+						qrMutex.Lock()
+						latestQR = ""
+						qrMutex.Unlock()
+					}
+					fmt.Printf("[Hypermeow Status] %s\n", evt.Event)
+				}
 			}
-		}
+		}()
 	} else {
 		err = client.Connect()
 		if err != nil {
@@ -114,6 +129,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/qr", handleGetQR)
 	mux.HandleFunc("/send-text", handleSendText)
 	mux.HandleFunc("/send-buttons", handleSendButtons)
 	mux.HandleFunc("/send-list", handleSendList)
@@ -145,6 +161,16 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 		"status":    "ok",
 		"connected": connected,
 		"engine":    "hypermeow-v1.0",
+	})
+}
+
+func handleGetQR(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	qrMutex.Lock()
+	code := latestQR
+	qrMutex.Unlock()
+	json.NewEncoder(w).Encode(map[string]string{
+		"qr": code,
 	})
 }
 
