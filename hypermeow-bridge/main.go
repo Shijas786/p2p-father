@@ -309,6 +309,7 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JID format", http.StatusBadRequest)
 		return
 	}
+	fmt.Printf("[SendButtons] resolved JID: %s (server=%s)\n", jid.String(), jid.Server)
 
 	// Build native quick_reply buttons (max 3, WhatsApp limit)
 	nativeFlowBtns := make([]*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton, 0)
@@ -317,18 +318,18 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		paramsJSON, _ := json.Marshal(map[string]string{"display_text": btn.Label, "id": btn.ID})
+		fmt.Printf("[SendButtons] Button: name=quick_reply params=%s\n", string(paramsJSON))
 		nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
 			Name:             proto.String("quick_reply"),
 			ButtonParamsJSON: proto.String(string(paramsJSON)),
 		})
 	}
 
-	// Build message proto
+	// No empty Header — omit unless a title/image is needed
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
 			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
-			Header: &waProto.InteractiveMessage_Header{},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
 					MessageVersion: proto.Int32(1),
@@ -338,8 +339,21 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Build the biz relay node required for WhatsApp to render native_flow buttons.
-	// Without this, WhatsApp ignores the interactive message and times out.
+	// ── Attempt 1: WITHOUT AdditionalNodes ──────────────────────────────────
+	// If this succeeds but buttons don't render visually, the proto is fine
+	// and the biz relay node is what's needed.
+	// If this ALSO times out, the problem is in proto serialization itself.
+	fmt.Println("[SendButtons] Attempt 1: sending WITHOUT AdditionalNodes")
+	_, err = client.SendMessage(context.Background(), jid, msg)
+	if err == nil {
+		fmt.Println("[SendButtons] Attempt 1 SUCCESS (no AdditionalNodes)")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+		return
+	}
+	fmt.Printf("[SendButtons] Attempt 1 FAILED: %v\n", err)
+
+	// ── Attempt 2: WITH biz relay AdditionalNodes ────────────────────────────
 	bizNode := waBinary.Node{
 		Tag: "biz",
 		Content: []waBinary.Node{
@@ -361,41 +375,48 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
-
-	// For DMs also add a bot node; groups only need the biz node.
 	isGroup := jid.Server == "g.us"
 	additionalNodes := []waBinary.Node{bizNode}
 	if !isGroup {
 		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
 	}
-
+	fmt.Printf("[SendButtons] Attempt 2: sending WITH AdditionalNodes (isGroup=%v)\n", isGroup)
 	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
 		AdditionalNodes: &additionalNodes,
 	})
-	if err != nil {
-		fmt.Printf("[SendButtons] Interactive failed (%v), falling back to plain text\n", err)
-		// Fallback: send as numbered plain text
-		fallbackText := req.Text + "\n\n━━━━━━━━━━━━━━━━━━━━"
-		nums := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
-		for i, btn := range req.Buttons {
-			num := fmt.Sprintf("%d.", i+1)
-			if i < len(nums) {
-				num = nums[i]
-			}
-			fallbackText += fmt.Sprintf("\n%s %s", num, btn.Label)
-		}
-		fallbackText += "\n━━━━━━━━━━━━━━━━━━━━\n_" + req.Footer + "_"
-		fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
-		_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
-		if err2 != nil {
-			http.Error(w, fmt.Sprintf("Failed to send buttons: %v; fallback also failed: %v", err, err2), http.StatusInternalServerError)
-			return
-		}
+	if err == nil {
+		fmt.Println("[SendButtons] Attempt 2 SUCCESS (with AdditionalNodes)")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+		return
 	}
+	fmt.Printf("[SendButtons] Attempt 2 FAILED: %v\n", err)
+
+	// ── Attempt 3: Plain text fallback ───────────────────────────────────────
+	fmt.Println("[SendButtons] Attempt 3: plain text fallback")
+	fallbackText := req.Text + "\n\n━━━━━━━━━━━━━━━━━━━━"
+	nums := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
+	for i, btn := range req.Buttons {
+		num := fmt.Sprintf("%d.", i+1)
+		if i < len(nums) {
+			num = nums[i]
+		}
+		fallbackText += fmt.Sprintf("\n%s %s", num, btn.Label)
+	}
+	fallbackText += "\n━━━━━━━━━━━━━━━━━━━━\n_" + req.Footer + "_"
+	fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
+	_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
+	if err2 != nil {
+		fmt.Printf("[SendButtons] Attempt 3 FAILED: %v\n", err2)
+		http.Error(w, fmt.Sprintf("all send attempts failed: %v / %v / %v", err, err, err2), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("[SendButtons] Attempt 3 SUCCESS (plain text fallback sent)")
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
 }
+
 
 func handleSendList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
