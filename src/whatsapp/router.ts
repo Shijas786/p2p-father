@@ -778,30 +778,30 @@ Welcome back, *${handle}*! 🛡️
 
 Choose an action from the menu below:`;
 
-    // Message 1 (Frame 1: 3 Buttons)
+    // Message 1 (Frame 1: Primary Wallet & Ad Creation Actions)
     await replyWithButtons(
         sock,
         jid,
         topMessageText,
         [
-            { id: "/balance", label: "💰 Balance & Vault" },
-            { id: "/ads",     label: "📊 Browse P2P Ads" },
-            { id: "/post",    label: "➕ Post New Ad" },
+            { id: "/balance",      label: "💰 Wallet Balance" },
+            { id: "vault_deposit", label: "🔒 Top Up Vault" },
+            { id: "/post",         label: "➕ Create Ad" },
         ]
     );
 
     // Short 250ms gap so messages arrive stacked seamlessly
     await new Promise((r) => setTimeout(r, 250));
 
-    // Message 2 (Frame 2: 3 Buttons)
+    // Message 2 (Frame 2: P2P Marketplace & Profile Actions)
     await replyWithButtons(
         sock,
         jid,
-        `⚡ *QUICK ACCOUNT ACTIONS & TRADES*`,
+        `⚡ *P2P MARKETPLACE & PROFILE*`,
         [
-            { id: "/trades",  label: "📜 Active Trades" },
+            { id: "/ads",     label: "📊 Browse Ads" },
             { id: "/my_ads",  label: "📋 My Ads" },
-            { id: "/profile", label: "👤 My Profile" },
+            { id: "/profile", label: "👤 Profile" },
         ]
     );
 }
