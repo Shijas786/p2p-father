@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -651,7 +652,7 @@ func eventHandler(evt interface{}) {
 
 		var audioBase64 string
 		if text == "" && v.Message.GetAudioMessage() != nil {
-			audioBytes, err := client.Download(v.Message.GetAudioMessage())
+			audioBytes, err := client.Download(context.Background(), v.Message.GetAudioMessage())
 			if err == nil && len(audioBytes) > 0 {
 				audioBase64 = base64.StdEncoding.EncodeToString(audioBytes)
 				text = "[VOICE_NOTE]"
