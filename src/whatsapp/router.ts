@@ -13,7 +13,6 @@ import { handleGroupMention } from "./handlers/group";
 import { MAIN_MENU, formatTraderContact } from "./formatters";
 import { ai } from "../services/ai";
 import { env } from "../config/env";
-import { evolutionClient } from "./evolutionClient";
 import { hypermeowClient } from "./hypermeowClient";
 
 function extractText(msg: IWebMessageInfo): string {
@@ -23,20 +22,28 @@ function extractText(msg: IWebMessageInfo): string {
     if (nativeTap) {
         try {
             const parsed = JSON.parse(nativeTap);
-            if (parsed?.id) return String(parsed.id).trim();
-        } catch { /* ignore */ }
+            if (parsed.id) return parsed.id.trim();
+        } catch (_) {}
     }
     return (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
         msg.message?.buttonsResponseMessage?.selectedButtonId ||
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        (msg.message as any)?.templateButtonReplyMessage?.selectedId ||
         ""
     ).trim();
 }
 
-function getBotJid(sock: WASocket): string {
+export function getCleanSenderJid(sock: WASocket, msg: IWebMessageInfo): string {
+    const rawJid = msg.key?.remoteJid || "";
+    if (rawJid.endsWith("@g.us")) return rawJid;
+    const participant = msg.key?.participant || (msg as any).participant || "";
+    if (participant) return participant.split(":")[0] + "@s.whatsapp.net";
+    return rawJid.split(":")[0] + "@s.whatsapp.net";
+}
+
+export function getCleanBotJid(sock: WASocket): string {
     return (sock.user?.id ?? "").split(":")[0] + "@s.whatsapp.net";
 }
 
@@ -50,10 +57,6 @@ export async function reply(
         await hypermeowClient.sendText(jid, text);
         return;
     }
-    if (evolutionClient.isConfigured()) {
-        await evolutionClient.sendText(jid, text);
-        return;
-    }
     const opts = quoted ? { quoted: quoted as WAMessage } : undefined;
     await sock.sendMessage(jid, { text }, opts);
 }
@@ -63,14 +66,11 @@ export async function replyWithButtons(
     jid: string,
     text: string,
     buttons: { id: string; label: string }[],
-    footer = "P2PFather Escrow Exchange"
+    footer = "P2PFather Escrow Exchange",
+    quoted?: IWebMessageInfo
 ): Promise<void> {
     if (hypermeowClient.isConfigured()) {
         await hypermeowClient.sendButtons(jid, text, buttons, footer);
-        return;
-    }
-    if (evolutionClient.isConfigured()) {
-        await evolutionClient.sendButtons(jid, text, buttons, footer);
         return;
     }
 
@@ -84,21 +84,14 @@ export async function replyWithButtons(
     if (nativeButtons.length > 0) {
         try {
             await sock.sendMessage(jid, {
-                interactiveMessage: {
-                    body: { text },
-                    footer: { text: footer },
-                    header: { hasMediaAttachment: false },
-                    nativeFlowMessage: {
-                        messageVersion: 1,
-                        buttons: nativeButtons.map((b) => ({
-                            name: "quick_reply",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: b.label,
-                                id: b.id,
-                            }),
-                        })),
-                    },
-                },
+                buttons: nativeButtons.map((b) => ({
+                    buttonId: b.id,
+                    buttonText: { displayText: b.label },
+                    type: 1,
+                })),
+                headerType: 1,
+                text,
+                footer,
             } as any);
             return;
         } catch (err: any) {
@@ -165,10 +158,6 @@ export async function replyWithList(
 ): Promise<void> {
     if (hypermeowClient.isConfigured()) {
         const ok = await hypermeowClient.sendList(jid, text, buttonTitle, sections);
-        if (ok) return;
-    }
-    if (evolutionClient.isConfigured()) {
-        const ok = await evolutionClient.sendList(jid, text, buttonTitle, sections, footer);
         if (ok) return;
     }
 
@@ -330,7 +319,7 @@ export async function routeMessage(
 
     // ── Group: respond if @mentioned or keyword triggered ────────────────────
     if (isGroup) {
-        const botJid = getBotJid(sock);
+        const botJid = getCleanBotJid(sock);
         const mentionedJids: string[] =
             (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid as string[]) ?? [];
         const lowerText = text.toLowerCase();

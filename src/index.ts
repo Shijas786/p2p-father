@@ -9,7 +9,6 @@ import axios from "axios";
 import { miniappRouter } from "./api/miniapp";
 import { webhookRouter } from "./api/webhook";
 import { whatsappWebhookRouter } from "./api/whatsappWebhook";
-import { evolutionClient } from "./whatsapp/evolutionClient";
 import { customHttpsAgent } from "./services/polymarket";
 
 async function main() {
@@ -135,9 +134,7 @@ async function main() {
                     try {
                         const QRCode = await import("qrcode");
                         qrDataUrl = await QRCode.toDataURL(rawQr);
-                    } catch (err) {
-                        console.error("[WA-QR] Failed to generate QR data URL:", err);
-                    }
+                    } catch (_) {}
                 }
                 res.json({
                     connected: health.connected,
@@ -147,16 +144,6 @@ async function main() {
                 return;
             }
 
-            if (evolutionClient.isConfigured()) {
-                const evoState = await evolutionClient.fetchConnectionState();
-                const evoQr = await evolutionClient.fetchQrCode();
-                res.json({
-                    connected: evoState.connected,
-                    qr: evoQr,
-                    provider: "evolution",
-                });
-                return;
-            }
 
             // Baileys disabled — Hypermeow is the active engine
             res.json({ connected: false, qr: null, provider: "none" });
