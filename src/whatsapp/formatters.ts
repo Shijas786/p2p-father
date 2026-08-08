@@ -9,7 +9,7 @@
 
 import type { Order, Trade, User } from "../types";
 
-const BOT_NUMBER = process.env.WA_BOT_NUMBER || "";
+const BOT_NUMBER = (process.env.WA_BOT_NUMBER || "917012751478").replace(/[^0-9]/g, "");
 
 /** Deep link into private DM to start a specific action */
 export function waLink(text: string): string {
