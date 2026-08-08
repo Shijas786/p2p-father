@@ -293,30 +293,62 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buttons := make([]*waProto.ButtonsMessage_Button, 0)
-	for _, btn := range req.Buttons {
-		buttons = append(buttons, &waProto.ButtonsMessage_Button{
-			ButtonID: proto.String(btn.ID),
-			ButtonText: &waProto.ButtonsMessage_Button_ButtonText{
-				DisplayText: proto.String(btn.Label),
-			},
-			Type: waProto.ButtonsMessage_Button_RESPONSE.Enum(),
-		})
+	// Build native quick_reply buttons (max 3, WhatsApp limit)
+	type nativeBtn struct {
+		Name             string          `json:"name"`
+		ButtonParamsJson string          `json:"buttonParamsJson"`
+	}
+	type btnParams struct {
+		DisplayText string `json:"display_text"`
+		ID          string `json:"id"`
 	}
 
+	nativeBtns := make([]nativeBtn, 0)
+	for i, btn := range req.Buttons {
+		if i >= 3 {
+			break
+		}
+		paramsJSON, _ := json.Marshal(btnParams{DisplayText: btn.Label, ID: btn.ID})
+		nativeBtns = append(nativeBtns, nativeBtn{
+			Name:             "quick_reply",
+			ButtonParamsJson: string(paramsJSON),
+		})
+	}
+	nativeBtnsJSON, _ := json.Marshal(nativeBtns)
+
 	msg := &waProto.Message{
-		ButtonsMessage: &waProto.ButtonsMessage{
-			ContentText: proto.String(req.Text),
-			FooterText:  proto.String(req.Footer),
-			Buttons:     buttons,
-			HeaderType:  waProto.ButtonsMessage_EMPTY.Enum(),
+		InteractiveMessage: &waProto.InteractiveMessage{
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
+			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
+			Header: &waProto.InteractiveMessage_Header{},
+			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
+				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
+					MessageVersion: proto.Int32(1),
+					ButtonsJson:    proto.String(string(nativeBtnsJSON)),
+				},
+			},
 		},
 	}
 
 	_, err = client.SendMessage(context.Background(), jid, msg)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to send buttons: %v", err), http.StatusInternalServerError)
-		return
+		// Fallback: send as numbered plain text
+		fallbackText := req.Text + "\n\n━━━━━━━━━━━━━━━━━━━━"
+		nums := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"}
+		for i, btn := range req.Buttons {
+			num := fmt.Sprintf("%d.", i+1)
+			if i < len(nums) {
+				num = nums[i]
+			}
+			fallbackText += fmt.Sprintf("\n%s %s", num, btn.Label)
+		}
+		fallbackText += "\n━━━━━━━━━━━━━━━━━━━━\n_" + req.Footer + "_"
+		fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
+		_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
+		if err2 != nil {
+			http.Error(w, fmt.Sprintf("Failed to send buttons: %v; fallback also failed: %v", err, err2), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
