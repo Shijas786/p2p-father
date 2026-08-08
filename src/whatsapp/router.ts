@@ -531,6 +531,44 @@ Select an option below to start trading 👇`,
 
     const lowerText = text.toLowerCase().trim();
 
+    // ── Check active trade chat state ─────────────────────────────────────────
+    const chatState = await (db as any).getWhatsappState(user.id);
+    if (chatState?.key?.startsWith("IN_TRADE_CHAT_")) {
+        const tradeId = chatState.key.replace("IN_TRADE_CHAT_", "");
+
+        if (text === "exit_trade_chat" || text === "/start" || text === "menu" || text === "/trades") {
+            await (db as any).clearWhatsappState(user.id);
+            if (text === "exit_trade_chat") {
+                await replyWithButtons(sock, jid, "🚪 Exited trade chat.", [
+                    { id: "/start",   label: "🏠 Main Menu" },
+                    { id: "/trades",  label: "📜 Active Trades" },
+                ]);
+                return;
+            }
+        } else {
+            // Relay message directly to counterparty
+            const counterpartyId = chatState.data?.counterpartyId;
+            if (counterpartyId) {
+                const counterparty = await db.getUserById(counterpartyId);
+                if (counterparty) {
+                    const shortId = tradeId.slice(0, 5).toUpperCase();
+                    const { sendUserAlert } = await import("../services/notifier");
+                    await sendUserAlert(
+                        counterparty,
+                        `💬 *TRADE CHAT (#PF-${shortId})*\n\n*${formatTraderContact(user)}:* ${text}`,
+                        undefined,
+                        [
+                            { id: `/chat_${tradeId}`, label: "💬 Reply in Chat" },
+                            { id: "/trades",          label: "📜 Active Trades" },
+                        ]
+                    );
+                    await reply(sock, jid, "✅ Message delivered to counterparty!", msg);
+                    return;
+                }
+            }
+        }
+    }
+
     // ── Natural language: balance check ──────────────────────────────────────
     if (
         text.startsWith("/balance") ||

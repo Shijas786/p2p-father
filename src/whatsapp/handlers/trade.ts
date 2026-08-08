@@ -310,6 +310,128 @@ The seller has been notified to check their bank account/UPI.`,
         } catch (err) {
             await reply(sock, jid, "❌ Cannot cancel this trade. Contact support.", msg);
         }
+        return;
+    }
+
+    // ─── /trades or [📜 Active Trades] ─────────────────────────────────────────
+    if (text === "/trades" || text === "my_trades" || text.startsWith("/trades")) {
+        try {
+            const client = (db as any).getClient();
+            const { data: activeTrades, error } = await client
+                .from("trades")
+                .select("*, buyer:users!buyer_id(username, whatsapp_phone), seller:users!seller_id(username, whatsapp_phone)")
+                .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+                .in("status", ["matched", "in_escrow", "fiat_sent", "releasing", "disputed"])
+                .order("created_at", { ascending: false });
+
+            if (error || !activeTrades || activeTrades.length === 0) {
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `📜 *MY TRADES*
+
+You currently have no active ongoing trades.`,
+                    [
+                        { id: "/ads",     label: "📊 Browse Ads" },
+                        { id: "/post",    label: "➕ Create Ad" },
+                        { id: "/start",   label: "🏠 Main Menu" },
+                    ]
+                );
+                return;
+            }
+
+            for (const trade of activeTrades.slice(0, 5)) {
+                const isBuyer = trade.buyer_id === user.id;
+                const roleLabel = isBuyer ? "🟢 BUYER" : "🔴 SELLER";
+                const shortId = trade.id.slice(0, 5).toUpperCase();
+                const formattedTradeId = `PF-${shortId}`;
+
+                const counterparty = isBuyer ? trade.seller : trade.buyer;
+                const counterpartyHandle = counterparty?.whatsapp_phone
+                    ? `+${counterparty.whatsapp_phone}`
+                    : (counterparty?.username ? `@${counterparty.username}` : "Trader");
+
+                let statusText = "🟢 Active";
+                if (trade.status === "in_escrow") statusText = "🔒 USDT Locked in Escrow";
+                if (trade.status === "fiat_sent") statusText = "💸 Payment Marked Sent";
+                if (trade.status === "disputed") statusText = "⚠️ Under Admin Dispute";
+
+                const cardMsg =
+`🤝 *TRADE #${formattedTradeId}*
+
+• *Role:* ${roleLabel}
+• *Amount:* ${trade.amount} USDT (₹${trade.fiat_amount})
+• *Chain:* ${trade.chain?.toUpperCase() ?? "BSC"}
+• *Counterparty:* ${counterpartyHandle}
+• *Status:* ${statusText}`;
+
+                const buttons: { id: string; label: string }[] = [
+                    { id: `/chat_${trade.id}`, label: "💬 Chat Counterparty" },
+                ];
+
+                if (isBuyer && (trade.status === "matched" || trade.status === "in_escrow")) {
+                    buttons.push({ id: `/paid_${trade.id}`, label: "💸 Mark Paid" });
+                } else if (!isBuyer && (trade.status === "in_escrow" || trade.status === "fiat_sent")) {
+                    buttons.push({ id: `/release_${trade.id}`, label: "🔓 Confirm Release" });
+                }
+
+                buttons.push({ id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" });
+
+                await replyWithButtons(sock, jid, cardMsg, buttons.slice(0, 3));
+                await new Promise((r) => setTimeout(r, 250));
+            }
+
+            // Universal nav frame
+            await replyWithButtons(sock, jid, `🧭 *TRADE MENU*`, [
+                { id: "/start",   label: "🏠 Main Menu" },
+                { id: "/profile", label: "👤 My Profile" },
+                { id: "/ads",     label: "📊 Browse Ads" },
+            ]);
+        } catch (err: any) {
+            await reply(sock, jid, "❌ Failed to load active trades. Try again.", msg);
+        }
+        return;
+    }
+
+    // ─── /chat_<tradeId> ──────────────────────────────────────────────────────
+    if (text.startsWith("/chat_")) {
+        const tradeId = text.replace("/chat_", "").trim();
+        try {
+            const trade = await db.getTradeById(tradeId);
+            if (!trade) {
+                await reply(sock, jid, "❌ Trade not found.", msg);
+                return;
+            }
+
+            const isBuyer = trade.buyer_id === user.id;
+            const counterpartyId = isBuyer ? trade.seller_id : trade.buyer_id;
+            const counterparty = await db.getUserById(counterpartyId);
+
+            await (db as any).setWhatsappState(user.id, `IN_TRADE_CHAT_${tradeId}`, { counterpartyId });
+
+            const shortId = trade.id.slice(0, 5).toUpperCase();
+            const counterpartyHandle = counterparty?.whatsapp_phone
+                ? `+${counterparty.whatsapp_phone}`
+                : (counterparty?.username ? `@${counterparty.username}` : "Counterparty");
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `💬 *LIVE TRADE CHAT (#PF-${shortId})*
+
+You are now in live direct chat with *${counterpartyHandle}*!
+Every text message you send now will be forwarded directly to them.
+
+_Tap below when finished to return to main menu:_`,
+                [
+                    { id: "exit_trade_chat", label: "🚪 Exit Chat" },
+                    { id: "/start",          label: "🏠 Main Menu" },
+                ]
+            );
+        } catch (err) {
+            await reply(sock, jid, "❌ Failed to enter chat mode.", msg);
+        }
+        return;
     }
 }
 
