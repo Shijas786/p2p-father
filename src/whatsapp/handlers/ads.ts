@@ -6,6 +6,8 @@
 import type { WASocket, IWebMessageInfo } from "../types";
 import type { User } from "../../types";
 import { db } from "../../db/client";
+import { escrow } from "../../services/escrow";
+import { env } from "../../config/env";
 import { reply, replyWithButtons, replyWithList } from "../router";
 import { fmtOrderList, fmtMyAds } from "../formatters";
 import { broadcastNewAdToGroups } from "./group";
@@ -98,8 +100,8 @@ export async function handleAdCommand(
         await replyWithList(
             sock,
             jid,
-            `${headerText}\n\nTap an ad to start an escrow-protected trade 🔒`,
-            "💼 Select an Ad to Trade",
+            headerText,
+            "Choose a trader to trade instantly",
             sections
         );
         return;
@@ -136,7 +138,7 @@ export async function handleAdCommand(
         return;
     }
 
-    // ─── /post — Start multi-step ad creation flow ────────────────────────────
+    // ─── /post — Create a new ad ──────────────────────────────────────────────
     if (text === "/post") {
         // Initialize draft state
         await (db as any).setWhatsappState(user.id, "POST_AD", { step: "TYPE" } as AdDraft);
@@ -176,6 +178,39 @@ async function handleAdCreationFlow(
                 return;
             }
             const type = text.includes("sell") ? "sell" : "buy";
+
+            // If SELL ad, check Escrow Vault balance FIRST!
+            if (type === "sell" && user.wallet_address) {
+                try {
+                    const bscUsdt = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", "bsc").catch(() => "0");
+                    const baseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, "base").catch(() => "0");
+                    const totalVault = parseFloat(bscUsdt) + parseFloat(baseUsdt);
+
+                    if (totalVault <= 0) {
+                        await (db as any).clearWhatsappState(user.id);
+                        await replyWithButtons(
+                            sock,
+                            jid,
+                            `❌ *INSUFFICIENT ESCROW VAULT BALANCE*
+
+To post a *SELL Ad*, you must first deposit USDT into your P2PFather Smart Contract Vault.
+
+💳 *Wallet:* \`${user.wallet_address}\`
+🔒 *Vault Balance:* 0.00 USDT
+
+_Please top up your vault by sending USDT to your deposit address before creating a SELL ad._`,
+                            [
+                                { id: "/deposit", label: "📥 Deposit USDT" },
+                                { id: "/balance", label: "💰 Check Balance" },
+                            ]
+                        );
+                        return;
+                    }
+                } catch (_) {
+                    // Continue if RPC read fails temporarily
+                }
+            }
+
             draft.type = type;
             draft.step = "TOKEN";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
