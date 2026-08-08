@@ -427,6 +427,13 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         return;
     }
 
+    // ── Explicit Welcome / Onboarding test command ────────────────────────────
+    if (text === "/welcome" || text === "welcome" || text === "/onboarding") {
+        await (db as any).clearWhatsappState(user.id);
+        await showWelcomeScreen(sock, jid, msg);
+        return;
+    }
+
     const isGreeting = ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help", ""].includes(text);
     if (isGreeting) {
         await (db as any).clearWhatsappState(user.id);

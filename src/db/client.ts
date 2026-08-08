@@ -920,7 +920,7 @@ class Database {
             first_name:        `WA_${phone.slice(-4)}`,
             whatsapp_phone:    phone,
             preferred_channel: "whatsapp",
-            wallet_index:      null,
+            wallet_index:      nextIndex,
             wallet_address:    null,
             wallet_type:       null,
         };
@@ -966,15 +966,26 @@ class Database {
     async assignWalletToWaUser(userId: string): Promise<User> {
         const db = this.getClient();
 
-        const { data: maxResult } = await db
+        // Check if user already has a pre-assigned wallet_index
+        const { data: existingUser } = await db
             .from("users")
             .select("wallet_index")
-            .not("wallet_index", "is", null)
-            .order("wallet_index", { ascending: false })
-            .limit(1)
+            .eq("id", userId)
             .maybeSingle();
 
-        const nextIndex = ((maxResult as any)?.wallet_index ?? 0) + 1;
+        let nextIndex = existingUser?.wallet_index;
+
+        if (!nextIndex) {
+            const { data: maxResult } = await db
+                .from("users")
+                .select("wallet_index")
+                .not("wallet_index", "is", null)
+                .order("wallet_index", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            nextIndex = ((maxResult as any)?.wallet_index ?? 0) + 1;
+        }
 
         let walletAddress: string | null = null;
         try {
