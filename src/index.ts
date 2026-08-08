@@ -70,22 +70,18 @@ async function main() {
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
-    // Start WhatsApp Bot (Baileys)
-    if (!process.env.NO_WHATSAPP) {
-        try {
-            console.log("  📱 Starting WhatsApp bot (Baileys)...");
-            const { initWhatsApp, getSock } = await import("./whatsapp/client");
-            const { setBroadcastSock } = await import("./whatsapp/handlers/group");
-            await initWhatsApp();
-            // Give Baileys 2s to connect before registering sock for broadcasts
-            setTimeout(() => {
-                try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
-            }, 2000);
-        } catch (err: any) {
-            console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
-        }
-    } else {
-        console.log("  🚫 WhatsApp bot is disabled by NO_WHATSAPP env var.");
+    // Start WhatsApp Bot (Baileys) unconditionally
+    try {
+        console.log("  📱 Starting WhatsApp bot (Baileys)...");
+        const { initWhatsApp, getSock } = await import("./whatsapp/client");
+        const { setBroadcastSock } = await import("./whatsapp/handlers/group");
+        await initWhatsApp();
+        // Give Baileys 2s to connect before registering sock for broadcasts
+        setTimeout(() => {
+            try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
+        }, 2000);
+    } catch (err: any) {
+        console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
     }
 
 
