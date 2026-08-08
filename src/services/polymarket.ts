@@ -138,7 +138,7 @@ class PolymarketService {
             // pUSD — Polymarket's native ERC-20 collateral (replaces USDC.e as of April 2026)
             const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
 
-            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || "https://polygon-rpc.com");
+            const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || "https://polygon-rpc.com", 137, { staticNetwork: true });
             const contract = new ethers.Contract(pusdAddress, [
                 "function balanceOf(address) view returns (uint256)",
                 "function decimals() view returns (uint8)"
@@ -178,7 +178,7 @@ class PolymarketService {
         const account = privateKeyToAccount(derived.privateKey as `0x${string}`);
         
         const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
-        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const provider = new ethers.JsonRpcProvider(rpcUrl, 137, { staticNetwork: true });
 
         const { polymarketRelayerService } = await import("./relayer");
         const depositWallet = await polymarketRelayerService.resolveDepositWallet(userWalletIndex);

@@ -15,7 +15,7 @@ const CTF_ABI = [
 
 async function getConditionResolution(conditionId: string): Promise<{ num0: number; num1: number; denominator: number } | null> {
     try {
-        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com');
+        const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com', 137, { staticNetwork: true });
         const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, provider);
         const denominator = await ctf.payoutDenominator(conditionId);
         if (BigInt(denominator) === 0n) return null; // Not resolved yet
