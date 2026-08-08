@@ -771,7 +771,7 @@ export async function sendTwoMessageMainMenu(
 
 Welcome back, *${handle}*! 🛡️
 
-• *Vault Wallet:* ${walletAddr}
+• *P2P Wallet:* ${walletAddr}
 • *Networks:* Base & BSC (USDT)
 • *Security:* 100% Smart-Contract Escrow
 
