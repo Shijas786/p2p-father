@@ -323,6 +323,21 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             response: "I didn't understand that. Try /help to see what I can do!",
         };
     }
+
+    public async transcribeAudio(audioBuffer: Buffer, filename = "voice.ogg"): Promise<string | null> {
+        try {
+            if (!this.client) return null;
+            const file = await OpenAI.toFile(audioBuffer, filename, { type: "audio/ogg" });
+            const res = await this.client.audio.transcriptions.create({
+                file,
+                model: "whisper-1",
+            });
+            return res.text ? res.text.trim() : null;
+        } catch (err: any) {
+            console.error("[AI] Whisper voice transcription error:", err?.message || err);
+            return null;
+        }
+    }
 }
 
 export const ai = new AIService();
