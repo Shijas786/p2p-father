@@ -4,7 +4,7 @@
  * - Broadcasts new ads to all registered groups (with rate-limiting)
  */
 
-import type { WASocket, proto } from "@whiskeysockets/baileys";
+import type { WASocket, IWebMessageInfo } from "../types";
 import { db } from "../../db/client";
 import { reply } from "../router";
 import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
@@ -13,7 +13,7 @@ import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
 
 export async function handleGroupMention(
     sock: WASocket,
-    msg: proto.IWebMessageInfo,
+    msg: IWebMessageInfo,
     groupJid: string,
     text: string
 ): Promise<void> {

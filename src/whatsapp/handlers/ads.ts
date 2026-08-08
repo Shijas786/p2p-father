@@ -3,7 +3,7 @@
  * Handles: /ads, /post, /my_ads, /delete_ad_<id>, /pause_ad_<id>
  */
 
-import type { WASocket, proto } from "@whiskeysockets/baileys";
+import type { WASocket, IWebMessageInfo } from "../types";
 import type { User } from "../../types";
 import { db } from "../../db/client";
 import { reply, replyWithButtons, replyWithList } from "../router";
@@ -26,7 +26,7 @@ interface AdDraft {
 
 export async function handleAdCommand(
     sock: WASocket,
-    msg: proto.IWebMessageInfo,
+    msg: IWebMessageInfo,
     jid: string,
     user: User,
     text: string
@@ -162,7 +162,7 @@ export async function handleAdCommand(
 
 async function handleAdCreationFlow(
     sock: WASocket,
-    msg: proto.IWebMessageInfo,
+    msg: IWebMessageInfo,
     jid: string,
     user: User,
     text: string,

@@ -1,21 +1,50 @@
 /**
- * WhatsApp Express Webhook for Evolution API
- * Listens for MESSAGES_UPSERT webhooks from Evolution API server.
+ * WhatsApp Webhook Router
+ * Receives messages from Hypermeow (Go bridge) and Evolution API,
+ * routes them through the P2PFather message router.
  */
 
 import { Router } from "express";
 import { routeMessage } from "../whatsapp/router";
-import type { WASocket, proto } from "@whiskeysockets/baileys";
-import { getSock } from "../whatsapp/client";
+import type { WASocket, IWebMessageInfo } from "../whatsapp/types";
 
 export const whatsappWebhookRouter = Router();
+
+/** Stub socket — Hypermeow handles all outgoing sends via HTTP */
+const stubSock: WASocket = {
+    user: { id: "917012751478:0@s.whatsapp.net" },
+    sendMessage: async () => {},
+};
 
 whatsappWebhookRouter.post("/webhook", async (req, res) => {
     try {
         const body = req.body;
         const event = body.event || body.type;
 
-        // Evolution API pushes messages via MESSAGES_UPSERT or SEND_MESSAGE
+        // ── Hypermeow (Go bridge) webhook ──────────────────────────────────────
+        // Payload: { jid, text, sender, pushName }
+        if (body.jid && body.text !== undefined && !event) {
+            const normalizedMsg: IWebMessageInfo = {
+                key: {
+                    remoteJid: body.jid,
+                    fromMe: false,
+                    id: `hm_${Date.now()}`,
+                },
+                message: {
+                    conversation: body.text,
+                    extendedTextMessage: { text: body.text },
+                },
+                pushName: body.pushName || "",
+            };
+
+            routeMessage(stubSock, normalizedMsg).catch((err) => {
+                console.error("[Hypermeow-Webhook] Error routing message:", err);
+            });
+
+            return res.status(200).json({ status: "ok" });
+        }
+
+        // ── Evolution API webhook ──────────────────────────────────────────────
         if (event === "messages.upsert" || event === "MESSAGES_UPSERT") {
             const data = body.data;
             if (!data) return res.status(200).json({ status: "ignored" });
@@ -26,7 +55,6 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
             const remoteJid = key.remoteJid || (data.sender ? `${data.sender}@s.whatsapp.net` : "");
             if (!remoteJid) return res.status(200).json({ status: "ignored_no_jid" });
 
-            // Extract message content or button / list tap response
             const message = data.message || {};
             const buttonReply =
                 data.buttonsResponseMessage?.selectedButtonId ||
@@ -42,8 +70,7 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                 message.extendedTextMessage?.text ||
                 "";
 
-            // Construct normalized Baileys-like WebMessageInfo stub
-            const normalizedMsg: proto.IWebMessageInfo = {
+            const normalizedMsg: IWebMessageInfo = {
                 key: {
                     remoteJid,
                     fromMe: false,
@@ -57,26 +84,14 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                 },
             };
 
-            let sock: WASocket | null = null;
-            try {
-                sock = getSock();
-            } catch (_) {
-                // Dummy socket stub if local Baileys socket is not initialized
-                sock = {
-                    user: { id: "917012751478:0@s.whatsapp.net" },
-                    sendMessage: async () => {},
-                } as any;
-            }
-
-            // Asynchronously route message through P2PFather router logic
-            routeMessage(sock!, normalizedMsg).catch((err) => {
+            routeMessage(stubSock, normalizedMsg).catch((err) => {
                 console.error("[Evolution-Webhook] Error routing message:", err);
             });
         }
 
         res.status(200).json({ status: "ok" });
     } catch (err: any) {
-        console.error("[Evolution-Webhook] Processing error:", err?.message);
+        console.error("[Webhook] Processing error:", err?.message);
         res.status(500).json({ error: "Webhook processing error" });
     }
 });

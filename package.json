@@ -34,7 +34,6 @@
     "@supabase/supabase-js": "^2.49.4",
     "@types/multer": "^2.0.0",
     "@types/qrcode": "^1.5.6",
-    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",

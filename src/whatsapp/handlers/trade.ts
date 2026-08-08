@@ -3,7 +3,7 @@
  * Handles: trade_ad_<id>, /paid_<id>, /release_<id>, /dispute_<id>, /cancel_<id>
  */
 
-import type { WASocket, proto } from "@whiskeysockets/baileys";
+import type { WASocket, IWebMessageInfo } from "../types";
 import type { User } from "../../types";
 import { db } from "../../db/client";
 import { escrow } from "../../services/escrow";
@@ -19,7 +19,7 @@ import { sendUserAlert } from "../../services/notifier";
 
 export async function handleTradeCommand(
     sock: WASocket,
-    msg: proto.IWebMessageInfo,
+    msg: IWebMessageInfo,
     jid: string,
     user: User,
     text: string

@@ -3,7 +3,7 @@
  * Handles: /balance, /deposit, /send, /withdraw
  */
 
-import type { WASocket, proto } from "@whiskeysockets/baileys";
+import type { WASocket, IWebMessageInfo } from "../types";
 import type { User } from "../../types";
 import { wallet } from "../../services/wallet";
 import { db } from "../../db/client";
@@ -13,7 +13,7 @@ import QRCode from "qrcode";
 
 export async function handleWalletCommand(
     sock: WASocket,
-    msg: proto.IWebMessageInfo,
+    msg: IWebMessageInfo,
     jid: string,
     senderPhone: string,
     user: User,

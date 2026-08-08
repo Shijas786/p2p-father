@@ -3,7 +3,7 @@
  *
  * Sends alerts to users via their preferred channel:
  *   - Telegram (via grammY bot.api)
- *   - WhatsApp (via Baileys sock)
+ *   - WhatsApp (via Hypermeow Go bridge)
  *   - Both
  *
  * Usage:
@@ -38,19 +38,13 @@ export async function sendUserAlert(
         }
     }
 
-    // ── Send to WhatsApp ──────────────────────────────────────────────────────
+    // ── Send to WhatsApp via Hypermeow ────────────────────────────────────────
     if (sendWhatsApp && (user as any).whatsapp_phone) {
         try {
-            const { getSock } = await import("../whatsapp/client");
-            const sock  = getSock();
+            const { hypermeowClient } = await import("../whatsapp/hypermeowClient");
             const phone = (user as any).whatsapp_phone as string;
             const jid   = `${phone}@s.whatsapp.net`;
-
-            if (imageBuffer) {
-                await sock.sendMessage(jid, { image: imageBuffer, caption: message });
-            } else {
-                await sock.sendMessage(jid, { text: message });
-            }
+            await hypermeowClient.sendText(jid, message);
         } catch (err) {
             console.error(`[Notifier] WhatsApp send failed for user ${user.id}:`, err);
         }

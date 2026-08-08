@@ -72,19 +72,7 @@ async function main() {
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
-    // Baileys is DISABLED — Hypermeow Go bridge is the active WhatsApp engine
-    // To re-enable Baileys, uncomment the block below
-    // try {
-    //     console.log("  📱 Starting WhatsApp bot (Baileys)...");
-    //     const { initWhatsApp, getSock } = await import("./whatsapp/client");
-    //     const { setBroadcastSock } = await import("./whatsapp/handlers/group");
-    //     await initWhatsApp();
-    //     setTimeout(() => {
-    //         try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
-    //     }, 2000);
-    // } catch (err: any) {
-    //     console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
-    // }
+    // Hypermeow Go bridge is the active WhatsApp engine — Baileys removed
     console.log("  🟢 WhatsApp engine: Hypermeow (Go bridge)");
 
 

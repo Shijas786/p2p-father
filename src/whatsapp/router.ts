@@ -2,7 +2,7 @@
  * P2PFather WhatsApp Message Router
  */
 
-import type { WASocket, proto, WAMessage } from "@whiskeysockets/baileys";
+import type { WASocket, IWebMessageInfo, WAMessage } from "./types";
 import { db } from "../db/client";
 import { handleWalletCommand } from "./handlers/wallet";
 import { handleAdCommand } from "./handlers/ads";
@@ -14,7 +14,7 @@ import { env } from "../config/env";
 import { evolutionClient } from "./evolutionClient";
 import { hypermeowClient } from "./hypermeowClient";
 
-function extractText(msg: proto.IWebMessageInfo): string {
+function extractText(msg: IWebMessageInfo): string {
     // interactiveResponseMessage: fired when user taps a native nativeFlow button
     const nativeTap = (msg.message?.interactiveResponseMessage as any)
         ?.nativeFlowResponseMessage?.paramsJson;
@@ -42,7 +42,7 @@ export async function reply(
     sock: WASocket,
     jid: string,
     text: string,
-    quoted?: proto.IWebMessageInfo
+    quoted?: IWebMessageInfo
 ): Promise<void> {
     if (hypermeowClient.isConfigured()) {
         await hypermeowClient.sendText(jid, text);
@@ -227,7 +227,7 @@ export async function replyWithList(
 async function showWelcomeScreen(
     sock: WASocket,
     jid: string,
-    msg: proto.IWebMessageInfo
+    msg: IWebMessageInfo
 ): Promise<void> {
     await replyWithButtons(
         sock,
@@ -256,7 +256,7 @@ To get started, create your wallet or learn how it works 👇`,
 async function showGuide(
     sock: WASocket,
     jid: string,
-    msg: proto.IWebMessageInfo
+    msg: IWebMessageInfo
 ): Promise<void> {
     await replyWithButtons(
         sock,
@@ -291,7 +291,7 @@ Ready to start? Create your wallet below 👇`,
 async function showWalletChoice(
     sock: WASocket,
     jid: string,
-    msg: proto.IWebMessageInfo
+    msg: IWebMessageInfo
 ): Promise<void> {
     await replyWithButtons(
         sock,
@@ -316,7 +316,7 @@ _Already have a 6-digit link code from Telegram? Just send it here!_`,
 
 export async function routeMessage(
     sock: WASocket,
-    msg: proto.IWebMessageInfo
+    msg: IWebMessageInfo
 ): Promise<void> {
     if (!msg.key) return;
     const jid = msg.key.remoteJid;
