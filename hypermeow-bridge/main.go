@@ -389,10 +389,20 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Build inline text button list so ALL WhatsApp clients (iOS/Android/Web/Desktop) render action options
+	textWithInlineButtons := req.Text
+	if len(req.Buttons) > 0 {
+		textWithInlineButtons += "\n\n━━━━━━━━━━━━━━━━━━━━"
+		for _, btn := range req.Buttons {
+			textWithInlineButtons += fmt.Sprintf("\n👉 *%s* → Send: `%s`", btn.Label, btn.ID)
+		}
+		textWithInlineButtons += "\n━━━━━━━━━━━━━━━━━━━━"
+	}
+
 	// No empty Header — omit unless a title/image is needed
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
-			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(textWithInlineButtons)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
@@ -505,9 +515,27 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	textWithInlineList := req.Title
+	if len(req.Sections) > 0 {
+		textWithInlineList += "\n\n━━━━━━━━━━━━━━━━━━━━"
+		for _, sec := range req.Sections {
+			if sec.Title != "" {
+				textWithInlineList += "\n\n📌 *" + sec.Title + "*"
+			}
+			for _, r := range sec.Rows {
+				textWithInlineList += fmt.Sprintf("\n• *%s*", r.Title)
+				if r.Description != "" {
+					textWithInlineList += fmt.Sprintf("\n  └ %s", r.Description)
+				}
+				textWithInlineList += fmt.Sprintf("\n  👉 Send: `%s`", r.ID)
+			}
+		}
+		textWithInlineList += "\n━━━━━━━━━━━━━━━━━━━━"
+	}
+
 	msg := &waProto.Message{
 		ListMessage: &waProto.ListMessage{
-			Title:      proto.String(req.Title),
+			Title:      proto.String(textWithInlineList),
 			ButtonText: proto.String(req.ButtonText),
 			ListType:   waProto.ListMessage_SINGLE_SELECT.Enum(),
 			Sections:   sections,
