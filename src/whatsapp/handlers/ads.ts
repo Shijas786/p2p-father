@@ -171,6 +171,21 @@ async function handleAdCreationFlow(
     text: string,
     draft: AdDraft
 ): Promise<void> {
+    const lower = text.toLowerCase().trim();
+    if (lower === "back" || lower === "cancel" || lower === "ad_cancel" || lower === "/cancel") {
+        await (db as any).clearWhatsappState(user.id);
+        await replyWithButtons(
+            sock,
+            jid,
+            "❌ *Ad creation cancelled.*",
+            [
+                { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "/profile", label: "👤 View Profile" },
+            ]
+        );
+        return;
+    }
+
     switch (draft.step) {
         // ── Step 1: Ad type ───────────────────────────────────────────────────
         case "TYPE": {
@@ -202,7 +217,7 @@ To post a *SELL Ad*, you must first deposit USDT into your P2PFather Smart Contr
 _Please top up your vault by sending USDT to your deposit address before creating a SELL ad._`,
                             [
                                 { id: "/deposit", label: "📥 Deposit USDT" },
-                                { id: "/balance", label: "💰 Check Balance" },
+                                { id: "/profile", label: "🔙 Back to Profile" },
                             ]
                         );
                         return;
@@ -222,8 +237,8 @@ _Please top up your vault by sending USDT to your deposit address before creatin
                 `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2 of 5: Select token & chain:`,
                 [
                     { id: "ad_token_usdt_bsc",     label: "USDT (BSC)" },
-                    { id: "ad_token_usdt_polygon",  label: "USDT (Polygon)" },
                     { id: "ad_token_usdt_base",     label: "USDT (Base)" },
+                    { id: "ad_cancel",              label: "🔙 Cancel" },
                 ]
             );
             return;
