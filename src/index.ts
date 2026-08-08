@@ -140,9 +140,19 @@ async function main() {
             const { hypermeowClient } = await import("./whatsapp/hypermeowClient");
             if (hypermeowClient.isConfigured()) {
                 const health = await hypermeowClient.checkHealth();
+                const rawQr = await hypermeowClient.getQrCode();
+                let qrDataUrl: string | null = null;
+                if (rawQr) {
+                    try {
+                        const QRCode = await import("qrcode");
+                        qrDataUrl = await QRCode.toDataURL(rawQr);
+                    } catch (err) {
+                        console.error("[WA-QR] Failed to generate QR data URL:", err);
+                    }
+                }
                 res.json({
                     connected: health.connected,
-                    qr: null,
+                    qr: qrDataUrl,
                     provider: "hypermeow",
                 });
                 return;

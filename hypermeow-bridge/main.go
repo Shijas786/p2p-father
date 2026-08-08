@@ -157,7 +157,7 @@ func main() {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	connected := client != nil && client.IsConnected()
+	connected := client != nil && client.IsConnected() && client.Store.ID != nil
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "ok",
 		"connected": connected,
