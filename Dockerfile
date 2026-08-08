@@ -1,7 +1,9 @@
 FROM node:22-bookworm
 
-# Install Go compiler & SQLite build dependencies
-RUN apt-get update && apt-get install -y golang gcc g++ make sqlite3 libsqlite3-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install build tools & Go 1.22 official compiler binary
+RUN apt-get update && apt-get install -y gcc g++ make sqlite3 libsqlite3-dev ca-certificates wget tar && rm -rf /var/lib/apt/lists/*
+RUN wget -q https://go.dev/dl/go1.22.5.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz && rm go1.22.5.linux-amd64.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 WORKDIR /app
 
