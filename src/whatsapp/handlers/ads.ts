@@ -14,17 +14,18 @@ import { broadcastNewAdToGroups } from "./group";
 import { hasPaymentMethods } from "./profile";
 
 /** Multi-step Post Ad flow state machine */
-type AdStep = "TYPE" | "TOKEN" | "RATE" | "LIMITS" | "PAYMENT" | "CONFIRM";
+type AdStep = "TYPE" | "TOKEN" | "RATE" | "AMOUNT" | "LIMITS" | "PAYMENT" | "CONFIRM";
 
 interface AdDraft {
     step: AdStep;
     type?: "buy" | "sell";
     token?: string;
+    chain?: string;
     rate?: number;
+    amount?: number;
     min_amount?: number;
     max_amount?: number;
     payment_methods?: string[];
-    chain?: string;
 }
 
 export async function handleAdCommand(
@@ -272,38 +273,40 @@ _Please top up your vault by sending USDT to your deposit address before creatin
                 return;
             }
             draft.rate = rate;
-            draft.step = "LIMITS";
+            draft.step = "AMOUNT";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             await reply(
                 sock,
                 jid,
-                `✅ *Rate: ₹${rate} / USDT*\n\nStep 4 of 5: Enter your *min and max trade limits* (₹)\n\n*Example:* \`1000 50000\``,
+                `✅ *Rate: ₹${rate} / USDT*\n\nStep 4 of 5: Enter the *total USDT amount* for this ad:\n\n*Example:* \`100\` (for 100 USDT → ₹${(100 * rate).toLocaleString("en-IN")})`,
                 msg
             );
             return;
         }
 
-        // ── Step 4: Limits ────────────────────────────────────────────────────
-        case "LIMITS": {
-            const nums = text.match(/(\d+)/g);
-            if (!nums || nums.length < 2) {
-                await reply(sock, jid, "❌ Enter min and max limits separated by space.\n*Example:* `1000 50000`", msg);
+        // ── Step 4: Amount ────────────────────────────────────────────────────
+        case "AMOUNT": {
+            const amount = parseFloat(text);
+            if (isNaN(amount) || amount <= 0) {
+                await reply(sock, jid, "❌ Enter a valid USDT amount.\n*Example:* `100`", msg);
                 return;
             }
-            draft.min_amount = parseInt(nums[0]);
-            draft.max_amount = parseInt(nums[1]);
-            draft.step       = "PAYMENT";
+            const totalFiat = Math.round(amount * draft.rate!);
+            draft.amount = amount;
+            draft.min_amount = 100;
+            draft.max_amount = totalFiat;
+            draft.step = "PAYMENT";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *Limits: ₹${draft.min_amount} – ₹${draft.max_amount}*\n\nStep 5 of 5: Select *payment methods* (you can pick multiple):\nReply with: \`UPI IMPS BANK\` (space-separated)`,
+                `✅ *Amount: ${amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})*\n\nStep 5 of 5: Select *payment method*:`,
                 [
-                    { id: "ad_pay_upi",        label: "UPI (GPay/PhonePe)" },
-                    { id: "ad_pay_imps",       label: "IMPS Bank Transfer" },
-                    { id: "ad_pay_upi_imps",   label: "UPI + IMPS" },
+                    { id: "ad_pay_upi",        label: "📱 UPI (GPay/PhonePe)" },
+                    { id: "ad_pay_imps",       label: "🏦 Bank Transfer / IMPS" },
+                    { id: "ad_pay_upi_imps",   label: "📱 UPI + Bank Transfer" },
                 ]
             );
             return;
@@ -321,6 +324,8 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             draft.step = "CONFIRM";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
+            const totalFiat = Math.round((draft.amount || 0) * (draft.rate || 0));
+
             await replyWithButtons(
                 sock,
                 jid,
@@ -328,8 +333,9 @@ _Please top up your vault by sending USDT to your deposit address before creatin
 
 • *Type:* ${draft.type!.toUpperCase()} USDT
 • *Token:* USDT (${draft.chain!.toUpperCase()})
-• *Rate:* ₹${draft.rate}
-• *Limits:* ₹${draft.min_amount} – ₹${draft.max_amount}
+• *Amount:* ${draft.amount} USDT
+• *Rate:* ₹${draft.rate} / USDT
+• *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
 • *Payment:* ${methods.join(", ")}
 
 Tap ✅ Publish to go live!`,
