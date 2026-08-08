@@ -58,7 +58,7 @@ async function main() {
 
     // Background Jobs
     if (env.NODE_ENV !== 'test') {
-        const { startExpiryJob, startLiquiditySyncJob, startAutoClaimJob, startPredictionSyncJob, startPredictionResolutionJob } = await import("./services/jobs");
+        const { startExpiryJob, startLiquiditySyncJob, startTradeReconciliationJob, startPredictionSyncJob, startPredictionResolutionJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
         const { bridgeMonitor } = await import("./services/bridge-monitor");
         // 🚀 Deposit Monitor disabled globally - now runs on-demand via API
@@ -66,7 +66,7 @@ async function main() {
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
-        // startAutoClaimJob(); // Disabled background auto-claim service, using manual claim button instead
+        startTradeReconciliationJob();
         startPredictionSyncJob();
         startPredictionResolutionJob();
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits

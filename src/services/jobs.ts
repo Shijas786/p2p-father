@@ -511,3 +511,57 @@ export function startCopyTradingWatchJob() {
         setInterval(run, 30 * 1000); // then every 30s
     }, 10 * 1000);
 }
+
+export function startTradeReconciliationJob() {
+    console.log("🛡️ Starting P2P Trade On-Chain Reconciliation Worker (polls every 30s)...");
+
+    setInterval(async () => {
+        try {
+            const client = (db as any).getClient();
+
+            // Query trades in escrow_pending or release_pending state
+            const { data: pendingTrades, error } = await client
+                .from("trades")
+                .select("*")
+                .in("status", ["escrow_pending", "release_pending"])
+                .limit(20);
+
+            if (error || !pendingTrades || pendingTrades.length === 0) return;
+
+            const { getFastProvider } = await import("../utils/provider");
+
+            for (const trade of pendingTrades) {
+                const txHash = trade.escrow_tx_hash || trade.release_tx_hash;
+                if (!txHash) continue;
+
+                try {
+                    const chainKey = (trade.chain || "bsc").toLowerCase();
+                    const provider = getFastProvider(chainKey);
+
+                    const txReceipt = await provider.getTransactionReceipt(txHash);
+                    if (txReceipt && txReceipt.status === 1) {
+                        if (trade.status === "waiting_for_escrow" || trade.status === "matched") {
+                            await db.updateTrade(trade.id, {
+                                status: "in_escrow",
+                                escrow_tx_hash: txHash,
+                            });
+                            console.log(`[Reconciliation] ✅ Trade ${trade.id} escrow TX ${txHash} confirmed on-chain! Status -> in_escrow`);
+                        } else if (trade.status === "releasing") {
+                            await db.updateTrade(trade.id, {
+                                status: "completed",
+                                release_tx_hash: txHash,
+                            });
+                            console.log(`[Reconciliation] 🎉 Trade ${trade.id} release TX ${txHash} confirmed on-chain! Status -> completed`);
+                        }
+                    } else if (txReceipt && txReceipt.status === 0) {
+                        console.warn(`[Reconciliation] ❌ Trade ${trade.id} TX ${txHash} failed on-chain.`);
+                    }
+                } catch (err: any) {
+                    console.error(`[Reconciliation] Error checking TX for trade ${trade.id}:`, err.message);
+                }
+            }
+        } catch (err: any) {
+            console.error("[Reconciliation] Worker error:", err.message);
+        }
+    }, 30 * 1000); // Poll every 30 seconds
+}
