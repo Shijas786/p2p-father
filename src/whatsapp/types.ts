@@ -33,6 +33,10 @@ export interface IInteractiveResponseMessage {
 
 export interface IExtendedTextMessage {
     text?: string | null;
+    contextInfo?: {
+        mentionedJid?: string[] | null;
+        [key: string]: any;
+    } | null;
 }
 
 export interface IImageMessage {
@@ -58,6 +62,7 @@ export interface IWebMessageInfo {
 export interface WASocket {
     user?: { id: string } | null;
     sendMessage: (jid: string, content: any, opts?: any) => Promise<any>;
+    groupMetadata: (jid: string) => Promise<{ subject?: string; [key: string]: any }>;
 }
 
 /** Alias for IWebMessageInfo */

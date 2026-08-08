@@ -14,6 +14,7 @@ export const whatsappWebhookRouter = Router();
 const stubSock: WASocket = {
     user: { id: "917012751478:0@s.whatsapp.net" },
     sendMessage: async () => {},
+    groupMetadata: async () => ({ subject: "Unknown" }),
 };
 
 whatsappWebhookRouter.post("/webhook", async (req, res) => {
