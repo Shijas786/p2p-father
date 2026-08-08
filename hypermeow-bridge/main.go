@@ -139,7 +139,9 @@ func main() {
 	ctx := context.Background()
 	dbLog := waLog.Stdout("Database", "INFO", true)
 	var err error
-	container, err = sqlstore.New(ctx, "sqlite3", "file:hypermeow.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
+	// Use persistent volume path so session survives redeploys
+	dbPath := "/app/hypermeow-bridge/data/hypermeow.db"
+	container, err = sqlstore.New(ctx, "sqlite3", "file:"+dbPath+"?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
 	if err != nil {
 		log.Fatalf("Failed to initialize SQLite store: %v", err)
 	}
