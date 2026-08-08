@@ -136,18 +136,20 @@ export function fmtOrderList(orders: any[], type: string): string {
     return `📊 *LIVE ${type.toUpperCase()} USDT ADS*\n\n${lines.join("\n\n")}\n\n_Tap a link to open private chat & start escrow trade_`;
 }
 
-export function fmtMyAds(orders: any[]): string {
+export function fmtMyAds(orders: Order[]): string {
     if (orders.length === 0) {
-        return `📋 *You have no active ads.*\n\nPost one now with /post`;
+        return `📋 *You have no active ads.*\n\nPost one now with /post 🚀`;
     }
 
     const lines = orders.map((o, i) => {
-        const status = o.status === "active" ? "🟢 Active" : `⏸ ${o.status}`;
-        const limits = formatOrderLimits(o);
-        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} | ${status}
-   Limits: ${limits}
-   ▸ Delete: /delete_ad_${o.id}
-   ▸ Pause: /pause_ad_${o.id}`;
+        const status = o.status === "active" ? "🟢 Active" : `⏸ ${o.status.toUpperCase()}`;
+        const shortId = o.id.slice(0, 8);
+        const totalFiat = Math.round((o.amount || 0) * (o.rate || 0));
+
+        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / USDT | ${status}
+   • Amount: ${o.amount} ${o.token} (Total: ₹${totalFiat.toLocaleString("en-IN")})
+   • Chain: ${(o.chain || "BSC").toUpperCase()} | Payment: ${(o.payment_methods ?? []).join(", ") || "UPI"}
+   👉 Delete: \`/delete_${shortId}\` | Pause: \`/pause_${shortId}\``;
     });
 
     return `📋 *YOUR P2P ADS*\n\n${lines.join("\n\n")}`;

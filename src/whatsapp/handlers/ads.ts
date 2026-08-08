@@ -115,28 +115,77 @@ export async function handleAdCommand(
     // ─── /my_ads — View own ads ───────────────────────────────────────────────
     if (text === "/my_ads") {
         const myOrders = await db.getOrdersByUserId(user.id);
-        await reply(sock, jid, fmtMyAds(myOrders as any), msg);
+        if (myOrders.length === 0) {
+            await replyWithButtons(sock, jid, "📋 *You have no active ads.*\n\nPost one now with /post 🚀", [
+                { id: "/post", label: "➕ Post New Ad" },
+                { id: "/ads",  label: "📊 Browse Ads" },
+            ]);
+            return;
+        }
+
+        const firstAd = myOrders[0];
+        await replyWithButtons(
+            sock,
+            jid,
+            fmtMyAds(myOrders as any),
+            [
+                { id: `/delete_${firstAd.id.slice(0, 8)}`, label: "🗑️ Delete Ad" },
+                { id: `/pause_${firstAd.id.slice(0, 8)}`,  label: "⏸️ Pause Ad" },
+                { id: "/post",                             label: "➕ Post New Ad" },
+            ]
+        );
         return;
     }
 
-    // ─── /delete_ad_<id> ─────────────────────────────────────────────────────
-    if (text.startsWith("/delete_ad_")) {
-        const orderId = text.replace("/delete_ad_", "").trim();
+    // ─── /delete_<id> ────────────────────────────────────────────────────────
+    if (text.startsWith("/delete") || text.startsWith("/del_")) {
+        const inputId = text.replace("/delete_ad_", "").replace("/delete_", "").replace("/del_", "").trim();
+        const myOrders = await db.getOrdersByUserId(user.id);
+        const target = myOrders.find((o: any) => o.id === inputId || o.id.startsWith(inputId));
+
+        if (!target) {
+            await reply(sock, jid, "❌ Ad not found or already deleted.", msg);
+            return;
+        }
+
         try {
-            await db.cancelOrder(orderId);
-            await reply(sock, jid, `✅ Ad \`${orderId.slice(0, 8)}\` has been deleted.`, msg);
+            await db.cancelOrder(target.id);
+            await replyWithButtons(
+                sock,
+                jid,
+                `✅ *Ad \`${target.id.slice(0, 8)}\` Deleted Successfully!*`,
+                [
+                    { id: "/my_ads", label: "📋 My Ads" },
+                    { id: "/post",   label: "➕ Post New Ad" },
+                ]
+            );
         } catch {
             await reply(sock, jid, "❌ Could not delete ad. Make sure you own it.", msg);
         }
         return;
     }
 
-    // ─── /pause_ad_<id> ──────────────────────────────────────────────────────
-    if (text.startsWith("/pause_ad_")) {
-        const orderId = text.replace("/pause_ad_", "").trim();
+    // ─── /pause_<id> ─────────────────────────────────────────────────────────
+    if (text.startsWith("/pause")) {
+        const inputId = text.replace("/pause_ad_", "").replace("/pause_", "").trim();
+        const myOrders = await db.getOrdersByUserId(user.id);
+        const target = myOrders.find((o: any) => o.id === inputId || o.id.startsWith(inputId));
+
+        if (!target) {
+            await reply(sock, jid, "❌ Ad not found.", msg);
+            return;
+        }
+
         try {
-            await db.pauseOrder(orderId, user.id);
-            await reply(sock, jid, `⏸ Ad \`${orderId.slice(0, 8)}\` has been paused.`, msg);
+            await db.pauseOrder(target.id, user.id);
+            await replyWithButtons(
+                sock,
+                jid,
+                `⏸ *Ad \`${target.id.slice(0, 8)}\` Paused!*`,
+                [
+                    { id: "/my_ads", label: "📋 My Ads" },
+                ]
+            );
         } catch {
             await reply(sock, jid, "❌ Could not pause ad.", msg);
         }
