@@ -225,6 +225,22 @@ export function fmtTradeReleased(trade: any): string {
 ⚡ Trade safe with P2PFather`;
 }
 
+export function fmtKycApprovedBroadcast(user: any): string {
+    const handle = formatTraderContact(user);
+
+    return `🎉 *KYC VERIFICATION APPROVED!* 🛡️
+
+*${handle}* is now a **VERIFIED MERCHANT** 🎩
+
+• *Badge Awarded:* [🛡️ KYC Verified]
+• *Family Status:* 🟢 MADE MAN (P2PFather Family)
+
+✅ Identity Verified
+⚡ Trade safe with *${handle}* in all group chats! 🚀
+
+👉 *Want your [🛡️ KYC Verified] badge?* Tap /profile to start verification!`;
+}
+
 export function fmtDisputeOpened(trade: Trade): string {
     return `⚠️ *DISPUTE OPENED*
 

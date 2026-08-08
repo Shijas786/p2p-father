@@ -388,6 +388,20 @@ export async function broadcastAd(order: any, user: any) {
     }
 }
 
+export async function broadcastKycApprovalTelegram(user: any): Promise<void> {
+    try {
+        const botUser = await getBotInfo();
+        const botUsername = botUser.username;
+        const keyboard = new InlineKeyboard().url("🛡️ Get KYC Verified", `https://t.me/${botUsername}?start=kyc`);
+
+        const { fmtKycApprovedBroadcast } = await import("../whatsapp/formatters");
+        const msgText = fmtKycApprovedBroadcast(user);
+        await broadcast(msgText, keyboard, "Markdown");
+    } catch (e) {
+        console.error("[TG] KYC Broadcast error:", e);
+    }
+}
+
 export async function updateAdBroadcasts(order: any, user: any, statusOverride?: string): Promise<{ chat_id: number; message_id: number }[]> {
     const processedBroadcasts: { chat_id: number; message_id: number }[] = [];
     try {
