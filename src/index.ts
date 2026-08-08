@@ -72,19 +72,20 @@ async function main() {
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
-    // Start WhatsApp Bot (Baileys) unconditionally
-    try {
-        console.log("  📱 Starting WhatsApp bot (Baileys)...");
-        const { initWhatsApp, getSock } = await import("./whatsapp/client");
-        const { setBroadcastSock } = await import("./whatsapp/handlers/group");
-        await initWhatsApp();
-        // Give Baileys 2s to connect before registering sock for broadcasts
-        setTimeout(() => {
-            try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
-        }, 2000);
-    } catch (err: any) {
-        console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
-    }
+    // Baileys is DISABLED — Hypermeow Go bridge is the active WhatsApp engine
+    // To re-enable Baileys, uncomment the block below
+    // try {
+    //     console.log("  📱 Starting WhatsApp bot (Baileys)...");
+    //     const { initWhatsApp, getSock } = await import("./whatsapp/client");
+    //     const { setBroadcastSock } = await import("./whatsapp/handlers/group");
+    //     await initWhatsApp();
+    //     setTimeout(() => {
+    //         try { setBroadcastSock(getSock()); } catch { /* not connected yet */ }
+    //     }, 2000);
+    // } catch (err: any) {
+    //     console.warn("  ⚠️  WhatsApp init failed (non-fatal):", err.message);
+    // }
+    console.log("  🟢 WhatsApp engine: Hypermeow (Go bridge)");
 
 
     console.log("");
@@ -169,18 +170,8 @@ async function main() {
                 return;
             }
 
-            const { getLatestQr, isWaConnected } = await import("./whatsapp/client");
-            const QRCode = await import("qrcode");
-            const qrStr = getLatestQr();
-            let qrDataUrl: string | null = null;
-            if (qrStr) {
-                qrDataUrl = await QRCode.toDataURL(qrStr, { margin: 2, width: 250 });
-            }
-            res.json({
-                connected: isWaConnected(),
-                qr: qrDataUrl,
-                provider: "baileys",
-            });
+            // Baileys disabled — Hypermeow is the active engine
+            res.json({ connected: false, qr: null, provider: "none" });
         } catch (e) {
             res.json({ connected: false, qr: null, provider: "unknown" });
         }
