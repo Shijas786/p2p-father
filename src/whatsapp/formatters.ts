@@ -81,10 +81,14 @@ export function formatTraderContact(user: any): string {
     if (user.username) {
         parts.push(`@${user.username}`);
     }
+
+    const isKyc = Boolean(user.is_verified || user.kyc_status === 'approved');
+    const badge = isKyc ? " [🛡️ KYC Verified]" : "";
+
     if (parts.length > 0) {
-        return parts.join(" (") + (parts.length > 1 ? ")" : "");
+        return parts.join(" (") + (parts.length > 1 ? ")" : "") + badge;
     }
-    return user.first_name ? user.first_name : "Verified Trader";
+    return (user.first_name ? user.first_name : "Verified Trader") + badge;
 }
 
 export function fmtDepositAddress(user: User): string {

@@ -14,7 +14,7 @@ import { broadcastNewAdToGroups } from "./group";
 import { hasPaymentMethods } from "./profile";
 
 /** Multi-step Post Ad flow state machine */
-type AdStep = "TYPE" | "TOKEN" | "RATE" | "AMOUNT" | "LIMITS" | "PAYMENT" | "CONFIRM";
+type AdStep = "TYPE" | "TOKEN" | "RATE" | "AMOUNT" | "PAYMENT" | "EXPIRY" | "KYC_REQ" | "NOTE" | "CONFIRM";
 
 interface AdDraft {
     step: AdStep;
@@ -26,6 +26,9 @@ interface AdDraft {
     min_amount?: number;
     max_amount?: number;
     payment_methods?: string[];
+    expiry_minutes?: number;
+    require_kyc?: boolean;
+    note?: string;
 }
 
 export async function handleAdCommand(
@@ -302,25 +305,87 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *Amount: ${amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})*\n\nStep 5 of 5: Select *payment method*:`,
+                `✅ *Amount: ${amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})*\n\nStep 5: Select *Payment Method*:`,
                 [
-                    { id: "ad_pay_upi",        label: "📱 UPI (GPay/PhonePe)" },
-                    { id: "ad_pay_imps",       label: "🏦 Bank Transfer / IMPS" },
-                    { id: "ad_pay_upi_imps",   label: "📱 UPI + Bank Transfer" },
+                    { id: "ad_pay_upi",    label: "📱 UPI (GPay/PhonePe)" },
+                    { id: "ad_pay_imps",   label: "🏦 Bank Transfer / IMPS" },
+                    { id: "ad_pay_cdm",    label: "🏧 CDM Cash Deposit" },
+                    { id: "ad_pay_erupee", label: "📲 Digital e-Rupee" },
                 ]
             );
             return;
         }
 
-        // ── Step 5: Payment → Confirm & Select Publish Target ───────────────
+        // ── Step 5: Payment ───────────────────────────────────────────────────
         case "PAYMENT": {
             let methods: string[] = [];
-            if (text.includes("upi"))  methods.push("UPI");
-            if (text.includes("imps")) methods.push("IMPS");
-            if (text.includes("bank")) methods.push("BANK");
-            if (methods.length === 0)  methods = ["UPI"];
+            if (text.includes("cdm"))      methods.push("CDM");
+            else if (text.includes("erupee")) methods.push("DIGITAL_RUPEE");
+            else if (text.includes("imps") || text.includes("bank")) methods.push("BANK");
+            else methods.push("UPI");
 
             draft.payment_methods = methods;
+            draft.step = "EXPIRY";
+            await (db as any).setWhatsappState(user.id, "POST_AD", draft);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `✅ *Payment Method: ${methods.join(", ")}*\n\n⚙️ *ADVANCED SETTING — Ad Expiry Time*:\nHow long should this ad remain active?`,
+                [
+                    { id: "ad_exp_60",   label: "⏱️ 1 Hour" },
+                    { id: "ad_exp_120",  label: "⏱️ 2 Hours" },
+                    { id: "ad_exp_1440", label: "⏱️ 24 Hours" },
+                ]
+            );
+            return;
+        }
+
+        // ── Step 6: Expiry ────────────────────────────────────────────────────
+        case "EXPIRY": {
+            let mins = 60;
+            if (text.includes("120") || text.includes("2 h")) mins = 120;
+            if (text.includes("1440") || text.includes("24 h")) mins = 1440;
+
+            draft.expiry_minutes = mins;
+            draft.step = "KYC_REQ";
+            await (db as any).setWhatsappState(user.id, "POST_AD", draft);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `✅ *Expiry: ${mins >= 60 ? `${mins / 60} Hour(s)` : `${mins} Mins`}*\n\n⚙️ *ADVANCED SETTING — KYC Requirement Filter*:\nWho is allowed to trade on this ad?`,
+                [
+                    { id: "ad_kyc_yes", label: "🛡️ KYC Verified Traders Only" },
+                    { id: "ad_kyc_no",  label: "🌐 All Traders Allowed" },
+                ]
+            );
+            return;
+        }
+
+        // ── Step 7: KYC Filter ────────────────────────────────────────────────
+        case "KYC_REQ": {
+            const requireKyc = text.includes("yes") || text.includes("kyc_yes") || text.includes("verified");
+            draft.require_kyc = requireKyc;
+            draft.step = "NOTE";
+            await (db as any).setWhatsappState(user.id, "POST_AD", draft);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `✅ *KYC Filter: ${requireKyc ? "🛡️ Verified Traders Only" : "🌐 All Traders"}*\n\n⚙️ *ADVANCED SETTING — Trader Note (Optional)*:\nReply with special terms (e.g. \`UPI transfer only, no third party payment\`) or tap Skip Note:`,
+                [
+                    { id: "ad_note_skip", label: "⏭️ Skip Trader Note" },
+                ]
+            );
+            return;
+        }
+
+        // ── Step 8: Trader Note → Confirm ─────────────────────────────────────
+        case "NOTE": {
+            if (!text.includes("skip")) {
+                draft.note = text.trim();
+            }
             draft.step = "CONFIRM";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
@@ -329,14 +394,17 @@ _Please top up your vault by sending USDT to your deposit address before creatin
             await replyWithButtons(
                 sock,
                 jid,
-                `📋 *CONFIRM & PUBLISH AD*
+                `📋 *CONFIRM YOUR AD (ADVANCED SETTINGS)*
 
 • *Type:* ${draft.type!.toUpperCase()} USDT
 • *Token:* USDT (${draft.chain!.toUpperCase()})
 • *Amount:* ${draft.amount} USDT
 • *Rate:* ₹${draft.rate} / USDT
 • *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
-• *Payment:* ${methods.join(", ")}
+• *Payment:* ${draft.payment_methods!.join(", ")}
+• *Expiry:* ${draft.expiry_minutes ? `${draft.expiry_minutes / 60}h` : "1h"}
+• *KYC Filter:* ${draft.require_kyc ? "🛡️ Verified Only" : "🌐 All Traders"}
+${draft.note ? `• *Note:* _${draft.note}_` : ""}
 
 Where do you want to publish this ad? 👇`,
                 [
@@ -348,7 +416,7 @@ Where do you want to publish this ad? 👇`,
             return;
         }
 
-        // ── Final: Publish to Selected Channel(s) ──────────────────────────────
+        // ── Step 9: Final Publish ──────────────────────────────────────────────
         case "CONFIRM": {
             if (text.includes("no") || text.includes("cancel")) {
                 await (db as any).clearWhatsappState(user.id);
@@ -359,6 +427,13 @@ Where do you want to publish this ad? 👇`,
             try {
                 const orderAmount = draft.amount || draft.max_amount || 100;
                 const totalFiat = Math.round(orderAmount * (draft.rate || 0));
+
+                let expiresAt: string | undefined;
+                if (draft.expiry_minutes && draft.expiry_minutes > 0) {
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() + draft.expiry_minutes);
+                    expiresAt = now.toISOString();
+                }
 
                 const order = await db.createOrder({
                     user_id:         user.id,
@@ -373,7 +448,11 @@ Where do you want to publish this ad? 👇`,
                     payment_methods: draft.payment_methods as any[],
                     status:          "active",
                     filled_amount:   0,
-                    payment_details: {},
+                    expires_at:      expiresAt,
+                    payment_details: {
+                        require_kyc: Boolean(draft.require_kyc),
+                        note: draft.note || undefined,
+                    },
                 });
 
                 await (db as any).clearWhatsappState(user.id);
@@ -393,6 +472,7 @@ Where do you want to publish this ad? 👇`,
 Your ${draft.type!.toUpperCase()} ad is now LIVE!
 • *Amount:* ${orderAmount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
 • *Rate:* ₹${draft.rate} / USDT
+• *KYC Filter:* ${draft.require_kyc ? "🛡️ Verified Only" : "🌐 All Traders"}
 • *Published To:* ${channelText}
 
 Traders can now find and trade with you! 🚀`,
