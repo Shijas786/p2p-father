@@ -181,6 +181,8 @@ Supported chains: BSC, Polygon, Base`,
             return;
         }
 
+        const gasCoin = chain === "bsc" ? "BNB" : chain === "polygon" ? "POL" : "ETH";
+
         // Direct 1-tap confirmation step
         await replyWithButtons(
             sock,
@@ -189,7 +191,7 @@ Supported chains: BSC, Polygon, Base`,
 
 • *To:* \`${toAddress}\`
 • *Amount:* ${amount} ${token} (${chain.toUpperCase()})
-• *Fee:* Covered by P2PFather Relayer
+• *Gas Fee:* Required in wallet (${gasCoin})
 
 Proceed to execute on-chain transfer?`,
             [
