@@ -9,8 +9,6 @@ const BASE_RPCS = [
     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     "https://base-rpc.publicnode.com",
     "https://mainnet.base.org",
-    "https://api.zan.top/base-mainnet",
-    "https://1rpc.io/base",
 ].filter(Boolean);
 
 const BSC_RPCS = [
@@ -18,14 +16,13 @@ const BSC_RPCS = [
     `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     "https://bsc-dataseed.binance.org",
     "https://bsc-dataseed1.defibit.io",
-    "https://1rpc.io/bnb",
 ].filter(Boolean);
 
 const providerCache: Record<string, ethers.FallbackProvider | ethers.JsonRpcProvider> = {};
 
 /**
- * Creates a low-latency FallbackProvider with multiple RPC endpoints & API key failover.
- * If any primary RPC hits rate limits (429) or stalls (>2s), it instantly shifts to the next key/node.
+ * Creates a low-latency provider with staticNetwork enabled.
+ * Static network mode prevents 'failed to detect network' startup delays/errors.
  */
 export function getFastProvider(chain: 'base' | 'bsc' | string = 'base'): ethers.FallbackProvider | ethers.JsonRpcProvider {
     if (providerCache[chain]) {
@@ -40,15 +37,14 @@ export function getFastProvider(chain: 'base' | 'bsc' | string = 'base'): ethers
         const configs = rpcList.map((url, i) => ({
             provider: new JsonRpcProvider(url, staticNet, { staticNetwork: staticNet }),
             priority: i + 1,
-            stallTimeout: 2000,
+            stallTimeout: 2500,
             weight: 1,
         }));
 
-        const fallback = new FallbackProvider(configs, chainId, { quorum: 1 });
+        const fallback = new FallbackProvider(configs, staticNet, { quorum: 1 });
         providerCache[chain] = fallback;
         return fallback;
     } catch (_) {
-        // Fallback to single primary provider if FallbackProvider setup fails
         const primaryUrl = rpcList[0];
         const single = new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: staticNet });
         providerCache[chain] = single;
