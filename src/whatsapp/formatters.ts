@@ -57,6 +57,20 @@ ${balanceLines}
 📊 *To trade:* /ads`;
 }
 
+export function formatOrderLimits(order: any): string {
+    if (!order) return "₹100–₹50,000";
+    const rate = parseFloat(order.rate || "0");
+    const amount = parseFloat(order.amount || "0");
+    const totalFiat = Math.round(amount * rate);
+
+    const min = order.min_amount != null && order.min_amount > 0 ? order.min_amount : 100;
+    const max = order.max_amount != null && order.max_amount > 0
+        ? order.max_amount
+        : (totalFiat > 0 ? totalFiat : 50000);
+
+    return `₹${min.toLocaleString()}–₹${max.toLocaleString()}`;
+}
+
 export function formatTraderContact(user: any): string {
     if (!user) return "Verified Trader";
     const parts: string[] = [];
@@ -99,9 +113,10 @@ export function fmtOrderList(orders: any[], type: string): string {
         const traderName = formatTraderContact(o.users);
         const trust = o.users?.trust_score ?? 0;
         const payMethods = (o.payment_methods ?? []).join(", ");
+        const limits = formatOrderLimits(o);
         const link = waLink(`trade_ad_${o.id}`);
 
-        return `${i + 1}️⃣ *Rate: ₹${o.rate}* | Limit: ₹${o.min_amount ?? 0}–₹${o.max_amount ?? 0}
+        return `${i + 1}️⃣ *Rate: ₹${o.rate}* | Limit: ${limits}
    👤 ${traderName} (Score: ${trust}% ⭐) | ${payMethods}
    👉 *Trade Now:* ${link}`;
     });
@@ -116,8 +131,9 @@ export function fmtMyAds(orders: any[]): string {
 
     const lines = orders.map((o, i) => {
         const status = o.status === "active" ? "🟢 Active" : `⏸ ${o.status}`;
+        const limits = formatOrderLimits(o);
         return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} | ${status}
-   Limits: ₹${o.min_amount ?? 0}–₹${o.max_amount ?? 0}
+   Limits: ${limits}
    ▸ Delete: /delete_ad_${o.id}
    ▸ Pause: /pause_ad_${o.id}`;
     });
@@ -208,13 +224,14 @@ export function fmtGroupAdBroadcast(order: any): string {
     const trader = formatTraderContact(order.users);
     const trust = order.users?.trust_score ?? 0;
     const payMethods = (order.payment_methods ?? []).join(", ");
+    const limits = formatOrderLimits(order);
     const link = waLink(`trade_ad_${order.id}`);
 
     return `🔥 *LIVE P2P AD — P2PFATHER*
 
 ${type}
 • *Rate:* ₹${order.rate} / USDT
-• *Limits:* ₹${order.min_amount ?? 0} – ₹${order.max_amount ?? 0}
+• *Limits:* ${limits}
 • *Payment:* ${payMethods}
 • *Trader:* ${trader} (${trust}% ⭐)
 
@@ -237,8 +254,9 @@ export function fmtGroupLiveAds(orders: any[], type: "buy" | "sell" | "all"): st
 
     const lines = orders.slice(0, 5).map((o, i) => {
         const trader = formatTraderContact(o.users);
+        const limits = formatOrderLimits(o);
         const link = waLink(`trade_ad_${o.id}`);
-        return `${i + 1}. *₹${o.rate}* | ₹${o.min_amount}–${o.max_amount} | ${(o.payment_methods ?? []).join("/")} — ${trader}\n   👉 ${link}`;
+        return `${i + 1}. *₹${o.rate}* | ${limits} | ${(o.payment_methods ?? []).join("/")} — ${trader}\n   👉 ${link}`;
     });
 
     return `${header}\n\n${lines.join("\n\n")}\n\n_Tap a link → private chat → instant escrow trade 🔒_`;
