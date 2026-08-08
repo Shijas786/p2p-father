@@ -186,7 +186,7 @@ func main() {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	connected := client != nil && client.IsConnected() && client.Store.ID != nil && client.Store.ID.User != ""
+	connected := client != nil && client.Store.ID != nil && client.Store.ID.User != ""
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "ok",
 		"connected": connected,
@@ -197,14 +197,20 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 func handleGetQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// If not connected and no active QR, trigger startQRFlow
-	if (client.Store.ID == nil || client.Store.ID.User == "") {
-		qrMutex.Lock()
-		hasQR := latestQR != ""
-		qrMutex.Unlock()
-		if !hasQR {
-			startQRFlow()
-		}
+	// If already logged in / paired, never generate or return QR
+	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" {
+		json.NewEncoder(w).Encode(map[string]string{
+			"qr": "",
+		})
+		return
+	}
+
+	// If not logged in and no active QR, trigger startQRFlow
+	qrMutex.Lock()
+	hasQR := latestQR != ""
+	qrMutex.Unlock()
+	if !hasQR {
+		startQRFlow()
 	}
 
 	qrMutex.Lock()
