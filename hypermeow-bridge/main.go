@@ -74,16 +74,11 @@ var (
 	qrActive   bool
 )
 
-// resolveJID converts @lid JIDs to @s.whatsapp.net before sending.
-// WhatsApp newer clients use @lid format; whatsmeow needs @s.whatsapp.net to send.
+// resolveJID parses the raw JID string into waTypes.JID preserving original server (@lid or @s.whatsapp.net)
 func resolveJID(rawJID string) (waTypes.JID, error) {
 	jid, err := waTypes.ParseJID(rawJID)
 	if err != nil {
 		return waTypes.JID{}, fmt.Errorf("invalid JID: %w", err)
-	}
-	if jid.Server == "lid" {
-		jid.Server = "s.whatsapp.net"
-		fmt.Printf("[JID Resolve] @lid → @s.whatsapp.net: %s\n", jid.String())
 	}
 	return jid, nil
 }
@@ -517,7 +512,7 @@ func eventHandler(evt interface{}) {
 			}
 		}
 
-		fmt.Printf("[Hypermeow Message] from=%s jid=%s text=%q\n", v.Info.Sender.String(), v.Info.Chat.String(), text)
+		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, text)
 
 		if text == "" {
 			fmt.Printf("[Hypermeow Message] IGNORED — empty text (msgType=%T)\n", v.Message)
