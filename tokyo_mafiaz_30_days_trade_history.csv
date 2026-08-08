@@ -1,0 +1,21 @@
+Trade ID,Date & Time (UTC),Role,Counterparty,Crypto Amount (USDT),Fiat Amount (INR),Status
+aa0ca8c8-c0e9-4478-8a54-67a895da3b39,2026-08-05 08:55:53,BUYER,@jashee1,15.00,1518.69,completed
+472ae2f3-097e-449f-a6b8-b8ddbb45d156,2026-08-03 14:29:39,BUYER,@fahmmin,10.00,1017.45,completed
+7de81aca-937a-4d58-876f-aa2ca3204aff,2026-08-03 13:52:06,BUYER,@fahmmin,10.02,1019.48,completed
+37193ffb-c77b-40ca-a840-d7288e576b3d,2026-08-02 18:37:05,BUYER,@fahmmin,10.00,1017.45,completed
+cbe3368a-a777-4cba-8390-b69b5cc03e0f,2026-08-02 17:17:38,BUYER,@fahmmin,6.00,610.47,completed
+19c05202-61ff-4bb7-b0fe-9d5b0105c241,2026-08-02 15:20:04,SELLER,@Abhi,17.05,1734.75,completed
+9e10f982-04a6-4704-a779-241819e6b354,2026-08-02 11:43:34,BUYER,@fahmmin,5.01,504.74,refunded
+e0f3c84b-88c1-429a-95db-dc748dd4673b,2026-08-02 11:31:39,BUYER,@Ajmal243,10.00,1017.45,completed
+7ecea61a-e0c2-449a-b91d-f02832c5c035,2026-08-02 08:54:08,SELLER,@ashim9656,21.035,2140.21,completed
+ec88b55b-9563-4978-9d0d-b064080b9c31,2026-08-02 05:47:08,BUYER,@Oxccb5,10.00,1032.41,completed
+9674643c-b7f2-438d-9bd2-00bf10711fb0,2026-08-01 05:33:06,BUYER,@zoul404,5.026,516.38,completed
+85ff3975-a4d3-4640-aac7-649080bb0b04,2026-07-31 15:58:51,BUYER,@Krishnapriyaahh,7.47,760.04,completed
+0a656eed-7284-49fd-b3d6-c13752d5d69b,2026-07-27 17:33:52,SELLER,@Hsirk1437,14.04,1428.50,completed
+3ba8eb94-61c7-487b-a09b-4e58eb30a93b,2026-07-25 05:35:26,BUYER,@faroo8943,30.00,3082.28,completed
+efc2fd7b-15f4-4c1c-86b9-1f25c5319873,2026-07-22 12:35:17,BUYER,@messironalo,10.00,1027.43,completed
+659e8b68-a334-4eb0-8cc0-984a3d4ff900,2026-07-21 10:23:00,BUYER,@Kiwi_node,13.00,1322.69,completed
+c09171cb-e78a-45e0-90c4-d1dbe74b42f3,2026-07-20 08:56:30,BUYER,@mohdafham,18.00,1813.46,completed
+c15d6aaa-5ad6-4e9f-a840-a0f17c45e27f,2026-07-19 14:22:15,BUYER,@mohdafham,10.00,1010.00,completed
+8aa94a15-332b-4a52-81d1-b5abc3db043f,2026-07-08 15:55:13,SELLER,@aslamdt,11.60,1180.24,completed
+a3a03f72-4e21-4f61-bf5e-358926f57d93,2026-07-07 14:22:38,BUYER,@Shiifiiin,2.50,250.62,completed

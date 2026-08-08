@@ -131,8 +131,8 @@ class WalletService {
                 contract.decimals()
             ]);
             return ethers.formatUnits(balance, decimals);
-        } catch (e) {
-            console.error(`Failed to get token balance for ${tokenAddress} on ${chain}`, e);
+        } catch (e: any) {
+            console.warn(`[Wallet] Token balance fetch warning for ${tokenAddress} on ${chain}:`, e?.shortMessage || e?.message || e);
             return "0.0";
         }
     }
