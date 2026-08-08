@@ -95,21 +95,6 @@ class AIService {
             };
         }
 
-        // Normalize common Whisper mishearings before sending to OpenAI
-        // These are phonetically-similar words that Whisper frequently confuses
-        // in the context of short WhatsApp/Telegram voice notes
-        message = message
-            .replace(/\blive\s+arts?\b/gi, "live ads")         // "live arts" → "live ads"
-            .replace(/\bour\s+tea\b/gi, "ads")                 // "our tea" → "ads"
-            .replace(/\bshow\s+arts?\b/gi, "show ads")         // "show arts" → "show ads"
-            .replace(/\bpost\s+arts?\b/gi, "post ads")         // "post arts" → "post ads"
-            .replace(/\bmy\s+arts?\b/gi, "my ads")             // "my arts" → "my ads"
-            .replace(/\bUSD\s+tea\b/gi, "USDT")               // "USD tea" → "USDT"
-            .replace(/\bUSD\s+t\b/gi, "USDT")                 // "USD T" → "USDT"
-            .replace(/\bwalled?\b/gi, "wallet")               // "walled" → "wallet"
-            .replace(/\bbalence\b/gi, "balance")              // typo normalization
-            .replace(/\bbal\b/gi, "balance");                  // "bal" → "balance"
-
         try {
             const client = this.getClient();
 
