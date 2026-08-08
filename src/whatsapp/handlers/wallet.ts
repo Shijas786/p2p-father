@@ -40,9 +40,18 @@ export async function handleWalletCommand(
 
             const message = fmtWalletBalance(user, balances);
             await replyWithButtons(sock, jid, message, [
-                { id: "/deposit", label: "📥 Deposit" },
-                { id: "/send",    label: "📤 Send/Withdraw" },
-                { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "/deposit",      label: "📥 Deposit USDT" },
+                { id: "/withdraw",     label: "📤 Send/Withdraw" },
+                { id: "vault_deposit", label: "🔒 Lock to Vault" },
+            ]);
+
+            await new Promise((r) => setTimeout(r, 250));
+
+            // Message 2: Universal Navigation Bar
+            await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+                { id: "/start",   label: "🏠 Main Menu" },
+                { id: "/profile", label: "👤 My Profile" },
+                { id: "/post",    label: "➕ Post New Ad" },
             ]);
         } catch (err) {
             await reply(sock, jid, "❌ Failed to fetch balances. Please try again later.", msg);
@@ -67,11 +76,20 @@ export async function handleWalletCommand(
                 `📥 *Your P2PFather Deposit QR*\n\nScan to send USDT / USDC to:\n\`${user.wallet_address}\``
             );
 
-            // Then send instructions with interactive buttons
+            // Then send instructions with primary action buttons
             await replyWithButtons(sock, jid, fmtDepositAddress(user), [
-                { id: "/balance", label: "💰 Check Balance" },
-                { id: "/ads",     label: "📊 Trade Now" },
-                { id: "/post",    label: "➕ Post New Ad" },
+                { id: "/balance",      label: "💰 View Balance" },
+                { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                { id: "/post",         label: "➕ Post New Ad" },
+            ]);
+
+            await new Promise((r) => setTimeout(r, 250));
+
+            // Message 2: Universal Navigation Bar
+            await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+                { id: "/start",   label: "🏠 Main Menu" },
+                { id: "/profile", label: "👤 My Profile" },
+                { id: "/ads",     label: "📊 Browse Ads" },
             ]);
         } catch (err) {
             await reply(sock, jid, fmtDepositAddress(user), msg);
@@ -165,9 +183,22 @@ To withdraw, reply in this format:
 *Example:*
 \`/withdraw 0x742d35Cc6634... 50 USDT bsc\`
 
-Supported chains: BSC, Polygon, Base`,
-                [{ id: "/balance", label: "💰 Check Balance" }]
+Supported chains: BSC & Base`,
+                [
+                    { id: "/balance",      label: "💰 View Balance" },
+                    { id: "/deposit",      label: "📥 Deposit USDT" },
+                    { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                ]
             );
+
+            await new Promise((r) => setTimeout(r, 250));
+
+            // Message 2: Universal Navigation Bar
+            await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+                { id: "/start",   label: "🏠 Main Menu" },
+                { id: "/profile", label: "👤 My Profile" },
+                { id: "/ads",     label: "📊 Browse Ads" },
+            ]);
             return;
         }
 

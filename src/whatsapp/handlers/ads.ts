@@ -609,4 +609,13 @@ export async function showMyAdCard(
     }
 
     await replyWithButtons(sock, jid, cardText, buttons);
+
+    await new Promise((r) => setTimeout(r, 250));
+
+    // Message 2: Universal Navigation Bar
+    await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+        { id: "/start",   label: "🏠 Main Menu" },
+        { id: "/profile", label: "👤 My Profile" },
+        { id: "/balance", label: "💰 View Balance" },
+    ]);
 }

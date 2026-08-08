@@ -228,6 +228,15 @@ async function showProfilePage1(
         { id: "vault_deposit",      label: "🔒 Lock to Vault" },
         { id: "profile_page_2",     label: "▶️ Next Page" },
     ]);
+
+    await new Promise((r) => setTimeout(r, 250));
+
+    // Message 2: Universal Navigation Bar
+    await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
+        { id: "/start",   label: "🏠 Main Menu" },
+        { id: "/balance", label: "💰 View Balance" },
+        { id: "/post",    label: "➕ Post New Ad" },
+    ]);
 }
 
 /** Render Profile Page 2: Trade History & Account Sync + Single-line Navigation */
