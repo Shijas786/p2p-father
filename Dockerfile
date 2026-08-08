@@ -28,8 +28,8 @@ WORKDIR /app
 RUN npm run build
 RUN chmod +x start.sh
 
-# Expose ports
-EXPOSE 8000 8081
+# Expose main Express port for Railway routing
+EXPOSE 8000
 
 # Start both Go Hypermeow bridge and Node.js backend
 CMD ["/bin/sh", "/app/start.sh"]
