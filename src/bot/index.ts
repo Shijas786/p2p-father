@@ -2033,6 +2033,17 @@ bot.command("disputes", async (ctx) => {
         }
 
         for (const trade of disputes) {
+            const buyer = await db.getUserById(trade.buyer_id);
+            const seller = await db.getUserById(trade.seller_id);
+
+            const buyerContact = buyer?.whatsapp_phone
+                ? `+${buyer.whatsapp_phone}${buyer.username ? ` (@${buyer.username})` : ""}`
+                : (buyer?.username ? `@${buyer.username}` : `ID: ${trade.buyer_id.slice(0, 8)}`);
+
+            const sellerContact = seller?.whatsapp_phone
+                ? `+${seller.whatsapp_phone}${seller.username ? ` (@${seller.username})` : ""}`
+                : (seller?.username ? `@${seller.username}` : `ID: ${trade.seller_id.slice(0, 8)}`);
+
             const keyboard = new InlineKeyboard()
                 .text("✅ Release to Buyer", `resolve:${trade.id}:buyer`)
                 .row()
@@ -2044,6 +2055,8 @@ bot.command("disputes", async (ctx) => {
                     "",
                     `Amount: ${formatTokenAmount(trade.amount)}`,
                     `Fiat: ${formatINR(trade.fiat_amount)}`,
+                    `Buyer: \`${buyerContact}\``,
+                    `Seller: \`${sellerContact}\``,
                     `Status: ${formatTradeStatus(trade.status)}`,
                     `Reason: ${trade.dispute_reason || "Not specified"}`,
                     "",

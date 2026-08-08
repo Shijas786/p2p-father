@@ -320,14 +320,25 @@ async function alertAdminsDisputeOpened(trade: any): Promise<void> {
         const { env } = await import("../../config/env");
         const { InlineKeyboard } = await import("grammy");
 
+        const buyer = await db.getUserById(trade.buyer_id);
+        const seller = await db.getUserById(trade.seller_id);
+
+        const buyerInfo = buyer?.whatsapp_phone
+            ? `+${buyer.whatsapp_phone}${buyer.username ? ` (@${buyer.username})` : ""}`
+            : (buyer?.username ? `@${buyer.username}` : `ID: ${trade.buyer_id.slice(0, 8)}`);
+
+        const sellerInfo = seller?.whatsapp_phone
+            ? `+${seller.whatsapp_phone}${seller.username ? ` (@${seller.username})` : ""}`
+            : (seller?.username ? `@${seller.username}` : `ID: ${trade.seller_id.slice(0, 8)}`);
+
         const msg = 
 `🚨 *NEW DISPUTE RAISED (WHATSAPP)* 🚨
 
 • *Trade ID:* \`${trade.id}\`
 • *Amount:* ${trade.amount} ${trade.token} (₹${trade.fiat_amount})
 • *Chain:* ${trade.chain?.toUpperCase() ?? "BSC"}
-• *Buyer ID:* \`${trade.buyer_id.slice(0, 8)}\`
-• *Seller ID:* \`${trade.seller_id.slice(0, 8)}\`
+• *Buyer:* \`${buyerInfo}\`
+• *Seller:* \`${sellerInfo}\`
 
 Please review payment evidence and choose resolution below:`;
 
