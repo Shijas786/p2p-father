@@ -95,6 +95,21 @@ class AIService {
             };
         }
 
+        // Normalize common Whisper mishearings before sending to OpenAI
+        // These are phonetically-similar words that Whisper frequently confuses
+        // in the context of short WhatsApp/Telegram voice notes
+        message = message
+            .replace(/\blive\s+arts?\b/gi, "live ads")         // "live arts" → "live ads"
+            .replace(/\bour\s+tea\b/gi, "ads")                 // "our tea" → "ads"
+            .replace(/\bshow\s+arts?\b/gi, "show ads")         // "show arts" → "show ads"
+            .replace(/\bpost\s+arts?\b/gi, "post ads")         // "post arts" → "post ads"
+            .replace(/\bmy\s+arts?\b/gi, "my ads")             // "my arts" → "my ads"
+            .replace(/\bUSD\s+tea\b/gi, "USDT")               // "USD tea" → "USDT"
+            .replace(/\bUSD\s+t\b/gi, "USDT")                 // "USD T" → "USDT"
+            .replace(/\bwalled?\b/gi, "wallet")               // "walled" → "wallet"
+            .replace(/\bbalence\b/gi, "balance")              // typo normalization
+            .replace(/\bbal\b/gi, "balance");                  // "bal" → "balance"
+
         try {
             const client = this.getClient();
 
@@ -331,6 +346,10 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             const res = await this.client.audio.transcriptions.create({
                 file,
                 model: "whisper-1",
+                // Domain prompt: steers Whisper toward P2P crypto vocabulary so it doesn't
+                // mishear "ads" as "arts", "USDT" as "USD Tea", "BSC" as "BC", etc.
+                prompt: "P2P crypto trading app. Keywords: ads, USDT, USDC, BSC, Polygon, Base, escrow, balance, wallet, buy, sell, trade, rate, deposit, withdraw, post ad, live ads, my ads, my trades, confirm, release.",
+                language: "en",
             });
             return res.text ? res.text.trim() : null;
         } catch (err: any) {
