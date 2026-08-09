@@ -471,6 +471,12 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
 
     // ── Wallet Setup: new WA user chooses how to get a wallet ─────────────────
     if (text === "wa_setup_link_telegram" || text.includes("link telegram")) {
+        if (user.telegram_id || user.wallet_address) {
+            await reply(sock, jid, "✅ *Your account is already linked and your wallet is ready!*", msg);
+            await sendTwoMessageMainMenu(sock, jid, msg, user);
+            return;
+        }
+
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || "P2p_fatherbot";
         const botLink = `https://t.me/${botUsername}?start=linkwa`;
         await reply(
@@ -497,6 +503,12 @@ _Code is valid for 10 minutes._`,
     }
 
     if (text === "wa_setup_newwallet" || text.includes("create new wallet") || text.includes("new wallet")) {
+        if (user.wallet_address) {
+            await reply(sock, jid, "✅ *You already have a wallet set up!*", msg);
+            await sendTwoMessageMainMenu(sock, jid, msg, user);
+            return;
+        }
+
         try {
             await reply(sock, jid, "⏳ Generating your secure multi-chain wallet & crediting Testnet USDT...", msg);
             const updatedUser = await (db as any).assignWalletToWaUser(user.id);
