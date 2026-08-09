@@ -29,7 +29,6 @@ export function BottomNav({ user }: Props) {
 
     const tabs: any[] = [
         ...baseTabs.slice(0, 4),
-        { path: '/predict', icon: '', Icon: IconMarket, label: 'Predict' },
         baseTabs[4],
         ...(isAdmin ? [{ path: '/admin', icon: '', Icon: IconAdmin, label: 'Admin' }] : []),
     ];
