@@ -221,12 +221,14 @@ class Database {
         return data as Order;
     }
 
-    async getActiveOrders(type?: string, token?: string, limit = 20): Promise<Order[]> {
+    async getActiveOrders(type?: string, token?: string, limit = 20, chain?: string): Promise<Order[]> {
         const db = this.getClient();
         let query = db
             .from("orders")
             .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, photo_url, hide_group_handle)")
             .eq("status", "active")
+            // ── Always exclude testnet chains from live orderbook ──────────────
+            .not("chain", "in", '("bsc_testnet","base_sepolia")')
             .order("rate", { ascending: type === "sell" })
             .limit(limit);
 
@@ -238,8 +240,13 @@ class Database {
             query = query.eq("type", type);
         }
 
+        if (chain) {
+            query = query.eq("chain", chain);
+        }
+
         const { data, error } = await query;
         if (error) throw new Error(`Failed to get orders: ${error.message}`);
+
 
         return (data || []).map((d: any) => {
             const isHidden = Boolean(d.users?.hide_group_handle);
