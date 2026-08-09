@@ -1770,7 +1770,7 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
         const { data: disputes } = await supabase
             .from("trades")
             .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id, phone_number, trust_score), buyer:users!trades_buyer_id_fkey(username, first_name, trust_score), payment_proofs(utr)")
-            .in("status", ["disputed", "in_escrow", "fiat_sent", "waiting_for_escrow"])
+            .in("status", ["disputed", "DISPUTED"])
             .order("created_at", { ascending: false });
 
         res.json({ disputes: disputes || [] });
