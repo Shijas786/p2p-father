@@ -375,8 +375,20 @@ export async function broadcastAd(order: any, user: any) {
         const botUser = await getBotInfo();
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
-        const keyboard = new InlineKeyboard()
-            .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
+
+        // If ad originated from WhatsApp (or user is WhatsApp-only), direct button to WhatsApp DM
+        const isWaAd = Boolean(
+            order?.source === "whatsapp" ||
+            user?.preferred_channel === "whatsapp" ||
+            (user?.whatsapp_phone && !user?.telegram_id)
+        );
+
+        const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
+        const targetUrl = isWaAd
+            ? `https://wa.me/${waBotPhone}?text=trade_ad_${order.id}`
+            : `https://t.me/${botUsername}?start=buy_${order.id}`;
+
+        const keyboard = new InlineKeyboard().url(actionLabel, targetUrl);
 
         if (order.type === 'sell') {
             keyboard.success();
@@ -914,40 +926,15 @@ bot.command(["start", "open"], async (ctx) => {
         return;
     }
 
-    // 2. Buy / Trade specific order from ad link
+    // 2. Buy / Trade specific order from ad link (Default Telegram MiniApp behavior)
     if (payload && (payload.startsWith("buy_") || payload.startsWith("trade_"))) {
         const orderId = payload.replace("buy_", "").replace("trade_", "");
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
-            const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
-            const waTradeUrl = `https://wa.me/${waBotPhone}?text=trade_ad_${orderId}`;
-
-            const actionLabel = order.type === "sell" ? "BUY" : "SELL";
-            const totalFiat = Math.round(order.amount * order.rate);
-
-            const keyboard = new InlineKeyboard()
-                .text(`⚡ Trade in Telegram Chat`, `trade_ad:${orderId}`)
-                .row()
-                .url(`💬 Trade in WhatsApp`, waTradeUrl)
-                .row()
-                .webApp(`🌐 Open MiniApp`, miniAppUrl);
-
-            await ctx.reply(
-                [
-                    `📢 *P2P AD \\#${escapeMarkdown(orderId.slice(0, 8))}*`,
-                    "",
-                    `• *Type:* ${order.type.toUpperCase()} ${escapeMarkdown(order.token)}`,
-                    `• *Amount:* ${escapeMarkdown(formatTokenAmount(order.amount, order.token))}`,
-                    `• *Rate:* ₹${escapeMarkdown(order.rate.toLocaleString())} / ${escapeMarkdown(order.token)}`,
-                    `• *Total Fiat:* ₹${escapeMarkdown(totalFiat.toLocaleString("en-IN"))}`,
-                    `• *Chain:* ${escapeMarkdown((order.chain || "base").toUpperCase())}`,
-                    "",
-                    `Choose how you want to trade below 👇`
-                ].join("\n"),
-                { parse_mode: "Markdown", reply_markup: keyboard }
-            );
+            const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
+            await ctx.reply(`🔍 *Viewing Ad \\#${escapeMarkdown(orderId.slice(0, 8))}*`, { parse_mode: "Markdown", reply_markup: keyboard });
             return;
         } else {
             await ctx.reply("❌ Ad not found or no longer active.");

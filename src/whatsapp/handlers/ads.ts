@@ -729,7 +729,7 @@ Traders can now find and trade with you! 🚀`,
                 );
 
                 // Broadcast to selected channels
-                const fullOrder = { ...order, users: user };
+                const fullOrder = { ...order, users: user, source: "whatsapp" };
 
                 if (pubWa) {
                     await broadcastNewAdToGroups(fullOrder);
