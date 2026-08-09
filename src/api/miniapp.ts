@@ -788,6 +788,13 @@ router.post("/wallet/vault/withdraw", async (req: Request, res: Response) => {
         const txHash = await wallet.withdrawFromVault(user.wallet_index, amount.toString(), tokenAddress, targetChain);
 
         res.json({ txHash });
+
+        // Instantly cancel any sell ads that are now under-funded due to this withdrawal.
+        // Fire-and-forget — don't block the HTTP response.
+        import("../services/jobs").then(({ cancelUnderfundedAds }) => {
+            cancelUnderfundedAds(user.id, user.wallet_address!, token, targetChain, escrow).catch(console.error);
+        }).catch(console.error);
+
     } catch (err: any) {
         console.error("[MINIAPP] Vault withdraw error:", err);
         res.status(500).json({ error: err.message });

@@ -3,6 +3,76 @@ import { env } from "../config/env";
 import { deleteAdBroadcasts } from "../bot";
 import { ethers } from "ethers";
 
+/**
+ * Immediately cancels any active SELL ads for a user on a specific token/chain
+ * if their vault balance is now insufficient to back them.
+ *
+ * Called right after any successful vault withdrawal (MiniApp or WA bot)
+ * to give buyers instant protection — no waiting for the 5-minute job.
+ */
+export async function cancelUnderfundedAds(
+    userId: string,
+    walletAddress: string,
+    token: string,
+    chain: string,
+    escrowService: any
+): Promise<void> {
+    try {
+        const client = (db as any).getClient();
+
+        let tokenAddress = "";
+        if (chain === "bsc") {
+            tokenAddress = token === "BNB"
+                ? "0x0000000000000000000000000000000000000000"
+                : (token === "USDT" ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d");
+        } else if (chain === "bsc_testnet") {
+            tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+        } else {
+            tokenAddress = token === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+        }
+
+        const balanceStr = await escrowService.getVaultBalance(walletAddress, tokenAddress, chain);
+        const physicalBalance = parseFloat(balanceStr);
+        const reserved = await db.getReservedAmount(userId, token, chain);
+
+        if (physicalBalance >= reserved) return; // Still covered — nothing to cancel
+
+        console.warn(`[INSTANT-CANCEL] User ${walletAddress} under-funded on ${chain}/${token}. Balance: ${physicalBalance}, Reserved: ${reserved}. Cancelling ads now.`);
+
+        // Cancel newest ads first until balance covers remaining reserved amount
+        const { data: ads } = await client
+            .from("orders")
+            .select("id, amount, filled_amount")
+            .eq("user_id", userId)
+            .eq("status", "active")
+            .eq("type", "sell")
+            .eq("token", token)
+            .eq("chain", chain)
+            .order("created_at", { ascending: false });
+
+        let currentReserved = reserved;
+        if (ads) {
+            for (const ad of ads) {
+                if (currentReserved <= physicalBalance) break;
+
+                console.log(`[INSTANT-CANCEL] Cancelling ad ${ad.id} — vault withdrawal left seller with insufficient balance.`);
+                await client
+                    .from("orders")
+                    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+                    .eq("id", ad.id);
+
+                deleteAdBroadcasts(ad.id).catch((err: any) => {
+                    console.error(`[INSTANT-CANCEL] Failed to cleanup broadcasts for ad ${ad.id}:`, err);
+                });
+
+                currentReserved -= (ad.amount - (ad.filled_amount || 0));
+            }
+        }
+    } catch (err: any) {
+        console.error("[INSTANT-CANCEL] Error during instant ad cancellation:", err?.message);
+    }
+}
+
 export function startExpiryJob() {
     console.log("⏰ Starting Ad Expiry Job...");
 

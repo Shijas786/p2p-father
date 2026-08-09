@@ -429,6 +429,14 @@ Proceed to execute on-chain transfer?`,
                     { id: "/profile", label: "👤 View Profile" },
                 ]
             );
+
+            // Instantly cancel any sell ads that are now under-funded.
+            // Hot-wallet withdrawal reduces the balance backing vault-reserved ads.
+            // Fire-and-forget — do not block the response.
+            const { escrow } = await import("../../services/escrow");
+            const { cancelUnderfundedAds } = await import("../../services/jobs");
+            cancelUnderfundedAds(user.id, user.wallet_address!, "USDT", chainKey, escrow).catch(console.error);
+
         } catch (err: any) {
             await reply(sock, jid, `❌ Withdrawal failed: ${err?.message || "Insufficient balance"}`, msg);
         }
