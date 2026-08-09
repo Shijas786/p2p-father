@@ -399,20 +399,10 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Build inline text button list so ALL WhatsApp clients (iOS/Android/Web/Desktop) render action options
-	textWithInlineButtons := req.Text
-	if len(req.Buttons) > 0 {
-		textWithInlineButtons += "\n\n━━━━━━━━━━━━━━━━━━━━"
-		for _, btn := range req.Buttons {
-			textWithInlineButtons += fmt.Sprintf("\n👉 *%s* → Send: `%s`", btn.Label, btn.ID)
-		}
-		textWithInlineButtons += "\n━━━━━━━━━━━━━━━━━━━━"
-	}
-
 	// No empty Header — omit unless a title/image is needed
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
-			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(textWithInlineButtons)},
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
@@ -509,46 +499,37 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sections := make([]*waProto.ListMessage_Section, 0)
-	for _, sec := range req.Sections {
-		rows := make([]*waProto.ListMessage_Row, 0)
-		for _, r := range sec.Rows {
-			rows = append(rows, &waProto.ListMessage_Row{
-				RowID:       proto.String(r.ID),
-				Title:       proto.String(r.Title),
-				Description: proto.String(r.Description),
-			})
-		}
-		sections = append(sections, &waProto.ListMessage_Section{
-			Title: proto.String(sec.Title),
-			Rows:  rows,
-		})
+	// Format native_flow single_select payload for WhatsApp native interactive list
+	paramsJSON, err := json.Marshal(map[string]interface{}{
+		"title":    req.ButtonText,
+		"sections": req.Sections,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	textWithInlineList := req.Title
-	if len(req.Sections) > 0 {
-		textWithInlineList += "\n\n━━━━━━━━━━━━━━━━━━━━"
-		for _, sec := range req.Sections {
-			if sec.Title != "" {
-				textWithInlineList += "\n\n📌 *" + sec.Title + "*"
-			}
-			for _, r := range sec.Rows {
-				textWithInlineList += fmt.Sprintf("\n• *%s*", r.Title)
-				if r.Description != "" {
-					textWithInlineList += fmt.Sprintf("\n  └ %s", r.Description)
-				}
-				textWithInlineList += fmt.Sprintf("\n  👉 Send: `%s`", r.ID)
-			}
-		}
-		textWithInlineList += "\n━━━━━━━━━━━━━━━━━━━━"
+	listBtn := &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+		Name:       proto.String("single_select"),
+		ParamsJson: proto.String(string(paramsJSON)),
 	}
 
 	msg := &waProto.Message{
-		ListMessage: &waProto.ListMessage{
-			Title:      proto.String(textWithInlineList),
-			ButtonText: proto.String(req.ButtonText),
-			ListType:   waProto.ListMessage_SINGLE_SELECT.Enum(),
-			Sections:   sections,
+		InteractiveMessage: &waProto.InteractiveMessage{
+			Body: &waProto.InteractiveMessage_Body{
+				Text: proto.String(req.Title),
+			},
+			Footer: &waProto.InteractiveMessage_Footer{
+				Text: proto.String("P2PFather Escrow Exchange"),
+			},
+			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
+				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
+					MessageVersion: proto.Int32(1),
+					Buttons: []*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+						listBtn,
+					},
+				},
+			},
 		},
 	}
 
@@ -570,24 +551,24 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
 	}
 
-	// Attempt 1: ListMessage with AdditionalNodes
+	// Attempt 1: InteractiveMessage with single_select NativeFlowButton
 	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
 		AdditionalNodes: &additionalNodes,
 	})
 	if err == nil {
-		fmt.Println("[SendList] Attempt 1 SUCCESS")
+		fmt.Println("[SendList] Attempt 1 SUCCESS (Native Interactive List sent)")
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
 		return
 	}
 	fmt.Printf("[SendList] Attempt 1 FAILED: %v\n", err)
 
-	// Attempt 2: Clean Plain-Text Menu Fallback
+	// Attempt 2: Clean Plain-Text Menu Fallback (only used if native list is unsupported on recipient client)
 	fmt.Println("[SendList] Attempt 2: sending plain-text list menu fallback")
 	fallbackText := req.Title + "\n\n━━━━━━━━━━━━━━━━━━━━"
 	for _, sec := range req.Sections {
 		if sec.Title != "" {
-			fallbackText += "\n\n* " + sec.Title + " *"
+			fallbackText += "\n\n📌 *" + sec.Title + "*"
 		}
 		for _, r := range sec.Rows {
 			fallbackText += fmt.Sprintf("\n• *%s*", r.Title)
