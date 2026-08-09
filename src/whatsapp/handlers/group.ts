@@ -45,11 +45,22 @@ export async function scanAndDeleteSpam(
     msg: IWebMessageInfo,
     groupJid: string
 ): Promise<boolean> {
-    // Extract raw message text including image captions
+    const senderParticipant = msg.key?.participant ?? "unknown";
+    const senderPhone = senderParticipant.split("@")[0];
+
+    // ── 1. Image messages: always delete in groups (QR codes, payment screens, scam images) ──
+    const isImage = Boolean(msg.message?.imageMessage);
+    if (isImage) {
+        const caption = msg.message?.imageMessage?.caption ?? "";
+        console.log(`[GROUP-GUARD] Image message detected from ${senderParticipant} in ${groupJid}. Deleting (possible QR/scam image).`);
+        await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, "Images and QR codes");
+        return true;
+    }
+
+    // ── 2. Text messages: scan for phishing/spam patterns ──────────────────────
     const rawText = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
         ""
     );
 
@@ -61,30 +72,37 @@ export async function scanAndDeleteSpam(
     if (!isWaInvite && !isPhishing) return false;
 
     const reason = isWaInvite ? "WhatsApp group invite link" : "phishing/spam content";
-    const senderParticipant = msg.key?.participant ?? "unknown";
     console.log(`[GROUP-GUARD] Detected ${reason} in ${groupJid} from ${senderParticipant}. Attempting delete.`);
+    await deleteOrWarn(
+        sock, msg, groupJid, senderParticipant, senderPhone,
+        isWaInvite ? "WhatsApp group invite links" : "Promotional / phishing links"
+    );
+    return true;
+}
 
+/** Shared helper: delete message for everyone (requires admin), fallback to public warning */
+async function deleteOrWarn(
+    sock: WASocket,
+    msg: IWebMessageInfo,
+    groupJid: string,
+    senderParticipant: string,
+    senderPhone: string,
+    contentLabel: string
+): Promise<void> {
     try {
-        // deleteMessage for everyone requires bot to be admin
         if (msg.key) {
-            await sock.sendMessage(groupJid, {
-                delete: msg.key
-            } as any);
-            console.log(`[GROUP-GUARD] ✅ Deleted spam message from ${senderParticipant} in ${groupJid}`);
+            await sock.sendMessage(groupJid, { delete: msg.key } as any);
+            console.log(`[GROUP-GUARD] ✅ Deleted message from ${senderParticipant} in ${groupJid}`);
         }
     } catch (deleteErr: any) {
-        // Bot is not admin or delete failed — warn in the group
-        console.warn(`[GROUP-GUARD] ⚠️ Could not delete message (bot may not be admin): ${deleteErr?.message}`);
+        console.warn(`[GROUP-GUARD] ⚠️ Could not delete (bot not admin?): ${deleteErr?.message}`);
         try {
-            const senderPhone = senderParticipant.split("@")[0];
             await sock.sendMessage(
                 groupJid,
-                { text: `⚠️ @${senderPhone} — ${isWaInvite ? "WhatsApp group invite links" : "Promotional / phishing links"} are not allowed in this group.` },
+                { text: `⚠️ @${senderPhone} — ${contentLabel} are not allowed in this group.` }
             );
         } catch (_) { /* silently ignore */ }
     }
-
-    return true;
 }
 
 
