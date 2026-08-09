@@ -290,12 +290,15 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             const { env } = await import("../../config/env");
 
             let tokenAddress = env.USDT_ADDRESS;
-            if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
-            if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+            if (chainKey === "bsc_testnet") tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+            else if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            else if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
 
             const txHash = await wallet.depositToVault(user.wallet_index, amountStr, tokenAddress, chainKey as any);
 
-            const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
+            const explorerBase = chainKey === "bsc_testnet"
+                ? "https://testnet.bscscan.com/tx/"
+                : (chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/");
 
             await replyWithButtons(
                 sock,
@@ -401,8 +404,9 @@ Proceed to execute on-chain transfer?`,
             const { env } = await import("../../config/env");
 
             let tokenAddress = env.USDT_ADDRESS;
-            if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
-            if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+            if (chainKey === "bsc_testnet") tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+            else if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            else if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
 
             const txHash = await wallet.sendToken(
                 user.wallet_index,
@@ -412,7 +416,9 @@ Proceed to execute on-chain transfer?`,
                 chainKey as any
             );
 
-            const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
+            const explorerBase = chainKey === "bsc_testnet"
+                ? "https://testnet.bscscan.com/tx/"
+                : (chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/");
 
             await replyWithButtons(
                 sock,
