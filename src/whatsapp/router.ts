@@ -813,71 +813,9 @@ Check balance first: /balance 💰`,
                 await handleTradeCommand(sock, msg, jid, user, "/trades");
                 return;
             }
-            // 🛡️ Ad creation: show confirmation card before executing
-            // 🛡️ Ad creation: check payment & vault before rendering confirmation card
+            // 🛡️ Safe Ad Creation: Route directly to step-by-step /post flow (no AI hallucinated rates or amounts)
             if (intent.intent === "CREATE_SELL_ORDER" || intent.intent === "CREATE_BUY_ORDER") {
-                const isSell = intent.intent === "CREATE_SELL_ORDER";
-                const typeLabel = isSell ? "🟢 SELL USDT" : "🔴 BUY USDT";
-                const amount = Math.max(1, Math.abs(intent.params?.amount || 50));
-                const chain = "bsc_testnet";
-
-                // 1. Payment Method Verification Check
-                const hasPayment = Boolean(user.upi_id || user.phone_number || (user as any).bank_account_number);
-                if (!hasPayment) {
-                    await replyWithButtons(
-                        sock,
-                        jid,
-                        `⚠️ *PAYMENT METHOD REQUIRED*\n\nYou haven't added a payment method (UPI / Bank Account) to your profile yet.\n\nPlease set up your payment details first so traders can send/receive funds with you!`,
-                        [
-                            { id: "/profile", label: "⚙️ Set Payment Method" },
-                            { id: "/start",   label: "🏠 Main Menu" },
-                        ]
-                    );
-                    return;
-                }
-
-                // 2. Escrow Vault Check for Sellers
-                if (isSell && user.wallet_address) {
-                    const { escrow } = await import("../services/escrow");
-                    const vaultBalStr = await escrow.getVaultBalance(user.wallet_address, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", "bsc_testnet").catch(() => "0");
-                    const vaultBal = parseFloat(vaultBalStr || "0");
-                    if (vaultBal < amount) {
-                        await replyWithButtons(
-                            sock,
-                            jid,
-                            `🔒 *ESCROW VAULT BALANCE LOW*\n\nYour Smart Contract Vault has *${vaultBal.toFixed(2)} USDT* on BSC Testnet.\nTo post a SELL ad for *${amount} USDT*, please lock funds into your vault first!`,
-                            [
-                                { id: "/deposit", label: "📥 Deposit USDT" },
-                                { id: "/start",   label: "🏠 Main Menu" },
-                            ]
-                        );
-                        return;
-                    }
-                }
-
-                // 3. Dynamic Rate Calculation if rate not specified or invalid
-                let rate = intent.params?.rate;
-                if (!rate || isNaN(rate) || rate <= 0) {
-                    const activeOrders = await db.getActiveOrders(isSell ? "buy" : "sell", "USDT", 1);
-                    if (activeOrders && activeOrders.length > 0) {
-                        rate = activeOrders[0].rate;
-                    } else {
-                        rate = 89.5;
-                    }
-                }
-
-                console.log(`[WA-AI] 💬 Sending ad confirmation preview: ${intent.intent} amount=${amount} chain=bsc_testnet rate=${rate}`);
-
-                await replyWithButtons(
-                    sock,
-                    jid,
-                    `🎙️ *VOICE/TEXT COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* 🧪 BSC Testnet\n• *Rate:* ₹${rate} / USDT\n\nWhere do you want to publish this ad? 👇`,
-                    [
-                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_bsc_testnet_${rate}_wa`,  label: "💬 WhatsApp Market" },
-                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_bsc_testnet_${rate}_all`, label: "🌐 Both (WA & TG)" },
-                        { id: "/start", label: "❌ Cancel" },
-                    ]
-                );
+                await handleAdCommand(sock, msg, jid, user, "/post");
                 return;
             }
             if (intent.intent === "HELP" || intent.intent === "UNKNOWN") {

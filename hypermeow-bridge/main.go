@@ -399,20 +399,10 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Build inline text button list so ALL WhatsApp clients (iOS/Android/Web/Desktop) render action options
-	textWithInlineButtons := req.Text
-	if len(req.Buttons) > 0 {
-		textWithInlineButtons += "\n\n━━━━━━━━━━━━━━━━━━━━"
-		for _, btn := range req.Buttons {
-			textWithInlineButtons += fmt.Sprintf("\n👉 *%s* → Send: `%s`", btn.Label, btn.ID)
-		}
-		textWithInlineButtons += "\n━━━━━━━━━━━━━━━━━━━━"
-	}
-
-	// No empty Header — omit unless a title/image is needed
+	// Clean body text for native interactive button card (no duplicate inline text instructions)
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
-			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(textWithInlineButtons)},
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
