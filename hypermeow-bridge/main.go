@@ -399,10 +399,20 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Build inline text button list so ALL WhatsApp clients (iOS/Android/Web/Desktop) render action options
+	textWithInlineButtons := req.Text
+	if len(req.Buttons) > 0 {
+		textWithInlineButtons += "\n\n━━━━━━━━━━━━━━━━━━━━"
+		for _, btn := range req.Buttons {
+			textWithInlineButtons += fmt.Sprintf("\n👉 *%s* → Send: `%s`", btn.Label, btn.ID)
+		}
+		textWithInlineButtons += "\n━━━━━━━━━━━━━━━━━━━━"
+	}
+
 	// No empty Header — omit unless a title/image is needed
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
-			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(textWithInlineButtons)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
 				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
@@ -499,37 +509,46 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Format native_flow single_select payload for WhatsApp native interactive list
-	paramsJSON, err := json.Marshal(map[string]interface{}{
-		"title":    req.ButtonText,
-		"sections": req.Sections,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	sections := make([]*waProto.ListMessage_Section, 0)
+	for _, sec := range req.Sections {
+		rows := make([]*waProto.ListMessage_Row, 0)
+		for _, r := range sec.Rows {
+			rows = append(rows, &waProto.ListMessage_Row{
+				RowID:       proto.String(r.ID),
+				Title:       proto.String(r.Title),
+				Description: proto.String(r.Description),
+			})
+		}
+		sections = append(sections, &waProto.ListMessage_Section{
+			Title: proto.String(sec.Title),
+			Rows:  rows,
+		})
 	}
 
-	listBtn := &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
-		Name:             proto.String("single_select"),
-		ButtonParamsJSON: proto.String(string(paramsJSON)),
+	textWithInlineList := req.Title
+	if len(req.Sections) > 0 {
+		textWithInlineList += "\n\n━━━━━━━━━━━━━━━━━━━━"
+		for _, sec := range req.Sections {
+			if sec.Title != "" {
+				textWithInlineList += "\n\n📌 *" + sec.Title + "*"
+			}
+			for _, r := range sec.Rows {
+				textWithInlineList += fmt.Sprintf("\n• *%s*", r.Title)
+				if r.Description != "" {
+					textWithInlineList += fmt.Sprintf("\n  └ %s", r.Description)
+				}
+				textWithInlineList += fmt.Sprintf("\n  👉 Send: `%s`", r.ID)
+			}
+		}
+		textWithInlineList += "\n━━━━━━━━━━━━━━━━━━━━"
 	}
 
 	msg := &waProto.Message{
-		InteractiveMessage: &waProto.InteractiveMessage{
-			Body: &waProto.InteractiveMessage_Body{
-				Text: proto.String(req.Title),
-			},
-			Footer: &waProto.InteractiveMessage_Footer{
-				Text: proto.String("P2PFather Escrow Exchange"),
-			},
-			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
-				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
-					MessageVersion: proto.Int32(1),
-					Buttons: []*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
-						listBtn,
-					},
-				},
-			},
+		ListMessage: &waProto.ListMessage{
+			Title:      proto.String(textWithInlineList),
+			ButtonText: proto.String(req.ButtonText),
+			ListType:   waProto.ListMessage_SINGLE_SELECT.Enum(),
+			Sections:   sections,
 		},
 	}
 
@@ -551,27 +570,24 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
 	}
 
-	resp, err := client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
+	// Attempt 1: ListMessage with AdditionalNodes
+	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
 		AdditionalNodes: &additionalNodes,
 	})
 	if err == nil {
-		fmt.Printf("[SendList] SendMessage SUCCESS: jid=%s id=%s timestamp=%v\n", jid.String(), resp.ID, resp.Timestamp)
+		fmt.Println("[SendList] Attempt 1 SUCCESS")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "sent",
-			"jid":    req.JID,
-			"msgId":  resp.ID,
-		})
+		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
 		return
 	}
-	fmt.Printf("[SendList] SendMessage FAILED: jid=%s err=%v\n", jid.String(), err)
+	fmt.Printf("[SendList] Attempt 1 FAILED: %v\n", err)
 
-	// Attempt 2: Clean Plain-Text Menu Fallback (only used if native list is unsupported on recipient client)
+	// Attempt 2: Clean Plain-Text Menu Fallback
 	fmt.Println("[SendList] Attempt 2: sending plain-text list menu fallback")
 	fallbackText := req.Title + "\n\n━━━━━━━━━━━━━━━━━━━━"
 	for _, sec := range req.Sections {
 		if sec.Title != "" {
-			fallbackText += "\n\n📌 *" + sec.Title + "*"
+			fallbackText += "\n\n* " + sec.Title + " *"
 		}
 		for _, r := range sec.Rows {
 			fallbackText += fmt.Sprintf("\n• *%s*", r.Title)
@@ -584,20 +600,16 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 	fallbackText += "\n━━━━━━━━━━━━━━━━━━━━"
 
 	fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
-	resp2, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
+	_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
 	if err2 != nil {
 		fmt.Printf("[SendList] Attempt 2 FAILED: %v\n", err2)
 		http.Error(w, fmt.Sprintf("all list send attempts failed: %v / %v", err, err2), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Printf("[SendList] Attempt 2 SUCCESS: jid=%s id=%s (plain text fallback sent)\n", jid.String(), resp2.ID)
+	fmt.Println("[SendList] Attempt 2 SUCCESS (plain text list fallback sent)")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "sent_fallback",
-		"jid":    req.JID,
-		"msgId":  resp2.ID,
-	})
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
 }
 
 func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
@@ -686,10 +698,7 @@ func eventHandler(evt interface{}) {
 			}
 		}
 		if text == "" && v.Message.GetListResponseMessage() != nil {
-			lrm := v.Message.GetListResponseMessage()
-			if lrm.GetSingleSelectReply() != nil {
-				text = lrm.GetSingleSelectReply().GetSelectedRowID()
-			}
+			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowID()
 		}
 		// Handle interactive button tap (NativeFlowMessage response & Body text)
 		if text == "" && v.Message.GetInteractiveResponseMessage() != nil {
