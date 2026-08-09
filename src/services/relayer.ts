@@ -243,7 +243,7 @@ class PolymarketRelayerService {
             if (!client) throw new Error("Could not instantiate RelayClient");
 
             const depositWallet = await this.resolveDepositWallet(userWalletIndex);
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             
             // The CTF Exchange V2 spender from the error log
             const CTF_EXCHANGE_V2 = "0xE111180000d2663C0091e4f400237545B87B996B";
@@ -296,7 +296,7 @@ class PolymarketRelayerService {
             if (!client) throw new Error("Could not instantiate RelayClient");
 
             const depositWallet = await this.resolveDepositWallet(userWalletIndex);
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             
             const CTF_EXCHANGE_V2 = "0xE111180000d2663C0091e4f400237545B87B996B";
             const CONDITIONAL_TOKENS = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
@@ -361,7 +361,7 @@ class PolymarketRelayerService {
 
             // 2. Query ConditionalTokens contract to check resolution and payout numerators
             const CTF_CONTRACT_ADDRESS = ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045");
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             
             const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, [
                 "function payoutDenominator(bytes32) view returns (uint256)",
@@ -475,7 +475,7 @@ class PolymarketRelayerService {
     async getPusdBalance(userWalletIndex: number): Promise<string> {
         try {
             const depositWallet = await this.resolveDepositWallet(userWalletIndex);
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             const pusd = new ethers.Contract(PUSD_ADDRESS, ERC20_ABI as any, provider);
             const balance = await pusd.balanceOf(depositWallet);
             return ethers.formatUnits(balance, 6); // pUSD has 6 decimals (same as USDC)
@@ -500,7 +500,7 @@ class PolymarketRelayerService {
 
         // If native Polygon pUSD, just transfer directly to the deposit wallet (proxy)
         if (chain === 'polygon' && token === 'PUSD') {
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             const pusdAddress = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
             const signer = new ethers.Wallet(derived.privateKey, provider);
             const pusdContract = new ethers.Contract(pusdAddress, ERC20_ABI as any, signer);
@@ -518,7 +518,7 @@ class PolymarketRelayerService {
 
         // If native Polygon USDC, we can still use the instant onramp to save bridge time
         if (chain === 'polygon' && token === 'USDC') {
-            const provider = new ethers.JsonRpcProvider(POLYGON_RPC);
+            const provider = new ethers.JsonRpcProvider(POLYGON_RPC, 137, { staticNetwork: true });
             const usdce = new ethers.Contract(USDCE_ADDRESS, ERC20_ABI as any, provider);
 
             const usdceBalance = await usdce.balanceOf(depositWallet);
@@ -673,7 +673,8 @@ class PolymarketRelayerService {
             throw new Error(`Unsupported chain for gasless deposit: ${chain}`);
         }
 
-        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const chainIdMap: Record<string, number> = { bsc: 56, base: 8453, polygon: 137, arbitrum: 42161, ethereum: 1, optimism: 10 };
+        const provider = new ethers.JsonRpcProvider(rpcUrl, chainIdMap[chain] || 137, { staticNetwork: true });
         const signer = new ethers.Wallet(derived.privateKey, provider);
         const sourceToken = new ethers.Contract(tokenAddr, ERC20_ABI as any, signer);
 

@@ -281,7 +281,7 @@ export function startAutoClaimJob() {
             const { bot } = await import("../bot");
 
             const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
-            const provider = new ethers.JsonRpcProvider(rpcUrl);
+            const provider = new ethers.JsonRpcProvider(rpcUrl, 137, { staticNetwork: true });
             const ctfContract = new ethers.Contract(
                 ethers.getAddress("0x4d97dcd97ec945f40cf65f87097ace5ea0476045"),
                 [
