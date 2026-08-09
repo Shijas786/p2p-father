@@ -633,7 +633,7 @@ func eventHandler(evt interface{}) {
 			}
 		}
 		if text == "" && v.Message.GetTemplateButtonReplyMessage() != nil {
-			text = v.Message.GetTemplateButtonReplyMessage().GetSelectedId()
+			text = v.Message.GetTemplateButtonReplyMessage().GetSelectedID()
 			if text == "" {
 				text = v.Message.GetTemplateButtonReplyMessage().GetSelectedDisplayText()
 			}
