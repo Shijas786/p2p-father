@@ -64,6 +64,8 @@ class WalletService {
     }
 
     getContractAddress(chain: Chain): string {
+        if ((chain as string) === 'bsc_testnet') return process.env.ESCROW_CONTRACT_ADDRESS_BSC_TESTNET || "0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260";
+        if ((chain as string) === 'base_sepolia') return process.env.ESCROW_CONTRACT_ADDRESS_BASE_SEPOLIA || "0xf20872C359788a53958a048413D64F183403B1f1";
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
