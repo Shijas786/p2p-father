@@ -819,7 +819,7 @@ Check balance first: /balance 💰`,
                 const isSell = intent.intent === "CREATE_SELL_ORDER";
                 const typeLabel = isSell ? "🟢 SELL USDT" : "🔴 BUY USDT";
                 const amount = Math.max(1, Math.abs(intent.params?.amount || 50));
-                const chain = (intent.params?.chain || "bsc").toUpperCase();
+                const chain = "bsc_testnet";
 
                 // 1. Payment Method Verification Check
                 const hasPayment = Boolean(user.upi_id || user.phone_number || (user as any).bank_account_number);
@@ -839,13 +839,13 @@ Check balance first: /balance 💰`,
                 // 2. Escrow Vault Check for Sellers
                 if (isSell && user.wallet_address) {
                     const { escrow } = await import("../services/escrow");
-                    const vaultBalStr = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, chain.toLowerCase()).catch(() => "0");
+                    const vaultBalStr = await escrow.getVaultBalance(user.wallet_address, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", "bsc_testnet").catch(() => "0");
                     const vaultBal = parseFloat(vaultBalStr || "0");
                     if (vaultBal < amount) {
                         await replyWithButtons(
                             sock,
                             jid,
-                            `🔒 *ESCROW VAULT BALANCE LOW*\n\nYour Smart Contract Vault has *${vaultBal.toFixed(2)} USDT* on ${chain}.\nTo post a SELL ad for *${amount} USDT*, please lock funds into your vault first!`,
+                            `🔒 *ESCROW VAULT BALANCE LOW*\n\nYour Smart Contract Vault has *${vaultBal.toFixed(2)} USDT* on BSC Testnet.\nTo post a SELL ad for *${amount} USDT*, please lock funds into your vault first!`,
                             [
                                 { id: "/deposit", label: "📥 Deposit USDT" },
                                 { id: "/start",   label: "🏠 Main Menu" },
@@ -866,15 +866,15 @@ Check balance first: /balance 💰`,
                     }
                 }
 
-                console.log(`[WA-AI] 💬 Sending ad confirmation preview: ${intent.intent} amount=${amount} chain=${chain} rate=${rate}`);
+                console.log(`[WA-AI] 💬 Sending ad confirmation preview: ${intent.intent} amount=${amount} chain=bsc_testnet rate=${rate}`);
 
                 await replyWithButtons(
                     sock,
                     jid,
-                    `🎙️ *VOICE/TEXT COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* ${chain}\n• *Rate:* ₹${rate} / USDT\n\nWhere do you want to publish this ad? 👇`,
+                    `🎙️ *VOICE/TEXT COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* 🧪 BSC Testnet\n• *Rate:* ₹${rate} / USDT\n\nWhere do you want to publish this ad? 👇`,
                     [
-                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}_wa`,  label: "💬 WhatsApp Market" },
-                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}_all`, label: "🌐 Both (WA & TG)" },
+                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_bsc_testnet_${rate}_wa`,  label: "💬 WhatsApp Market" },
+                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_bsc_testnet_${rate}_all`, label: "🌐 Both (WA & TG)" },
                         { id: "/start", label: "❌ Cancel" },
                     ]
                 );

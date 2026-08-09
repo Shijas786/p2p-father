@@ -183,7 +183,7 @@ export async function handleAdCommand(
         // Format: ad_confirm_[type]_[amount]_[chain]_[rate]_[platform]
         const type = parts[2] === "sell" ? "sell" : "buy";
         const amount = parseFloat(parts[3] || "50");
-        const chain = (parts[4] || "bsc").toLowerCase();
+        const chain = (parts[4] && parts[4] !== "bsc" ? parts[4] : "bsc_testnet").toLowerCase();
         const rate = parseFloat(parts[5] || "89.5");
         const platform = parts[6] || "all";
 
