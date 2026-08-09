@@ -107,6 +107,14 @@ class EscrowService {
         try {
             const contract = this.getEscrowContract(chain);
 
+            if (chain === ('bsc_testnet' as any)) {
+                const [b1, b2] = await Promise.all([
+                    (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n),
+                    (contract.balances(userAddress, "0x21d4945A5499107F19F819dA1ab9133902A58EAB") as Promise<bigint>).catch(() => 0n)
+                ]);
+                return ethers.formatUnits(b1 + b2, 18);
+            }
+
             // 3.5s timeout wrapper to prevent slow RPC providers from stalling ad creation
             const balancePromise = contract.balances(userAddress, tokenAddress) as Promise<bigint>;
             const timeoutPromise = new Promise<never>((_, reject) =>
