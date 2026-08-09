@@ -198,6 +198,45 @@ export async function handleAdCommand(
             return;
         }
 
+        // ── SELL AD: Vault balance gate (same as the multi-step flow) ───────────
+        if (type === "sell" && user.wallet_address) {
+            try {
+                let tokenAddress = env.USDT_ADDRESS;
+                if (chain === "bsc" || chain === "bsc_testnet") {
+                    tokenAddress = chain === "bsc_testnet"
+                        ? "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd"
+                        : "0x55d398326f99059fF775485246999027B3197955";
+                }
+                const vaultStr  = await escrow.getVaultBalance(user.wallet_address, tokenAddress, chain as any);
+                const vaultBal  = parseFloat(vaultStr);
+                const reserved  = await (db as any).getReservedAmount(user.id, "USDT", chain);
+                const available = vaultBal - reserved;
+
+                if (available < amount - 0.000001) {
+                    await replyWithButtons(
+                        sock,
+                        jid,
+                        `❌ *INSUFFICIENT VAULT BALANCE*
+
+You need *${amount} USDT* on ${chain.toUpperCase()} but only *${available.toFixed(2)} USDT* is available.
+
+💰 *Vault Balance:* ${vaultBal.toFixed(2)} USDT
+🔒 *Already Reserved:* ${reserved.toFixed(2)} USDT
+
+Please deposit more USDT and lock it to your Vault first.`,
+                        [
+                            { id: "/deposit",      label: "📥 Deposit USDT" },
+                            { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                        ]
+                    );
+                    return;
+                }
+            } catch (rpcErr: any) {
+                console.warn("[WA-AdConfirm] Vault check failed (RPC error):", rpcErr?.message);
+                // Fallthrough — liquidity sync job will handle any discrepancy
+            }
+        }
+
         try {
             const totalFiat = Math.round(amount * rate);
             const order = await db.createOrder({
@@ -297,10 +336,11 @@ async function handleAdCreationFlow(
             }
             const type = text.includes("sell") ? "sell" : "buy";
 
-            // If SELL ad, check Escrow Vault balance FIRST!
+            // For SELL ads: show user their available vault balance across all chains as a heads-up.
+            // The hard gate happens at AMOUNT step once we know the specific chain and amount.
             if (type === "sell" && user.wallet_address) {
                 try {
-                    const bscUsdt = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", "bsc").catch(() => "0");
+                    const bscUsdt  = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", "bsc").catch(() => "0");
                     const baseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, "base").catch(() => "0");
                     const totalVault = parseFloat(bscUsdt) + parseFloat(baseUsdt);
 
@@ -309,28 +349,30 @@ async function handleAdCreationFlow(
                         await replyWithButtons(
                             sock,
                             jid,
-                            `🤖 *AI VAULT ASSISTANT*
+                            `🔒 *SELL AD — VAULT BALANCE REQUIRED*
 
-❌ *INSUFFICIENT ESCROW VAULT BALANCE*
+To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault.
 
-To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract Escrow Vault so buyers can trade safely.
+💰 *Your Vault Balance:* 0.00 USDT
 
-💳 *Deposit Address:* \`${user.wallet_address}\`
-🔒 *Vault Balance:* 0.00 USDT
-
-*Quick 2-Step Vault Top-Up:*
-1. Tap *[📥 Deposit USDT]* to get your deposit QR code.
-2. Send USDT (BSC or Base) to your address, then tap *[🔒 Lock to Vault]*.`,
+Please deposit USDT to your wallet and lock it to the Vault first.`,
                             [
-                                { id: "/deposit",        label: "📥 Deposit USDT" },
-                                { id: "vault_deposit",   label: "🔒 Lock to Vault" },
-                                { id: "/profile",        label: "👤 View Profile" },
+                                { id: "/deposit",      label: "📥 Deposit USDT" },
+                                { id: "vault_deposit", label: "🔒 Lock to Vault" },
                             ]
                         );
                         return;
                     }
+
+                    // Show balance as friendly info and proceed
+                    await reply(
+                        sock,
+                        jid,
+                        `💰 *Your Vault Balance:* ${totalVault.toFixed(2)} USDT (BSC + Base combined)\n\n✅ *SELL Ad selected.* Next: choose the specific chain to list on.`,
+                        msg
+                    );
                 } catch (_) {
-                    // Continue if RPC read fails temporarily
+                    // RPC unavailable — let them proceed, hard check at AMOUNT step
                 }
             }
 
@@ -341,7 +383,7 @@ To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract E
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2: Select Token & Network:`,
+                `Step 2: Select Token & Network:`,
                 [
                     { id: "ad_token_usdt_bsc_testnet", label: "🧪 USDT (BSC Testnet)" },
                     { id: "ad_token_usdt_bsc",         label: "USDT (BSC Mainnet)" },
@@ -401,6 +443,51 @@ To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract E
                 await reply(sock, jid, "❌ Enter a valid USDT amount.\n*Example:* `100`", msg);
                 return;
             }
+
+            // ── SELL AD: Hard vault balance gate (exact same logic as MiniApp) ──
+            if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
+                try {
+                    const chain = draft.chain as any;
+                    let tokenAddress = env.USDT_ADDRESS;
+                    if (chain === "bsc" || chain === "bsc_testnet") {
+                        tokenAddress = chain === "bsc_testnet"
+                            ? "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd" // BSC Testnet USDT
+                            : "0x55d398326f99059fF775485246999027B3197955"; // BSC Mainnet USDT
+                    }
+
+                    const vaultStr  = await escrow.getVaultBalance(user.wallet_address, tokenAddress, chain);
+                    const vaultBal  = parseFloat(vaultStr);
+                    const reserved  = await (db as any).getReservedAmount(user.id, draft.token, draft.chain);
+                    const available = vaultBal - reserved;
+
+                    if (available < amount - 0.000001) {
+                        await (db as any).clearWhatsappState(user.id);
+                        await replyWithButtons(
+                            sock,
+                            jid,
+                            `❌ *INSUFFICIENT VAULT BALANCE*
+
+You need *${amount} USDT* on ${draft.chain!.toUpperCase()} but only *${available.toFixed(2)} USDT* is available.
+
+💰 *Vault Balance:* ${vaultBal.toFixed(2)} USDT
+🔒 *Already Reserved by Other Ads:* ${reserved.toFixed(2)} USDT
+📊 *Available:* ${available.toFixed(2)} USDT
+
+Please deposit more USDT and lock it to your Vault before posting this ad.`,
+                            [
+                                { id: "/deposit",      label: "📥 Deposit USDT" },
+                                { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                                { id: "/post",         label: "🔄 Try Again" },
+                            ]
+                        );
+                        return;
+                    }
+                } catch (rpcErr: any) {
+                    console.warn("[WA-AdPost] Vault balance check failed (RPC error), proceeding:", rpcErr?.message);
+                    // RPC temporarily down — allow through, the liquidity sync job will catch any discrepancy
+                }
+            }
+
             const totalFiat = Math.round(amount * draft.rate!);
             draft.amount = amount;
             draft.min_amount = 100;
@@ -547,6 +634,45 @@ Where do you want to publish this ad? 👇`,
             try {
                 const orderAmount = draft.amount || draft.max_amount || 100;
                 const totalFiat = Math.round(orderAmount * (draft.rate || 0));
+
+                // ── FINAL VAULT RE-VALIDATION before writing to DB (TOCTOU guard) ──
+                // Time may have passed since AMOUNT step — re-check in case user withdrew.
+                if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
+                    try {
+                        const chain = draft.chain as any;
+                        let tokenAddress = env.USDT_ADDRESS;
+                        if (chain === "bsc" || chain === "bsc_testnet") {
+                            tokenAddress = chain === "bsc_testnet"
+                                ? "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd"
+                                : "0x55d398326f99059fF775485246999027B3197955";
+                        }
+                        const vaultStr  = await escrow.getVaultBalance(user.wallet_address, tokenAddress, chain);
+                        const vaultBal  = parseFloat(vaultStr);
+                        const reserved  = await (db as any).getReservedAmount(user.id, draft.token, draft.chain);
+                        const available = vaultBal - reserved;
+
+                        if (available < orderAmount - 0.000001) {
+                            await (db as any).clearWhatsappState(user.id);
+                            await replyWithButtons(
+                                sock,
+                                jid,
+                                `❌ *VAULT BALANCE CHANGED*
+
+Your available vault balance has changed since you started. You now only have *${available.toFixed(2)} USDT* available but this ad requires *${orderAmount} USDT*.
+
+Please top up your Vault and try again.`,
+                                [
+                                    { id: "/deposit",      label: "📥 Deposit USDT" },
+                                    { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                                    { id: "/post",         label: "🔄 Try Again" },
+                                ]
+                            );
+                            return;
+                        }
+                    } catch (_) {
+                        // RPC down — allow through, liquidity sync job will catch discrepancy
+                    }
+                }
 
                 let expiresAt: string | undefined;
                 if (draft.expiry_minutes && draft.expiry_minutes > 0) {
