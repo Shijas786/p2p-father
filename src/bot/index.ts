@@ -77,10 +77,10 @@ async function safeEditMessage(ctx: BotContext, text: string, extra: any = {}) {
             try {
                 await ctx.editMessageCaption({ caption: text, parse_mode: extra?.parse_mode, reply_markup: extra?.reply_markup });
                 return;
-            } catch (_) {}
+            } catch (_) { }
         }
         // Fallback to regular reply if edit fails for other reasons (e.g. message is photo or not modified)
-        await ctx.reply(text, extra).catch(() => {});
+        await ctx.reply(text, extra).catch(() => { });
     }
 }
 
@@ -273,7 +273,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
                         [availableGifs[i], availableGifs[j]] = [availableGifs[j], availableGifs[i]];
                     }
                 }
-                
+
                 while (availableGifs.length > 0) {
                     const randomFile = availableGifs.pop()!;
                     const candidatePath = path.join(gifDir, randomFile);
@@ -487,7 +487,7 @@ export async function deleteAdBroadcasts(orderId: string, statusOverride?: strin
             console.log(`[Bot] Retaining/updating ${broadcasts.length} broadcast messages in group for order ${orderId} (Type: ${order.type}, Status: ${statusOverride || order.status}).`);
             const user = await db.getUserById(order.user_id);
             const processed = await updateAdBroadcasts(order, user, statusOverride || order.status);
-            
+
             // Delete only the successfully processed broadcasts from database
             for (const b of processed) {
                 await db.deleteSpecificAdBroadcast(orderId, b.chat_id, b.message_id);
@@ -595,6 +595,113 @@ bot.use(async (ctx, next) => {
 bot.use(async (ctx, next) => {
     if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
         groupManager.addGroup(ctx.chat.id).catch(console.error);
+    }
+    await next();
+});
+
+// 🎩 Telegram Group Unofficial OTC Offer Detector & Godfather Nudge System
+const groupOtcNudgeCooldown = new Map<string, number>();
+
+export function isUnofficialGroupOtcPost(text: string): boolean {
+    if (!text || text.length < 3) return false;
+    const lower = text.toLowerCase();
+
+    // Ignore official bot messages or commands
+    if (lower.startsWith('/') || lower.includes('p2pfather') || lower.includes('escrow') || lower.includes('miniapp')) return false;
+
+    // Shorthand deal pattern (e.g. "15@101.", "50@92.5")
+    if (/\b\d+(?:\.\d+)?\s*@\s*\d+(?:\.\d+)?/.test(lower)) return true;
+
+    // Pattern 1: Token/Currency indicators (including "$ 200", "2000 $", "14.88usdt", "250 dt")
+    const hasToken = /\b(usdt|dt|usdc|bnb|eth|usd)\b|\$\s*\d+|\d+\s*\$|\d+(?:\.\d+)?\s*(usdt|dt)\b/.test(lower);
+
+    // Pattern 2: Deal terms & OTC keywords
+    const hasDealTerms = /\b(by\s*hand|byhand|cdm|f2f|cash|lakh|daily|upi|trc20|dm|direct|calicut|kochi|kerala)\b/.test(lower);
+
+    // Pattern 3: Trade intent & Rate indicators
+    const hasIntent = /\b(available|for sale|want to sell|wts|wtb|looking for|arkelum venel|venel|sale|buying|seller|buyer)\b|rate\s*[:\-@]?|price\s*[:\-]?|per\s*\d+|@\s*\d+/.test(lower);
+
+    // Matches if message combines token/currency + (deal terms OR trade intent/rate)
+    if (hasToken && (hasDealTerms || hasIntent)) return true;
+
+    // Direct strong indicators (e.g. "250 dt for sale", "usdt available", "100 usdt for sale", "300$ available")
+    if (/\b(usdt|dt|\$)\b.*\b(available|for sale|sale|wts|wtb|by\s*hand|byhand|cdm|dm)\b/.test(lower)) return true;
+    if (/\b(available|for sale|sale|wts|wtb|by\s*hand|byhand|cdm|dm)\b.*\b(usdt|dt|\$)\b/.test(lower)) return true;
+
+    return false;
+}
+
+export function detectOtcSide(text: string): "sell" | "buy" {
+    const lower = text.toLowerCase();
+    if (/\b(wtb|want to buy|buying|need usdt|need dt|looking for seller|buy usdt|buy dt)\b/.test(lower)) {
+        return "buy";
+    }
+    return "sell";
+}
+
+const GODFATHER_SELL_NUDGE_TEMPLATES = [
+    "🎩 *In this family, rule #1 is simple:* Never sell crypto without escrow protection! Post your SELL ad in the **P2PFather MiniApp** where your USDT is locked safe until cash hits your account.",
+    "💼 *Capo, posting direct SELL offers in chat is how traders lose USDT to fake receipts!* Move your sell offer to the **P2PFather MiniApp** — 1-tap setup, 100% smart contract security.",
+    "🕶️ *A real seller doesn't gamble on raw text messages.* In our syndicate, all legit sellers list on the **P2PFather MiniApp**! Lock your sell offer in escrow and trade like a boss.",
+    "🎩 *Don't let scammers play with your hard-earned crypto!* Put your sell order in the **P2PFather MiniApp** — buyer pays into escrow first, you release when funds hit your bank!",
+    "💼 *We do clean, professional business here!* Don't advertise raw sell deals in chat. Post your SELL offer in the **P2PFather MiniApp** and let buyers trade with you safely.",
+    "🕶️ *Ey Don, someone in your DMs might promise high rates*, but only smart-contract escrow guarantees your payout! Move your SELL deal to the **P2PFather MiniApp** now.",
+    "🎩 *Respect the trade!* Post your SELL offer in the **P2PFather MiniApp** where verified buyers deal with zero risk and instant automated payouts."
+];
+
+const GODFATHER_BUY_NUDGE_TEMPLATES = [
+    "🎩 *Looking to BUY crypto, Don?* Never send bank payments directly to strangers in chat! Place your BUY ad in the **P2PFather MiniApp** where seller crypto is locked in escrow first.",
+    "💼 *Capo, buying crypto through group DMs is risky business!* Create a BUY order on the **P2PFather MiniApp** so seller crypto is automatically escrowed before you pay.",
+    "🕶️ *Smart buyers trade with smart-contract protection.* Post your BUY request on the **P2PFather MiniApp** and let verified sellers deal with you safely!",
+    "🎩 *Protect your cash, boss!* In our family, buyers only pay when the seller's crypto is locked in **P2PFather Escrow**. Create your BUY order in the MiniApp now.",
+    "💼 *Clean business only!* Don't ask for buy deals in raw text. Post your BUY offer in the **P2PFather MiniApp** so seller crypto is locked upfront."
+];
+
+// Middleware: Intercept informal group OTC sale posts and nudge user with Godfather Mafia persona
+bot.use(async (ctx, next) => {
+    if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup') && ctx.message?.text) {
+        const text = ctx.message.text;
+        const userId = ctx.from?.id;
+        if (userId && isUnofficialGroupOtcPost(text)) {
+            const cooldownKey = `${userId}:${ctx.chat.id}`;
+            const lastNudge = groupOtcNudgeCooldown.get(cooldownKey) || 0;
+            const now = Date.now();
+
+            if (now - lastNudge > 600000) { // 10 minutes per-user cooldown in group
+                groupOtcNudgeCooldown.set(cooldownKey, now);
+
+                const side = detectOtcSide(text);
+                const pool = side === "buy" ? GODFATHER_BUY_NUDGE_TEMPLATES : GODFATHER_SELL_NUDGE_TEMPLATES;
+                const template = pool[Math.floor(Math.random() * pool.length)];
+                const buttonLabel = side === "buy" ? "🔴 Post BUY Ad in MiniApp" : "🟢 Post SELL Ad in MiniApp";
+
+                const miniAppUrl = `https://p2pfather.com/miniapp/create?type=${side}`;
+                const botUsername = ctx.me?.username || "P2p_fatherbot";
+                const keyboard = new InlineKeyboard()
+                    .webApp(buttonLabel, miniAppUrl)
+                    .url("💬 Open MiniApp", `https://t.me/${botUsername}?start=newad_${ctx.chat.id}`);
+
+                try {
+                    console.log(`[GodfatherNudge] 🎩 ${side.toUpperCase()} offer detected in group ${ctx.chat.id} from user ${userId}: "${text.slice(0, 40)}..."`);
+                    const sentMsg = await ctx.reply(template, {
+                        parse_mode: "Markdown",
+                        reply_to_message_id: ctx.message.message_id,
+                        reply_markup: keyboard,
+                    });
+
+                    // Auto-delete nudge reply after 3 minutes (180,000ms) to keep group chat clean
+                    setTimeout(async () => {
+                        try {
+                            await ctx.api.deleteMessage(sentMsg.chat.id, sentMsg.message_id);
+                        } catch {
+                            // Ignore if message was manually deleted
+                        }
+                    }, 180000);
+                } catch (err: any) {
+                    console.error("[GodfatherNudge] Error sending group nudge:", err?.message || err);
+                }
+            }
+        }
     }
     await next();
 });
@@ -1133,7 +1240,7 @@ bot.command("phone", async (ctx) => {
                 if (!user.wallet_address && waUser.wallet_address) {
                     await db.updateUser(user.id, {
                         wallet_address: waUser.wallet_address,
-                        wallet_index:   waUser.wallet_index,
+                        wallet_index: waUser.wallet_index,
                     } as any);
                 }
 

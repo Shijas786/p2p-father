@@ -177,6 +177,70 @@ export async function handleAdCommand(
         return;
     }
 
+    // ─── Direct AI / Voice Ad Confirmation ──────────────────────────────────────
+    if (text.startsWith("ad_confirm_")) {
+        const parts = text.split("_");
+        // Format: ad_confirm_[type]_[amount]_[chain]_[rate]_[platform]
+        const type = parts[2] === "sell" ? "sell" : "buy";
+        const amount = parseFloat(parts[3] || "50");
+        const chain = (parts[4] || "bsc").toLowerCase();
+        const rate = parseFloat(parts[5] || "89.5");
+        const platform = parts[6] || "all";
+
+        const hasPayment = Boolean(user.upi_id || user.phone_number || (user as any).bank_account_number);
+        if (!hasPayment) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `⚠️ *PAYMENT METHOD REQUIRED*\n\nPlease set up your payment details in /profile first!`,
+                [{ id: "/profile", label: "⚙️ Set Payment Method" }]
+            );
+            return;
+        }
+
+        try {
+            const totalFiat = Math.round(amount * rate);
+            const order = await db.createOrder({
+                user_id: user.id,
+                type: type as any,
+                token: "USDT",
+                chain,
+                amount,
+                min_amount: 100,
+                max_amount: totalFiat,
+                rate,
+                fiat_currency: "INR",
+                payment_methods: [(user.upi_id ? "UPI" : "BANK")],
+                status: "active",
+                filled_amount: 0,
+                payment_details: { require_kyc: false },
+            });
+
+            let platformText = "🌐 Both WhatsApp & Telegram";
+            if (platform === "wa") {
+                platformText = "💬 WhatsApp Marketplace";
+                await broadcastNewAdToGroups(order);
+            } else if (platform === "tg") {
+                platformText = "✈️ Telegram Marketplace";
+            } else {
+                await broadcastNewAdToGroups(order);
+            }
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `🎉 *P2P AD PUBLISHED SUCCESSFULLY!* 🚀\n\n• *Type:* ${type.toUpperCase()} USDT\n• *Amount:* ${amount} USDT\n• *Rate:* ₹${rate} / USDT\n• *Network:* ${chain.toUpperCase()}\n• *Destination:* ${platformText}\n\nYour ad is live in the marketplace! Traders can now initiate deals with you.`,
+                [
+                    { id: "/ads",   label: "📊 View Market Ads" },
+                    { id: "/start", label: "🏠 Main Menu" },
+                ]
+            );
+        } catch (err: any) {
+            await reply(sock, jid, `❌ Failed to publish ad: ${err?.message || "Error"}`, msg);
+        }
+        return;
+    }
+
     // ─── /post — Create a new ad ──────────────────────────────────────────────
     if (text === "/post") {
         // Initialize draft state

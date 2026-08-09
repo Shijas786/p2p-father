@@ -14,6 +14,7 @@ import { MAIN_MENU, formatTraderContact } from "./formatters";
 import { waAi as ai } from "../services/wa-ai";
 import { env } from "../config/env";
 import { hypermeowClient } from "./hypermeowClient";
+import { wallet } from "../services/wallet";
 
 function extractText(msg: IWebMessageInfo): string {
     // interactiveResponseMessage: fired when user taps a native nativeFlow button
@@ -405,22 +406,27 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
 
     // ── Number Shortcuts (1, 2, 3, 4, 5) ──────────────────────────────────────
     if (text === "1" || text === "1️⃣") {
+        await (db as any).clearWhatsappState(user.id);
         await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
         return;
     }
     if (text === "2" || text === "2️⃣") {
+        await (db as any).clearWhatsappState(user.id);
         await handleAdCommand(sock, msg, jid, user, "/ads");
         return;
     }
     if (text === "3" || text === "3️⃣") {
+        await (db as any).clearWhatsappState(user.id);
         await handleAdCommand(sock, msg, jid, user, "/post");
         return;
     }
     if (text === "4" || text === "4️⃣") {
+        await (db as any).clearWhatsappState(user.id);
         await handleTradeCommand(sock, msg, jid, user, "/trades");
         return;
     }
     if (text === "5" || text === "5️⃣") {
+        await (db as any).clearWhatsappState(user.id);
         await handleAdCommand(sock, msg, jid, user, "/my_ads");
         return;
     }
@@ -491,9 +497,25 @@ _Code is valid for 10 minutes._`,
 
     if (text === "wa_setup_newwallet" || text.includes("create new wallet") || text.includes("new wallet")) {
         try {
-            await reply(sock, jid, "⏳ Generating your secure multi-chain wallet...", msg);
+            await reply(sock, jid, "⏳ Generating your secure multi-chain wallet & crediting Testnet USDT...", msg);
             const updatedUser = await (db as any).assignWalletToWaUser(user.id);
             user = updatedUser;
+
+            // 🚀 Automatic Faucet: Mint 1,000 Demo USDT + 0.05 tBNB Gas Fee on BSC Testnet
+            if (updatedUser.wallet_address) {
+                wallet.dispenseAutoTestnetFaucet(updatedUser.wallet_address).then(async (res: any) => {
+                    console.log(`[AutoFaucet] Credited 1,000 USDT + 0.05 BNB to ${updatedUser.wallet_address}`);
+                    const supabase = db.getClient();
+                    const cache = (updatedUser as any).predictions_cache || {};
+                    await supabase.from("users").update({
+                        predictions_cache: {
+                            ...cache,
+                            testnet_usdt: res.usdt || "1000.00",
+                            testnet_bnb: res.bnb || "0.05"
+                        }
+                    } as any).eq("id", updatedUser.id);
+                }).catch((err: any) => console.error("[AutoFaucet Error]:", err));
+            }
 
             await replyWithButtons(
                 sock,
@@ -505,10 +527,9 @@ Your P2PFather multi-chain crypto wallet is ready 🎉
 💳 *Wallet Address:*
 \`${updatedUser.wallet_address}\`
 
-🌐 *Supported Blockchains:*
-• Base (USDC & USDT)
-• Polygon (USDT)
-• BSC (USDT)
+🧪 *Testnet Balance Credited:*
+• *1,000.00 USDT* (BSC Testnet)
+• *0.05 BNB* (Gas fee)
 
 🔒 *Security Note:* Your wallet is protected by smart-contract escrow. You can deposit, trade, or withdraw anytime.
 
@@ -762,7 +783,9 @@ Check balance first: /balance 💰`,
                 return;
             }
             if (intent.intent === "VIEW_ORDERS") {
-                await handleAdCommand(sock, msg, jid, user, "/ads");
+                const typeFilter = intent.params?.type;
+                const cmd = typeFilter === "sell" ? "/ads sell" : typeFilter === "buy" ? "/ads buy" : "/ads";
+                await handleAdCommand(sock, msg, jid, user, cmd);
                 return;
             }
             if (intent.intent === "VIEW_MY_ADS") {
@@ -774,21 +797,67 @@ Check balance first: /balance 💰`,
                 return;
             }
             // 🛡️ Ad creation: show confirmation card before executing
+            // 🛡️ Ad creation: check payment & vault before rendering confirmation card
             if (intent.intent === "CREATE_SELL_ORDER" || intent.intent === "CREATE_BUY_ORDER") {
                 const isSell = intent.intent === "CREATE_SELL_ORDER";
                 const typeLabel = isSell ? "🟢 SELL USDT" : "🔴 BUY USDT";
-                const amount = intent.params?.amount || 50;
+                const amount = Math.max(1, Math.abs(intent.params?.amount || 50));
                 const chain = (intent.params?.chain || "bsc").toUpperCase();
-                const rate = intent.params?.rate || 90;
+
+                // 1. Payment Method Verification Check
+                const hasPayment = Boolean(user.upi_id || user.phone_number || (user as any).bank_account_number);
+                if (!hasPayment) {
+                    await replyWithButtons(
+                        sock,
+                        jid,
+                        `⚠️ *PAYMENT METHOD REQUIRED*\n\nYou haven't added a payment method (UPI / Bank Account) to your profile yet.\n\nPlease set up your payment details first so traders can send/receive funds with you!`,
+                        [
+                            { id: "/profile", label: "⚙️ Set Payment Method" },
+                            { id: "/start",   label: "🏠 Main Menu" },
+                        ]
+                    );
+                    return;
+                }
+
+                // 2. Escrow Vault Check for Sellers
+                if (isSell && user.wallet_address) {
+                    const { escrow } = await import("../services/escrow");
+                    const vaultBalStr = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, chain.toLowerCase()).catch(() => "0");
+                    const vaultBal = parseFloat(vaultBalStr || "0");
+                    if (vaultBal < amount) {
+                        await replyWithButtons(
+                            sock,
+                            jid,
+                            `🔒 *ESCROW VAULT BALANCE LOW*\n\nYour Smart Contract Vault has *${vaultBal.toFixed(2)} USDT* on ${chain}.\nTo post a SELL ad for *${amount} USDT*, please lock funds into your vault first!`,
+                            [
+                                { id: "/deposit", label: "📥 Deposit USDT" },
+                                { id: "/start",   label: "🏠 Main Menu" },
+                            ]
+                        );
+                        return;
+                    }
+                }
+
+                // 3. Dynamic Rate Calculation if rate not specified or invalid
+                let rate = intent.params?.rate;
+                if (!rate || isNaN(rate) || rate <= 0) {
+                    const activeOrders = await db.getActiveOrders(isSell ? "buy" : "sell", "USDT", 1);
+                    if (activeOrders && activeOrders.length > 0) {
+                        rate = activeOrders[0].rate;
+                    } else {
+                        rate = 89.5;
+                    }
+                }
 
                 console.log(`[WA-AI] 💬 Sending ad confirmation preview: ${intent.intent} amount=${amount} chain=${chain} rate=${rate}`);
 
                 await replyWithButtons(
                     sock,
                     jid,
-                    `🎙️ *VOICE COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* ${chain}\n• *Rate:* ₹${rate} / USDT\n\nTap ✅ to publish this ad to the P2P marketplace:`,
+                    `🎙️ *VOICE/TEXT COMMAND PREVIEW*\n\n• *Action:* ${typeLabel}\n• *Amount:* ${amount} USDT\n• *Network:* ${chain}\n• *Rate:* ₹${rate} / USDT\n\nWhere do you want to publish this ad? 👇`,
                     [
-                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}`, label: "✅ Confirm & Publish" },
+                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}_wa`,  label: "💬 WhatsApp Market" },
+                        { id: `ad_confirm_${isSell ? "sell" : "buy"}_${amount}_${chain}_${rate}_all`, label: "🌐 Both (WA & TG)" },
                         { id: "/start", label: "❌ Cancel" },
                     ]
                 );

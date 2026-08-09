@@ -87,9 +87,28 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             return;
         }
 
+        if (order.user_id === user.id) {
+            await reply(sock, jid, "❌ You cannot trade with your own ad.", msg);
+            return;
+        }
+
         const isBuyer = order.type === "sell";
         const buyerId = isBuyer ? user.id : order.user_id;
         const sellerId = isBuyer ? order.user_id : user.id;
+
+        // If current user is seller, verify they have payment details configured
+        if (!isBuyer) {
+            const hasPayment = Boolean(user.upi_id || user.phone_number || (user as any).bank_account_number);
+            if (!hasPayment) {
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `⚠️ *PAYMENT METHOD REQUIRED*\n\nYou are selling crypto in this trade. Please set up your payment details in /profile first so the buyer knows where to pay!`,
+                    [{ id: "/profile", label: "⚙️ Set Payment Method" }]
+                );
+                return;
+            }
+        }
 
         try {
             // Lock trade in DB & Escrow

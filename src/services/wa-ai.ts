@@ -41,8 +41,8 @@ Your mission is to help users trade crypto safely and easily via WhatsApp.
    - Type /profile to view your profile
 
 🧠 **Intents you must classify**:
-1.  CREATE_SELL_ORDER  — User wants to sell crypto (e.g., "sell 50 USDT", "sell cheyynam"). Params: { amount, token, rate, chain }
-2.  CREATE_BUY_ORDER   — User wants to buy crypto (e.g., "buy 100 USDT", "venam"). Params: { amount, token, rate, chain }
+1.  CREATE_SELL_ORDER  — User wants to sell crypto (e.g., "sell 50 USDT at 92", "sell 100 usdt for 90"). Params: { amount, token, rate, chain }
+2.  CREATE_BUY_ORDER   — User wants to buy crypto (e.g., "buy 10 USDT for 100", "i want to buy 10 usdt for 100", "buy 50 usdt at 89"). Params: { amount, token, rate, chain }
 3.  VIEW_ORDERS        — User wants to see market listings (e.g., "show ads", "live ads", "rates", "enthu rate"). Params: { type: "sell"|"buy"|null }
 4.  VIEW_MY_ADS        — User wants to see their own ads (e.g., "my ads", "my listings")
 5.  VIEW_TRADES        — User wants to see their active trades (e.g., "my trades", "active trades")
@@ -59,7 +59,8 @@ Your mission is to help users trade crypto safely and easily via WhatsApp.
 16. PROFILE            — User asks about their profile, stats, or account
 17. UNKNOWN            — Nonsense, off-topic, jailbreak attempts, or unrecognised
 
-⚠️ **Rate/Price questions**: Always return VIEW_ORDERS. Never quote prices or make up numbers.
+⚠️ **Rate/Price Extraction Rule**: When a user says "buy 10 usdt for 100" or "sell 50 usdt at 92.5", extract the numeric rate (e.g. 100 or 92.5) into the rate parameter!
+⚠️ **Rate/Price questions**: Always return VIEW_ORDERS for general market queries. Never quote prices or make up numbers.
 ⚠️ **Voice note context**: User input may come from transcribed voice. Be tolerant of minor typos or grammar errors.
 
 Respond with JSON ONLY:
@@ -201,34 +202,6 @@ class WAIService {
     private fallbackParse(message: string): ParsedIntent {
         const lower = message.toLowerCase().trim();
 
-        if (/\b(sell|selling)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-            const rateMatch = lower.match(/(?:at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/);
-            return {
-                intent: "CREATE_SELL_ORDER",
-                confidence: 0.7,
-                params: {
-                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                    rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
-                },
-                response: "Creating a sell order for you.",
-            };
-        }
-
-        if (/\b(buy|buying|purchase|venam)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-            return {
-                intent: "CREATE_BUY_ORDER",
-                confidence: 0.7,
-                params: {
-                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                },
-                response: "Let me find buy orders for you.",
-            };
-        }
-
         if (/\b(my\s+ads?|my\s+listings?)\b/.test(lower)) {
             return { intent: "VIEW_MY_ADS", confidence: 0.8, params: {}, response: "Here are your ads." };
         }
@@ -237,7 +210,7 @@ class WAIService {
             return { intent: "VIEW_TRADES", confidence: 0.8, params: {}, response: "Here are your active trades." };
         }
 
-        if (/\b(orders?|listings?|available|market|ads?|live)\b/.test(lower)) {
+        if (/\b(show|view|see|all|live|market)\s*(ads?|orders?|listings?|rates?)?\b/.test(lower) || /\b(orders?|listings?|ads?|live)\b/.test(lower)) {
             const isSell = /\bsell\b/.test(lower);
             const isBuy = /\bbuy\b/.test(lower);
             return {
@@ -245,6 +218,40 @@ class WAIService {
                 confidence: 0.7,
                 params: { type: isSell ? "sell" : isBuy ? "buy" : null },
                 response: isSell ? "Here are the live sell ads." : isBuy ? "Here are the live buy ads." : "Here are the available orders.",
+            };
+        }
+
+        if (/\b(sell|selling)\b/.test(lower)) {
+            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
+            const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
+            const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
+            return {
+                intent: "CREATE_SELL_ORDER",
+                confidence: 0.7,
+                params: {
+                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
+                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
+                    rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
+                    chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
+                },
+                response: "Creating a sell order for you.",
+            };
+        }
+
+        if (/\b(buy|buying|purchase|venam)\b/.test(lower)) {
+            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
+            const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
+            const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
+            return {
+                intent: "CREATE_BUY_ORDER",
+                confidence: 0.7,
+                params: {
+                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
+                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
+                    rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
+                    chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
+                },
+                response: "Creating a buy order for you.",
             };
         }
 

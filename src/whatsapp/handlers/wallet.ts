@@ -61,13 +61,20 @@ export async function handleWalletCommand(
 
     // ─── /faucet — Testnet USDT & BNB Faucet for Beta Testing ────────────────
     if (text === "/faucet" || text === "faucet" || text.includes("testnet faucet")) {
-        await reply(sock, jid, "⏳ Dispensing 100.00 Testnet USDT + 0.005 Testnet BNB to your wallet...", msg);
+        if (!user.wallet_address) {
+            await reply(sock, jid, "❌ No wallet address found. Please create a wallet first.", msg);
+            return;
+        }
+
+        await reply(sock, jid, "⏳ Minting 1,000.00 Testnet USDT + transferring 0.05 BNB Gas Fee to your wallet...", msg);
 
         try {
+            const res = await wallet.dispenseAutoTestnetFaucet(user.wallet_address);
+
             const supabase = db.getClient();
             const cache = (user as any).predictions_cache || {};
-            const currentTestnetUsdt = (parseFloat(cache.testnet_usdt || "0") + 100).toFixed(2);
-            const currentTestnetBnb = (parseFloat(cache.testnet_bnb || "0") + 0.005).toFixed(4);
+            const currentTestnetUsdt = (parseFloat(cache.testnet_usdt || "0") + 1000).toFixed(2);
+            const currentTestnetBnb = (parseFloat(cache.testnet_bnb || "0") + 0.05).toFixed(4);
 
             const updatedCache = {
                 ...cache,
@@ -85,8 +92,8 @@ export async function handleWalletCommand(
                 jid,
                 `🎉 *TESTNET FAUCET DISPENSED!* 🧪
 
-💰 *Testnet USDT Balance:* ${currentTestnetUsdt} USDT
-⚡ *Testnet BNB Gas Balance:* ${currentTestnetBnb} BNB
+💰 *Testnet USDT Balance:* ${res.usdt || currentTestnetUsdt} USDT
+⚡ *Testnet BNB Gas Balance:* ${res.bnb || currentTestnetBnb} BNB
 
 You can now post P2P Ads on *🧪 BSC Testnet* and test live trades with zero financial risk!
 
