@@ -501,8 +501,8 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
 
         const [
             balances,
-            vaultBaseUsdc, vaultBscUsdc, vaultBaseUsdt, vaultBscUsdt, vaultBscBnb,
-            reservedBaseUsdc, reservedBscUsdc, reservedBaseUsdt, reservedBscUsdt, reservedBscBnb
+            vaultBaseUsdc, vaultBscUsdc, vaultBaseUsdt, vaultBscUsdt, vaultBscBnb, vaultTestnetUsdt,
+            reservedBaseUsdc, reservedBscUsdc, reservedBaseUsdt, reservedBscUsdt, reservedBscBnb, reservedTestnetUsdt
         ] = await Promise.all([
             wallet.getBalances(user.wallet_address),
             escrow.getVaultBalance(user.wallet_address, env.USDC_ADDRESS, 'base').catch(() => "0.0"),
@@ -510,11 +510,13 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, 'base').catch(() => "0.0"),
             escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", 'bsc').catch(() => "0.0"),
             escrow.getVaultBalance(user.wallet_address, "0x0000000000000000000000000000000000000000", 'bsc').catch(() => "0.0"),
+            escrow.getVaultBalance(user.wallet_address, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", 'bsc_testnet' as any).catch(() => "0.0"),
             db.getReservedAmount(user.id, 'USDC', 'base').catch(() => 0),
             db.getReservedAmount(user.id, 'USDC', 'bsc').catch(() => 0),
             db.getReservedAmount(user.id, 'USDT', 'base').catch(() => 0),
             db.getReservedAmount(user.id, 'USDT', 'bsc').catch(() => 0),
-            db.getReservedAmount(user.id, 'BNB', 'bsc').catch(() => 0)
+            db.getReservedAmount(user.id, 'BNB', 'bsc').catch(() => 0),
+            db.getReservedAmount(user.id, 'USDT', 'bsc_testnet').catch(() => 0)
         ]);
 
         res.json({
@@ -524,8 +526,10 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             vault_base_usdt: vaultBaseUsdt,
             vault_bsc_usdt: vaultBscUsdt,
             vault_bsc_bnb: vaultBscBnb,
+            vault_testnet_usdt: vaultTestnetUsdt,
             vault_base_reserved: (reservedBaseUsdc + reservedBaseUsdt).toString(),
             vault_bsc_reserved: (reservedBscUsdc + reservedBscUsdt + reservedBscBnb).toString(),
+            vault_testnet_reserved: reservedTestnetUsdt.toString(),
 
             // Detailed reserved breakdown for UI
             reserved_base_usdc: reservedBaseUsdc.toString(),
@@ -533,6 +537,7 @@ router.get("/wallet/balances", async (req: Request, res: Response) => {
             reserved_bsc_usdc: reservedBscUsdc.toString(),
             reserved_bsc_usdt: reservedBscUsdt.toString(),
             reserved_bsc_bnb: reservedBscBnb.toString(),
+            reserved_testnet_usdt: reservedTestnetUsdt.toString(),
 
             wallet_type: (user as any).wallet_type || 'bot'
         });

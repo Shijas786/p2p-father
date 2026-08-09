@@ -199,6 +199,8 @@ export function startLiquiditySyncJob(escrowService: any) {
                                 } else {
                                     tokenAddress = (token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
                                 }
+                            } else if (chain === 'bsc_testnet') {
+                                tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
                             } else {
                                 tokenAddress = (token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
                             }
