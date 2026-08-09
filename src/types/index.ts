@@ -96,6 +96,7 @@ export interface Order {
     status: "active" | "paused" | "filled" | "cancelled" | "expired";
     filled_amount: number;
     expires_at?: string | null;
+    source?: string | null;
     created_at: string;
     // Joined data
     username?: string;

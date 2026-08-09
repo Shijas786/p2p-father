@@ -623,6 +623,7 @@ Please top up your Vault and try again.`,
                     status:          "active",
                     filled_amount:   0,
                     expires_at:      expiresAt,
+                    source:          "whatsapp",
                     payment_details: {
                         require_kyc: Boolean(draft.require_kyc),
                         note: draft.note || undefined,
