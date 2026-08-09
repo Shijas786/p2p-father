@@ -362,9 +362,9 @@ To withdraw, reply in this format:
 \`/withdraw <address> <amount> USDT <chain>\`
 
 *Example:*
-\`/withdraw 0x742d35Cc6634... 50 USDT bsc\`
+\`/withdraw 0x742d35Cc6634... 50 USDT bsc_testnet\`
 
-Supported chains: BSC & Base`,
+Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
                 [
                     { id: "/balance",      label: "💰 View Balance" },
                     { id: "/deposit",      label: "📥 Deposit USDT" },
@@ -386,14 +386,14 @@ Supported chains: BSC & Base`,
         const toAddress = parts[1];
         const amount    = parseFloat(parts[2]);
         const token     = (parts[3] || "USDT").toUpperCase();
-        const chain     = ((parts[4] || "bsc") as any).toLowerCase();
+        const chain     = ((parts[4] || "bsc_testnet") as any).toLowerCase();
 
         if (isNaN(amount) || amount <= 0) {
             await reply(sock, jid, "❌ Invalid amount. Please enter a positive number.", msg);
             return;
         }
 
-        const gasCoin = chain === "bsc" ? "BNB" : chain === "polygon" ? "POL" : "ETH";
+        const gasCoin = (chain === "bsc" || chain === "bsc_testnet") ? "tBNB" : chain === "polygon" ? "POL" : "ETH";
 
         // Direct 1-tap confirmation step
         await replyWithButtons(
@@ -421,7 +421,8 @@ Proceed to execute on-chain transfer?`,
 
         const toAddress = parts[0];
         const amountStr = parts[1] || "10";
-        const chainKey  = (parts[2] || "bsc").toLowerCase();
+        let chainKey  = (parts[2] || "bsc_testnet").toLowerCase();
+        if (chainKey === "bsc") chainKey = "bsc_testnet";
 
         try {
             await reply(sock, jid, "⏳ Executing withdrawal... Please wait.", msg);
@@ -429,7 +430,7 @@ Proceed to execute on-chain transfer?`,
             const { wallet } = await import("../../services/wallet");
             const { env } = await import("../../config/env");
 
-            let tokenAddress = env.USDT_ADDRESS;
+            let tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
             if (chainKey === "bsc_testnet") tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
             else if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
             else if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
@@ -453,24 +454,23 @@ Proceed to execute on-chain transfer?`,
 
 • *To:* \`${toAddress}\`
 • *Amount:* ${amountStr} USDT
-• *Chain:* ${chainKey.toUpperCase()}
+• *Chain:* BSC TESTNET
 • *Tx Hash:* \`${txHash}\`
-🔗 *Explorer:* ${explorerBase}${txHash}`,
+
+🔗 *Explorer Link:* ${explorerBase}${txHash}
+
+Withdrawal confirmed on-chain! 🚀`,
                 [
                     { id: "/balance", label: "💰 View Balance" },
-                    { id: "/profile", label: "👤 View Profile" },
+                    { id: "/start",   label: "🏠 Main Menu" },
                 ]
             );
-
             // Instantly cancel any sell ads that are now under-funded.
-            // Hot-wallet withdrawal reduces the balance backing vault-reserved ads.
-            // Fire-and-forget — do not block the response.
             const { escrow } = await import("../../services/escrow");
             const { cancelUnderfundedAds } = await import("../../services/jobs");
             cancelUnderfundedAds(user.id, user.wallet_address!, "USDT", chainKey, escrow).catch(console.error);
-
         } catch (err: any) {
-            await reply(sock, jid, `❌ Withdrawal failed: ${err?.message || "Insufficient balance"}`, msg);
+            await reply(sock, jid, `❌ Withdrawal failed: ${err?.message || err}`, msg);
         }
         return;
     }
