@@ -49,7 +49,7 @@ export function fmtWalletBalance(
 
     const balanceLines = balances.length > 0
         ? balances.map((b) => `  • *${labelMap[b.token] || b.token.toUpperCase()}:* ${b.amount}`).join("\n")
-        : "  _No balance found. Tap Testnet Faucet below to claim 1,000 Demo USDT!_";
+        : "  _No balance found. Free testnet USDT & BNB gas auto-credited on registration._";
 
     return `💰 *YOUR P2PFATHER WALLET*
 

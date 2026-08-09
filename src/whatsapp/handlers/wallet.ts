@@ -50,7 +50,7 @@ export async function handleWalletCommand(
             // Message 2: Universal Navigation Bar
             await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
                 { id: "/start",   label: "🏠 Main Menu" },
-                { id: "/faucet",  label: "🧪 Testnet Faucet" },
+                { id: "/profile", label: "👤 My Profile" },
                 { id: "/post",    label: "➕ Post New Ad" },
             ]);
         } catch (err) {
