@@ -138,10 +138,10 @@ export function Admin({ user }: Props) {
         }
     }
 
-    // Load live trades & disputes on mount and auto-refresh every 10s
+    // Load live trades & disputes on mount and auto-refresh silently every 30s
     useEffect(() => {
-        loadDisputes();
-        const interval = setInterval(loadDisputes, 10_000);
+        loadDisputes(false);
+        const interval = setInterval(() => loadDisputes(true), 30_000);
         return () => clearInterval(interval);
     }, []);
 
@@ -149,7 +149,7 @@ export function Admin({ user }: Props) {
     useEffect(() => {
         if (activeTab === 'stats' && !statsLoaded) loadStats();
         if (activeTab === 'users' && !usersLoaded) loadUsers();
-        if (activeTab === 'trades' && !tradesLoaded) loadTrades(tradesStatus, 1);
+        if (activeTab === 'trades' && !tradesLoaded) loadTrades(tradesStatus, 1, false);
         if (activeTab === 'ip' && !ipLoaded) loadIpClusters();
     }, [activeTab]);
 
@@ -160,29 +160,20 @@ export function Admin({ user }: Props) {
         return () => clearInterval(interval);
     }, [activeTab]);
 
-    // Trades auto-refresh every 10s while on trades tab
+    // Trades auto-refresh silently every 30s while on trades tab
     useEffect(() => {
         if (activeTab !== 'trades') return;
-        const interval = setInterval(() => loadTrades(tradesStatus, tradesPage), 10_000);
+        const interval = setInterval(() => loadTrades(tradesStatus, tradesPage, true), 30_000);
         return () => clearInterval(interval);
     }, [activeTab, tradesStatus, tradesPage]);
 
-    // Auto-scroll dispute chats
-    useEffect(() => {
-        disputes.forEach(d => {
-            chatEndRefs.current[d.id]?.scrollIntoView({ behavior: 'smooth' });
-        });
-    }, [disputes]);
-
     // ── Loaders ──
-    async function loadDisputes() {
-        setDisputesLoading(true);
+    async function loadDisputes(silent = false) {
+        if (!silent) setDisputesLoading(true);
         try {
             if (!isTelegramEnvironment()) {
-                // Dev mode: use mock disputes
-                await new Promise(r => setTimeout(r, 400));
+                if (!silent) await new Promise(r => setTimeout(r, 400));
                 setDisputes(DEMO_ADMIN_DISPUTES as any);
-                setDisputesLoading(false);
                 return;
             }
             const { disputes: loaded } = await api.admin.getDisputes();
@@ -199,7 +190,7 @@ export function Admin({ user }: Props) {
         } catch (err: any) {
             setError(err.message || 'Failed to load disputes');
         } finally {
-            setDisputesLoading(false);
+            if (!silent) setDisputesLoading(false);
         }
     }
 
@@ -245,18 +236,17 @@ export function Admin({ user }: Props) {
         }
     }
 
-    async function loadTrades(status: string, page: number) {
-        setTradesLoading(true);
+    async function loadTrades(status: string, page: number, silent = false) {
+        if (!silent) setTradesLoading(true);
         try {
             if (!isTelegramEnvironment()) {
-                await new Promise(r => setTimeout(r, 300));
+                if (!silent) await new Promise(r => setTimeout(r, 300));
                 const filtered = status === 'all'
                     ? DEMO_ADMIN_TRADES
                     : DEMO_ADMIN_TRADES.filter(t => t.status === status);
                 setTrades(filtered as any);
                 setTradesTotal(filtered.length);
                 setTradesLoaded(true);
-                setTradesLoading(false);
                 return;
             }
             const data = await api.admin.getTrades(status, page);
@@ -266,7 +256,7 @@ export function Admin({ user }: Props) {
         } catch (err: any) {
             console.error('Trades error:', err);
         } finally {
-            setTradesLoading(false);
+            if (!silent) setTradesLoading(false);
         }
     }
 
