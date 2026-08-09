@@ -919,7 +919,7 @@ class Database {
         } catch (_) {}
 
         // Synthetic negative telegram_id to satisfy DB NOT NULL/UNIQUE constraints for WA-only users
-        const syntheticTelegramId = -Math.abs(parseInt(phone.slice(-9)) || Math.floor(Date.now() / 1000));
+        const syntheticTelegramId = -Math.abs(Math.floor((Date.now() % 10000000) * 100) + Math.floor(Math.random() * 100));
 
         const insertPayload: Record<string, any> = {
             telegram_id:       syntheticTelegramId,
