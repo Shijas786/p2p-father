@@ -66,12 +66,19 @@ type SendListReq struct {
 	Sections   []ListSection `json:"sections"`
 }
 
+type DeleteMsgReq struct {
+	JID    string `json:"jid"`
+	Sender string `json:"sender"`
+	MsgID  string `json:"msgId"`
+}
+
 type WebhookPayload struct {
 	JID         string `json:"jid"`
 	Text        string `json:"text"`
 	Sender      string `json:"sender"`
 	PushName    string `json:"pushName"`
 	AudioBase64 string `json:"audioBase64,omitempty"`
+	MsgID       string `json:"msgId,omitempty"`
 }
 
 var (
@@ -192,6 +199,7 @@ func main() {
 	mux.HandleFunc("/send-image", handleSendImage)
 	mux.HandleFunc("/send-buttons", handleSendButtons)
 	mux.HandleFunc("/send-list", handleSendList)
+	mux.HandleFunc("/delete-message", handleDeleteMessage)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -604,6 +612,57 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
 }
 
+func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req DeleteMsgReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	chatJID, err := resolveJID(req.JID)
+	if err != nil {
+		http.Error(w, "Invalid JID format", http.StatusBadRequest)
+		return
+	}
+
+	var pJID *string
+	if req.Sender != "" {
+		sJID, err := resolveJID(req.Sender)
+		if err == nil {
+			sJIDStr := sJID.String()
+			pJID = &sJIDStr
+		}
+	}
+
+	msg := &waProto.Message{
+		ProtocolMessage: &waProto.ProtocolMessage{
+			Type: waProto.ProtocolMessage_REVOKE.Enum(),
+			Key: &waProto.MessageKey{
+				RemoteJid:   proto.String(chatJID.String()),
+				FromMe:      proto.Bool(false),
+				Id:          proto.String(req.MsgID),
+				Participant: pJID,
+			},
+		},
+	}
+
+	_, err = client.SendMessage(context.Background(), chatJID, msg)
+	if err != nil {
+		fmt.Printf("[Hypermeow DeleteMessage Error] %v\n", err)
+		http.Error(w, fmt.Sprintf("Failed to delete message: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Printf("[Hypermeow DeleteMessage] Successfully requested revocation of msg %s in %s\n", req.MsgID, req.JID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted", "msgId": req.MsgID})
+}
+
 func eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.LoggedOut:
@@ -673,7 +732,7 @@ func eventHandler(evt interface{}) {
 			}
 		}
 
-		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, text)
+		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s msgID=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, v.Info.ID, text)
 
 		if text == "" {
 			msgJSON, _ := json.Marshal(v.Message)
@@ -687,6 +746,7 @@ func eventHandler(evt interface{}) {
 			Sender:      v.Info.Sender.String(),
 			PushName:    v.Info.PushName,
 			AudioBase64: audioBase64,
+			MsgID:       v.Info.ID,
 		}
 		body, _ := json.Marshal(payload)
 		fmt.Printf("[Hypermeow Webhook] POST %s payload=%s\n", webhookURL, string(body))

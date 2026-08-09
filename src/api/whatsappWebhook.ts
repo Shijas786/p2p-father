@@ -17,7 +17,15 @@ const stubSock: WASocket = {
     user: { id: "917012751478:0@s.whatsapp.net" },
     sendMessage: async (jid: string, content: any) => {
         try {
-            if (content.image) {
+            if (content.delete) {
+                const targetKey = content.delete;
+                const msgId = targetKey.id;
+                const sender = targetKey.participant || "";
+                if (msgId) {
+                    console.log(`[WA-StubSocket] Executing message deletion for jid=${jid} msgId=${msgId} sender=${sender}`);
+                    await hypermeowClient.deleteMessage(jid, sender, msgId);
+                }
+            } else if (content.image) {
                 // Generate QR code URL or image URL for WhatsApp
                 let imageUrl = "";
                 if (typeof content.image === "string") {
@@ -50,7 +58,7 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
         const event = body.event || body.type;
 
         // ── Hypermeow (Go bridge) webhook ──────────────────────────────────────
-        // Payload: { jid, text, sender, pushName, audioBase64 }
+        // Payload: { jid, text, sender, pushName, audioBase64, msgId }
         if (body.jid && body.text !== undefined && !event) {
             let messageText = body.text;
 
@@ -73,7 +81,8 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                 key: {
                     remoteJid: body.jid,
                     fromMe: false,
-                    id: `hm_${Date.now()}`,
+                    id: body.msgId || `hm_${Date.now()}`,
+                    participant: body.sender || undefined,
                 },
                 message: {
                     conversation: messageText,

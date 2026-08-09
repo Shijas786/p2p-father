@@ -104,6 +104,20 @@ export class HypermeowClient {
             return false;
         }
     }
+
+    public async deleteMessage(jid: string, sender: string, msgId: string): Promise<boolean> {
+        try {
+            const res = await axios.post(
+                `${this.baseUrl}/delete-message`,
+                { jid, sender, msgId },
+                { timeout: 8000 }
+            );
+            return res.status === 200;
+        } catch (err: any) {
+            console.error(`[HypermeowClient] DeleteMessage error for ${jid}/${msgId}:`, err?.message || err);
+            return false;
+        }
+    }
 }
 
 export const hypermeowClient = new HypermeowClient();

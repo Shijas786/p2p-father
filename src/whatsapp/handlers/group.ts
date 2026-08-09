@@ -12,16 +12,13 @@ import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
 
 // ─── Spam / Phishing Patterns ────────────────────────────────────────────────
 
-// WhatsApp group invite links
-const WA_GROUP_INVITE_RE = /chat\.whatsapp\.com\/[A-Za-z0-9]{10,}/i;
+// Match ANY URL or link sent in group (http, https, www, t.me, wa.me, chat.whatsapp.com, etc.)
+const LINK_RE = /(https?:\/\/[^\s]+|www\.[^\s]+|chat\.whatsapp\.com\/[^\s]+|t\.me\/[^\s]+|wa\.me\/[^\s]+)/i;
 
-// Common phishing / scam domains and patterns (extend as needed)
+// Phishing / scam keywords (extend as needed)
 const PHISHING_PATTERNS: RegExp[] = [
-    /bit\.ly\/[A-Za-z0-9]+/i,        // URL shorteners
-    /t\.me\/\+[A-Za-z0-9]+/i,        // Telegram group invite links in WA groups
-    /tinyurl\.com/i,
     /free.*usdt/i,
-    /earn.*usdt.*daily/i,
+    /earn.*usdt/i,
     /double.*your.*usdt/i,
     /investment.*profit/i,
     /guaranteed.*return/i,
@@ -51,13 +48,12 @@ export async function scanAndDeleteSpam(
     // ── 1. Image messages: always delete in groups (QR codes, payment screens, scam images) ──
     const isImage = Boolean(msg.message?.imageMessage);
     if (isImage) {
-        const caption = msg.message?.imageMessage?.caption ?? "";
         console.log(`[GROUP-GUARD] Image message detected from ${senderParticipant} in ${groupJid}. Deleting (possible QR/scam image).`);
         await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, "Images and QR codes");
         return true;
     }
 
-    // ── 2. Text messages: scan for phishing/spam patterns ──────────────────────
+    // ── 2. Text messages: scan for links or phishing patterns ──────────────────────
     const rawText = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -66,16 +62,16 @@ export async function scanAndDeleteSpam(
 
     if (!rawText) return false;
 
-    const isWaInvite = WA_GROUP_INVITE_RE.test(rawText);
+    const hasLink = LINK_RE.test(rawText);
     const isPhishing = PHISHING_PATTERNS.some((re) => re.test(rawText));
 
-    if (!isWaInvite && !isPhishing) return false;
+    if (!hasLink && !isPhishing) return false;
 
-    const reason = isWaInvite ? "WhatsApp group invite link" : "phishing/spam content";
-    console.log(`[GROUP-GUARD] Detected ${reason} in ${groupJid} from ${senderParticipant}. Attempting delete.`);
+    const reason = hasLink ? "External link" : "Phishing/spam content";
+    console.log(`[GROUP-GUARD] Detected ${reason} in ${groupJid} from ${senderParticipant} (msgId=${msg.key?.id}). Attempting delete.`);
     await deleteOrWarn(
         sock, msg, groupJid, senderParticipant, senderPhone,
-        isWaInvite ? "WhatsApp group invite links" : "Promotional / phishing links"
+        hasLink ? "Links and URLs" : "Promotional / phishing text"
     );
     return true;
 }
