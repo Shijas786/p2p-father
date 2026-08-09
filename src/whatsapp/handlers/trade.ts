@@ -16,6 +16,7 @@ import {
     fmtDisputeOpened,
 } from "../formatters";
 import { sendUserAlert } from "../../services/notifier";
+import { getTradeWebUrl } from "../../api/miniapp";
 
 export async function handleTradeCommand(
     sock: WASocket,
@@ -356,6 +357,7 @@ You currently have no active ongoing trades.`,
                 if (trade.status === "fiat_sent") statusText = "💸 Payment Marked Sent";
                 if (trade.status === "disputed") statusText = "⚠️ Under Admin Dispute";
 
+                const webUrl = getTradeWebUrl(trade.id, user.id);
                 const cardMsg =
 `🤝 *TRADE #${formattedTradeId}*
 
@@ -363,7 +365,10 @@ You currently have no active ongoing trades.`,
 • *Amount:* ${trade.amount} USDT (₹${trade.fiat_amount})
 • *Chain:* ${trade.chain?.toUpperCase() ?? "BSC"}
 • *Counterparty:* ${counterpartyHandle}
-• *Status:* ${statusText}`;
+• *Status:* ${statusText}
+
+🌐 *Live Web Trade Room:*
+${webUrl}`;
 
                 const buttons: { id: string; label: string }[] = [
                     { id: `/chat_${trade.id}`, label: "💬 Chat Counterparty" },

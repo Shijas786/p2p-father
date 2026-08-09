@@ -423,6 +423,17 @@ export const api = {
         }>('/whatsapp/preference', { method: 'PUT', body: JSON.stringify({ channel }) }),
         unlink: () => request<{ success: boolean; user: any }>('/whatsapp/unlink', { method: 'POST' }),
     },
+
+    // ---- Web Trade Room Magic Token Auth ----
+    authWithTradeToken: (token: string) => request<{
+        success: boolean;
+        initData: string;
+        tradeId: string;
+        user: any;
+    }>('/auth/trade-token', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+    }),
 };
 
 

@@ -45,7 +45,25 @@ export function useAuth() {
             setLoading(true);
             setError(null);
 
-            if (isTelegramEnvironment()) {
+            // Check if URL has ?token=... for Web Trade Room magic link auth
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (token) {
+                try {
+                    const res = await api.authWithTradeToken(token);
+                    if (res.success && res.initData && res.user) {
+                        localStorage.setItem('trade_init_data', res.initData);
+                        setUser(res.user);
+                        setLoading(false);
+                        return;
+                    }
+                } catch (tokenErr: any) {
+                    console.error('[WebTradeAuth] Token auth failed:', tokenErr?.message);
+                }
+            }
+
+            if (isTelegramEnvironment() || localStorage.getItem('trade_init_data')) {
                 const { user: authUser } = await api.auth.login();
                 setUser(authUser);
             } else {

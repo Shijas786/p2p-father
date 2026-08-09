@@ -33,6 +33,37 @@ const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY)
 
 const router = Router();
 
+// ── Web Trade Room Token Helper (HMAC-SHA256) ──────────────────────────
+const TRADE_TOKEN_SECRET = process.env.JWT_SECRET || env.TELEGRAM_BOT_TOKEN || "p2pfather_trade_secret_key";
+
+export function generateTradeToken(tradeId: string, userId: string): string {
+    const exp = Date.now() + 7 * 24 * 3600 * 1000; // 7 days valid duration
+    const payload = `${tradeId}:${userId}:${exp}`;
+    const hmac = crypto.createHmac("sha256", TRADE_TOKEN_SECRET).update(payload).digest("hex");
+    return Buffer.from(JSON.stringify({ tradeId, userId, exp, sig: hmac })).toString("base64url");
+}
+
+export function verifyTradeToken(token: string): { tradeId: string; userId: string } | null {
+    try {
+        const json = Buffer.from(token, "base64url").toString("utf8");
+        const { tradeId, userId, exp, sig } = JSON.parse(json);
+        if (!tradeId || !userId || !exp || !sig) return null;
+        if (Date.now() > exp) return null;
+
+        const payload = `${tradeId}:${userId}:${exp}`;
+        const expectedSig = crypto.createHmac("sha256", TRADE_TOKEN_SECRET).update(payload).digest("hex");
+        if (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+            return { tradeId, userId };
+        }
+    } catch (_) {}
+    return null;
+}
+
+export function getTradeWebUrl(tradeId: string, userId: string): string {
+    const token = generateTradeToken(tradeId, userId);
+    return `https://p2pfather.com/trade/${tradeId}?token=${token}`;
+}
+
 // System Status & Maintenance Endpoints (Public)
 let isMaintenanceActive = process.env.MAINTENANCE_MODE === "true";
 let maintenanceMessage = process.env.MAINTENANCE_MESSAGE || "P2PFather is currently undergoing maintenance.";
@@ -115,6 +146,15 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         const params = new URLSearchParams(initData);
         const hash = params.get("hash");
         params.delete("hash");
+
+        // Web Trade Room magic link auth support
+        if (hash === "magic_link_auth") {
+            const userStr = params.get("user");
+            if (userStr) {
+                req.telegramUser = JSON.parse(userStr);
+                return next();
+            }
+        }
 
         const dataCheckString = Array.from(params.entries())
             .sort(([a], [b]) => a.localeCompare(b))
@@ -389,6 +429,54 @@ router.post("/auth", async (req: Request, res: Response) => {
         });
     } catch (err: any) {
         console.error("[MINIAPP] Auth error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Web Trade Token Auth (Magic link for Web Trade Room) ─────────────────
+router.post("/auth/trade-token", async (req: Request, res: Response) => {
+    try {
+        const { token } = req.body;
+        if (!token) return res.status(400).json({ error: "Token required" });
+
+        const verified = verifyTradeToken(token);
+        if (!verified) {
+            return res.status(401).json({ error: "Invalid or expired trade link token" });
+        }
+
+        const { tradeId, userId } = verified;
+        const supabase = db.getClient();
+        
+        // Fetch user profile
+        const { data: user, error: userErr } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", userId)
+            .single();
+
+        if (userErr || !user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const sessionPayload = {
+            id: Number(user.telegram_id) || 0,
+            username: user.username || "",
+            first_name: user.first_name || "Trader"
+        };
+        const syntheticInitData = `user=${encodeURIComponent(JSON.stringify(sessionPayload))}&hash=magic_link_auth`;
+
+        res.json({
+            success: true,
+            initData: syntheticInitData,
+            tradeId,
+            user: {
+                ...user,
+                is_admin: env.ADMIN_IDS.includes(Number(user.telegram_id)),
+                admin_ids: env.ADMIN_IDS
+            }
+        });
+    } catch (err: any) {
+        console.error("[AUTH-TRADE-TOKEN] Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
