@@ -223,54 +223,71 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
         }
     }
 
+    private extractAmountAndRate(lower: string): { amount?: number; rate?: number; token: string; chain: string } {
+        const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
+        const chain = chainMatch ? chainMatch[1].toLowerCase() : "bsc";
+
+        const ratePrefixMatch = lower.match(/(?:for|at|rate|@|price|price\s*-)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/)
+            || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
+
+        let rate: number | undefined = ratePrefixMatch ? parseFloat(ratePrefixMatch[1]) : undefined;
+        let ratePhrase = ratePrefixMatch ? ratePrefixMatch[0] : "";
+
+        const remainingStr = ratePhrase ? lower.replace(ratePhrase, "") : lower;
+
+        const explicitAmountMatch = remainingStr.match(/(\d+(?:\.\d+)?)\s*(usdt|usdc|eth|bnb|dt|\$)/)
+            || lower.match(/(\d+(?:\.\d+)?)\s*(usdt|usdc|eth|bnb|dt|\$)/);
+
+        let amount: number | undefined;
+        let token = "USDT";
+
+        if (explicitAmountMatch) {
+            amount = parseFloat(explicitAmountMatch[1]);
+            if (explicitAmountMatch[2] && ["USDT", "USDC", "ETH", "BNB"].includes(explicitAmountMatch[2].toUpperCase())) {
+                token = explicitAmountMatch[2].toUpperCase();
+            }
+        } else {
+            const fallbackNumberMatch = remainingStr.match(/(\d+(?:\.\d+)?)/);
+            if (fallbackNumberMatch) {
+                amount = parseFloat(fallbackNumberMatch[1]);
+            }
+        }
+
+        return { amount, rate, token, chain };
+    }
+
     /**
      * Fallback: parse intent without AI using simple keyword matching
      */
     private fallbackParse(message: string): ParsedIntent {
         const lower = message.toLowerCase().trim();
 
-        // 1. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt")
+        // 1. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt", "at 100 sell 10 usdt")
         const isCreation = /\b(create|post|publish|make|add|list|new)\b/.test(lower);
+        const hasSell = /\b(sell|selling)\b/.test(lower);
+        const hasBuy = /\b(buy|buying|purchase)\b/.test(lower);
 
-        if (isCreation || /\b(sell|selling)\b/.test(lower)) {
-            if (/\b(sell|selling)\b/.test(lower) || (isCreation && !/\bbuy\b/.test(lower))) {
-                const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-                const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
-                const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
-                return {
-                    intent: "CREATE_SELL_ORDER",
-                    confidence: 0.7,
-                    params: {
-                        amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                        token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                        rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
-                        chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
-                    },
-                    response: "Creating a sell order for you.",
-                };
-            }
+        if (hasSell || (isCreation && !hasBuy)) {
+            const { amount, rate, token, chain } = this.extractAmountAndRate(lower);
+            return {
+                intent: "CREATE_SELL_ORDER",
+                confidence: 0.7,
+                params: { amount, token, rate, chain },
+                response: "Creating a sell order for you.",
+            };
         }
 
-        if (isCreation || /\b(buy|buying|purchase)\b/.test(lower)) {
-            if (/\b(buy|buying|purchase)\b/.test(lower)) {
-                const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-                const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
-                const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
-                return {
-                    intent: "CREATE_BUY_ORDER",
-                    confidence: 0.7,
-                    params: {
-                        amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                        token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                        rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
-                        chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
-                    },
-                    response: "Creating a buy order for you.",
-                };
-            }
+        if (hasBuy || (isCreation && !hasSell)) {
+            const { amount, rate, token, chain } = this.extractAmountAndRate(lower);
+            return {
+                intent: "CREATE_BUY_ORDER",
+                confidence: 0.7,
+                params: { amount, token, rate, chain },
+                response: "Creating a buy order for you.",
+            };
         }
 
-        if (/\b(show|view|see|browse|all|live|market)\s*(ads?|orders?|listings?|rates?)?\b/.test(lower) || /\b(live\s+ads?|active\s+ads?|market\s+ads?)\b/.test(lower)) {
+        if (/\b(show|view|see|browse|all|live|market)\s+(ads?|orders?|listings?|rates?)?\b/.test(lower) || /\b(live\s+ads?|active\s+ads?|market\s+ads?)\b/.test(lower)) {
             const isSell = /\bsell\b/.test(lower);
             const isBuy = /\bbuy\b/.test(lower);
             return {
@@ -283,7 +300,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             };
         }
 
-        if (/\b(balance|how much|wallet)\b/.test(lower)) {
+        if (/\b(balance|how much|my wallet|wallet balance)\b/.test(lower)) {
             return { intent: "CHECK_BALANCE", confidence: 0.7, params: {}, response: "Checking your balance." };
         }
 
@@ -325,8 +342,9 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
         }
 
         if (/\b(news|market|rates?|price|update|today|happening|enthu rate|rate und|rate aano)\b/.test(lower)) {
-            // Redirect to live orderbook — never make up rate numbers
-            return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: null }, response: "Check the live P2P orderbook for the best rates! 📊" };
+            if (/\b(what\s+(is\s+the\s+)?rate|live\s+rates?|current\s+rate|market\s+rates?)\b/.test(lower)) {
+                return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: undefined }, response: "Check the live P2P orderbook for the best rates! 📊" };
+            }
         }
 
         return {
