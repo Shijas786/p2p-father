@@ -111,17 +111,86 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
         }
 
         try {
-            // Lock trade in DB & Escrow
+            // 1. Atomically Mark Order as Filled (Prevent Race Conditions)
+            await db.updateOrder(order.id, { status: "filled", filled_amount: order.amount });
+            
+            await reply(sock, jid, "⏳ Locking crypto in smart contract escrow... Please wait.", msg);
+
+            const tokenSymbol = order.token || "USDC";
+            const { env } = await import("../../config/env");
+            const tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+            const { wallet } = await import("../../services/wallet");
+            const { escrow } = await import("../../services/escrow");
+
+            const seller = await db.getUserById(sellerId);
+            const buyer = await db.getUserById(buyerId);
+            
+            if (!seller?.wallet_address || !buyer?.wallet_address) {
+                await db.revertFillOrder(order.id, order.amount);
+                await reply(sock, jid, "❌ Trade failed: One of the parties does not have a wallet set up.", msg);
+                return;
+            }
+
+            // 2. Check Seller Balance
+            const vaultBalanceStr = await escrow.getVaultBalance(seller.wallet_address, tokenAddress, order.chain as any);
+            const vaultBalance = parseFloat(vaultBalanceStr);
+
+            if (vaultBalance < order.amount) {
+                // Check Hot Wallet
+                const hotBalanceStr = await wallet.getTokenBalance(seller.wallet_address, tokenAddress);
+                const hotBalance = parseFloat(hotBalanceStr);
+
+                if (hotBalance < order.amount) {
+                    await db.revertFillOrder(order.id, order.amount);
+                    await reply(sock, jid, `❌ Trade failed: Seller has insufficient funds (Needs ${order.amount} ${tokenSymbol}).`, msg);
+                    
+                    // Notify seller they missed a trade
+                    if (isBuyer) {
+                        await sendUserAlert(seller, `⚠️ *TRADE FAILED!*\n\nA buyer tried to match your ${order.amount} ${tokenSymbol} ad, but you don't have enough balance.`);
+                    }
+                    return;
+                }
+
+                try {
+                    // Auto-deposit
+                    await wallet.depositToVault(seller.wallet_index, order.amount.toString(), tokenAddress);
+                } catch (err: any) {
+                    await db.revertFillOrder(order.id, order.amount);
+                    await reply(sock, jid, `❌ Trade failed: Auto-deposit failed (likely insufficient gas).`, msg);
+                    return;
+                }
+            }
+
+            // 3. Lock in Smart Contract
+            const tradeIdOnChainStr = await escrow.createRelayedTrade(
+                seller.wallet_address,
+                buyer.wallet_address,
+                tokenAddress,
+                order.amount.toString(),
+                1800, // 30 min deadline
+                order.chain as any
+            );
+
+            // 4. Create local Trade record
+            const feePercent = env.getFeePercentage(order.chain);
             const trade = await db.createTrade({
                 order_id: order.id,
                 buyer_id: buyerId,
                 seller_id: sellerId,
+                token: tokenSymbol,
                 amount: order.amount,
                 rate: order.rate,
                 fiat_amount: Math.round(order.amount * order.rate),
+                fiat_currency: "INR",
+                fee_amount: order.amount * feePercent,
+                fee_percentage: feePercent,
+                buyer_receives: order.amount * (1 - feePercent),
                 payment_method: (order.payment_methods ?? [])[0] ?? "UPI",
                 chain: order.chain || "base",
-                status: "pending_payment",
+                status: "in_escrow",
+                on_chain_trade_id: Number(tradeIdOnChainStr),
+                escrow_tx_hash: "pending",
+                created_at: new Date().toISOString()
             } as any);
 
             await replyWithButtons(
@@ -130,7 +199,7 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
                 `🤝 *TRADE MATCHED & ESCROW LOCKED!*
 
 • *Trade ID:* \`${trade.id.slice(0, 8)}\`
-• *Amount:* ${trade.amount} USDT
+• *Amount:* ${trade.amount} ${tokenSymbol}
 • *Pay Fiat:* ₹${trade.fiat_amount} via ${(trade as any).payment_method}
 
 ⚠️ *Buyer:* Pay to the seller's payment details, then tap *Payment Sent*.`,
@@ -141,17 +210,19 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             );
 
             // Alert Seller with interactive action buttons
-            const seller = await db.getUserById(sellerId);
-            if (seller) {
+            if (sellerId !== user.id) { // Only alert if the current user isn't the seller
                 await sendUserAlert(
                     seller,
-                    `🤝 *TRADE MATCHED!* Buyer has initiated trade for ${trade.amount} USDT (₹${trade.fiat_amount}). Awaiting payment.`,
+                    `🤝 *TRADE MATCHED!* Buyer has initiated trade for ${trade.amount} ${tokenSymbol} (₹${trade.fiat_amount}). Crypto is locked in escrow. Awaiting payment.`,
                     undefined,
                     [{ id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" }]
                 );
             }
 
         } catch (err: any) {
+            console.error("[WA-Trade] Critical match error:", err);
+            // Safety fallback
+            await db.revertFillOrder(order.id, order.amount).catch(() => {});
             await reply(sock, jid, `❌ Failed to initiate trade: ${err?.message || err}`, msg);
         }
         return;
