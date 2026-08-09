@@ -1016,6 +1016,16 @@ class Database {
 
         if (error || !updated) throw new Error("Failed to assign wallet");
         console.log(`[DB] Assigned wallet ${walletAddress} (index=${nextIndex}) to WA user ${userId}`);
+
+        // 🚀 Automatic Faucet: Mint 1,000 Demo USDT + 0.05 tBNB Gas Fee on BSC Testnet
+        if (walletAddress) {
+            import("../services/wallet").then(({ wallet }) => {
+                wallet.dispenseAutoTestnetFaucet(walletAddress!).catch(err => {
+                    console.error("[DB AutoFaucet Error]:", err?.message || err);
+                });
+            }).catch(() => {});
+        }
+
         return updated as User;
     }
 
