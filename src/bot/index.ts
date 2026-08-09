@@ -2982,41 +2982,24 @@ bot.on("callback_query:data", async (ctx) => {
                     const tokenSymbol = order.token || "USDC";
                     const tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
 
-                    // 🛠️ AUTO-DEPOSIT CHECK 🛠️
-                    // If Seller created ad using Hot Wallet, funds might not be in Vault yet.
+                    // 🛠️ AUTO-DEPOSIT CHECK REMOVED 🛠️
                     const vaultBalance = await escrow.getVaultBalance(seller.wallet_address!, tokenAddress);
                     if (parseFloat(vaultBalance) < order.amount) {
-                        // ❌ External Wallets cannot auto-deposit since we don't have their private key
-                        if (seller.wallet_type === 'external') {
-                            await db.revertFillOrder(order.id, order.amount);
-                            await ctx.editMessageText(
-                                "❌ *Trade Failed*\n\nSeller \\(External Wallet\\) has insufficient Vault balance\\.\nFunds must be deposited to Vault manually via Mini App\\.",
+                        await db.revertFillOrder(order.id, order.amount);
+                        await ctx.editMessageText(
+                            `❌ *Trade Failed*\n\nThe Seller does not have enough crypto locked in their Escrow Vault.\nPlease try another ad.`,
+                            { parse_mode: "Markdown" }
+                        );
+                        
+                        // Notify Seller that they missed a trade
+                        if (seller.telegram_id) {
+                            await ctx.api.sendMessage(
+                                seller.telegram_id,
+                                `⚠️ *MISSED TRADE\\!*\n\nA buyer tried to match your ${escapeMarkdown(formatTokenAmount(order.amount, tokenSymbol))} ad, but you don't have enough balance locked in your Escrow Vault\\.\n\nPlease deposit funds to your Vault via the Mini App to keep your ads active\\.`,
                                 { parse_mode: "Markdown" }
                             );
-                            return;
                         }
-
-                        await ctx.editMessageText("⏳ Seller vault needs funding. Attempting auto-deposit...");
-
-                        // Check Hot Wallet
-                        const hotBalance = await wallet.getTokenBalance(seller.wallet_address!, tokenAddress);
-                        if (parseFloat(hotBalance) < order.amount) {
-                            await db.revertFillOrder(order.id, order.amount);
-                            await ctx.editMessageText("❌ Trade failed: Seller has insufficient funds!");
-                            return;
-                        }
-
-                        try {
-                            // Perform Deposit (Approve + Deposit)
-                            // This requires Seller to have ETH for gas
-                            await wallet.depositToVault(seller.wallet_index, order.amount.toString(), tokenAddress);
-                            await ctx.editMessageText("✅ Auto-Deposit successful. Locking funds...");
-                        } catch (err: any) {
-                            console.error("Auto-deposit failed:", err);
-                            await db.revertFillOrder(order.id, order.amount);
-                            await ctx.editMessageText(`❌ Trade failed: Auto-deposit failed (likely insufficient ETH for gas). Details: ${err.message}`);
-                            return;
-                        }
+                        return;
                     }
 
                     await ctx.editMessageText("⏳ Locking crypto in escrow contract...");
@@ -3092,12 +3075,13 @@ bot.on("callback_query:data", async (ctx) => {
                     const tokenSymbol = order.token || "USDC";
                     const tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
 
-                    // 1. Check Seller's Balance (Baseline Amount)
-                    const balance = await wallet.getTokenBalance(seller.wallet_address!, tokenAddress);
+                    // 1. Check Seller's Vault Balance
+                    const vaultBalance = await escrow.getVaultBalance(seller.wallet_address!, tokenAddress);
                     const totalRequired = order.amount;
-                    if (parseFloat(balance) < totalRequired) {
+                    
+                    if (parseFloat(vaultBalance) < totalRequired) {
                         await ctx.editMessageText(
-                            `❌ *Insufficient ${tokenSymbol} Balance*\n\nYou need *${escapeMarkdown(formatTokenAmount(totalRequired, tokenSymbol))}* but have *${escapeMarkdown(formatTokenAmount(parseFloat(balance), tokenSymbol))}*.\n\nDeposit funds to your wallet: \`${escapeMarkdown(seller.wallet_address!)}\``,
+                            `❌ *Insufficient ${tokenSymbol} Vault Balance*\n\nYou need *${escapeMarkdown(formatTokenAmount(totalRequired, tokenSymbol))}* locked in your Escrow Vault but have *${escapeMarkdown(formatTokenAmount(parseFloat(vaultBalance), tokenSymbol))}*.\n\nPlease open the Mini App or type /wallet to deposit funds to your Vault first.`,
                             { parse_mode: "Markdown" }
                         );
                         return;
@@ -3106,11 +3090,7 @@ bot.on("callback_query:data", async (ctx) => {
                     await ctx.editMessageText(`⏳ Locking ${tokenSymbol} in escrow...`);
 
                     try {
-                        // 2. Seller sends tokens to Relayer (Admin Wallet)
-                        const relayerAddress = env.ADMIN_WALLET_ADDRESS;
-                        const sellerTransferTx = await wallet.sendToken(seller.wallet_index, relayerAddress, totalRequired.toString(), tokenAddress);
-
-                        // 3. Relayer creates Trade on Smart Contract
+                        // 2. Relayer creates Trade on Smart Contract
                         const buyerUser = await db.getUserById(order.user_id);
 
                         const { txHash, tradeId } = {

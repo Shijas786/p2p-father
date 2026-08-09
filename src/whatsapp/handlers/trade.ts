@@ -136,29 +136,17 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             const vaultBalance = parseFloat(vaultBalanceStr);
 
             if (vaultBalance < order.amount) {
-                // Check Hot Wallet
-                const hotBalanceStr = await wallet.getTokenBalance(seller.wallet_address, tokenAddress);
-                const hotBalance = parseFloat(hotBalanceStr);
-
-                if (hotBalance < order.amount) {
-                    await db.revertFillOrder(order.id, order.amount);
-                    await reply(sock, jid, `❌ Trade failed: Seller has insufficient funds (Needs ${order.amount} ${tokenSymbol}).`, msg);
-                    
-                    // Notify seller they missed a trade
-                    if (isBuyer) {
-                        await sendUserAlert(seller, `⚠️ *TRADE FAILED!*\n\nA buyer tried to match your ${order.amount} ${tokenSymbol} ad, but you don't have enough balance.`);
-                    }
-                    return;
+                await db.revertFillOrder(order.id, order.amount);
+                
+                if (isBuyer) {
+                    // Current user is the buyer, Maker is the seller.
+                    await reply(sock, jid, `❌ Trade failed: The seller does not have enough crypto locked in their Vault.`, msg);
+                    await sendUserAlert(seller, `⚠️ *MISSED TRADE!*\n\nA buyer tried to match your ${order.amount} ${tokenSymbol} ad, but you don't have enough balance locked in your Escrow Vault.\n\nPlease deposit funds to your Vault to keep your ads active.`);
+                } else {
+                    // Current user is the seller (fulfilling a BUY ad)
+                    await reply(sock, jid, `❌ Trade failed: You must manually deposit ${order.amount} ${tokenSymbol} to your Escrow Vault before accepting this trade.\n\nType /deposit or use the Vault Top-Up button in the Main Menu.`, msg);
                 }
-
-                try {
-                    // Auto-deposit
-                    await wallet.depositToVault(seller.wallet_index, order.amount.toString(), tokenAddress);
-                } catch (err: any) {
-                    await db.revertFillOrder(order.id, order.amount);
-                    await reply(sock, jid, `❌ Trade failed: Auto-deposit failed (likely insufficient gas).`, msg);
-                    return;
-                }
+                return;
             }
 
             // 3. Lock in Smart Contract
