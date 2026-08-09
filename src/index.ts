@@ -66,8 +66,8 @@ async function main() {
         startExpiryJob();
         startLiquiditySyncJob(escrow);
         startTradeReconciliationJob();
-        startPredictionSyncJob();
-        startPredictionResolutionJob();
+        // startPredictionSyncJob(); // Disabled — prediction feature sunset
+        // startPredictionResolutionJob(); // Disabled — prediction feature sunset
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
     }
 
