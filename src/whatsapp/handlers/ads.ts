@@ -239,6 +239,20 @@ Please deposit more USDT and lock it to your Vault first.`,
 
         try {
             const totalFiat = Math.round(amount * rate);
+
+            // Collect all configured payment methods on user profile
+            const paymentMethods: string[] = [];
+            if (user.upi_id) paymentMethods.push("UPI");
+            if ((user as any).bank_account_number) paymentMethods.push("BANK", "IMPS");
+            if ((user as any).cdm_bank_number) paymentMethods.push("CDM");
+            if ((user as any).digital_rupee_id) paymentMethods.push("DIGITAL_RUPEE");
+            if (paymentMethods.length === 0) paymentMethods.push("UPI");
+
+            // Default 24-hour ad expiry
+            const now = new Date();
+            now.setHours(now.getHours() + 24);
+            const expiresAt = now.toISOString();
+
             const order = await db.createOrder({
                 user_id: user.id,
                 type: type as any,
@@ -249,26 +263,42 @@ Please deposit more USDT and lock it to your Vault first.`,
                 max_amount: totalFiat,
                 rate,
                 fiat_currency: "INR",
-                payment_methods: [(user.upi_id ? "UPI" : "BANK")],
+                payment_methods: paymentMethods as any[],
                 status: "active",
                 filled_amount: 0,
+                expires_at: expiresAt,
                 payment_details: { require_kyc: false },
             });
 
             let platformText = "🌐 Both WhatsApp & Telegram";
+            const fullOrder = { ...order, users: user, source: "whatsapp" };
+
             if (platform === "wa") {
                 platformText = "💬 WhatsApp Marketplace";
-                await broadcastNewAdToGroups(order);
+                await broadcastNewAdToGroups(fullOrder);
             } else if (platform === "tg") {
                 platformText = "✈️ Telegram Marketplace";
+                try {
+                    const { broadcastAd } = await import("../../bot");
+                    await broadcastAd(fullOrder, user);
+                } catch (e: any) {
+                    console.error("[WA-AdConfirm] Telegram broadcast error:", e.message);
+                }
             } else {
-                await broadcastNewAdToGroups(order);
+                // "all" — Broadcast to BOTH WhatsApp & Telegram groups
+                await broadcastNewAdToGroups(fullOrder);
+                try {
+                    const { broadcastAd } = await import("../../bot");
+                    await broadcastAd(fullOrder, user);
+                } catch (e: any) {
+                    console.error("[WA-AdConfirm] Telegram broadcast error:", e.message);
+                }
             }
 
             await replyWithButtons(
                 sock,
                 jid,
-                `🎉 *P2P AD PUBLISHED SUCCESSFULLY!* 🚀\n\n• *Type:* ${type.toUpperCase()} USDT\n• *Amount:* ${amount} USDT\n• *Rate:* ₹${rate} / USDT\n• *Network:* ${chain.toUpperCase()}\n• *Destination:* ${platformText}\n\nYour ad is live in the marketplace! Traders can now initiate deals with you.`,
+                `🎉 *P2P AD PUBLISHED SUCCESSFULLY!* 🚀\n\n• *Type:* ${type.toUpperCase()} USDT\n• *Amount:* ${amount} USDT\n• *Rate:* ₹${rate} / USDT\n• *Network:* ${chain.toUpperCase()}\n• *Payment Methods:* ${paymentMethods.join(", ")}\n• *Expires in:* 24 Hours\n• *Destination:* ${platformText}\n\nYour ad is live in the marketplace! Traders can now initiate deals with you.`,
                 [
                     { id: "/ads",   label: "📊 View Market Ads" },
                     { id: "/start", label: "🏠 Main Menu" },
