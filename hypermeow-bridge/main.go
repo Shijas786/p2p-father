@@ -510,8 +510,8 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	listBtn := &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
-		Name:       proto.String("single_select"),
-		ParamsJson: proto.String(string(paramsJSON)),
+		Name:             proto.String("single_select"),
+		ButtonParamsJSON: proto.String(string(paramsJSON)),
 	}
 
 	msg := &waProto.Message{
