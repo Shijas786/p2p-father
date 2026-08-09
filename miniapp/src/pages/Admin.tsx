@@ -853,9 +853,14 @@ export function Admin({ user }: Props) {
                             <div className="flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
                                 <div>
                                     <div className="flex items-center" style={{ gap: 8 }}>
-                                        <span className="font-mono font-bold" style={{ fontSize: 13, color: cluster.is_multi ? 'var(--red)' : 'var(--blue)' }}>
+                                        <span className="font-mono font-bold" style={{ fontSize: 13, color: cluster.has_target ? '#f59e0b' : (cluster.is_multi ? 'var(--red)' : 'var(--blue)') }}>
                                             🌐 IP: {cluster.ip}
                                         </span>
+                                        {cluster.has_target && (
+                                            <span style={{ fontSize: 9, backgroundColor: '#f59e0b', color: '#000', padding: '1px 6px', borderRadius: 4, fontWeight: 'bold' }}>
+                                                🎯 TARGET WATCHLIST (target_user)
+                                            </span>
+                                        )}
                                         {cluster.is_multi ? (
                                             <span style={{ fontSize: 9, backgroundColor: '#f6465d', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 'bold' }}>
                                                 🚨 {cluster.user_count} MULTI-ACCOUNTS

@@ -94,19 +94,35 @@ export class IpTrackerService {
             }
         }
 
-        // Build list of clusters (show all logged IPs, prioritizing multi-account clusters with 2+ users first)
+        // Build list of clusters (show all logged IPs, prioritizing target watchlist and multi-account clusters)
+        const targetKeywords = ["target_user", "big nage", "big_nage", "nage", "carnage", "999999999"];
+
         const clusters: any[] = [];
         ipMap.forEach((userList, ip) => {
+            const hasTarget = userList.some(u => {
+                const text = `${u.username || ''} ${u.first_name || ''} ${u.telegram_id}`.toLowerCase();
+                return targetKeywords.some(kw => text.includes(kw));
+            });
+
             clusters.push({
                 ip,
                 user_count: userList.length,
                 is_multi: userList.length > 1,
-                users: userList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                has_target: hasTarget,
+                users: userList.map(u => {
+                    const text = `${u.username || ''} ${u.first_name || ''} ${u.telegram_id}`.toLowerCase();
+                    const isTargetUser = targetKeywords.some(kw => text.includes(kw));
+                    return { ...u, is_target: isTargetUser };
+                }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             });
         });
 
-        // Sort: Multi-account IPs first, then by count descending
-        clusters.sort((a, b) => b.user_count - a.user_count);
+        // Sort: Watchlist targets FIRST, then multi-account IPs, then count
+        clusters.sort((a, b) => {
+            if (a.has_target && !b.has_target) return -1;
+            if (!a.has_target && b.has_target) return 1;
+            return b.user_count - a.user_count;
+        });
 
         return clusters;
     }
