@@ -643,9 +643,9 @@ func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
 		ProtocolMessage: &waProto.ProtocolMessage{
 			Type: waProto.ProtocolMessage_REVOKE.Enum(),
 			Key: &waProto.MessageKey{
-				RemoteJid:   proto.String(chatJID.String()),
+				RemoteJID:   proto.String(chatJID.String()),
 				FromMe:      proto.Bool(false),
-				Id:          proto.String(req.MsgID),
+				ID:          proto.String(req.MsgID),
 				Participant: pJID,
 			},
 		},
