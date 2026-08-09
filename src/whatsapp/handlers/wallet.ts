@@ -50,11 +50,55 @@ export async function handleWalletCommand(
             // Message 2: Universal Navigation Bar
             await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
                 { id: "/start",   label: "🏠 Main Menu" },
-                { id: "/profile", label: "👤 My Profile" },
+                { id: "/faucet",  label: "🧪 Testnet Faucet" },
                 { id: "/post",    label: "➕ Post New Ad" },
             ]);
         } catch (err) {
             await reply(sock, jid, "❌ Failed to fetch balances. Please try again later.", msg);
+        }
+        return;
+    }
+
+    // ─── /faucet — Testnet USDT & BNB Faucet for Beta Testing ────────────────
+    if (text === "/faucet" || text === "faucet" || text.includes("testnet faucet")) {
+        await reply(sock, jid, "⏳ Dispensing 100.00 Testnet USDT + 0.005 Testnet BNB to your wallet...", msg);
+
+        try {
+            const supabase = db.getClient();
+            const cache = (user as any).predictions_cache || {};
+            const currentTestnetUsdt = (parseFloat(cache.testnet_usdt || "0") + 100).toFixed(2);
+            const currentTestnetBnb = (parseFloat(cache.testnet_bnb || "0") + 0.005).toFixed(4);
+
+            const updatedCache = {
+                ...cache,
+                testnet_usdt: currentTestnetUsdt,
+                testnet_bnb: currentTestnetBnb
+            };
+
+            await supabase
+                .from("users")
+                .update({ predictions_cache: updatedCache } as any)
+                .eq("id", user.id);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `🎉 *TESTNET FAUCET DISPENSED!* 🧪
+
+💰 *Testnet USDT Balance:* ${currentTestnetUsdt} USDT
+⚡ *Testnet BNB Gas Balance:* ${currentTestnetBnb} BNB
+
+You can now post P2P Ads on *🧪 BSC Testnet* and test live trades with zero financial risk!
+
+Choose an option below to start testing 👇`,
+                [
+                    { id: "/post",  label: "➕ Post Testnet Ad" },
+                    { id: "/ads",   label: "📊 Browse Ads" },
+                    { id: "/start", label: "🏠 Main Menu" },
+                ]
+            );
+        } catch (err: any) {
+            await reply(sock, jid, "❌ Failed to dispense testnet faucet. Please try again.", msg);
         }
         return;
     }

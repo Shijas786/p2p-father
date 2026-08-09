@@ -425,6 +425,12 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         return;
     }
 
+    // ── Faucet Command for Testnet Testing ────────────────────────────
+    if (text === "/faucet" || text === "faucet" || text.includes("testnet faucet") || text.includes("faucet")) {
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/faucet");
+        return;
+    }
+
     // ── Explicit Welcome / Onboarding test command ────────────────────────────
     if (text === "/welcome" || text === "welcome" || text === "/onboarding") {
         await (db as any).clearWhatsappState(user.id);

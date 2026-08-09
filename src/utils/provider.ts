@@ -18,20 +18,43 @@ const BSC_RPCS = [
     "https://bsc-dataseed1.defibit.io",
 ].filter(Boolean);
 
+const BSC_TESTNET_RPCS = [
+    "https://data-seed-prebsc-1-s1.binance.org:8545/",
+    "https://data-seed-prebsc-2-s1.binance.org:8545/",
+    "https://bsc-testnet.publicnode.com"
+];
+
+const BASE_SEPOLIA_RPCS = [
+    "https://sepolia.base.org",
+    "https://base-sepolia-rpc.publicnode.com"
+];
+
 const providerCache: Record<string, ethers.JsonRpcProvider> = {};
 
 /**
  * Creates a low-latency JsonRpcProvider with staticNetwork: true enabled.
  * Static network mode eliminates startup 'failed to detect network' errors completely.
  */
-export function getFastProvider(chain: 'base' | 'bsc' | string = 'base'): ethers.JsonRpcProvider {
+export function getFastProvider(chain: string = 'base'): ethers.JsonRpcProvider {
     if (providerCache[chain]) {
         return providerCache[chain];
     }
 
-    const chainId = chain === 'base' ? 8453 : (chain === 'bsc' ? 56 : 1);
-    const rpcList = chain === 'base' ? BASE_RPCS : (chain === 'bsc' ? BSC_RPCS : BASE_RPCS);
-    const primaryUrl = rpcList[0] || (chain === 'base' ? env.BASE_RPC_URL : env.BSC_RPC_URL);
+    let chainId = 8453;
+    let rpcList = BASE_RPCS;
+
+    if (chain === 'bsc') {
+        chainId = 56;
+        rpcList = BSC_RPCS;
+    } else if (chain === 'bsc_testnet') {
+        chainId = 97;
+        rpcList = BSC_TESTNET_RPCS;
+    } else if (chain === 'base_sepolia') {
+        chainId = 84532;
+        rpcList = BASE_SEPOLIA_RPCS;
+    }
+
+    const primaryUrl = rpcList[0];
     const staticNet = Network.from(chainId);
 
     const provider = new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: true });

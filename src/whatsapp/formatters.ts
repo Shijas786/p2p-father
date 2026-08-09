@@ -137,9 +137,11 @@ export function fmtMyAds(orders: Order[]): string {
         const shortId = o.id.slice(0, 8);
         const totalFiat = Math.round((o.amount || 0) * (o.rate || 0));
 
+        const chainLabel = o.chain === "bsc_testnet" ? "🧪 BSC Testnet" : (o.chain === "base_sepolia" ? "🧪 Base Sepolia" : (o.chain || "BSC").toUpperCase());
+
         return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / USDT | 🟢 ACTIVE
    • Amount: ${o.amount} ${o.token} (Total: ₹${totalFiat.toLocaleString("en-IN")})
-   • Chain: ${(o.chain || "BSC").toUpperCase()} | Payment: ${(o.payment_methods ?? []).join(", ") || "UPI"}
+   • Chain: ${chainLabel} | Payment: ${(o.payment_methods ?? []).join(", ") || "UPI"}
    👉 Delete: \`/delete_${shortId}\``;
     });
 

@@ -83,6 +83,21 @@ export const CONTRACTS = {
             USDT: "0x55d398326f99059fF775485246999027B3197955",
             BNB: "0x0000000000000000000000000000000000000000",
         }
+    },
+    bsc_testnet: {
+        escrow: "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a",
+        tokens: {
+            USDT: "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd",
+            USDC: "0x64544969ed7EBf5f083679233325356EbE738930",
+            BNB: "0x0000000000000000000000000000000000000000",
+        }
+    },
+    base_sepolia: {
+        escrow: "0xf20872C359788a53958a048413D64F183403B1f1",
+        tokens: {
+            USDC: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            USDT: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        }
     }
 };
 

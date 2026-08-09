@@ -277,11 +277,11 @@ To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract E
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2: Select Token & Network (Base or BSC):`,
+                `✅ *${type.toUpperCase()} Ad selected.*\n\nStep 2: Select Token & Network:`,
                 [
-                    { id: "ad_token_usdt_bsc",  label: "USDT (BSC)" },
-                    { id: "ad_token_usdt_base", label: "USDT (Base)" },
-                    { id: "/profile",           label: "🔙 Cancel" },
+                    { id: "ad_token_usdt_bsc_testnet", label: "🧪 USDT (BSC Testnet)" },
+                    { id: "ad_token_usdt_bsc",         label: "USDT (BSC Mainnet)" },
+                    { id: "ad_token_usdt_base",        label: "USDT (Base Mainnet)" },
                 ]
             );
             return;
@@ -294,14 +294,17 @@ To post a *SELL Ad*, your USDT must be locked in your P2PFather Smart Contract E
                 return;
             }
             draft.token = "USDT";
-            draft.chain = text.includes("polygon") ? "polygon" : text.includes("base") ? "base" : "bsc";
+            draft.chain = (text.includes("testnet") || text.includes("bsc_testnet"))
+                ? "bsc_testnet"
+                : (text.includes("base") ? "base" : "bsc");
             draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
+            const chainDisplay = draft.chain === "bsc_testnet" ? "🧪 BSC Testnet" : draft.chain!.toUpperCase();
             await reply(
                 sock,
                 jid,
-                `✅ *USDT (${draft.chain!.toUpperCase()}) selected.*\n\nStep 3 of 5: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                `✅ *USDT (${chainDisplay}) selected.*\n\nStep 3 of 5: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
                 msg
             );
             return;
