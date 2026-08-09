@@ -262,7 +262,16 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
     private fallbackParse(message: string): ParsedIntent {
         const lower = message.toLowerCase().trim();
 
-        // 1. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt", "at 100 sell 10 usdt")
+        // 1. Explicit Questions / Rate Inquiries / Help (Prioritized over creation to avoid "how to create a sell ad" -> CREATE_SELL_ORDER)
+        if (/\b(what\s+(is\s+the\s+)?rate|live\s+rates?|current\s+rate|market\s+rates?|enthu rate|rate und|rate aano)\b/.test(lower)) {
+            return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: undefined }, response: "Check the live P2P orderbook for the best rates! 📊" };
+        }
+
+        if (/\b(help|how|what|faq|support|guide)\b/.test(lower)) {
+            return { intent: "HELP", confidence: 0.7, params: {}, response: "Here's how I can help." };
+        }
+
+        // 2. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt", "at 100 sell 10 usdt")
         const isCreation = /\b(create|post|publish|make|add|list|new)\b/.test(lower);
         const hasSell = /\b(sell|selling)\b/.test(lower);
         const hasBuy = /\b(buy|buying|purchase)\b/.test(lower);
@@ -300,6 +309,10 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             };
         }
 
+        if (/\b(help|how|what|faq|support)\b/.test(lower)) {
+            return { intent: "HELP", confidence: 0.7, params: {}, response: "Here's how I can help." };
+        }
+
         if (/\b(balance|how much|my wallet|wallet balance)\b/.test(lower)) {
             return { intent: "CHECK_BALANCE", confidence: 0.7, params: {}, response: "Checking your balance." };
         }
@@ -308,15 +321,12 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             return { intent: "BRIDGE_TOKENS", confidence: 0.6, params: {}, response: "Let me help you bridge tokens." };
         }
 
-        if (/\b(send)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
+        if (/\b(send\s+\d+|transfer\s+\d+|withdraw\s+\d+)\b/.test(lower)) {
+            const { amount, token } = this.extractAmountAndRate(lower);
             return {
                 intent: "SEND_CRYPTO",
                 confidence: 0.7,
-                params: {
-                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                },
+                params: { amount, token },
                 response: "Preparing to send crypto.",
             };
         }
@@ -325,7 +335,7 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             return { intent: "CONFIRM_PAYMENT", confidence: 0.7, params: {}, response: "Marking payment as sent." };
         }
 
-        if (/\b(received|got|confirm)\b/.test(lower)) {
+        if (/\b(confirm\s+(payment|receipt|trade)|release\s+(usdt|crypto|escrow|funds)|received\s+(fiat|payment|money)|got\s+(payment|fiat|money))\b/.test(lower)) {
             return { intent: "CONFIRM_RECEIPT", confidence: 0.6, params: {}, response: "Confirming receipt." };
         }
 
@@ -333,18 +343,12 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
             return { intent: "DISPUTE", confidence: 0.7, params: {}, response: "Opening a dispute." };
         }
 
-        if (/\b(help|how|what|faq)\b/.test(lower)) {
-            return { intent: "HELP", confidence: 0.7, params: {}, response: "Here's how I can help." };
-        }
-
         if (/\b(profile|stats|my|account)\b/.test(lower)) {
             return { intent: "PROFILE", confidence: 0.6, params: {}, response: "Here's your profile." };
         }
 
-        if (/\b(news|market|rates?|price|update|today|happening|enthu rate|rate und|rate aano)\b/.test(lower)) {
-            if (/\b(what\s+(is\s+the\s+)?rate|live\s+rates?|current\s+rate|market\s+rates?)\b/.test(lower)) {
-                return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: undefined }, response: "Check the live P2P orderbook for the best rates! 📊" };
-            }
+        if (/\b(news|market|price|update|today|happening)\b/.test(lower)) {
+            return { intent: "MARKET_NEWS", confidence: 0.5, params: {}, response: "Here's the latest market news." };
         }
 
         return {

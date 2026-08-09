@@ -235,7 +235,16 @@ class WAIService {
     private fallbackParse(message: string): ParsedIntent {
         const lower = message.toLowerCase().trim();
 
-        // 1. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt", "at 100 sell 10 usdt", "rate 92.5 for 50 usdt")
+        // 1. Explicit Questions / Rate Inquiries / Help (Prioritized over creation to avoid "how to create a sell ad" -> CREATE_SELL_ORDER)
+        if (/\b(what\s+(is\s+the\s+)?rate|live\s+rates?|current\s+rate|market\s+rates?|enthu rate|rate und|rate aano)\b/.test(lower)) {
+            return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: null }, response: "Check the live P2P orderbook for the best rates! 📊" };
+        }
+
+        if (/\b(help|how|what|faq|support|guide)\b/.test(lower)) {
+            return { intent: "HELP", confidence: 0.7, params: {}, response: "Here's how I can help." };
+        }
+
+        // 2. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt", "at 100 sell 10 usdt", "rate 92.5 for 50 usdt")
         const isCreation = /\b(create|post|publish|make|add|list|new)\b/.test(lower);
         const hasSell = /\b(sell|selling)\b/.test(lower);
         const hasBuy = /\b(buy|buying|purchase|venam)\b/.test(lower);
@@ -308,14 +317,6 @@ class WAIService {
 
         if (/\b(dispute|problem|issue|scam|fraud)\b/.test(lower)) {
             return { intent: "DISPUTE", confidence: 0.7, params: {}, response: "Opening a dispute." };
-        }
-
-        if (/\b(help|how|what|faq)\b/.test(lower)) {
-            return { intent: "HELP", confidence: 0.7, params: {}, response: "Here's how I can help." };
-        }
-
-        if (/\b(what\s+(is\s+the\s+)?rate|live\s+rates?|current\s+rate|market\s+rates?|enthu rate|rate und|rate aano)\b/.test(lower)) {
-            return { intent: "VIEW_ORDERS", confidence: 0.7, params: { type: null }, response: "Check the live P2P orderbook for the best rates! 📊" };
         }
 
         return {
