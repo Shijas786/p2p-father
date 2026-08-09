@@ -221,7 +221,6 @@ async function showWelcomeScreen(
     jid: string,
     msg: IWebMessageInfo
 ): Promise<void> {
-    // Message 1 (Frame 1: Onboarding & Account Setup — 3 Buttons)
     await replyWithButtons(
         sock,
         jid,
@@ -240,23 +239,6 @@ P2PFather is India's premier *smart-contract P2P exchange* for safe, escrow-prot
             { id: "wa_setup_link_telegram", label: "🔗 Link Telegram Wallet" },
             { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
             { id: "wa_guide",              label: "📖 Platform Guide" },
-        ]
-    );
-
-    // Short 250ms gap so stacked messages arrive in sequence
-    await new Promise((r) => setTimeout(r, 250));
-
-    // Message 2 (Frame 2: P2P Marketplace & Help — 3 Buttons)
-    await replyWithButtons(
-        sock,
-        jid,
-        `⚡ *EXPLORE P2PFATHER MARKETPLACE*
-
-Browse live buy/sell ads, create new ads, or view help & support:`,
-        [
-            { id: "/ads",     label: "📊 Browse Live Ads" },
-            { id: "/post",    label: "➕ Create New Ad" },
-            { id: "/help",    label: "💬 Help & Support" },
         ]
     );
 }

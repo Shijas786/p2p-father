@@ -229,7 +229,48 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
     private fallbackParse(message: string): ParsedIntent {
         const lower = message.toLowerCase().trim();
 
-        if (/\b(show|view|see|all|live|market)\s*(ads?|orders?|listings?|rates?)?\b/.test(lower) || /\b(orders?|listings?|ads?|live)\b/.test(lower)) {
+        // 1. Explicit Ad Creation Intent (e.g. "i want to create a buy ad of 10 usdt", "post sell ad 50 usdt")
+        const isCreation = /\b(create|post|publish|make|add|list|new)\b/.test(lower);
+
+        if (isCreation || /\b(sell|selling)\b/.test(lower)) {
+            if (/\b(sell|selling)\b/.test(lower) || (isCreation && !/\bbuy\b/.test(lower))) {
+                const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
+                const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
+                const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
+                return {
+                    intent: "CREATE_SELL_ORDER",
+                    confidence: 0.7,
+                    params: {
+                        amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
+                        token: amountMatch?.[2]?.toUpperCase() || "USDT",
+                        rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
+                        chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
+                    },
+                    response: "Creating a sell order for you.",
+                };
+            }
+        }
+
+        if (isCreation || /\b(buy|buying|purchase)\b/.test(lower)) {
+            if (/\b(buy|buying|purchase)\b/.test(lower)) {
+                const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
+                const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
+                const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
+                return {
+                    intent: "CREATE_BUY_ORDER",
+                    confidence: 0.7,
+                    params: {
+                        amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
+                        token: amountMatch?.[2]?.toUpperCase() || "USDT",
+                        rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
+                        chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
+                    },
+                    response: "Creating a buy order for you.",
+                };
+            }
+        }
+
+        if (/\b(show|view|see|browse|all|live|market)\s*(ads?|orders?|listings?|rates?)?\b/.test(lower) || /\b(live\s+ads?|active\s+ads?|market\s+ads?)\b/.test(lower)) {
             const isSell = /\bsell\b/.test(lower);
             const isBuy = /\bbuy\b/.test(lower);
             return {
@@ -239,40 +280,6 @@ Respond with JSON: { amount, receiver, status, utr, timestamp, amountMatch, rece
                     type: isSell ? "sell" : (isBuy ? "buy" : undefined)
                 },
                 response: isSell ? "Here are the live sell ads." : (isBuy ? "Here are the live buy ads." : "Here are the available orders.")
-            };
-        }
-
-        if (/\b(sell|selling)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-            const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
-            const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
-            return {
-                intent: "CREATE_SELL_ORDER",
-                confidence: 0.7,
-                params: {
-                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                    rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
-                    chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
-                },
-                response: "Creating a sell order for you.",
-            };
-        }
-
-        if (/\b(buy|buying|purchase)\b/.test(lower)) {
-            const amountMatch = lower.match(/(\d+(?:\.\d+)?)\s*(usdc|eth|usdt|bnb)?/);
-            const rateMatch = lower.match(/(?:for|at|rate|@)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/) || lower.match(/(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr)/);
-            const chainMatch = lower.match(/\b(bsc|base|polygon|mainnet)\b/);
-            return {
-                intent: "CREATE_BUY_ORDER",
-                confidence: 0.7,
-                params: {
-                    amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
-                    token: amountMatch?.[2]?.toUpperCase() || "USDT",
-                    rate: rateMatch ? parseFloat(rateMatch[1]) : undefined,
-                    chain: chainMatch ? chainMatch[1].toLowerCase() : "bsc",
-                },
-                response: "Creating a buy order for you.",
             };
         }
 
