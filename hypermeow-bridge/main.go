@@ -533,8 +533,27 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Send InteractiveMessage directly so WhatsMeow's built-in native_flow handling constructs the metadata automatically
-	resp, err := client.SendMessage(context.Background(), jid, msg)
+	bizNode := waBinary.Node{
+		Tag: "biz",
+		Content: []waBinary.Node{
+			{
+				Tag: "interactive",
+				Attrs: waBinary.Attrs{"type": "native_flow", "v": "1"},
+				Content: []waBinary.Node{
+					{Tag: "native_flow", Attrs: waBinary.Attrs{"v": "9", "name": "mixed"}},
+				},
+			},
+		},
+	}
+	isGroup := jid.Server == "g.us"
+	additionalNodes := []waBinary.Node{bizNode}
+	if !isGroup {
+		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
+	}
+
+	resp, err := client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
+		AdditionalNodes: &additionalNodes,
+	})
 	if err == nil {
 		fmt.Printf("[SendList] SendMessage SUCCESS: jid=%s id=%s timestamp=%v\n", jid.String(), resp.ID, resp.Timestamp)
 		w.Header().Set("Content-Type", "application/json")
