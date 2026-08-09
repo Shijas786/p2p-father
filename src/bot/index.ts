@@ -435,8 +435,18 @@ export async function updateAdBroadcasts(order: any, user: any, statusOverride?:
         // If there is no status override, or if it is explicitly 'active', show the button.
         // Otherwise (locked, completed, cancelled, expired), remove the keyboard.
         if (!statusOverride || statusOverride === 'active') {
-            keyboard = new InlineKeyboard()
-                .url(actionLabel, `https://t.me/${botUsername}?start=buy_${order.id}`);
+            const isWaAd = Boolean(
+                order?.source === "whatsapp" ||
+                user?.preferred_channel === "whatsapp" ||
+                (user?.whatsapp_phone && !user?.telegram_id)
+            );
+
+            const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
+            const targetUrl = isWaAd
+                ? `https://wa.me/${waBotPhone}?text=trade_ad_${order.id}`
+                : `https://t.me/${botUsername}?start=buy_${order.id}`;
+
+            keyboard = new InlineKeyboard().url(actionLabel, targetUrl);
 
             if (order.type === 'sell') {
                 keyboard.success();
