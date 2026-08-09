@@ -336,26 +336,24 @@ async function handleAdCreationFlow(
             }
             const type = text.includes("sell") ? "sell" : "buy";
 
-            // For SELL ads: show user their available vault balance across all chains as a heads-up.
-            // The hard gate happens at AMOUNT step once we know the specific chain and amount.
+            // For SELL ads: show user their available vault balance on BSC Testnet as a heads-up.
             if (type === "sell" && user.wallet_address) {
                 try {
-                    const bscUsdt  = await escrow.getVaultBalance(user.wallet_address, "0x55d398326f99059fF775485246999027B3197955", "bsc").catch(() => "0");
-                    const baseUsdt = await escrow.getVaultBalance(user.wallet_address, env.USDT_ADDRESS, "base").catch(() => "0");
-                    const totalVault = parseFloat(bscUsdt) + parseFloat(baseUsdt);
+                    const testnetUsdt = await escrow.getVaultBalance(user.wallet_address, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", "bsc_testnet").catch(() => "0");
+                    const vaultBal = parseFloat(testnetUsdt);
 
-                    if (totalVault <= 0) {
+                    if (vaultBal <= 0) {
                         await (db as any).clearWhatsappState(user.id);
                         await replyWithButtons(
                             sock,
                             jid,
                             `🔒 *SELL AD — VAULT BALANCE REQUIRED*
 
-To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault.
+To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault (BSC Testnet).
 
-💰 *Your Vault Balance:* 0.00 USDT
+💰 *Your Vault Balance:* 0.00 USDT (BSC Testnet)
 
-Please deposit USDT to your wallet and lock it to the Vault first.`,
+Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
                             [
                                 { id: "/deposit",      label: "📥 Deposit USDT" },
                                 { id: "vault_deposit", label: "🔒 Lock to Vault" },
@@ -364,11 +362,10 @@ Please deposit USDT to your wallet and lock it to the Vault first.`,
                         return;
                     }
 
-                    // Show balance as friendly info and proceed
                     await reply(
                         sock,
                         jid,
-                        `💰 *Your Vault Balance:* ${totalVault.toFixed(2)} USDT (BSC + Base combined)\n\n✅ *SELL Ad selected.* Next: choose the specific chain to list on.`,
+                        `💰 *Your Vault Balance:* ${vaultBal.toFixed(2)} USDT (BSC Testnet)\n\n✅ *SELL Ad selected (🧪 BSC Testnet).*`,
                         msg
                     );
                 } catch (_) {
@@ -376,41 +373,32 @@ Please deposit USDT to your wallet and lock it to the Vault first.`,
                 }
             }
 
-            draft.type = type;
-            draft.step = "TOKEN";
+            draft.type  = type;
+            draft.token = "USDT";
+            draft.chain = "bsc_testnet";
+            draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
-            await replyWithButtons(
+            await reply(
                 sock,
                 jid,
-                `Step 2: Select Token & Network:`,
-                [
-                    { id: "ad_token_usdt_bsc_testnet", label: "🧪 USDT (BSC Testnet)" },
-                    { id: "ad_token_usdt_bsc",         label: "USDT (BSC Mainnet)" },
-                    { id: "ad_token_usdt_base",        label: "USDT (Base Mainnet)" },
-                ]
+                `✅ *${type.toUpperCase()} USDT (🧪 BSC Testnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                msg
             );
             return;
         }
 
-        // ── Step 2: Token ─────────────────────────────────────────────────────
+        // ── Step 2: Token (fallback if reached) ───────────────────────────────
         case "TOKEN": {
-            if (!text.includes("usdt")) {
-                await reply(sock, jid, "Please select a token from the options.", msg);
-                return;
-            }
             draft.token = "USDT";
-            draft.chain = (text.includes("testnet") || text.includes("bsc_testnet"))
-                ? "bsc_testnet"
-                : (text.includes("base") ? "base" : "bsc");
+            draft.chain = "bsc_testnet";
             draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
-            const chainDisplay = draft.chain === "bsc_testnet" ? "🧪 BSC Testnet" : draft.chain!.toUpperCase();
             await reply(
                 sock,
                 jid,
-                `✅ *USDT (${chainDisplay}) selected.*\n\nStep 3 of 5: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                `✅ *USDT (🧪 BSC Testnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
                 msg
             );
             return;
