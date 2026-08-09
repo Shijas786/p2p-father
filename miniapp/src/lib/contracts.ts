@@ -85,7 +85,7 @@ export const CONTRACTS = {
         }
     },
     bsc_testnet: {
-        escrow: "0x9F4Ab356cF973a6A5ad7D5A826d04e29861c502a",
+        escrow: "0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260",
         tokens: {
             USDT: "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd",
             USDC: "0x64544969ed7EBf5f083679233325356EbE738930",

@@ -68,17 +68,11 @@ const ESCROW_ABI = [
     "event FeeCollectorUpdated(address oldCollector, address newCollector)",
 ];
 
-type Chain = 'base' | 'bsc';
+type Chain = 'base' | 'bsc' | 'bsc_testnet' | 'base_sepolia';
 
 class EscrowService {
-    private providers: Record<string, ethers.Provider | null> = {
-        base: null,
-        bsc: null
-    };
-    private relayers: Record<string, ethers.Wallet | null> = {
-        base: null,
-        bsc: null
-    };
+    private providers: Record<string, ethers.Provider | null> = {};
+    private relayers: Record<string, ethers.Wallet | null> = {};
 
     private getProvider(chain: Chain = 'base'): ethers.Provider {
         return getFastProvider(chain);
@@ -94,7 +88,9 @@ class EscrowService {
         return this.relayers[chain]!;
     }
 
-    private getContractAddress(chain: Chain): string {
+    private getContractAddress(chain: Chain = 'base'): string {
+        if (chain === 'bsc_testnet') return process.env.ESCROW_CONTRACT_ADDRESS_BSC_TESTNET || "0x5ED1dC490061Bf9e281B849B6D4ed17feE84F260";
+        if (chain === 'base_sepolia') return process.env.ESCROW_CONTRACT_ADDRESS_BASE_SEPOLIA || "0xf20872C359788a53958a048413D64F183403B1f1";
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
