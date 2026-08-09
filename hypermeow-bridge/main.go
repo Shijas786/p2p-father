@@ -533,35 +533,19 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	bizNode := waBinary.Node{
-		Tag: "biz",
-		Content: []waBinary.Node{
-			{
-				Tag: "interactive",
-				Attrs: waBinary.Attrs{"type": "native_flow", "v": "1"},
-				Content: []waBinary.Node{
-					{Tag: "native_flow", Attrs: waBinary.Attrs{"v": "9", "name": "mixed"}},
-				},
-			},
-		},
-	}
-	isGroup := jid.Server == "g.us"
-	additionalNodes := []waBinary.Node{bizNode}
-	if !isGroup {
-		additionalNodes = append([]waBinary.Node{{Tag: "bot", Attrs: waBinary.Attrs{"biz_bot": "1"}}}, additionalNodes...)
-	}
-
-	// Attempt 1: InteractiveMessage with single_select NativeFlowButton
-	_, err = client.SendMessage(context.Background(), jid, msg, whatsmeow.SendRequestExtra{
-		AdditionalNodes: &additionalNodes,
-	})
+	// Send InteractiveMessage directly so WhatsMeow's built-in native_flow handling constructs the metadata automatically
+	resp, err := client.SendMessage(context.Background(), jid, msg)
 	if err == nil {
-		fmt.Println("[SendList] Attempt 1 SUCCESS (Native Interactive List sent)")
+		fmt.Printf("[SendList] SendMessage SUCCESS: jid=%s id=%s timestamp=%v\n", jid.String(), resp.ID, resp.Timestamp)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "sent",
+			"jid":    req.JID,
+			"msgId":  resp.ID,
+		})
 		return
 	}
-	fmt.Printf("[SendList] Attempt 1 FAILED: %v\n", err)
+	fmt.Printf("[SendList] SendMessage FAILED: jid=%s err=%v\n", jid.String(), err)
 
 	// Attempt 2: Clean Plain-Text Menu Fallback (only used if native list is unsupported on recipient client)
 	fmt.Println("[SendList] Attempt 2: sending plain-text list menu fallback")
@@ -581,16 +565,20 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 	fallbackText += "\n━━━━━━━━━━━━━━━━━━━━"
 
 	fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}
-	_, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
+	resp2, err2 := client.SendMessage(context.Background(), jid, fallbackMsg)
 	if err2 != nil {
 		fmt.Printf("[SendList] Attempt 2 FAILED: %v\n", err2)
 		http.Error(w, fmt.Sprintf("all list send attempts failed: %v / %v", err, err2), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println("[SendList] Attempt 2 SUCCESS (plain text list fallback sent)")
+	fmt.Printf("[SendList] Attempt 2 SUCCESS: jid=%s id=%s (plain text fallback sent)\n", jid.String(), resp2.ID)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "sent_fallback",
+		"jid":    req.JID,
+		"msgId":  resp2.ID,
+	})
 }
 
 func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
