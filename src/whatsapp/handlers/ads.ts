@@ -282,13 +282,30 @@ Please deposit more USDT and lock it to your Vault first.`,
 
     // ─── /post — Create a new ad ──────────────────────────────────────────────
     if (text === "/post") {
+        if (!hasPaymentMethods(user)) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `💳 *PAYMENT METHOD REQUIRED*
+
+To post a BUY or SELL ad, you must first set at least one payment method (UPI ID or Bank Account) on your profile.
+
+This ensures counterparties can send or receive fiat payments.`,
+                [
+                    { id: "set_upi",  label: "📱 Set UPI ID" },
+                    { id: "/profile", label: "👤 View Profile" },
+                ]
+            );
+            return;
+        }
+
         // Initialize draft state
         await (db as any).setWhatsappState(user.id, "POST_AD", { step: "TYPE" } as AdDraft);
 
         await replyWithButtons(
             sock,
             jid,
-            `➕ *POST A P2P AD*\n\nStep 1 of 5: What type of ad do you want to post?`,
+            `➕ *POST A P2P AD*\n\nStep 1 of 4: What type of ad do you want to post?`,
             [
                 { id: "ad_type_sell", label: "🟢 SELL (I have USDT)" },
                 { id: "ad_type_buy",  label: "🔴 BUY  (I want USDT)" },
@@ -321,6 +338,25 @@ async function handleAdCreationFlow(
             "❌ *Ad creation cancelled.*",
             [
                 { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "/profile", label: "👤 View Profile" },
+            ]
+        );
+        return;
+    }
+
+    // ── Mandatory Payment Method Gate ──
+    if (!hasPaymentMethods(user)) {
+        await (db as any).clearWhatsappState(user.id);
+        await replyWithButtons(
+            sock,
+            jid,
+            `💳 *PAYMENT METHOD REQUIRED*
+
+To post a BUY or SELL ad, you must first set at least one payment method (UPI ID or Bank Account) on your profile.
+
+This ensures counterparties can send or receive fiat payments.`,
+            [
+                { id: "set_upi",  label: "📱 Set UPI ID" },
                 { id: "/profile", label: "👤 View Profile" },
             ]
         );
