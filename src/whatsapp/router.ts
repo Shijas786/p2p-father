@@ -9,7 +9,7 @@ import { handleWalletCommand } from "./handlers/wallet";
 import { handleAdCommand } from "./handlers/ads";
 import { handleTradeCommand } from "./handlers/trade";
 import { handleProfileCommand } from "./handlers/profile";
-import { handleGroupMention } from "./handlers/group";
+import { handleGroupMention, scanAndDeleteSpam } from "./handlers/group";
 import { MAIN_MENU, formatTraderContact } from "./formatters";
 import { waAi as ai } from "../services/wa-ai";
 import { env } from "../config/env";
@@ -321,6 +321,10 @@ export async function routeMessage(
 
     // ── Group: respond if @mentioned or keyword triggered ────────────────────
     if (isGroup) {
+        // 🛡️ SPAM GUARD: always scan every group message first (no mention required)
+        const wasSpam = await scanAndDeleteSpam(sock, msg, jid);
+        if (wasSpam) return; // Stop processing — message was spam
+
         const botJid = getCleanBotJid(sock);
         const mentionedJids: string[] =
             (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid as string[]) ?? [];
