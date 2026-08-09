@@ -149,15 +149,15 @@ Choose an option below to start testing 👇`,
     }
 
     // ─── /vault_deposit or [🔒 Lock to Vault] ─────────────────────────────────
-    // ─── /vault_deposit or [🔒 Lock to Vault] ─────────────────────────────────
     if (text.startsWith("/vault_deposit") || text === "vault_deposit") {
         const parts = text.split(/\s+/);
 
-        let testnetUsdt = "0.00";
+        let testnetUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
                 testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
@@ -172,12 +172,13 @@ Choose an option below to start testing 👇`,
                 `🔒 *CONFIRM VAULT TOP-UP*
 
 • *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 • *Top-Up Amount:* ${amount} USDT (BSC Testnet)
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
                 [
-                    { id: `confirm_vault_dep_${amount}_${chain}`, label: "✅ Lock to Vault" },
+                    { id: `confirm_vault_dep_${amount}_${chain}`, label: `🔒 Lock ${amount} USDT to Vault` },
                     { id: "/deposit",                           label: "📥 Deposit First" },
                     { id: "/balance",                           label: "❌ Cancel" },
                 ]
@@ -193,6 +194,7 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             `🔒 *VAULT TOP-UP*
 
 • *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 
 Please reply to this message with the *USDT amount* you want to move into your Smart Contract Escrow Vault:
 _(Example: 10 or 50 or 100)_`,
@@ -217,11 +219,12 @@ _(Example: 10 or 50 or 100)_`,
 
         await (db as any).clearWhatsappState(user.id);
 
-        let testnetUsdt = "0.00";
+        let testnetUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
                 testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
@@ -233,12 +236,13 @@ _(Example: 10 or 50 or 100)_`,
             `🔒 *CONFIRM VAULT TOP-UP*
 
 • *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 • *Top-Up Amount:* ${amountStr} USDT (BSC Testnet)
 • *Target:* P2PFather Smart Contract Escrow Vault
 
-Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
+Tap below to confirm locking funds on-chain:`,
             [
-                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: "✅ Lock to Vault" },
+                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: `🔒 Lock ${amountStr} USDT to Vault` },
                 { id: "/deposit",                                  label: "📥 Deposit First" },
                 { id: "/balance",                                  label: "❌ Cancel" },
             ]
@@ -252,11 +256,12 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
         const amountStr = parts[0] || "10";
         const chainKey = (parts[1] || "bsc_testnet").toLowerCase();
 
-        let testnetUsdt = "0.00";
+        let testnetUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
                 testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
@@ -266,12 +271,13 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             `🔒 *CONFIRM VAULT TOP-UP*
 
 • *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 • *Top-Up Amount:* ${amountStr} USDT (${chainKey.toUpperCase()})
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             [
-                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: "✅ Lock to Vault" },
+                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: `🔒 Lock ${amountStr} USDT to Vault` },
                 { id: "/deposit",                                  label: "📥 Deposit First" },
                 { id: "/balance",                                  label: "❌ Cancel" },
             ]
@@ -306,9 +312,15 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
 
             const txHash = await wallet.depositToVault(user.wallet_index, amountStr, tokenAddress, chainKey as any);
 
-            const explorerBase = chainKey === "bsc_testnet"
-                ? "https://testnet.bscscan.com/tx/"
-                : (chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/");
+            // Fetch fresh balances post-deposit
+            let newWalletBal = "0.00", newVaultBal = "0.00";
+            try {
+                const freshBals = await wallet.getBalances(user.wallet_address!);
+                newWalletBal = (parseFloat(freshBals.testnet_usdt || "0")).toFixed(2);
+                newVaultBal = (parseFloat(freshBals.vault_testnet_usdt || "0")).toFixed(2);
+            } catch (_) {}
+
+            const explorerLink = `https://testnet.bscscan.com/tx/${txHash}`;
 
             await replyWithButtons(
                 sock,
@@ -316,14 +328,18 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
                 `🎉 *VAULT TOP-UP SUCCESSFUL!*
 
 • *Amount Locked:* ${amountStr} USDT
+• *Wallet Balance Remaining:* ${newWalletBal} USDT
+• *Vault Balance Locked:* ${newVaultBal} USDT (🔒 Escrow Vault)
 • *Chain:* BSC TESTNET
 • *Tx Hash:* \`${txHash}\`
-🔗 *Explorer:* ${explorerBase}${txHash}
 
-Your vault is ready for P2P trading! 🚀`,
+🔗 *BscScan Explorer Link:*
+${explorerLink}
+
+Your Escrow Vault is ready for P2P trading! 🚀`,
                 [
                     { id: "/post",    label: "➕ Post SELL Ad" },
-                    { id: "/balance", label: "💰 View Vault Balance" },
+                    { id: "/balance", label: "💰 View Balance" },
                 ]
             );
         } catch (err: any) {

@@ -727,7 +727,7 @@ Or check your balance first with /balance 💰`,
             await handleTradeCommand(sock, msg, jid, user, text);
             return;
         }
-        if (state.key === "AWAITING_WITHDRAW_PIN") {
+        if (state.key === "AWAITING_WITHDRAW_PIN" || state.key === "AWAITING_VAULT_DEP_AMOUNT") {
             await handleWalletCommand(sock, msg, jid, senderPhone, user, text);
             return;
         }
