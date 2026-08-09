@@ -29,19 +29,34 @@ export function fmtWalletBalance(
     balances: { token: string; amount: string }[]
 ): string {
     const address = user.wallet_address ?? "Not set";
-    const shortAddr = address !== "Not set"
-        ? `${address.slice(0, 6)}...${address.slice(-4)}`
-        : "Not set";
+
+    const labelMap: Record<string, string> = {
+        testnet_usdt: "USDT (🧪 BSC Testnet)",
+        testnet_bnb: "BNB (🧪 BSC Testnet Gas)",
+        vault_testnet_usdt: "USDT (🔒 Locked in Escrow Vault)",
+        bsc_usdt: "USDT (BSC Mainnet)",
+        usdt: "USDT (Base Mainnet)",
+        bsc_usdc: "USDC (BSC Mainnet)",
+        usdc: "USDC (Base Mainnet)",
+        bnb: "BNB (BSC Mainnet)",
+        eth: "ETH (Base Mainnet)",
+        pol: "POL (Polygon Mainnet)",
+        vault_usdt: "USDT (Base Vault)",
+        vault_usdc: "USDC (Base Vault)",
+        vault_bsc_usdt: "USDT (BSC Vault)",
+        vault_bsc_usdc: "USDC (BSC Vault)",
+    };
 
     const balanceLines = balances.length > 0
-        ? balances.map((b) => `  • *${b.token}:* ${b.amount}`).join("\n")
-        : "  _No balance found. Please deposit first._";
+        ? balances.map((b) => `  • *${labelMap[b.token] || b.token.toUpperCase()}:* ${b.amount}`).join("\n")
+        : "  _No balance found. Tap Testnet Faucet below to claim 1,000 Demo USDT!_";
 
     return `💰 *YOUR P2PFATHER WALLET*
 
-*Address:* \`${shortAddr}\`
+💳 *Address:*
+\`${address}\`
 
-*Balances:*
+📊 *Balances:*
 ${balanceLines}
 
 📥 *To deposit:* /deposit

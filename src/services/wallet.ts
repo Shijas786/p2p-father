@@ -74,6 +74,7 @@ class WalletService {
     async getBalances(address: string) {
         if (!address) {
             return {
+                testnet_usdt: "0.0", testnet_bnb: "0.0", vault_testnet_usdt: "0.0",
                 eth: "0.0", usdc: "0.0", usdt: "0.0", bnb: "0.0",
                 bsc_usdc: "0.0", bsc_usdt: "0.0", pol: "0.0", pusd: "0.0",
                 vault_usdc: "0.0", vault_usdt: "0.0", vault_bnb: "0.0",
@@ -84,9 +85,12 @@ class WalletService {
         const baseProvider = this.getProvider('base');
         const bscProvider = this.getProvider('bsc');
         const polProvider = this.getProvider('polygon');
+        const bscTestnetProvider = this.getProvider('bsc_testnet' as any);
 
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
         const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
+        const testnetUsdtAddr1 = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+        const testnetUsdtAddr2 = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
         const pusdAddress = (env as any).PUSD_ADDRESS || "0x0000000000000000000000000000000000000000";
 
         // 🚀 Parallel RPC execution using Promise.all for instant response
@@ -94,7 +98,8 @@ class WalletService {
             ethBal, usdcBal, usdtBal,
             bnbBal, bscUsdcBal, bscUsdtBal,
             polBal, pusdBal,
-            vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt
+            vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt,
+            testnetBnbBal, testnetUsdtBal1, testnetUsdtBal2, vaultTestnetUsdt
         ] = await Promise.all([
             withTimeout(baseProvider.getBalance(address), 3000, 0n),
             withTimeout(this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6), 3000, "0.0"),
@@ -108,11 +113,20 @@ class WalletService {
             withTimeout(this.getVaultBalance(address, env.USDT_ADDRESS, 'base'), 3000, "0.0"),
             withTimeout(this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc'), 3000, "0.0"),
             withTimeout(this.getVaultBalance(address, bscUsdc, 'bsc'), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, bscUsdt, 'bsc'), 3000, "0.0")
+            withTimeout(this.getVaultBalance(address, bscUsdt, 'bsc'), 3000, "0.0"),
+            withTimeout(bscTestnetProvider.getBalance(address), 3000, 0n),
+            withTimeout(this.getTokenBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any, 18), 3000, "0.0"),
+            withTimeout(this.getTokenBalance(address, testnetUsdtAddr2, 'bsc_testnet' as any, 18), 3000, "0.0"),
+            withTimeout(this.getVaultBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any), 3000, "0.0")
         ]);
+
+        const combinedTestnetUsdt = (parseFloat(testnetUsdtBal1 || "0") + parseFloat(testnetUsdtBal2 || "0")).toFixed(2);
 
         return {
             address,
+            testnet_usdt: combinedTestnetUsdt,
+            testnet_bnb: parseFloat(ethers.formatEther(testnetBnbBal)).toFixed(4),
+            vault_testnet_usdt: vaultTestnetUsdt,
             eth: ethers.formatEther(ethBal),
             usdc: usdcBal,
             usdt: usdtBal,
