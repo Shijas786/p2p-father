@@ -698,7 +698,10 @@ func eventHandler(evt interface{}) {
 			}
 		}
 		if text == "" && v.Message.GetListResponseMessage() != nil {
-			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowID()
+			lrm := v.Message.GetListResponseMessage()
+			if lrm.GetSingleSelectReply() != nil {
+				text = lrm.GetSingleSelectReply().GetSelectedRowID()
+			}
 		}
 		// Handle interactive button tap (NativeFlowMessage response & Body text)
 		if text == "" && v.Message.GetInteractiveResponseMessage() != nil {

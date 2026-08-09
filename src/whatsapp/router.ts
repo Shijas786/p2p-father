@@ -409,30 +409,35 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         return;
     }
 
-    // ── Number Shortcuts (1, 2, 3, 4, 5) ──────────────────────────────────────
-    if (text === "1" || text === "1️⃣") {
+    // ── 6-Option Interactive List Menu & Number Shortcuts ──────────────────────
+    if (text === "wallet" || text === "/wallet" || text === "/balance" || text === "balance" || text === "1" || text === "1️⃣") {
         await (db as any).clearWhatsappState(user.id);
         await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
         return;
     }
-    if (text === "2" || text === "2️⃣") {
+    if (text === "topup" || text === "top_up" || text === "/vault_deposit" || text === "vault_deposit" || text === "2" || text === "2️⃣") {
         await (db as any).clearWhatsappState(user.id);
-        await handleAdCommand(sock, msg, jid, user, "/ads");
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/vault_deposit");
         return;
     }
-    if (text === "3" || text === "3️⃣") {
+    if (text === "create_ad" || text === "post_ad" || text === "/post" || text === "3" || text === "3️⃣") {
         await (db as any).clearWhatsappState(user.id);
         await handleAdCommand(sock, msg, jid, user, "/post");
         return;
     }
-    if (text === "4" || text === "4️⃣") {
+    if (text === "browse_ads" || text === "/ads" || text === "ads" || text === "4" || text === "4️⃣") {
         await (db as any).clearWhatsappState(user.id);
-        await handleTradeCommand(sock, msg, jid, user, "/trades");
+        await handleAdCommand(sock, msg, jid, user, "/ads");
         return;
     }
-    if (text === "5" || text === "5️⃣") {
+    if (text === "my_ads" || text === "/my_ads" || text === "5" || text === "5️⃣") {
         await (db as any).clearWhatsappState(user.id);
         await handleAdCommand(sock, msg, jid, user, "/my_ads");
+        return;
+    }
+    if (text === "profile" || text === "/profile" || text === "my_profile" || text === "6" || text === "6️⃣") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleProfileCommand(sock, msg, jid, user, "/profile");
         return;
     }
 
@@ -917,7 +922,7 @@ Check balance first: /balance 💰`,
     );
 }
 
-/** Renders a stacked 2-message 6-button main menu dashboard */
+/** Renders the 6-option interactive list menu dashboard */
 export async function sendTwoMessageMainMenu(
     sock: WASocket,
     jid: string,
@@ -929,41 +934,35 @@ export async function sendTwoMessageMainMenu(
         ? `\`${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}\``
         : "Not created";
 
-    const topMessageText =
+    const menuText =
 `🎩 *P2PFATHER — INSTANT P2P CRYPTO EXCHANGE*
 
 Welcome back, *${handle}*! 🛡️
 
 • *P2P Wallet:* ${walletAddr}
-• *Networks:* Base & BSC (USDT)
+• *Network:* 🧪 BSC Testnet (USDT)
 • *Security:* 100% Smart-Contract Escrow
 
-Choose an action from the menu below:`;
+Tap the menu button below to select an option:`;
 
-    // Message 1 (Frame 1: Primary Wallet & Ad Creation Actions)
-    await replyWithButtons(
-        sock,
-        jid,
-        topMessageText,
-        [
-            { id: "/balance",      label: "💰 Wallet Balance" },
-            { id: "vault_deposit", label: "🔒 Top Up Vault" },
-            { id: "/post",         label: "➕ Create Ad" },
-        ]
-    );
+    const sections = [
+        {
+            title: "💼 Wallet & Vault",
+            rows: [
+                { id: "wallet",    title: "💰 Wallet Balance", description: "View USDT balance & deposit addresses" },
+                { id: "topup",     title: "🔒 Top Up Vault",   description: "Lock USDT to Escrow Vault for selling" },
+                { id: "create_ad", title: "➕ Create Ad",       description: "Post a new BUY or SELL offer" },
+            ],
+        },
+        {
+            title: "📊 Marketplace & Profile",
+            rows: [
+                { id: "browse_ads", title: "📊 Browse Ads", description: "Explore live P2P buy & sell offers" },
+                { id: "my_ads",     title: "📋 My Ads",     description: "Manage your active listings" },
+                { id: "profile",    title: "👤 My Profile", description: "KYC, UPI, & account settings" },
+            ],
+        },
+    ];
 
-    // Short 250ms gap so messages arrive stacked seamlessly
-    await new Promise((r) => setTimeout(r, 250));
-
-    // Message 2 (Frame 2: P2P Marketplace & Profile Actions)
-    await replyWithButtons(
-        sock,
-        jid,
-        `⚡ *P2P MARKETPLACE & PROFILE*`,
-        [
-            { id: "/ads",     label: "📊 Browse Ads" },
-            { id: "/my_ads",  label: "📋 My Ads" },
-            { id: "/profile", label: "👤 Profile" },
-        ]
-    );
+    await replyWithList(sock, jid, menuText, "📋 Open Menu", sections);
 }
