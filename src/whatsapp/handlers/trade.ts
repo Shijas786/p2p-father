@@ -116,9 +116,16 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             
             await reply(sock, jid, "⏳ Locking crypto in smart contract escrow... Please wait.", msg);
 
-            const tokenSymbol = order.token || "USDC";
+            const tokenSymbol = order.token || "USDT";
             const { env } = await import("../../config/env");
-            const tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+            let tokenAddress = env.USDT_ADDRESS;
+            if (order.chain === "bsc_testnet") {
+                tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+            } else if (order.chain === "bsc") {
+                tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            } else {
+                tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+            }
             const { wallet } = await import("../../services/wallet");
             const { escrow } = await import("../../services/escrow");
 
