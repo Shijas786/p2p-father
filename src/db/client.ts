@@ -1042,6 +1042,12 @@ class Database {
         await db.from("whatsapp_states").delete().eq("user_id", userId);
     }
 
+    /** Clear ALL WhatsApp conversation states */
+    async clearAllWhatsappStates(): Promise<void> {
+        const db = this.getClient();
+        await db.from("whatsapp_states").delete().neq("user_id", "00000000-0000-0000-0000-000000000000");
+    }
+
     // ── WhatsApp Account Linking ──────────────────────────────────────────────
 
     /** Generate a 6-digit OTP for account linking */
