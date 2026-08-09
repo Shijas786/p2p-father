@@ -9,7 +9,7 @@ import {
 } from '../lib/devMocks';
 import './Admin.css';
 
-type AdminTab = 'disputes' | 'stats' | 'users' | 'trades';
+type AdminTab = 'disputes' | 'stats' | 'users' | 'trades' | 'ip';
 
 interface Dispute {
     id: string;
@@ -103,6 +103,41 @@ export function Admin({ user }: Props) {
     const [tradesTotal, setTradesTotal]   = useState(0);
     const [expandedTrade, setExpandedTrade] = useState<string | null>(null);
 
+    // ── IP / Multi-Accounts ──
+    const [ipClusters, setIpClusters]       = useState<any[]>([]);
+    const [ipLoading, setIpLoading]         = useState(false);
+    const [ipLoaded, setIpLoaded]           = useState(false);
+    const [kickingIp, setKickingIp]         = useState<Record<string, boolean>>({});
+
+    async function loadIpClusters() {
+        setIpLoading(true);
+        try {
+            const res = await api.admin.getIpClusters();
+            setIpClusters(res.clusters || []);
+            setIpLoaded(true);
+        } catch (err: any) {
+            console.error('IP Clusters error:', err);
+        } finally {
+            setIpLoading(false);
+        }
+    }
+
+    async function handleKickAllOnIp(ip: string) {
+        if (!confirm(`Are you sure you want to KICK/BAN ALL users on IP ${ip}?`)) return;
+        setKickingIp(prev => ({ ...prev, [ip]: true }));
+        try {
+            const res = await api.admin.kickAllOnIp(ip);
+            haptic('warning');
+            alert(`Kicked ${res.bannedCount} account(s) on IP ${ip}!`);
+            loadIpClusters();
+            if (usersLoaded) loadUsers();
+        } catch (err: any) {
+            alert('Failed to kick users: ' + err.message);
+        } finally {
+            setKickingIp(prev => ({ ...prev, [ip]: false }));
+        }
+    }
+
     // Load live trades & disputes on mount and auto-refresh every 10s
     useEffect(() => {
         loadDisputes();
@@ -115,6 +150,7 @@ export function Admin({ user }: Props) {
         if (activeTab === 'stats' && !statsLoaded) loadStats();
         if (activeTab === 'users' && !usersLoaded) loadUsers();
         if (activeTab === 'trades' && !tradesLoaded) loadTrades(tradesStatus, 1);
+        if (activeTab === 'ip' && !ipLoaded) loadIpClusters();
     }, [activeTab]);
 
     // Stats auto-refresh every 30s while on stats tab
@@ -306,6 +342,7 @@ export function Admin({ user }: Props) {
 
     // ── Renders ──
     function renderTabBar() {
+        const multiCount = ipClusters.filter(c => c.is_multi).length;
         return (
             <div className="admin-tab-bar">
                 {([
@@ -313,6 +350,7 @@ export function Admin({ user }: Props) {
                     { key: 'stats',    icon: '📊', label: 'Stats',    badge: 0 },
                     { key: 'users',    icon: '👤', label: 'Users',    badge: 0 },
                     { key: 'trades',   icon: '📋', label: 'Trades',   badge: 0 },
+                    { key: 'ip',       icon: '🌐', label: 'IP Tracker', badge: multiCount },
                 ] as const).map(t => (
                     <button
                         key={t.key}
@@ -770,6 +808,145 @@ export function Admin({ user }: Props) {
         );
     }
 
+    function renderIpClusters() {
+        const multiClusters = ipClusters.filter(c => c.is_multi);
+
+        return (
+            <div className="admin-tab-content">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                        <h3 style={{ fontSize: 14, fontWeight: 'bold', color: '#fff', margin: 0 }}>🌐 Multi-Account & IP Tracker</h3>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                            {multiClusters.length} Shared IP Cluster{multiClusters.length !== 1 ? 's' : ''} Detected
+                        </p>
+                    </div>
+                    <button
+                        className="btn btn-sm"
+                        style={{ fontSize: 11, backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid var(--border)' }}
+                        onClick={loadIpClusters}
+                        disabled={ipLoading}
+                    >
+                        {ipLoading ? 'Refreshing...' : '🔄 Refresh IPs'}
+                    </button>
+                </div>
+
+                {ipLoading && !ipLoaded ? (
+                    <>{[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 100, borderRadius: 12, marginBottom: 8 }} />)}</>
+                ) : ipClusters.length === 0 ? (
+                    <div className="admin-empty">
+                        <div className="admin-empty-icon">🌐</div>
+                        No IP records logged yet. As users access the MiniApp, their IP clusters will appear here.
+                    </div>
+                ) : (
+                    ipClusters.map(cluster => (
+                        <div
+                            key={cluster.ip}
+                            className="card flex-col"
+                            style={{
+                                gap: 10,
+                                marginBottom: 12,
+                                border: cluster.is_multi ? '1px solid rgba(246, 70, 93, 0.4)' : '1px solid var(--border)',
+                                backgroundColor: cluster.is_multi ? 'rgba(246, 70, 93, 0.05)' : 'var(--card-bg)'
+                            }}
+                        >
+                            {/* Cluster Header */}
+                            <div className="flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                                <div>
+                                    <div className="flex items-center" style={{ gap: 8 }}>
+                                        <span className="font-mono font-bold" style={{ fontSize: 13, color: cluster.is_multi ? 'var(--red)' : 'var(--blue)' }}>
+                                            🌐 IP: {cluster.ip}
+                                        </span>
+                                        {cluster.is_multi ? (
+                                            <span style={{ fontSize: 9, backgroundColor: '#f6465d', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 'bold' }}>
+                                                🚨 {cluster.user_count} MULTI-ACCOUNTS
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: 9, backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', padding: '1px 6px', borderRadius: 4 }}>
+                                                1 Account
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {cluster.is_multi && (
+                                    <button
+                                        style={{
+                                            backgroundColor: '#f6465d',
+                                            color: '#fff',
+                                            border: 'none',
+                                            padding: '4px 10px',
+                                            fontSize: 10,
+                                            fontWeight: 'bold',
+                                            borderRadius: 6,
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleKickAllOnIp(cluster.ip)}
+                                        disabled={kickingIp[cluster.ip]}
+                                    >
+                                        {kickingIp[cluster.ip] ? 'Kicking...' : '💥 KICK ALL ON THIS IP'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* User List on this IP */}
+                            <div className="flex-col" style={{ gap: 6 }}>
+                                {cluster.users.map((u: any) => (
+                                    <div
+                                        key={u.id}
+                                        className="flex justify-between items-center"
+                                        style={{
+                                            padding: '8px 10px',
+                                            backgroundColor: 'rgba(0,0,0,0.3)',
+                                            borderRadius: 'var(--radius-md)',
+                                            border: u.is_banned ? '1px solid rgba(246, 70, 93, 0.3)' : '1px solid var(--border)'
+                                        }}
+                                    >
+                                        <div className="flex items-center" style={{ gap: 8 }}>
+                                            <div className="admin-user-avatar" style={{ width: 28, height: 28, fontSize: 12 }}>
+                                                {(u.first_name?.[0] || u.username?.[0] || '?').toUpperCase()}
+                                            </div>
+                                            <div className="flex-col">
+                                                <div className="font-bold" style={{ fontSize: 12, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span>@{u.username || u.first_name || 'Unknown'}</span>
+                                                    <span style={{ fontSize: 9, opacity: 0.4, fontFamily: 'monospace' }}>({u.telegram_id})</span>
+                                                    {u.is_banned && (
+                                                        <span style={{ fontSize: 8, backgroundColor: 'var(--red)', color: '#fff', padding: '0 4px', borderRadius: 3, fontWeight: 'bold' }}>
+                                                            BANNED
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                                                    Joined: {new Date(u.created_at).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            style={{
+                                                backgroundColor: u.is_banned ? 'rgba(16, 185, 129, 0.15)' : 'rgba(246, 70, 93, 0.15)',
+                                                color: u.is_banned ? '#10b981' : '#f6465d',
+                                                border: u.is_banned ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(246, 70, 93, 0.4)',
+                                                padding: '4px 10px',
+                                                fontSize: 10,
+                                                fontWeight: 'bold',
+                                                borderRadius: 6,
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => handleToggleBanUser(u.id)}
+                                            disabled={banningUser[u.id]}
+                                        >
+                                            {banningUser[u.id] ? 'Updating...' : u.is_banned ? '✅ UNBAN' : '⛔ KICK USER'}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="page admin-page">
             <div className="page-header">
@@ -781,6 +958,7 @@ export function Admin({ user }: Props) {
             {activeTab === 'stats'    && renderStats()}
             {activeTab === 'users'    && renderUsers()}
             {activeTab === 'trades'   && renderTrades()}
+            {activeTab === 'ip'       && renderIpClusters()}
         </div>
     );
 }

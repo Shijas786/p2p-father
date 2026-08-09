@@ -353,6 +353,12 @@ export const api = {
             request<{ success: boolean; is_banned: boolean; message: string }>(`/admin/users/${userId}/toggle-ban`, {
                 method: 'POST'
             }),
+        getIpClusters: () => request<{ success: boolean; clusters: any[] }>('/admin/ip-clusters'),
+        kickAllOnIp: (ip: string) =>
+            request<{ success: boolean; bannedCount: number }>('/admin/kick-ip-all', {
+                method: 'POST',
+                body: JSON.stringify({ ip })
+            }),
     },
 
 

@@ -23,6 +23,7 @@ import { attemptedRedeems } from "../services/jobs";
 import { bot } from "../bot";
 import { redis } from "../services/redis";
 import { feeCashbackService } from "../services/feeCashbackService";
+import { IpTrackerService } from "../services/ip-tracker";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -153,6 +154,12 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         }
 
         console.log(`[MINIAPP-AUTH] 🟢 Authenticated user: ${req.telegramUser.id} (@${req.telegramUser.username || "no_username"}) on ${req.method} ${req.url}`);
+
+        // Async IP logging for multi-account tracking & admin dashboard
+        db.getUserByTelegramId(req.telegramUser.id).then(u => {
+            if (u) IpTrackerService.logIp(u.id, req);
+        }).catch(() => {});
+
         next();
     } catch (err: any) {
         console.error(`[MINIAPP-AUTH] 💥 Exception during initData validation on ${req.method} ${req.url}:`, err.message);
@@ -2671,6 +2678,41 @@ router.post("/admin/users/:userId/toggle-ban", async (req: Request, res: Respons
         });
     } catch (err: any) {
         console.error("[ADMIN] Toggle ban error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Admin: Get Multi-Account IP Clusters ─────────────────────────────────
+router.get("/admin/ip-clusters", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser || !env.ADMIN_IDS.includes(Number(adminUser.telegram_id))) {
+            return res.status(403).json({ error: "Admin only" });
+        }
+
+        const clusters = await IpTrackerService.getMultiAccountClusters();
+        res.json({ success: true, clusters });
+    } catch (err: any) {
+        console.error("[ADMIN] Get IP clusters error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Admin: Kick / Ban All Accounts on an IP ─────────────────────────────
+router.post("/admin/kick-ip-all", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser || !env.ADMIN_IDS.includes(Number(adminUser.telegram_id))) {
+            return res.status(403).json({ error: "Admin only" });
+        }
+
+        const { ip } = req.body;
+        if (!ip) return res.status(400).json({ error: "IP address required" });
+
+        const result = await IpTrackerService.banAllOnIp(ip);
+        res.json({ ...result });
+    } catch (err: any) {
+        console.error("[ADMIN] Kick all on IP error:", err);
         res.status(500).json({ error: err.message });
     }
 });
