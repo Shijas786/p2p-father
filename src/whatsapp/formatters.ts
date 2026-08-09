@@ -263,28 +263,39 @@ export function fmtGroupAdBroadcast(order: any): string {
     const rate = order.rate || 0;
     const token = order.token || "USDT";
     const totalFiat = Math.round(amount * rate);
-    const chain = (order.chain || "base").toUpperCase();
+
+    const chainRaw = (order.chain || "base").toLowerCase();
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia");
+    const chainLabel = isTestnet
+        ? `🧪 DEMO / TESTNET (${chainRaw.toUpperCase()}) — ⚠️ NO REAL MONEY`
+        : chainRaw.toUpperCase();
+
     const payMethods = (order.payment_methods ?? []).join(", ") || "UPI";
     const link = waLink(`trade_ad_${order.id}`);
 
     const orderLine = `${emoji} *${trader}*${verifiedBadge} ${actionVerb} *${amount} ${token}*`;
     const rateLine = `💰 Rate: ₹${rate.toLocaleString()}/${token}`;
     const totalLine = `🧾 Total: ₹${totalFiat.toLocaleString("en-IN")}`;
-    const chainLine = `🔗 Chain: ${chain}`;
+    const chainLine = `🔗 Chain: ${chainLabel}`;
     const paymentLine = `💳 Payment: ${payMethods}`;
 
-    return `${header}
+    const lines = [
+        header,
+        "",
+        orderLine,
+        rateLine,
+        totalLine,
+        chainLine,
+        paymentLine,
+    ];
 
-${orderLine}
-${rateLine}
-${totalLine}
-${chainLine}
-${paymentLine}
+    if (isTestnet) {
+        lines.push("⚠️ *DEMO AD ONLY — FOR TESTING (NO REAL MONEY INVOLVED)*");
+    }
 
-👉 *Start Trade in Private DM:*
-${link}
+    lines.push("", "👉 *Start Trade in Private DM:*", link);
 
-_All trades are smart-contract escrow protected 🔒_`;
+    return lines.join("\n");
 }
 
 export function fmtGroupLiveAds(orders: any[], type: "buy" | "sell" | "all"): string {

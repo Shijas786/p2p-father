@@ -320,9 +320,15 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
     const orderLine = `${emoji} ${username}${avgSpeedText} ${actionVerb} ${amountStr}`;
 
+    const chainRaw = (order.chain || "base").toLowerCase();
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia");
+    const chainLabel = isTestnet
+        ? `🧪 DEMO / TESTNET (${escapeHTML(chainRaw.toUpperCase())}) — ⚠️ NO REAL MONEY`
+        : escapeHTML(chainRaw.toUpperCase());
+
     const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
     const totalLine = `🧾 Total: ₹${escapeHTML((displayAmount * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
-    const chainLine = `🔗 Chain: ${escapeHTML((order.chain || "base").toUpperCase())}`;
+    const chainLine = `🔗 Chain: ${chainLabel}`;
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
 
     const lines = [
@@ -334,6 +340,10 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         chainLine,
         paymentLine,
     ];
+
+    if (isTestnet) {
+        lines.push(`⚠️ <b>DEMO AD ONLY — FOR TESTING (NO REAL MONEY INVOLVED)</b>`);
+    }
 
     if (order.payment_details?.require_kyc) {
         lines.push(`🛡️ Requirement: <b>KYC Verified Only</b>`);
