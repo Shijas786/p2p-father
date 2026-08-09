@@ -224,19 +224,20 @@ async function showWelcomeScreen(
     await replyWithButtons(
         sock,
         jid,
-        `👋 *Welcome to P2PFather!* 🇮🇳
+        `👋 *WELCOME TO P2PFATHER!* 🎩
 
-P2PFather is India's premier *smart-contract P2P exchange* for safe crypto trading.
+P2PFather is India's premier *smart-contract P2P exchange* for safe, escrow-protected crypto trading.
 
-💱 *Buy & Sell USDT* peer-to-peer with UPI, IMPS, and bank transfers
-🔒 *Escrow Protection* — your funds are locked safely on-chain
-⚡ *Instant Matching* — trade directly with verified traders
-🌐 *Multi-Chain* — BSC, Polygon, and Base supported
+💱 *Buy & Sell USDT* peer-to-peer with UPI, IMPS, and Bank Transfers
+🔒 *Smart-Contract Escrow* — 100% on-chain protection
+⚡ *Instant Automated Settlement* on BSC, Base & Polygon
 
-Choose how you'd like to get started 👇`,
+*How would you like to get started?* 👇
+• *Link Telegram:* If you already traded on Telegram, carry over your wallet & history!
+• *Create New Wallet:* Instant 1-tap wallet + *1,000 Demo USDT & 0.05 BNB Gas Fee* credited!`,
         [
+            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram Wallet" },
             { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
-            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram" },
             { id: "wa_guide",              label: "📖 How It Works" },
         ]
     );
