@@ -626,18 +626,26 @@ func eventHandler(evt interface{}) {
 		if text == "" {
 			text = v.Message.GetExtendedTextMessage().GetText()
 		}
-		if text == "" {
+		if text == "" && v.Message.GetButtonsResponseMessage() != nil {
 			text = v.Message.GetButtonsResponseMessage().GetSelectedButtonID()
+			if text == "" {
+				text = v.Message.GetButtonsResponseMessage().GetSelectedDisplayText()
+			}
 		}
-		if text == "" {
+		if text == "" && v.Message.GetTemplateButtonReplyMessage() != nil {
+			text = v.Message.GetTemplateButtonReplyMessage().GetSelectedId()
+			if text == "" {
+				text = v.Message.GetTemplateButtonReplyMessage().GetSelectedDisplayText()
+			}
+		}
+		if text == "" && v.Message.GetListResponseMessage() != nil {
 			text = v.Message.GetListResponseMessage().GetSingleSelectReply().GetSelectedRowID()
 		}
-		// Handle interactive button tap (NativeFlowMessage response)
-		if text == "" {
-			nfr := v.Message.GetInteractiveResponseMessage().GetNativeFlowResponseMessage()
-			if nfr != nil {
-				paramsJSON := nfr.GetParamsJSON()
-				// Try to extract "id" field from params JSON
+		// Handle interactive button tap (NativeFlowMessage response & Body text)
+		if text == "" && v.Message.GetInteractiveResponseMessage() != nil {
+			irm := v.Message.GetInteractiveResponseMessage()
+			if irm.GetNativeFlowResponseMessage() != nil {
+				paramsJSON := irm.GetNativeFlowResponseMessage().GetParamsJSON()
 				var params map[string]interface{}
 				if err := json.Unmarshal([]byte(paramsJSON), &params); err == nil {
 					if id, ok := params["id"].(string); ok && id != "" {
@@ -647,6 +655,9 @@ func eventHandler(evt interface{}) {
 				if text == "" {
 					text = paramsJSON
 				}
+			}
+			if text == "" && irm.GetBody() != nil {
+				text = irm.GetBody().GetText()
 			}
 		}
 
@@ -665,7 +676,8 @@ func eventHandler(evt interface{}) {
 		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, text)
 
 		if text == "" {
-			fmt.Printf("[Hypermeow Message] IGNORED — empty text (msgType=%T)\n", v.Message)
+			msgJSON, _ := json.Marshal(v.Message)
+			fmt.Printf("[Hypermeow Message] IGNORED — empty text (msgType=%T) | RawMsg: %s\n", v.Message, string(msgJSON))
 			return
 		}
 
