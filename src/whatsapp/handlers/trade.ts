@@ -236,8 +236,8 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
     }
 
     // ─── /paid_<tradeId> — Buyer marks payment sent ───────────────────────────
-    if (text.startsWith("/paid_")) {
-        const tradeId = text.replace("/paid_", "").trim();
+    if (text.startsWith("/paid_") || text.startsWith("paid_")) {
+        const tradeId = text.replace(/^\/?paid_/, "").trim();
         const trade = await db.getTradeById(tradeId);
 
         if (!trade) {
@@ -288,8 +288,8 @@ The seller has been notified to check their bank account/UPI.`,
     }
 
     // ─── /release_<tradeId> — Seller releases crypto directly (Instant, No PIN) ─
-    if (text.startsWith("/release_") || text.startsWith("confirm_release_")) {
-        const tradeId = text.replace("/release_", "").replace("confirm_release_", "").trim();
+    if (text.startsWith("/release_") || text.startsWith("release_") || text.startsWith("confirm_release_")) {
+        const tradeId = text.replace(/^\/?(release_|confirm_release_)/, "").trim();
         const trade = await db.getTradeById(tradeId);
 
         if (!trade) {

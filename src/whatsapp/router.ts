@@ -689,13 +689,15 @@ Or check your balance first with /balance 💰`,
         return;
     }
 
+    const cleanTradeCmd = text.startsWith("/") ? text.slice(1) : text;
     if (
-        text.startsWith("trade_ad_") ||
-        text.startsWith("/trades") ||
-        text.startsWith("/paid_") ||
-        text.startsWith("/release_") ||
-        text.startsWith("/dispute_") ||
-        text.startsWith("/cancel_")
+        cleanTradeCmd.startsWith("trade_ad_") ||
+        cleanTradeCmd.startsWith("confirm_trade_") ||
+        cleanTradeCmd === "trades" ||
+        cleanTradeCmd.startsWith("paid_") ||
+        cleanTradeCmd.startsWith("release_") ||
+        cleanTradeCmd.startsWith("dispute_") ||
+        cleanTradeCmd.startsWith("cancel_")
     ) {
         await handleTradeCommand(sock, msg, jid, user, text);
         return;
