@@ -756,7 +756,7 @@ func eventHandler(evt interface{}) {
 			// Attempt to fetch group metadata to resolve LID JIDs to Phone Number JIDs
 			var gMeta *waTypes.GroupInfo
 			if client != nil {
-				gMeta, _ = client.GetGroupInfo(v.JID)
+				gMeta, _ = client.GetGroupInfo(context.Background(), v.JID)
 			}
 
 			for _, p := range joinedJIDs {
