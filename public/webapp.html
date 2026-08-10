@@ -481,7 +481,10 @@
 
     // Populate sidebar user info
     const phone = currentUser?.whatsapp_phone || fullPhone;
-    const name = currentUser?.first_name || currentUser?.username || 'Trader';
+    let name = currentUser?.first_name || currentUser?.username || 'Trader';
+    if (/^WA_\d+$/.test(name)) {
+      name = currentUser?.username || 'WhatsApp User';
+    }
     document.getElementById('sb-name').textContent = name;
     document.getElementById('sb-phone').textContent = '+' + phone;
     document.getElementById('sb-avatar').textContent = name.charAt(0).toUpperCase();

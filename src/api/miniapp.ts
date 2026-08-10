@@ -271,9 +271,14 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
         }
 
         // Construct wa_auth initData string
+        // Filter out synthetic WA_XXXX default names — use only real stored names
+        const realName = (user.first_name && !/^WA_\d+$/.test(user.first_name))
+            ? user.first_name
+            : null;
+
         const tgUserObj = {
             id: user.telegram_id || Math.abs(parseInt(cleanPhone.slice(-9)) || 88888888),
-            first_name: user.first_name || "Trader",
+            first_name: realName || user.username || "WhatsApp User",
             username: user.username || `wa_${cleanPhone.slice(-4)}`,
             is_wa_user: true,
             whatsapp_phone: cleanPhone
@@ -288,8 +293,9 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
         return res.json({
             success: true,
             initData,
-            user
+            user: { ...user, first_name: realName || user.username || null }
         });
+
     } catch (err: any) {
         console.error("[MINIAPP-AUTH] wa-verify-otp error:", err);
         return res.status(500).json({ error: err?.message || "OTP verification failed" });

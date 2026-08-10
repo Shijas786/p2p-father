@@ -353,6 +353,15 @@ export async function routeMessage(
         user = await db.getOrCreateUserByPhone(senderPhone);
     }
 
+    // ── Persist pushName (WhatsApp display name) if not yet stored ────────────
+    const pushName = msg.pushName?.trim();
+    if (pushName && user && (!user.first_name || /^WA_\d+$/.test(user.first_name))) {
+        try {
+            await db.getClient().from("users").update({ first_name: pushName }).eq("id", user.id);
+            user.first_name = pushName;
+        } catch (_) {}
+    }
+
     // ── Account Linking Command (/link 123456 or typing 6-digit code) ─────────
     const codeMatch = text.match(/\b(\d{6})\b/);
     if (text.startsWith("/link") || codeMatch) {
