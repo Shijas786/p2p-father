@@ -63,11 +63,23 @@ export function useAuth() {
                 }
             }
 
+            const isWebAppRoute = window.location.pathname.startsWith('/webapp');
+
             if (isTelegramEnvironment() || localStorage.getItem('trade_init_data')) {
                 const { user: authUser } = await api.auth.login();
                 setUser(authUser);
-            } else {
+            } else if (isWebAppRoute) {
+                // WhatsApp WebApp Route (/webapp): Require WhatsApp OTP login
                 setUser(null);
+            } else {
+                // Telegram MiniApp Route (/miniapp): Standalone browser preview mode with DEV_USER
+                const tgUser = getTelegramUser();
+                setUser({
+                    ...DEV_USER,
+                    telegram_id: tgUser?.id ?? DEV_USER.telegram_id,
+                    username: tgUser?.username ?? DEV_USER.username,
+                    first_name: tgUser?.first_name ?? DEV_USER.first_name,
+                });
             }
         } catch (err: any) {
             // Add debug info for troubleshooting

@@ -117,6 +117,13 @@ async function main() {
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
 
+    // Serve WhatsApp Web App (/webapp) — ChatterPay-style WhatsApp OTP Login & Dashboard
+    app.use("/webapp", express.static(miniAppDist, staticOpts));
+    app.get(/^\/webapp(?:\/.*)?$/, (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(miniAppDist, "index.html"));
+    });
+
     // WhatsApp QR Code Web API & Interface (Secured via secret key)
     app.get("/api/wa-qr", async (req, res) => {
         try {
