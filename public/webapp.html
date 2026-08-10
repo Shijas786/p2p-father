@@ -352,7 +352,15 @@
           <div class="ac-link">View →</div>
         </div>
       </div>
-      <div style="margin-top:28px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
+      <div style="margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;">Profile Name</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input type="text" id="profile-name-in" placeholder="Enter your display name (e.g. Shijas)" style="margin-bottom:0;color:#0f172a;background:#f8fafc;border:1px solid #cbd5e1;" />
+          <button class="btn btn-green" id="save-name-btn" onclick="saveProfileName()" style="width:auto;padding:12px 20px;margin-bottom:0;white-space:nowrap;flex-shrink:0;">Save Name</button>
+        </div>
+        <div id="name-save-ok" style="font-size:12px;color:#10b981;margin-top:8px;display:none;">✅ Name updated successfully!</div>
+      </div>
+      <div style="margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
         <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;">Wallet</div>
         <div style="font-size:13px;color:#64748b;margin-bottom:8px;">Address</div>
         <div id="wallet-addr" style="font-size:12px;color:#0f172a;font-family:monospace;background:#f8fafc;padding:10px 12px;border-radius:8px;word-break:break-all;">Loading…</div>
@@ -481,16 +489,46 @@
 
     // Populate sidebar user info
     const phone = currentUser?.whatsapp_phone || fullPhone;
-    let name = currentUser?.first_name || currentUser?.username || 'Trader';
-    if (/^WA_\d+$/.test(name)) {
-      name = currentUser?.username || 'WhatsApp User';
+    let name = currentUser?.first_name || '';
+    if (!name || /^WA_\d+$/.test(name) || name === 'Trader') {
+      name = currentUser?.username || (phone ? '+' + phone : 'Trader');
     }
     document.getElementById('sb-name').textContent = name;
-    document.getElementById('sb-phone').textContent = '+' + phone;
+    document.getElementById('sb-phone').textContent = phone ? '+' + phone : '';
     document.getElementById('sb-avatar').textContent = name.charAt(0).toUpperCase();
+
+    const nameIn = document.getElementById('profile-name-in');
+    if (nameIn && currentUser?.first_name && !/^WA_\d+$/.test(currentUser.first_name)) {
+      nameIn.value = currentUser.first_name;
+    }
 
     loadBalances();
     loadTrades();
+  }
+
+  async function saveProfileName() {
+    const nameIn = document.getElementById('profile-name-in');
+    const newName = nameIn.value.trim();
+    if (!newName) return;
+    const btn = document.getElementById('save-name-btn');
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const r = await fetch('/api/miniapp/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
+        body: JSON.stringify({ first_name: newName })
+      });
+      if (r.ok) {
+        if (currentUser) currentUser.first_name = newName;
+        document.getElementById('sb-name').textContent = newName;
+        document.getElementById('sb-avatar').textContent = newName.charAt(0).toUpperCase();
+        document.getElementById('name-save-ok').style.display = 'block';
+        setTimeout(() => document.getElementById('name-save-ok').style.display = 'none', 3000);
+      }
+    } catch(_) {}
+    finally {
+      btn.textContent = 'Save Name'; btn.disabled = false;
+    }
   }
 
   function showPage(pageId, el) {

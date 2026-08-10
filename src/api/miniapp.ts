@@ -2349,12 +2349,13 @@ router.put("/profile", async (req: Request, res: Response) => {
         if (!user) return res.status(404).json({ error: "User not found" });
 
         const {
-            upi_id, phone_number, bank_account_number, bank_ifsc, bank_name,
+            first_name, upi_id, phone_number, bank_account_number, bank_ifsc, bank_name,
             receive_address, cdm_bank_number, cdm_bank_name, cdm_phone,
             cdm_user_name, digital_rupee_id, bio, instagram_handle, x_handle,
             hide_group_handle
         } = req.body;
         const updates: Record<string, any> = {};
+        if (first_name !== undefined && typeof first_name === 'string') updates.first_name = first_name.trim();
         if (upi_id !== undefined) updates.upi_id = upi_id;
         if (phone_number !== undefined) updates.phone_number = phone_number;
         if (bank_account_number !== undefined) updates.bank_account_number = bank_account_number;
