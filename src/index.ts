@@ -117,11 +117,14 @@ async function main() {
         res.sendFile(path.join(miniAppDist, "index.html"));
     });
 
-    // Serve WhatsApp Web App (/webapp) — ChatterPay-style WhatsApp OTP Login & Dashboard
-    app.use("/webapp", express.static(miniAppDist, staticOpts));
-    app.get(/^\/webapp(?:\/.*)?$/, (req, res) => {
+    // Serve WhatsApp Web App (/webapp) — Standalone ChatterPay-style WhatsApp OTP Login page
+    app.get("/webapp", (req, res) => {
         noCacheHeaders(res);
-        res.sendFile(path.join(miniAppDist, "index.html"));
+        res.sendFile(path.join(process.cwd(), "public", "webapp.html"));
+    });
+    app.get("/webapp/", (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(process.cwd(), "public", "webapp.html"));
     });
 
     // WhatsApp QR Code Web API & Interface (Secured via secret key)

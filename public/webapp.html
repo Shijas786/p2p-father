@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>P2PFather Web App — Sign In with WhatsApp</title>
+  <meta name="description" content="Sign in to P2PFather using your WhatsApp number. Access your crypto P2P dashboard directly from the browser." />
+  <link rel="icon" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #050505; color: #fff; min-height: 100vh; display: flex; align-items: stretch; justify-content: center; }
+    .container { display: flex; width: 100%; min-height: 100vh; }
+
+    /* LEFT PANEL */
+    .left { flex: 0 0 480px; display: flex; flex-direction: column; justify-content: center; padding: 60px 56px; background: #0a0a0a; border-right: 1px solid rgba(255,255,255,0.06); }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 48px; }
+    .brand-logo { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .brand-name { font-size: 20px; font-weight: 800; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 36px; }
+    .steps { display: flex; gap: 8px; margin-bottom: 32px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: background 0.3s; }
+    .step-dot.active { background: #10b981; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 7px; letter-spacing: 0.4px; text-transform: uppercase; }
+    select, input[type="tel"], input[type="text"] { width: 100%; padding: 13px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 11px; color: #fff; font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.2s; margin-bottom: 14px; }
+    select:focus, input:focus { border-color: #10b981; }
+    input::placeholder { color: #334155; }
+    select option { background: #1e293b; }
+
+    .btn-primary { width: 100%; padding: 14px; background: #10b981; color: #000; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-bottom: 10px; }
+    .btn-primary:hover { background: #0ea172; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #047857; cursor: not-allowed; }
+    .btn-link { width: 100%; background: transparent; border: none; color: #475569; font-size: 13px; font-family: inherit; cursor: pointer; text-decoration: underline; padding: 4px 0; }
+    .btn-link:hover { color: #94a3b8; }
+    .error-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 11px 14px; color: #fca5a5; font-size: 13px; margin-bottom: 14px; }
+    .success-box { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 11px 14px; color: #6ee7b7; font-size: 13px; margin-bottom: 18px; }
+    .otp-input { text-align: center !important; font-size: 28px !important; letter-spacing: 10px !important; font-weight: 700 !important; }
+    .terms { font-size: 11px; color: #1e293b; margin-top: 36px; line-height: 1.6; }
+    .terms a { color: #334155; }
+
+    /* RIGHT PANEL */
+    .right { flex: 1; background: radial-gradient(ellipse at top right, #064e3b 0%, #022c22 50%, #010f09 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 48px; position: relative; overflow: hidden; }
+    .glow { position: absolute; width: 600px; height: 600px; border-radius: 50%; background: rgba(16,185,129,0.1); filter: blur(120px); top: -150px; right: -150px; pointer-events: none; }
+    .glow2 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: rgba(16,185,129,0.06); filter: blur(80px); bottom: -50px; left: -50px; pointer-events: none; }
+    .cards { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 420px; position: relative; z-index: 2; }
+    .card { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 18px 20px; color: #0f172a; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 14px; animation: floatCard 4s ease-in-out infinite; }
+    .card:nth-child(2) { margin-left: 28px; animation-delay: 0.5s; }
+    .card:nth-child(3) { animation-delay: 1s; }
+    .card:nth-child(4) { margin-left: 20px; animation-delay: 1.5s; }
+    @keyframes floatCard { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .icon.g { background: #dcfce7; }
+    .icon.b { background: #dbeafe; }
+    .icon.y { background: #fef3c7; }
+    .icon.p { background: #f3e8ff; }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .tagline { margin-top: 48px; font-size: 18px; font-weight: 600; color: #a7f3d0; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
+
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      .left { flex: none; max-width: 100%; padding: 36px 24px; border-right: none; }
+      .right { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="left">
+    <div class="brand">
+      <div class="brand-logo">🪙</div>
+      <div class="brand-name">P2PFather</div>
+    </div>
+
+    <h1>Sign in to P2PFather</h1>
+    <p class="subtitle">Enter your WhatsApp number to receive a login code</p>
+
+    <div class="steps">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+    </div>
+
+    <div id="step-phone">
+      <label for="country">Country</label>
+      <select id="country">
+        <option value="+91">🇮🇳 India (+91)</option>
+        <option value="+971">🇦🇪 UAE (+971)</option>
+        <option value="+60">🇲🇾 Malaysia (+60)</option>
+        <option value="+65">🇸🇬 Singapore (+65)</option>
+        <option value="+966">🇸🇦 Saudi Arabia (+966)</option>
+        <option value="+974">🇶🇦 Qatar (+974)</option>
+        <option value="+44">🇬🇧 UK (+44)</option>
+        <option value="+1">🇺🇸 USA (+1)</option>
+      </select>
+
+      <label for="phone">WhatsApp Number</label>
+      <input type="tel" id="phone" placeholder="Enter your number" />
+
+      <div id="phone-error" class="error-box" style="display:none;"></div>
+      <button class="btn-primary" id="send-btn" onclick="sendOtp()">Send Code to WhatsApp →</button>
+    </div>
+
+    <div id="step-otp" style="display:none;">
+      <div class="success-box">✅ Code sent! Check the P2PFather WhatsApp chat.</div>
+      <label for="otp">6-Digit Code</label>
+      <input type="text" id="otp" class="otp-input" placeholder="——————" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+      <div id="otp-error" class="error-box" style="display:none;"></div>
+      <button class="btn-primary" id="verify-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
+      <button class="btn-link" onclick="backToPhone()">← Change Phone Number</button>
+    </div>
+
+    <div class="terms">By signing in you agree to P2PFather's <a href="/privacy.html" target="_blank">Privacy Policy</a>.</div>
+  </div>
+
+  <div class="right">
+    <div class="glow"></div>
+    <div class="glow2"></div>
+    <div class="cards">
+      <div class="card"><div class="icon g">↙</div><div><div class="card-title">Received ₹85,000 from Buyer</div><div class="card-sub">Trade #4e22 Settled • Escrow Released</div></div></div>
+      <div class="card"><div class="icon b">↗</div><div><div class="card-title">Released 100 USDT to Buyer</div><div class="card-sub">Smart Contract Escrow • Non-Custodial</div></div></div>
+      <div class="card"><div class="icon y">🪙</div><div><div class="card-title">Posted Sell Ad: 500 USDT</div><div class="card-sub">Rate ₹91.5 / USDT • 0% Trading Fees</div></div></div>
+      <div class="card"><div class="icon p">🔒</div><div><div class="card-title">Escrow Vault Locked</div><div class="card-sub">BSC & Base On-Chain Non-Custodial Vault</div></div></div>
+    </div>
+    <div class="tagline">Use crypto P2P, directly in WhatsApp 💬</div>
+  </div>
+
+</div>
+<script>
+  let fullPhone = '';
+
+  function getFullPhone() {
+    const cc = document.getElementById('country').value.replace('+','');
+    const num = document.getElementById('phone').value.replace(/\D/g,'');
+    return cc + num;
+  }
+
+  async function sendOtp() {
+    const btn = document.getElementById('send-btn');
+    const err = document.getElementById('phone-error');
+    err.style.display = 'none';
+    const num = document.getElementById('phone').value.trim();
+    if (!num || num.replace(/\D/g,'').length < 7) {
+      err.textContent = 'Please enter a valid phone number.';
+      err.style.display = 'block'; return;
+    }
+    fullPhone = getFullPhone();
+    btn.textContent = 'Sending...'; btn.disabled = true;
+    try {
+      const r = await fetch('/api/miniapp/auth/wa-request-otp', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ phone: fullPhone })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.error || 'Failed to send OTP');
+      document.getElementById('step-phone').style.display = 'none';
+      document.getElementById('step-otp').style.display = 'block';
+      document.getElementById('dot1').classList.remove('active');
+      document.getElementById('dot2').classList.add('active');
+      document.getElementById('otp').focus();
+    } catch(e) {
+      err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
+    } finally {
+      btn.textContent = 'Send Code to WhatsApp →'; btn.disabled = false;
+    }
+  }
+
+  async function verifyOtp() {
+    const btn = document.getElementById('verify-btn');
+    const err = document.getElementById('otp-error');
+    err.style.display = 'none';
+    const otp = document.getElementById('otp').value.replace(/\D/g,'');
+    if (otp.length !== 6) {
+      err.textContent = 'Please enter the full 6-digit code.';
+      err.style.display = 'block'; return;
+    }
+    btn.textContent = 'Verifying...'; btn.disabled = true;
+    try {
+      const r = await fetch('/api/miniapp/auth/wa-verify-otp', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ phone: fullPhone, otp })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.error || 'Invalid OTP');
+      localStorage.setItem('trade_init_data', d.initData);
+      window.location.href = '/miniapp/';
+    } catch(e) {
+      err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
+      btn.textContent = 'Verify & Open Dashboard →'; btn.disabled = false;
+    }
+  }
+
+  function backToPhone() {
+    document.getElementById('step-otp').style.display = 'none';
+    document.getElementById('step-phone').style.display = 'block';
+    document.getElementById('dot1').classList.add('active');
+    document.getElementById('dot2').classList.remove('active');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('step-phone').style.display !== 'none') sendOtp();
+    else verifyOtp();
+  });
+</script>
+</body>
+</html>
