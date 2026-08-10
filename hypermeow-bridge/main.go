@@ -748,11 +748,11 @@ func eventHandler(evt interface{}) {
 		fmt.Printf("[Hypermeow Webhook] Response status: %d\n", resp.StatusCode)
 		resp.Body.Close()
 
-	case *events.GroupParticipant:
-		actionStr := fmt.Sprintf("%v", v.Action)
-		if v.Action == events.GroupParticipantActionAdd || v.Action == events.GroupParticipantActionJoin || actionStr == "add" || actionStr == "join" {
-			participants := make([]string, 0, len(v.Participants))
-			for _, p := range v.Participants {
+	case *events.GroupInfo:
+		joinedJIDs := append(v.Join, v.Add...)
+		if len(joinedJIDs) > 0 {
+			participants := make([]string, 0, len(joinedJIDs))
+			for _, p := range joinedJIDs {
 				participants = append(participants, p.String())
 			}
 			payload := map[string]interface{}{
