@@ -3,90 +3,169 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P2PFather Web App — Sign In with WhatsApp</title>
-  <meta name="description" content="Sign in to P2PFather using your WhatsApp number. Access your crypto P2P dashboard directly from the browser." />
+  <title>P2PFather — Sign In</title>
+  <meta name="description" content="Sign in to P2PFather using your WhatsApp number." />
   <link rel="icon" href="/favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #050505; color: #fff; min-height: 100vh; display: flex; align-items: stretch; justify-content: center; }
-    .container { display: flex; width: 100%; min-height: 100vh; }
-
-    /* LEFT PANEL */
-    .left { flex: 0 0 480px; display: flex; flex-direction: column; justify-content: center; padding: 60px 56px; background: #0a0a0a; border-right: 1px solid rgba(255,255,255,0.06); }
-    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 48px; }
-    .brand-logo { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .brand-name { font-size: 20px; font-weight: 800; background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
-    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 36px; }
-    .steps { display: flex; gap: 8px; margin-bottom: 32px; }
-    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: background 0.3s; }
-    .step-dot.active { background: #10b981; }
-
-    label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 7px; letter-spacing: 0.4px; text-transform: uppercase; }
-    select, input[type="tel"], input[type="text"] { width: 100%; padding: 13px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 11px; color: #fff; font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.2s; margin-bottom: 14px; }
-    select:focus, input:focus { border-color: #10b981; }
-    input::placeholder { color: #334155; }
-    select option { background: #1e293b; }
-
-    .btn-primary { width: 100%; padding: 14px; background: #10b981; color: #000; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-bottom: 10px; }
-    .btn-primary:hover { background: #0ea172; }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-primary:disabled { background: #047857; cursor: not-allowed; }
-    .btn-link { width: 100%; background: transparent; border: none; color: #475569; font-size: 13px; font-family: inherit; cursor: pointer; text-decoration: underline; padding: 4px 0; }
-    .btn-link:hover { color: #94a3b8; }
-    .error-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 11px 14px; color: #fca5a5; font-size: 13px; margin-bottom: 14px; }
-    .success-box { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 11px 14px; color: #6ee7b7; font-size: 13px; margin-bottom: 18px; }
-    .otp-input { text-align: center !important; font-size: 28px !important; letter-spacing: 10px !important; font-weight: 700 !important; }
-    .terms { font-size: 11px; color: #1e293b; margin-top: 36px; line-height: 1.6; }
-    .terms a { color: #334155; }
-
-    /* RIGHT PANEL */
-    .right { flex: 1; background: radial-gradient(ellipse at top right, #064e3b 0%, #022c22 50%, #010f09 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 48px; position: relative; overflow: hidden; }
-    .glow { position: absolute; width: 600px; height: 600px; border-radius: 50%; background: rgba(16,185,129,0.1); filter: blur(120px); top: -150px; right: -150px; pointer-events: none; }
-    .glow2 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: rgba(16,185,129,0.06); filter: blur(80px); bottom: -50px; left: -50px; pointer-events: none; }
-    .cards { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 420px; position: relative; z-index: 2; }
-    .card { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 18px 20px; color: #0f172a; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 14px; animation: floatCard 4s ease-in-out infinite; }
-    .card:nth-child(2) { margin-left: 28px; animation-delay: 0.5s; }
-    .card:nth-child(3) { animation-delay: 1s; }
-    .card:nth-child(4) { margin-left: 20px; animation-delay: 1.5s; }
-    @keyframes floatCard { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-    .icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-    .icon.g { background: #dcfce7; }
-    .icon.b { background: #dbeafe; }
-    .icon.y { background: #fef3c7; }
-    .icon.p { background: #f3e8ff; }
-    .card-title { font-size: 14px; font-weight: 700; }
-    .card-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .tagline { margin-top: 48px; font-size: 18px; font-weight: 600; color: #a7f3d0; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
-
-    @media (max-width: 768px) {
-      .container { flex-direction: column; }
-      .left { flex: none; max-width: 100%; padding: 36px 24px; border-right: none; }
-      .right { display: none; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#10b981;--green-dark:#059669;--green-dim:rgba(16,185,129,0.12);
+      --bg:#050505;--surface:#0d0d0d;--surface2:rgba(255,255,255,0.04);
+      --border:rgba(255,255,255,0.08);--text:#f1f5f9;--muted:#64748b;--sub:#94a3b8;
+      --red:#ef4444;--blue:#3b82f6;
     }
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* ─── LAYOUT ─── */
+    .app{display:flex;min-height:100vh}
+    .left{flex:0 0 460px;display:flex;flex-direction:column;justify-content:center;padding:60px 52px;background:var(--surface);border-right:1px solid var(--border);position:relative}
+    .right{flex:1;background:radial-gradient(ellipse at 70% 20%,#064e3b 0%,#022c22 45%,#010f09 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;overflow:hidden;position:relative}
+    @media(max-width:768px){.app{flex-direction:column}.left{flex:none;padding:36px 24px;border-right:none}.right{display:none}}
+
+    /* ─── BRAND ─── */
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:44px}
+    .brand-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--green),var(--green-dark));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .brand-name{font-size:19px;font-weight:800;background:linear-gradient(to right,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+    /* ─── STEPS ─── */
+    .steps{display:flex;gap:6px;margin-bottom:28px}
+    .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.12);transition:background .3s}
+    .dot.on{background:var(--green)}
+
+    /* ─── FORM ─── */
+    h1{font-size:26px;font-weight:800;margin-bottom:6px}
+    .subtitle{color:var(--muted);font-size:13.5px;margin-bottom:30px;line-height:1.5}
+    label{display:block;font-size:11.5px;font-weight:600;color:var(--sub);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
+    select,input{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14.5px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:12px}
+    select:focus,input:focus{border-color:var(--green)}
+    input::placeholder{color:#334155}
+    select option{background:#1e293b}
+    .btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px}
+    .btn-green{background:var(--green);color:#000}.btn-green:hover{background:#0ea172}.btn-green:active{transform:scale(.98)}.btn-green:disabled{background:#047857;opacity:.7;cursor:not-allowed}
+    .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--sub)}.btn-outline:hover{border-color:var(--green);color:var(--green)}
+    .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#2563eb}
+    .btn-link{background:transparent;border:none;color:var(--muted);font-size:12.5px;font-family:inherit;cursor:pointer;text-decoration:underline;padding:4px 0;width:100%}.btn-link:hover{color:var(--sub)}
+    .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:10px 13px;color:#fca5a5;font-size:12.5px;margin-bottom:12px}
+    .ok{background:var(--green-dim);border:1px solid rgba(16,185,129,.25);border-radius:9px;padding:10px 13px;color:#6ee7b7;font-size:12.5px;margin-bottom:16px}
+    .otp-in{text-align:center;font-size:26px;letter-spacing:9px;font-weight:700}
+    .terms{font-size:11px;color:#1e293b;margin-top:28px;line-height:1.6}.terms a{color:#334155}
+
+    /* ─── NEW USER SCREEN ─── */
+    .new-hero{font-size:40px;margin-bottom:16px}
+    .wa-card{background:linear-gradient(135deg,#064e3b,#047857);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:22px 20px;margin-bottom:16px}
+    .wa-card p{font-size:13.5px;color:#a7f3d0;line-height:1.65}
+
+    /* ─── DASHBOARD ─── */
+    .dash{display:flex;width:100%;min-height:100vh}
+
+    /* Sidebar */
+    .sidebar{flex:0 0 220px;background:#0a0a0a;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:relative}
+    .sb-brand{display:flex;align-items:center;gap:9px;padding:0 20px 28px}
+    .sb-brand-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--green),var(--green-dark));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .sb-brand-name{font-size:15px;font-weight:800;background:linear-gradient(to right,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .sb-section{font-size:10px;font-weight:700;color:#334155;letter-spacing:1px;padding:0 20px 8px;text-transform:uppercase}
+    .sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13.5px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .15s;border-radius:0;margin:0 8px;border-radius:8px;margin-bottom:2px}
+    .sb-item:hover{background:var(--surface2);color:var(--text)}
+    .sb-item.active{background:var(--green-dim);color:var(--green);font-weight:600}
+    .sb-item svg{width:16px;height:16px;flex-shrink:0}
+    .sb-spacer{flex:1}
+    .sb-user{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .sb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0}
+    .sb-uname{font-size:13px;font-weight:600;color:var(--text)}
+    .sb-uphone{font-size:11px;color:var(--muted)}
+
+    /* Main content */
+    .main{flex:1;overflow-y:auto;background:#f8fafb;padding:32px 36px}
+    .page{display:none}
+    .page.active{display:block}
+    .breadcrumb{font-size:12px;color:#94a3b8;margin-bottom:8px}
+    .breadcrumb span{color:var(--text)}
+    .page-title{font-size:26px;font-weight:800;color:#0f172a;margin-bottom:4px}
+    .page-sub{font-size:13.5px;color:#64748b;margin-bottom:28px}
+
+    /* Dashboard cards */
+    .portfolio-header{display:flex;align-items:baseline;gap:10px;margin-bottom:24px}
+    .portfolio-label{font-size:13px;color:#64748b;font-weight:500}
+    .portfolio-value{font-size:36px;font-weight:800;color:#0f172a}
+    .portfolio-currency{font-size:16px;color:#94a3b8}
+    .asset-row{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s}
+    .asset-row:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .asset-icon{width:38px;height:38px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:17px;margin-right:12px}
+    .asset-name{font-size:14px;font-weight:600;color:#0f172a}
+    .asset-sub{font-size:12px;color:#94a3b8}
+    .asset-value{font-size:15px;font-weight:700;color:#0f172a;text-align:right}
+    .action-row{display:flex;gap:10px;margin-bottom:28px}
+    .action-btn{flex:1;padding:11px 8px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+    .action-btn.primary{background:#0f172a;color:#fff;border-color:#0f172a}
+    .action-btn:hover{box-shadow:0 4px 10px rgba(0,0,0,.08)}
+    .section-title{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:14px}
+    .no-data{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13.5px}
+    .no-data-icon{font-size:36px;margin-bottom:10px}
+    .trade-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .trade-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px}
+    .badge-pending{background:#fef3c7;color:#92400e}
+    .badge-active{background:#d1fae5;color:#065f46}
+    .badge-completed{background:#dbeafe;color:#1e40af}
+    .badge-dispute{background:#fee2e2;color:#991b1b}
+    .order-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+
+    /* Account page */
+    .account-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+    .account-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;cursor:pointer;transition:box-shadow .15s;position:relative}
+    .account-card:hover{box-shadow:0 6px 16px rgba(0,0,0,.08)}
+    .action-required{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;color:#d97706;background:#fef3c7;padding:2px 8px;border-radius:6px}
+    .ac-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+    .ac-icon.gray{background:#f1f5f9}
+    .ac-icon.blue{background:#dbeafe}
+    .ac-icon.yellow{background:#fef3c7}
+    .ac-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
+    .ac-sub{font-size:12px;color:#64748b}
+    .ac-link{font-size:12px;color:#6366f1;font-weight:600;margin-top:14px;display:flex;align-items:center;gap:4px}
+
+    /* Right panel showcase */
+    .cards-wrap{display:flex;flex-direction:column;gap:14px;width:100%;max-width:420px;position:relative;z-index:2}
+    .rcard{background:rgba(255,255,255,.96);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 40px -10px rgba(0,0,0,.45)}
+    .rcard:nth-child(2){margin-left:24px}
+    .rcard:nth-child(4){margin-left:20px}
+    .ri{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .ri.g{background:#dcfce7}.ri.b{background:#dbeafe}.ri.y{background:#fef3c7}.ri.p{background:#f3e8ff}
+    .rc-title{font-size:13.5px;font-weight:700;color:#0f172a}
+    .rc-sub{font-size:11px;color:#64748b;margin-top:2px}
+    .tagline{margin-top:40px;font-size:17px;font-weight:600;color:#a7f3d0;position:relative;z-index:2}
+    .glow{position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(16,185,129,.1);filter:blur(100px);top:-120px;right:-120px;pointer-events:none}
+    .glow2{position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(16,185,129,.06);filter:blur(70px);bottom:-40px;left:-40px;pointer-events:none}
+
+    /* Loading spinner */
+    .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:sp .6s linear infinite}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .loading-row{display:flex;align-items:center;justify-content:center;padding:24px;color:#94a3b8;font-size:13px;gap:8px}
   </style>
 </head>
 <body>
-<div class="container">
 
+<!-- ═══════════════════════════════════════════ -->
+<!-- AUTH SCREENS -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="auth-view" class="app">
   <div class="left">
     <div class="brand">
-      <div class="brand-logo">🪙</div>
+      <div class="brand-icon">🪙</div>
       <div class="brand-name">P2PFather</div>
     </div>
 
-    <h1>Sign in to P2PFather</h1>
-    <p class="subtitle">Enter your WhatsApp number to receive a login code</p>
-
-    <div class="steps">
-      <div class="step-dot active" id="dot1"></div>
-      <div class="step-dot" id="dot2"></div>
+    <!-- STEP DOTS -->
+    <div class="steps" id="step-dots">
+      <div class="dot on" id="dot1"></div>
+      <div class="dot" id="dot2"></div>
+      <div class="dot" id="dot3"></div>
     </div>
 
+    <!-- ── STEP 1: PHONE ── -->
     <div id="step-phone">
+      <h1>Sign in to P2PFather</h1>
+      <p class="subtitle">Enter your WhatsApp number to get started.</p>
+
       <label for="country">Country</label>
       <select id="country">
         <option value="+91">🇮🇳 India (+91)</option>
@@ -95,91 +174,266 @@
         <option value="+65">🇸🇬 Singapore (+65)</option>
         <option value="+966">🇸🇦 Saudi Arabia (+966)</option>
         <option value="+974">🇶🇦 Qatar (+974)</option>
+        <option value="+973">🇧🇭 Bahrain (+973)</option>
+        <option value="+968">🇴🇲 Oman (+968)</option>
         <option value="+44">🇬🇧 UK (+44)</option>
         <option value="+1">🇺🇸 USA (+1)</option>
       </select>
 
-      <label for="phone">WhatsApp Number</label>
-      <input type="tel" id="phone" placeholder="Enter your number" />
+      <label for="phone-in">WhatsApp Number</label>
+      <input type="tel" id="phone-in" placeholder="e.g. 9876543210" />
 
-      <div id="phone-error" class="error-box" style="display:none;"></div>
-      <button class="btn-primary" id="send-btn" onclick="sendOtp()">Send Code to WhatsApp →</button>
+      <div id="phone-err" class="err" style="display:none;"></div>
+      <button class="btn btn-green" id="phone-btn" onclick="checkPhone()">Continue →</button>
     </div>
 
+    <!-- ── STEP 2a: NEW USER ── -->
+    <div id="step-new" style="display:none;">
+      <div class="new-hero">👋</div>
+      <h1 style="font-size:22px;margin-bottom:8px;">Get started</h1>
+      <p class="subtitle">Already have an account? <a href="#" onclick="goBack();return false;" style="color:var(--green);font-weight:600;text-decoration:none;">Sign in</a></p>
+
+      <div class="wa-card">
+        <p>You can use P2PFather entirely from WhatsApp. Start a chat with our bot first, then come back here to sign in with your number.</p>
+      </div>
+
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">By signing up, I agree to <a href="/privacy.html" target="_blank" style="color:#475569;">Terms of Service</a> and <a href="/privacy.html" target="_blank" style="color:#475569;">Privacy Policy</a>.</p>
+
+      <a id="wa-create-btn" href="#" target="_blank" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;letter-spacing:.2px;">
+        Create Account from WhatsApp →
+      </a>
+      <button class="btn-link" onclick="goBack()">← Use a different number</button>
+    </div>
+
+    <!-- ── STEP 2b: OTP ── -->
     <div id="step-otp" style="display:none;">
-      <div class="success-box">✅ Code sent! Check the P2PFather WhatsApp chat.</div>
-      <label for="otp">6-Digit Code</label>
-      <input type="text" id="otp" class="otp-input" placeholder="——————" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
-      <div id="otp-error" class="error-box" style="display:none;"></div>
-      <button class="btn-primary" id="verify-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
-      <button class="btn-link" onclick="backToPhone()">← Change Phone Number</button>
+      <h1 style="font-size:22px;margin-bottom:8px;">Verify your number</h1>
+      <div class="ok" id="otp-ok">✅ Code sent! Check the P2PFather WhatsApp message.</div>
+
+      <label for="otp-in">6-Digit WhatsApp Code</label>
+      <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+
+      <div id="otp-err" class="err" style="display:none;"></div>
+      <button class="btn btn-green" id="otp-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
+      <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
     </div>
 
-    <div class="terms">By signing in you agree to P2PFather's <a href="/privacy.html" target="_blank">Privacy Policy</a>.</div>
+    <div class="terms" id="auth-terms">By signing in you agree to P2PFather's <a href="/privacy.html" target="_blank">Privacy Policy</a>.</div>
   </div>
 
   <div class="right">
-    <div class="glow"></div>
-    <div class="glow2"></div>
-    <div class="cards">
-      <div class="card"><div class="icon g">↙</div><div><div class="card-title">Received ₹85,000 from Buyer</div><div class="card-sub">Trade #4e22 Settled • Escrow Released</div></div></div>
-      <div class="card"><div class="icon b">↗</div><div><div class="card-title">Released 100 USDT to Buyer</div><div class="card-sub">Smart Contract Escrow • Non-Custodial</div></div></div>
-      <div class="card"><div class="icon y">🪙</div><div><div class="card-title">Posted Sell Ad: 500 USDT</div><div class="card-sub">Rate ₹91.5 / USDT • 0% Trading Fees</div></div></div>
-      <div class="card"><div class="icon p">🔒</div><div><div class="card-title">Escrow Vault Locked</div><div class="card-sub">BSC & Base On-Chain Non-Custodial Vault</div></div></div>
+    <div class="glow"></div><div class="glow2"></div>
+    <div class="cards-wrap">
+      <div class="rcard"><div class="ri g">↙</div><div><div class="rc-title">Received ₹85,000 from Buyer</div><div class="rc-sub">Trade #4e22 Settled • Escrow Released</div></div></div>
+      <div class="rcard"><div class="ri b">↗</div><div><div class="rc-title">Released 100 USDT to Buyer</div><div class="rc-sub">Smart Contract Escrow • Non-Custodial</div></div></div>
+      <div class="rcard"><div class="ri y">🪙</div><div><div class="rc-title">Posted Sell Ad: 500 USDT</div><div class="rc-sub">Rate ₹91.5/USDT • 0% Trading Fees</div></div></div>
+      <div class="rcard"><div class="ri p">🔒</div><div><div class="rc-title">Escrow Vault Locked</div><div class="rc-sub">BSC & Base On-Chain Non-Custodial</div></div></div>
     </div>
     <div class="tagline">Use crypto P2P, directly in WhatsApp 💬</div>
   </div>
-
 </div>
-<script>
-  let fullPhone = '';
 
+<!-- ═══════════════════════════════════════════ -->
+<!-- DASHBOARD -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="dash-view" class="dash" style="display:none;">
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">🪙</div>
+      <div class="sb-brand-name">P2PFather</div>
+    </div>
+
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active" onclick="showPage('dash-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-item" onclick="showPage('market-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      P2P Market
+    </div>
+    <div class="sb-item" onclick="showPage('trades-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      My Trades
+    </div>
+    <div class="sb-item" onclick="showPage('orders-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      My Orders
+    </div>
+
+    <div class="sb-section" style="margin-top:16px;">Management</div>
+    <div class="sb-item" onclick="showPage('account-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      User
+    </div>
+
+    <div class="sb-spacer"></div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div>
+        <div class="sb-uname" id="sb-name">Loading…</div>
+        <div class="sb-uphone" id="sb-phone"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+    <!-- Dashboard Page -->
+    <div id="dash-page" class="page active">
+      <div class="breadcrumb">Dashboard</div>
+      <div class="portfolio-label" style="font-size:14px;color:#64748b;font-weight:500;margin-bottom:4px;">Portfolio Balance</div>
+      <div class="portfolio-header">
+        <div class="portfolio-value" id="total-balance">$0.00</div>
+        <div class="portfolio-currency">USD</div>
+      </div>
+
+      <div id="assets-list">
+        <div class="loading-row"><div class="spin"></div> Loading balances…</div>
+      </div>
+
+      <div class="action-row">
+        <button class="action-btn primary" onclick="alert('Use the Telegram bot to deposit: /deposit')">↙ Deposit</button>
+        <button class="action-btn" onclick="alert('Use the Telegram bot to withdraw: /withdraw')">↗ Withdraw</button>
+        <button class="action-btn" onclick="alert('Use the Telegram bot to swap: /swap')">⇄ Swap</button>
+      </div>
+
+      <div class="section-title">Recent Trade History</div>
+      <div id="recent-trades"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+    </div>
+
+    <!-- P2P Market Page -->
+    <div id="market-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>P2P Market</span></div>
+      <div class="page-title">P2P Market</div>
+      <div class="page-sub">Live buy/sell ads from traders</div>
+      <div id="market-list"><div class="loading-row"><div class="spin"></div> Loading orders…</div></div>
+    </div>
+
+    <!-- My Trades Page -->
+    <div id="trades-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>My Trades</span></div>
+      <div class="page-title">My Trades</div>
+      <div class="page-sub">All your active and past trades</div>
+      <div id="trades-list"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+    </div>
+
+    <!-- My Orders Page -->
+    <div id="orders-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>My Orders</span></div>
+      <div class="page-title">My Orders</div>
+      <div class="page-sub">Your posted buy/sell ads</div>
+      <div id="orders-list"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+    </div>
+
+    <!-- Account Page -->
+    <div id="account-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>User</span></div>
+      <div class="page-title">Account</div>
+      <div class="page-sub">Manage your profile, security, and referrals.</div>
+      <div class="account-cards">
+        <div class="account-card">
+          <div class="action-required">Action required</div>
+          <div class="ac-icon gray">🪪</div>
+          <div class="ac-title">Profile Information</div>
+          <div class="ac-sub">Your personal details and UPI/bank.</div>
+          <div class="ac-link">View →</div>
+        </div>
+        <div class="account-card">
+          <div class="action-required">Action required</div>
+          <div class="ac-icon blue">🔐</div>
+          <div class="ac-title">Security</div>
+          <div class="ac-sub">PIN, KYC, and account protection.</div>
+          <div class="ac-link">View →</div>
+        </div>
+        <div class="account-card">
+          <div class="ac-icon yellow">👥</div>
+          <div class="ac-title">Referrals</div>
+          <div class="ac-sub">Share your code and track usage.</div>
+          <div class="ac-link">View →</div>
+        </div>
+      </div>
+      <div style="margin-top:28px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;">Wallet</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:8px;">Address</div>
+        <div id="wallet-addr" style="font-size:12px;color:#0f172a;font-family:monospace;background:#f8fafc;padding:10px 12px;border-radius:8px;word-break:break-all;">Loading…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let initData = '';
+  let currentUser = null;
+  let fullPhone = '';
+  let dataLoaded = { balances: false, trades: false, orders: false, market: false };
+
+  // ─── PHONE STEP ───────────────────────────────
   function getFullPhone() {
     const cc = document.getElementById('country').value.replace('+','');
-    const num = document.getElementById('phone').value.replace(/\D/g,'');
+    const num = document.getElementById('phone-in').value.replace(/\D/g,'');
     return cc + num;
   }
 
-  async function sendOtp() {
-    const btn = document.getElementById('send-btn');
-    const err = document.getElementById('phone-error');
+  async function checkPhone() {
+    const btn = document.getElementById('phone-btn');
+    const err = document.getElementById('phone-err');
     err.style.display = 'none';
-    const num = document.getElementById('phone').value.trim();
-    if (!num || num.replace(/\D/g,'').length < 7) {
+    const num = document.getElementById('phone-in').value.replace(/\D/g,'');
+    if (!num || num.length < 7) {
       err.textContent = 'Please enter a valid phone number.';
       err.style.display = 'block'; return;
     }
     fullPhone = getFullPhone();
-    btn.textContent = 'Sending...'; btn.disabled = true;
+    btn.textContent = 'Checking…'; btn.disabled = true;
+
     try {
-      const r = await fetch('/api/miniapp/auth/wa-request-otp', {
+      const r = await fetch('/api/miniapp/auth/wa-check-user', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ phone: fullPhone })
       });
       const d = await r.json();
-      if (!r.ok || !d.success) throw new Error(d.error || 'Failed to send OTP');
-      document.getElementById('step-phone').style.display = 'none';
-      document.getElementById('step-otp').style.display = 'block';
-      document.getElementById('dot1').classList.remove('active');
-      document.getElementById('dot2').classList.add('active');
-      document.getElementById('otp').focus();
+      if (!r.ok) throw new Error(d.error || 'Check failed');
+
+      if (d.exists) {
+        // Existing user → send OTP
+        await sendOtp();
+      } else {
+        // New user → show registration screen
+        showStep('new');
+        // Build WhatsApp link: user must text bot first
+        const waNumber = '917012751478'; // P2PFather WhatsApp bot number
+        const waMsg = encodeURIComponent('hi');
+        document.getElementById('wa-create-btn').href = `https://wa.me/${waNumber}?text=${waMsg}`;
+      }
     } catch(e) {
       err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
     } finally {
-      btn.textContent = 'Send Code to WhatsApp →'; btn.disabled = false;
+      btn.textContent = 'Continue →'; btn.disabled = false;
     }
   }
 
+  async function sendOtp() {
+    const r = await fetch('/api/miniapp/auth/wa-request-otp', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: fullPhone })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.error || 'Failed to send OTP');
+    showStep('otp');
+    setTimeout(() => document.getElementById('otp-in').focus(), 100);
+  }
+
+  // ─── OTP STEP ────────────────────────────────
   async function verifyOtp() {
-    const btn = document.getElementById('verify-btn');
-    const err = document.getElementById('otp-error');
+    const btn = document.getElementById('otp-btn');
+    const err = document.getElementById('otp-err');
     err.style.display = 'none';
-    const otp = document.getElementById('otp').value.replace(/\D/g,'');
+    const otp = document.getElementById('otp-in').value.replace(/\D/g,'');
     if (otp.length !== 6) {
       err.textContent = 'Please enter the full 6-digit code.';
       err.style.display = 'block'; return;
     }
-    btn.textContent = 'Verifying...'; btn.disabled = true;
+    btn.textContent = 'Verifying…'; btn.disabled = true;
     try {
       const r = await fetch('/api/miniapp/auth/wa-verify-otp', {
         method: 'POST', headers: {'Content-Type':'application/json'},
@@ -187,25 +441,200 @@
       });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || 'Invalid OTP');
-      localStorage.setItem('trade_init_data', d.initData);
-      window.location.href = '/miniapp/';
+
+      initData = d.initData;
+      currentUser = d.user;
+      localStorage.setItem('trade_init_data', initData);
+
+      showDashboard();
     } catch(e) {
       err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
       btn.textContent = 'Verify & Open Dashboard →'; btn.disabled = false;
     }
   }
 
-  function backToPhone() {
-    document.getElementById('step-otp').style.display = 'none';
-    document.getElementById('step-phone').style.display = 'block';
-    document.getElementById('dot1').classList.add('active');
-    document.getElementById('dot2').classList.remove('active');
+  // ─── STEP HELPERS ────────────────────────────
+  function showStep(name) {
+    ['phone','new','otp'].forEach(s => {
+      document.getElementById('step-'+s).style.display = 'none';
+    });
+    document.getElementById('step-'+name).style.display = 'block';
+    // Update dots
+    document.getElementById('dot1').className = 'dot on';
+    document.getElementById('dot2').className = 'dot ' + (name==='otp'?'on':'');
+    document.getElementById('dot3').className = 'dot';
+    document.getElementById('step-dots').style.display = name==='new' ? 'none' : 'flex';
+    document.getElementById('auth-terms').style.display = name==='new' ? 'none' : 'block';
   }
 
+  function goBack() {
+    showStep('phone');
+    document.getElementById('phone-err').style.display='none';
+    document.getElementById('otp-err').style.display='none';
+    document.getElementById('otp-in').value='';
+  }
+
+  // ─── DASHBOARD ───────────────────────────────
+  function showDashboard() {
+    document.getElementById('auth-view').style.display = 'none';
+    document.getElementById('dash-view').style.display = 'flex';
+
+    // Populate sidebar user info
+    const phone = currentUser?.whatsapp_phone || fullPhone;
+    const name = currentUser?.first_name || currentUser?.username || 'Trader';
+    document.getElementById('sb-name').textContent = name;
+    document.getElementById('sb-phone').textContent = '+' + phone;
+    document.getElementById('sb-avatar').textContent = name.charAt(0).toUpperCase();
+
+    loadBalances();
+    loadTrades();
+  }
+
+  function showPage(pageId, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+
+    if (pageId === 'market-page' && !dataLoaded.market) loadMarket();
+    if (pageId === 'orders-page' && !dataLoaded.orders) loadOrders();
+    if (pageId === 'trades-page' && !dataLoaded.trades) loadTrades();
+  }
+
+  function apiGet(path) {
+    return fetch('/api/miniapp' + path, {
+      headers: { 'x-telegram-init-data': initData }
+    }).then(r => r.json());
+  }
+
+  async function loadBalances() {
+    try {
+      const d = await apiGet('/wallet/balances');
+      const usdt = parseFloat(d.usdt || '0') + parseFloat(d.vault_bsc_usdt || '0') + parseFloat(d.vault_base_usdt || '0');
+      const usdc = parseFloat(d.usdc || '0') + parseFloat(d.vault_base_usdc || '0') + parseFloat(d.vault_bsc_usdc || '0');
+      const total = usdt + usdc;
+
+      document.getElementById('total-balance').textContent = '$' + total.toFixed(2);
+
+      const addr = d.address || currentUser?.wallet_address || null;
+      document.getElementById('wallet-addr').textContent = addr || 'No wallet linked yet';
+
+      const html = `
+        <div class="asset-row">
+          <div style="display:flex;align-items:center;">
+            <div class="asset-icon">💎</div>
+            <div><div class="asset-name">Crypto</div><div class="asset-sub">USDT + USDC</div></div>
+          </div>
+          <div class="asset-value">$${total.toFixed(2)} <span style="font-size:12px;color:#94a3b8;">USD</span></div>
+        </div>
+        <div class="asset-row">
+          <div style="display:flex;align-items:center;">
+            <div class="asset-icon">🏦</div>
+            <div><div class="asset-name">Escrow Vault</div><div class="asset-sub">Locked in active trades</div></div>
+          </div>
+          <div class="asset-value">$${(parseFloat(d.vault_bsc_reserved||'0')+parseFloat(d.vault_base_reserved||'0')).toFixed(2)}</div>
+        </div>
+      `;
+      document.getElementById('assets-list').innerHTML = html;
+      dataLoaded.balances = true;
+    } catch(e) {
+      document.getElementById('assets-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load balances</div>';
+    }
+  }
+
+  async function loadTrades() {
+    try {
+      const d = await apiGet('/trades/mine');
+      const trades = d.trades || [];
+      const el = document.getElementById('trades-list');
+      const recEl = document.getElementById('recent-trades');
+
+      if (!trades.length) {
+        const empty = '<div class="no-data"><div class="no-data-icon">📋</div>No trades yet</div>';
+        el.innerHTML = empty; recEl.innerHTML = empty;
+        return;
+      }
+
+      const statusClass = { pending:'badge-pending',active:'badge-active',payment_sent:'badge-active',completed:'badge-completed',dispute:'badge-dispute',released:'badge-completed' };
+
+      const rows = trades.slice(0, 10).map(t => `
+        <div class="trade-row">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
+            <div style="font-size:11.5px;color:#94a3b8;margin-top:2px;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
+          </div>
+          <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
+        </div>
+      `).join('');
+
+      el.innerHTML = rows;
+      recEl.innerHTML = trades.slice(0, 5).map(t => `
+        <div class="trade-row">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
+            <div style="font-size:11px;color:#94a3b8;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
+          </div>
+          <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
+        </div>
+      `).join('');
+      dataLoaded.trades = true;
+    } catch(e) {
+      document.getElementById('trades-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load trades</div>';
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      const d = await apiGet('/orders/mine');
+      const orders = d.orders || [];
+      const el = document.getElementById('orders-list');
+      if (!orders.length) { el.innerHTML = '<div class="no-data"><div class="no-data-icon">📢</div>No orders posted yet</div>'; return; }
+      el.innerHTML = orders.map(o => `
+        <div class="order-row">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${o.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${o.amount} ${o.token}</div>
+            <div style="font-size:11.5px;color:#94a3b8;">₹${o.price}/USDT • Min ₹${o.min_order_amount||'—'}</div>
+          </div>
+          <span class="trade-badge ${o.is_active ? 'badge-active' : 'badge-completed'}">${o.is_active ? 'Active' : 'Inactive'}</span>
+        </div>
+      `).join('');
+      dataLoaded.orders = true;
+    } catch(e) {
+      document.getElementById('orders-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load orders</div>';
+    }
+  }
+
+  async function loadMarket() {
+    try {
+      const d = await apiGet('/orders?limit=20');
+      const orders = d.orders || [];
+      const el = document.getElementById('market-list');
+      if (!orders.length) { el.innerHTML = '<div class="no-data"><div class="no-data-icon">🏪</div>No active orders in market</div>'; return; }
+      el.innerHTML = orders.map(o => `
+        <div class="order-row">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${o.type === 'buy' ? '↙ Buyer' : '↗ Seller'} — ${o.amount} ${o.token}</div>
+            <div style="font-size:11.5px;color:#94a3b8;">₹${o.price}/USDT • ${o.payment_method||'UPI'}</div>
+          </div>
+          <button style="padding:7px 14px;border-radius:8px;border:1.5px solid ${o.type==='buy'?'#10b981':'#3b82f6'};background:transparent;color:${o.type==='buy'?'#10b981':'#3b82f6'};font-size:12.5px;font-weight:700;cursor:pointer;"
+            onclick="alert('Use the Telegram bot to trade: https://t.me/P2p_fatherbot')">
+            ${o.type === 'buy' ? 'Sell' : 'Buy'}
+          </button>
+        </div>
+      `).join('');
+      dataLoaded.market = true;
+    } catch(e) {
+      document.getElementById('market-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load market</div>';
+    }
+  }
+
+  // ─── ENTER KEY ────────────────────────────────
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
-    if (document.getElementById('step-phone').style.display !== 'none') sendOtp();
-    else verifyOtp();
+    const phone = document.getElementById('step-phone');
+    const otp = document.getElementById('step-otp');
+    if (phone.style.display !== 'none' && getComputedStyle(phone).display !== 'none') { if (!phone.hidden) checkPhone(); }
+    else if (otp.style.display !== 'none') verifyOtp();
   });
 </script>
 </body>

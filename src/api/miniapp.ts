@@ -209,7 +209,25 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
 
 // Public Routes
 
+// Check if a WhatsApp phone is already registered (no OTP sent — purely a lookup)
+router.post("/auth/wa-check-user", async (req: Request, res: Response) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) {
+            return res.status(400).json({ error: "Phone number is required" });
+        }
+        const { waOtpService } = await import("../services/wa-otp");
+        const cleanPhone = waOtpService.cleanPhone(phone);
+        const user = await db.getUserByWhatsappPhone(cleanPhone);
+        return res.json({ exists: !!user, phone: cleanPhone });
+    } catch (err: any) {
+        console.error("[MINIAPP-AUTH] wa-check-user error:", err);
+        return res.status(500).json({ error: err?.message || "Check failed" });
+    }
+});
+
 router.post("/auth/wa-request-otp", async (req: Request, res: Response) => {
+
     try {
         const { phone } = req.body;
         if (!phone) {
