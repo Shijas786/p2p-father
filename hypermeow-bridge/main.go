@@ -747,6 +747,28 @@ func eventHandler(evt interface{}) {
 		}
 		fmt.Printf("[Hypermeow Webhook] Response status: %d\n", resp.StatusCode)
 		resp.Body.Close()
+
+	case *events.GroupParticipant:
+		actionStr := fmt.Sprintf("%v", v.Action)
+		if v.Action == events.GroupParticipantActionAdd || v.Action == events.GroupParticipantActionJoin || actionStr == "add" || actionStr == "join" {
+			participants := make([]string, 0, len(v.Participants))
+			for _, p := range v.Participants {
+				participants = append(participants, p.String())
+			}
+			payload := map[string]interface{}{
+				"event":        "group_participant_join",
+				"groupJid":     v.JID.String(),
+				"participants": participants,
+			}
+			body, _ := json.Marshal(payload)
+			fmt.Printf("[Hypermeow GroupJoin Webhook] POST %s payload=%s\n", webhookURL, string(body))
+			resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(body))
+			if err == nil {
+				resp.Body.Close()
+			} else {
+				fmt.Printf("[Hypermeow GroupJoin Webhook Error] %v\n", err)
+			}
+		}
 	}
 }
 

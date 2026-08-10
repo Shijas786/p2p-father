@@ -8,7 +8,7 @@ import { Router } from "express";
 import { routeMessage } from "../whatsapp/router";
 import type { WASocket, IWebMessageInfo } from "../whatsapp/types";
 import { hypermeowClient } from "../whatsapp/hypermeowClient";
-import { setBroadcastSock } from "../whatsapp/handlers/group";
+import { setBroadcastSock, handleGroupJoin } from "../whatsapp/handlers/group";
 
 export const whatsappWebhookRouter = Router();
 
@@ -98,7 +98,32 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
             return res.status(200).json({ status: "ok" });
         }
 
+        // ── Hypermeow Group Participant Join event ────────────────────────────
+        if (event === "group_participant_join") {
+            const groupJid = body.groupJid;
+            const participants = body.participants || [];
+            if (groupJid && participants.length > 0) {
+                handleGroupJoin(stubSock, groupJid, participants).catch((err) => {
+                    console.error("[Hypermeow-Webhook] Error handling group join:", err);
+                });
+            }
+            return res.status(200).json({ status: "ok" });
+        }
+
         // ── Evolution API webhook ──────────────────────────────────────────────
+        if (event === "group-participants.update" || event === "GROUP_PARTICIPANTS_UPDATE") {
+            const data = body.data || {};
+            const groupJid = data.id || data.jid;
+            const action = data.action;
+            const participants = data.participants || [];
+            if (groupJid && (action === "add" || action === "join") && participants.length > 0) {
+                handleGroupJoin(stubSock, groupJid, participants).catch((err) => {
+                    console.error("[Evolution-Webhook] Error handling group join:", err);
+                });
+            }
+            return res.status(200).json({ status: "ok" });
+        }
+
         if (event === "messages.upsert" || event === "MESSAGES_UPSERT") {
             const data = body.data;
             if (!data) return res.status(200).json({ status: "ignored" });

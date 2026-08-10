@@ -208,3 +208,57 @@ async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<voi
         // Ignore — groupMetadata may fail if bot not admin
     }
 }
+
+// ─── Group Welcome Templates (Telegram Parity) ────────────────────────────────
+const WELCOME_TEMPLATES = [
+    (name: string) => `Welcome ${name}! Make yourself at home in our P2P trading hub 🔥`,
+    (name: string) => `Hey ${name}! Welcome to the family 🎩 Big trades ahead!`,
+    (name: string) => `Welcome ${name}! Fast, escrow-protected P2P exchange starts here ⚡`,
+    (name: string) => `Hey ${name}! Glad you joined us 🚀 Feel free to ask any questions!`,
+    (name: string) => `Welcome to the squad, ${name}! 🤝 Fast escrow at your fingertips.`,
+    (name: string) => `Welcome ${name}! 🎩 Glad to have another active trader in the group!`,
+    (name: string) => `Hey ${name}! Welcome aboard 🌟 Happy trading!`,
+];
+
+// Deduplication cache: prevent double welcoming if user rejoins quickly (clear after 10 minutes)
+const recentlyWelcomed = new Map<string, number>();
+
+/**
+ * Sends welcome message when a new participant joins a WhatsApp group.
+ */
+export async function handleGroupJoin(
+    sock: WASocket,
+    groupJid: string,
+    participantJids: string[]
+): Promise<void> {
+    if (!participantJids || participantJids.length === 0) return;
+
+    await registerGroupIfNew(groupJid, sock);
+
+    const now = Date.now();
+    for (const rawJid of participantJids) {
+        const phone = rawJid.split("@")[0].split(":")[0];
+        if (!phone) continue;
+
+        const cacheKey = `${groupJid}_${phone}`;
+        const lastWelcomed = recentlyWelcomed.get(cacheKey);
+        if (lastWelcomed && now - lastWelcomed < 10 * 60 * 1000) {
+            console.log(`[WA-Welcome] Skipping duplicate welcome for ${phone} in ${groupJid}`);
+            continue;
+        }
+
+        recentlyWelcomed.set(cacheKey, now);
+
+        const welcomeTag = `@${phone}`;
+        const randomTemplate = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
+        const welcomeText = randomTemplate(welcomeTag);
+
+        try {
+            await reply(sock, groupJid, welcomeText);
+            console.log(`[WA-Welcome] ✅ Sent group welcome message to ${phone} in ${groupJid}`);
+        } catch (err: any) {
+            console.error(`[WA-Welcome] ❌ Failed to send welcome message to ${groupJid}:`, err?.message || err);
+        }
+    }
+}
+
