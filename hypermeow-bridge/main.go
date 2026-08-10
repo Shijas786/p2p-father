@@ -749,7 +749,7 @@ func eventHandler(evt interface{}) {
 		resp.Body.Close()
 
 	case *events.GroupInfo:
-		joinedJIDs := append(v.Join, v.Add...)
+		joinedJIDs := v.Join
 		if len(joinedJIDs) > 0 {
 			participants := make([]string, 0, len(joinedJIDs))
 			for _, p := range joinedJIDs {
