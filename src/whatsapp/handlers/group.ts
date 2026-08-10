@@ -12,8 +12,9 @@ import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
 
 // ─── Spam / Phishing Patterns ────────────────────────────────────────────────
 
-// Match ANY URL or link sent in group (http, https, www, t.me, wa.me, chat.whatsapp.com, etc.)
-const LINK_RE = /(https?:\/\/[^\s]+|www\.[^\s]+|chat\.whatsapp\.com\/[^\s]+|t\.me\/[^\s]+|wa\.me\/[^\s]+)/i;
+// Match forbidden links (external sites, Telegram channels, WhatsApp group invites).
+// Allows wa.me/ phone number & P2PFather trade links.
+const FORBIDDEN_LINK_RE = /(chat\.whatsapp\.com\/[^\s]+|t\.me\/[^\s]+|https?:\/\/(?!wa\.me\/)[^\s]+|www\.[^\s]+)/i;
 
 // Phishing / scam keywords (extend as needed)
 const PHISHING_PATTERNS: RegExp[] = [
@@ -62,7 +63,7 @@ export async function scanAndDeleteSpam(
 
     if (!rawText) return false;
 
-    const hasLink = LINK_RE.test(rawText);
+    const hasLink = FORBIDDEN_LINK_RE.test(rawText);
     const isPhishing = PHISHING_PATTERNS.some((re) => re.test(rawText));
 
     if (!hasLink && !isPhishing) return false;
