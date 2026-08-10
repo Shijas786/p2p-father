@@ -68,7 +68,8 @@ export async function handleAdCommand(
             sections.push({
                 title: "🟢 SELL USDT — Buy from these traders",
                 rows: sellAds.map((o) => {
-                    const trader = o.users?.username ? `@${o.users.username}` : (o.users?.first_name ?? "Trader");
+                    const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
+                    const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
                     const trust  = o.users?.trust_score ?? 0;
                     const pay    = (o.payment_methods ?? []).join("/");
                     return {
@@ -84,7 +85,8 @@ export async function handleAdCommand(
             sections.push({
                 title: "🔴 BUY USDT — Sell to these traders",
                 rows: buyAds.map((o) => {
-                    const trader = o.users?.username ? `@${o.users.username}` : (o.users?.first_name ?? "Trader");
+                    const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
+                    const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
                     const trust  = o.users?.trust_score ?? 0;
                     const pay    = (o.payment_methods ?? []).join("/");
                     return {

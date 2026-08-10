@@ -89,8 +89,8 @@ export function formatTraderContact(user: any): string {
         return `@${user.username}${badge}`;
     }
 
-    // 2. Prefer First Name
-    if (user.first_name) {
+    // 2. Prefer First Name (ignore synthetic WA_XXXX IDs)
+    if (user.first_name && !/^WA_\d+$/.test(user.first_name)) {
         return `${user.first_name}${badge}`;
     }
 
