@@ -117,15 +117,6 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             await reply(sock, jid, "⏳ Locking crypto in smart contract escrow... Please wait.", msg);
 
             const tokenSymbol = order.token || "USDT";
-            const { env } = await import("../../config/env");
-            let tokenAddress = env.USDT_ADDRESS;
-            if (order.chain === "bsc_testnet") {
-                tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-            } else if (order.chain === "bsc") {
-                tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
-            } else {
-                tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
-            }
             const { wallet } = await import("../../services/wallet");
             const { escrow } = await import("../../services/escrow");
 
@@ -137,6 +128,13 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
                 await reply(sock, jid, "❌ Trade failed: One of the parties does not have a wallet set up.", msg);
                 return;
             }
+
+            const tokenAddress = await escrow.resolveTokenAddressForTrade(
+                seller.wallet_address,
+                tokenSymbol,
+                order.amount,
+                order.chain as any
+            );
 
             // 2. Check Seller Balance
             const vaultBalanceStr = await escrow.getVaultBalance(seller.wallet_address, tokenAddress, order.chain as any);
@@ -167,6 +165,7 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             );
 
             // 4. Create local Trade record
+            const { env } = await import("../../config/env");
             const feePercent = env.getFeePercentage(order.chain);
             const trade = await db.createTrade({
                 order_id: order.id,

@@ -3015,11 +3015,15 @@ bot.on("callback_query:data", async (ctx) => {
 
                     await ctx.editMessageText("⏳ Locking crypto in escrow contract...");
 
-                    const tokenSymbol = order.token || "USDC";
-                    const tokenAddress = tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+                    const tokenSymbol = order.token || "USDT";
+                    const tokenAddress = await escrow.resolveTokenAddressForTrade(
+                        seller.wallet_address!,
+                        tokenSymbol,
+                        order.amount,
+                        order.chain as any
+                    );
 
-                    // 🛠️ AUTO-DEPOSIT CHECK REMOVED 🛠️
-                    const vaultBalance = await escrow.getVaultBalance(seller.wallet_address!, tokenAddress);
+                    const vaultBalance = await escrow.getVaultBalance(seller.wallet_address!, tokenAddress, order.chain as any);
                     if (parseFloat(vaultBalance) < order.amount) {
                         await db.revertFillOrder(order.id, order.amount);
                         await ctx.editMessageText(

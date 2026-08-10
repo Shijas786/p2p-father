@@ -1297,16 +1297,12 @@ router.post("/trades", async (req: Request, res: Response) => {
 
             // 1. Check Seller's Vault Balance
             try {
-                let tokenAddress = env.USDC_ADDRESS;
-                if (order.chain === 'bsc') {
-                    if (order.token === 'BNB') {
-                        tokenAddress = "0x0000000000000000000000000000000000000000";
-                    } else {
-                        tokenAddress = (order.token === "USDT") ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-                    }
-                } else {
-                    tokenAddress = (order.token === "USDT") ? env.USDT_ADDRESS : env.USDC_ADDRESS;
-                }
+                const tokenAddress = await escrow.resolveTokenAddressForTrade(
+                    seller.wallet_address!,
+                    order.token || "USDT",
+                    tradeAmount,
+                    order.chain as any
+                );
 
                 const balance = await escrow.getVaultBalance(seller.wallet_address!, tokenAddress, order.chain as any);
                 if (parseFloat(balance) < tradeAmount) {

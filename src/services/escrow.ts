@@ -103,16 +103,57 @@ class EscrowService {
     //          VAULT & RELAYER FUNCTIONS
     // ═══════════════════════════════════════
 
+    /**
+     * Resolves the exact ERC20 token address for a trade on a given chain.
+     * On BSC Testnet, checks which testnet USDT token address (new 0x3376... or legacy 0x21d4...)
+     * contains the seller's vault balance.
+     */
+    async resolveTokenAddressForTrade(
+        sellerAddress: string,
+        tokenSymbol: string,
+        amount: number,
+        chain: Chain = 'base'
+    ): Promise<string> {
+        if (chain === ('bsc_testnet' as any)) {
+            const t1 = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
+            const t2 = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
+            try {
+                const contract = this.getEscrowContract('bsc_testnet' as any);
+                const reqWei = ethers.parseUnits(amount.toString(), 18);
+
+                const [b1, b2] = await Promise.all([
+                    (contract.balances(sellerAddress, t1) as Promise<bigint>).catch(() => 0n),
+                    (contract.balances(sellerAddress, t2) as Promise<bigint>).catch(() => 0n)
+                ]);
+
+                if (b1 >= reqWei) return t1;
+                if (b2 >= reqWei) return t2;
+                if (b1 > 0n || b2 > 0n) return b1 >= b2 ? t1 : t2;
+            } catch (err) {
+                console.error("[ESCROW] Error resolving testnet token address:", err);
+            }
+            return t1;
+        }
+
+        if (chain === 'bsc') {
+            if (tokenSymbol === 'BNB') return "0x0000000000000000000000000000000000000000";
+            return tokenSymbol === "USDT" ? "0x55d398326f99059fF775485246999027B3197955" : "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+        }
+
+        return tokenSymbol === "USDT" ? env.USDT_ADDRESS : env.USDC_ADDRESS;
+    }
+
     async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
         try {
             const contract = this.getEscrowContract(chain);
 
-            if (chain === ('bsc_testnet' as any)) {
+            if (chain === ('bsc_testnet' as any) && (!tokenAddress || tokenAddress === "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd")) {
                 const [b1, b2] = await Promise.all([
                     (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n),
                     (contract.balances(userAddress, "0x21d4945A5499107F19F819dA1ab9133902A58EAB") as Promise<bigint>).catch(() => 0n)
                 ]);
-                return ethers.formatUnits(b1 + b2, 18);
+                const maxB = b1 > b2 ? b1 : b2;
+                return ethers.formatUnits(maxB, 18);
             }
 
             // 3.5s timeout wrapper to prevent slow RPC providers from stalling ad creation
