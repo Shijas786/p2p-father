@@ -20,6 +20,7 @@ import { PredictProfile } from './pages/PredictProfile';
 import { PredictLeaderboard } from './pages/PredictLeaderboard';
 import { PredictCopyTrading } from './pages/PredictCopyTrading';
 
+import { WhatsAppLogin } from './pages/WhatsAppLogin';
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
@@ -280,7 +281,7 @@ function AppInner() {
     return null;
   };
 
-  if (loading || (walletChosen && !user)) {
+  if (loading) {
     return (
       <div className="loading-screen">
         <div className="logo">P2PFather</div>
@@ -288,6 +289,18 @@ function AppInner() {
         <span className="text-xs text-muted">Initializing...</span>
         <div style={{ position: 'absolute', bottom: 20, fontSize: 10, opacity: 0.4 }}>v{APP_VERSION}</div>
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <WhatsAppLogin
+        onSuccess={() => {
+          refreshUser();
+          setWalletChosen(true);
+          setWalletMode('bot');
+        }}
+      />
     );
   }
 

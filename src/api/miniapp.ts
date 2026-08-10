@@ -147,8 +147,8 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         const hash = params.get("hash");
         params.delete("hash");
 
-        // Web Trade Room magic link auth support
-        if (hash === "magic_link_auth") {
+        // Web Trade Room magic link & WhatsApp OTP auth support
+        if (hash === "magic_link_auth" || hash === "wa_auth") {
             const userStr = params.get("user");
             if (userStr) {
                 req.telegramUser = JSON.parse(userStr);
@@ -208,6 +208,75 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
 }
 
 // Public Routes
+
+router.post("/auth/wa-request-otp", async (req: Request, res: Response) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) {
+            return res.status(400).json({ error: "Phone number is required" });
+        }
+
+        const { waOtpService } = await import("../services/wa-otp");
+        const result = await waOtpService.sendOtp(phone);
+        if (!result.success) {
+            return res.status(400).json({ error: result.message });
+        }
+
+        return res.json({
+            success: true,
+            message: result.message,
+            expiresMinutes: result.expiresMinutes
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP-AUTH] wa-request-otp error:", err);
+        return res.status(500).json({ error: err?.message || "Failed to send OTP" });
+    }
+});
+
+router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
+    try {
+        const { phone, otp } = req.body;
+        if (!phone || !otp) {
+            return res.status(400).json({ error: "Phone number and OTP code are required" });
+        }
+
+        const { waOtpService } = await import("../services/wa-otp");
+        const verifyResult = waOtpService.verifyOtp(phone, otp);
+        if (!verifyResult.valid) {
+            return res.status(400).json({ error: verifyResult.message });
+        }
+
+        const cleanPhone = waOtpService.cleanPhone(phone);
+        let user = await db.getUserByWhatsappPhone(cleanPhone);
+        if (!user) {
+            user = await db.getOrCreateUserByPhone(cleanPhone);
+        }
+
+        // Construct wa_auth initData string
+        const tgUserObj = {
+            id: user.telegram_id || Math.abs(parseInt(cleanPhone.slice(-9)) || 88888888),
+            first_name: user.first_name || "Trader",
+            username: user.username || `wa_${cleanPhone.slice(-4)}`,
+            is_wa_user: true,
+            whatsapp_phone: cleanPhone
+        };
+        const params = new URLSearchParams();
+        params.set("user", JSON.stringify(tgUserObj));
+        params.set("auth_date", Math.floor(Date.now() / 1000).toString());
+        params.set("hash", "wa_auth");
+
+        const initData = params.toString();
+
+        return res.json({
+            success: true,
+            initData,
+            user
+        });
+    } catch (err: any) {
+        console.error("[MINIAPP-AUTH] wa-verify-otp error:", err);
+        return res.status(500).json({ error: err?.message || "OTP verification failed" });
+    }
+});
 
 // ── Orderbook proxy: server-side cache so mobile clients never hit clob.polymarket.com ──
 let _obCache: { data: any; ts: number } | null = null;

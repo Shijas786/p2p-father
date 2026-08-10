@@ -401,6 +401,30 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         return;
     }
 
+    // ── Web Dashboard & OTP Login Command (/web, /dashboard, /login, /app) ────
+    if (text === "/web" || text === "/dashboard" || text === "/login" || text === "/app" || text.includes("dashboard")) {
+        await (db as any).clearWhatsappState(user.id);
+        const { waOtpService } = await import("../services/wa-otp");
+        const otpResult = await waOtpService.sendOtp(senderPhone);
+
+        const webUrl = `https://p2pfather.com/miniapp/`;
+
+        await reply(
+            sock,
+            jid,
+            `🌐 *P2PFATHER WEB DASHBOARD*
+
+${otpResult.message}
+
+📲 *Access Web Dashboard:*
+${webUrl}
+
+_Enter your phone number (+${senderPhone}) and the OTP code above on the web dashboard to log in!_`,
+            msg
+        );
+        return;
+    }
+
     // ── Route by command ──────────────────────────────────────────────────────
     // ── Global Reset / Cancel Command ─────────────────────────────────────────
     if (text === "/cancel" || text === "cancel" || text === "cancel_trade") {

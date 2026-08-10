@@ -67,15 +67,7 @@ export function useAuth() {
                 const { user: authUser } = await api.auth.login();
                 setUser(authUser);
             } else {
-                // Dev mode: use rich mock user so all UI stats are visible
-                const tgUser = getTelegramUser();
-                setUser({
-                    ...DEV_USER,
-                    // Allow overriding with real Telegram user info if somehow available
-                    telegram_id: tgUser?.id ?? DEV_USER.telegram_id,
-                    username: tgUser?.username ?? DEV_USER.username,
-                    first_name: tgUser?.first_name ?? DEV_USER.first_name,
-                });
+                setUser(null);
             }
         } catch (err: any) {
             // Add debug info for troubleshooting
