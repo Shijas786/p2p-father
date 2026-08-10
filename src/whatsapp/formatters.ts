@@ -203,6 +203,54 @@ export function fmtEscrowLocked(trade: Trade): string {
 Buyer must pay ₹${trade.fiat_amount} now.`;
 }
 
+export function formatSellerPaymentDetails(seller: any, order?: any): string {
+    const details: string[] = [];
+
+    // 1. Order-level payment details
+    const orderPay = order?.payment_details;
+    if (orderPay) {
+        if (typeof orderPay === "object") {
+            if (orderPay.upi) details.push(`• *UPI ID:* \`${orderPay.upi}\``);
+            if (orderPay.google_pay || orderPay.gpay) details.push(`• *GPay / PhonePe:* \`${orderPay.google_pay || orderPay.gpay}\``);
+            if (orderPay.paytm) details.push(`• *Paytm:* \`${orderPay.paytm}\``);
+            if (orderPay.bank) {
+                const b = orderPay.bank;
+                if (typeof b === "object") {
+                    if (b.account_number) details.push(`• *Bank Acc:* \`${b.account_number}\``);
+                    if (b.ifsc) details.push(`• *IFSC:* \`${b.ifsc}\``);
+                    if (b.name) details.push(`• *Acc Name:* ${b.name}`);
+                } else if (typeof b === "string") {
+                    details.push(`• *Bank Info:* ${b}`);
+                }
+            }
+        } else if (typeof orderPay === "string") {
+            details.push(`• *Payment Info:* ${orderPay}`);
+        }
+    }
+
+    // 2. User profile payment details (fallback)
+    if (details.length === 0 && seller) {
+        if (seller.upi_id) {
+            details.push(`• *UPI ID:* \`${seller.upi_id}\``);
+        }
+        if (seller.bank_account_number) {
+            details.push(`• *Bank Acc:* \`${seller.bank_account_number}\``);
+            if (seller.ifsc_code) details.push(`• *IFSC:* \`${seller.ifsc_code}\``);
+            if (seller.account_holder_name) details.push(`• *Acc Name:* ${seller.account_holder_name}`);
+        }
+        if (seller.whatsapp_phone || seller.phone_number) {
+            const phone = String(seller.whatsapp_phone || seller.phone_number).replace("+", "").trim();
+            details.push(`• *Seller Contact:* \`+${phone}\``);
+        }
+    }
+
+    if (details.length === 0) {
+        return `⚠️ _Seller hasn't configured payment details yet. Ask in group or contact seller._`;
+    }
+
+    return details.join("\n");
+}
+
 export function fmtPaymentMarked(trade: Trade): string {
     return `💸 *PAYMENT MARKED SENT*
 

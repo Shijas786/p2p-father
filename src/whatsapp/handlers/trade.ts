@@ -187,6 +187,9 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
                 created_at: new Date().toISOString()
             } as any);
 
+            const { formatSellerPaymentDetails } = await import("../formatters");
+            const sellerPayDetails = formatSellerPaymentDetails(seller, order);
+
             await replyWithButtons(
                 sock,
                 jid,
@@ -194,9 +197,12 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
 
 • *Trade ID:* \`${trade.id.slice(0, 8)}\`
 • *Amount:* ${trade.amount} ${tokenSymbol}
-• *Pay Fiat:* ₹${trade.fiat_amount} via ${(trade as any).payment_method}
+• *Pay Fiat:* ₹${trade.fiat_amount.toLocaleString("en-IN")} via ${(trade as any).payment_method}
 
-⚠️ *Buyer:* Pay to the seller's payment details, then tap *Payment Sent*.`,
+💳 *SELLER PAYMENT DETAILS:*
+${sellerPayDetails}
+
+⚠️ *Buyer:* Pay ₹${trade.fiat_amount.toLocaleString("en-IN")} directly to the seller's payment details above, then tap *Payment Sent*.`,
                 [
                     { id: `/paid_${trade.id}`,    label: "💳 Payment Sent" },
                     { id: `/dispute_${trade.id}`, label: "⚠️ Open Dispute" },
