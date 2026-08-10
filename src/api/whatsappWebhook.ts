@@ -87,9 +87,11 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                 message: {
                     conversation: messageText,
                     extendedTextMessage: { text: messageText },
+                    ...(body.imageBase64 ? { imageMessage: { url: "base64" } } : {}),
                 },
                 pushName: body.pushName || "",
-            };
+                ...(body.imageBase64 ? { imageBase64: body.imageBase64 } : {}),
+            } as any;
 
             routeMessage(stubSock, normalizedMsg).catch((err) => {
                 console.error("[Hypermeow-Webhook] Error routing message:", err);

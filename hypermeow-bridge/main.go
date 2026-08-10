@@ -80,6 +80,7 @@ type WebhookPayload struct {
 	Sender      string `json:"sender"`
 	PushName    string `json:"pushName"`
 	AudioBase64 string `json:"audioBase64,omitempty"`
+	ImageBase64 string `json:"imageBase64,omitempty"`
 	MsgID       string `json:"msgId,omitempty"`
 }
 
@@ -761,6 +762,20 @@ func eventHandler(evt interface{}) {
 			}
 		}
 
+		var imageBase64 string
+		if v.Message.GetImageMessage() != nil {
+			imgBytes, err := client.Download(context.Background(), v.Message.GetImageMessage())
+			if err == nil && len(imgBytes) > 0 {
+				imageBase64 = base64.StdEncoding.EncodeToString(imgBytes)
+				if text == "" {
+					text = "[IMAGE]"
+				}
+				fmt.Printf("[Hypermeow Message] Received image message from sender=%s (bytes=%d)\n", v.Info.Sender.String(), len(imgBytes))
+			} else {
+				fmt.Printf("[Hypermeow Message] Failed to download image message: %v\n", err)
+			}
+		}
+
 		fmt.Printf("[Hypermeow Message] chat=%s sender=%s pushName=%s msgID=%s text=%q\n", v.Info.Chat.String(), v.Info.Sender.String(), v.Info.PushName, v.Info.ID, text)
 
 		if text == "" {
@@ -775,6 +790,7 @@ func eventHandler(evt interface{}) {
 			Sender:      v.Info.Sender.String(),
 			PushName:    v.Info.PushName,
 			AudioBase64: audioBase64,
+			ImageBase64: imageBase64,
 			MsgID:       v.Info.ID,
 		}
 		body, _ := json.Marshal(payload)

@@ -326,6 +326,71 @@ class WAIService {
             response: "I didn't understand that. Type /start to see what I can do!",
         };
     }
+
+    /**
+     * Analyzes an image sent in a group using OpenAI Vision (gpt-4o-mini).
+     * Detects fake payment receipts, bank screenshots, scam banners, or phishing text.
+     */
+    async analyzeGroupImage(imageBuffer: Buffer): Promise<{ isScam: boolean; reason: string }> {
+        if (!this.client) {
+            return { isScam: false, reason: "AI not configured" };
+        }
+        try {
+            const base64Image = imageBuffer.toString("base64");
+            const response = await this.client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are an expert security scanner for P2P crypto trading groups.
+Classify if an image sent in a group chat is suspicious or prohibited.
+
+Prohibited image types:
+1. Bank / UPI / Paytm / PhonePe payment receipts or transaction screenshots
+2. QR codes or payment request screens
+3. Investment scam flyers, "Double your money", "Free USDT" promo banners
+4. Screenshots asking users to send money or contact external admins
+
+Return JSON ONLY:
+{
+  "isScam": true|false,
+  "reason": "Brief reason if prohibited, or clean"
+}`
+                    },
+                    {
+                        role: "user",
+                        content: [
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:image/jpeg;base64,${base64Image}`
+                                }
+                            },
+                            {
+                                type: "text",
+                                text: "Is this image a payment receipt, QR code, bank screenshot, or scam promo flyer?"
+                            }
+                        ]
+                    }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1,
+                max_tokens: 150,
+            });
+
+            const content = response.choices[0]?.message?.content;
+            if (!content) return { isScam: false, reason: "Empty response" };
+
+            const parsed = JSON.parse(content);
+            return {
+                isScam: Boolean(parsed.isScam),
+                reason: parsed.reason || "Suspicious content detected"
+            };
+        } catch (err: any) {
+            console.error("[WA-AI] Error analyzing group image:", err?.message || err);
+            return { isScam: false, reason: "Scanning error" };
+        }
+    }
 }
 
 export const waAi = new WAIService();

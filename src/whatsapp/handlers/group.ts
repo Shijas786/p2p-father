@@ -9,6 +9,45 @@ import type { WASocket, IWebMessageInfo } from "../types";
 import { db } from "../../db/client";
 import { reply } from "../router";
 import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
+import jsQR from "jsqr";
+import jpeg from "jpeg-js";
+import { PNG } from "pngjs";
+
+/**
+ * Scans image buffer locally for QR code using jsqr (0 AI cost).
+ */
+export function detectQrCodeInImageBuffer(buffer: Buffer): boolean {
+    try {
+        let width = 0;
+        let height = 0;
+        let data: Uint8ClampedArray | null = null;
+
+        // Try JPEG decode
+        if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+            const rawJpeg = jpeg.decode(buffer, { useTArray: true });
+            width = rawJpeg.width;
+            height = rawJpeg.height;
+            data = new Uint8ClampedArray(rawJpeg.data);
+        } else {
+            // Try PNG decode
+            const png = PNG.sync.read(buffer);
+            width = png.width;
+            height = png.height;
+            data = new Uint8ClampedArray(png.data);
+        }
+
+        if (data && width > 0 && height > 0) {
+            const code = jsQR(data, width, height);
+            if (code) {
+                console.log(`[QR-Scanner] Found QR code in image buffer (length=${code.data.length})`);
+                return true;
+            }
+        }
+    } catch (_) {
+        // Not a valid JPEG/PNG or decode failed — skip local QR check
+    }
+    return false;
+}
 
 // ─── Spam / Phishing Patterns ────────────────────────────────────────────────
 
@@ -46,11 +85,57 @@ export async function scanAndDeleteSpam(
     const senderParticipant = msg.key?.participant ?? "unknown";
     const senderPhone = senderParticipant.split("@")[0];
 
-    // ── 1. Image messages: always delete in groups (QR codes, payment screens, scam images) ──
+    // Check if sender is a group admin (admins are exempt from image/link deletion)
+    let isAdmin = false;
+    try {
+        const meta = await sock.groupMetadata(groupJid);
+        const p = meta?.participants?.find(
+            (item: any) => item.id === senderParticipant || item.id === `${senderPhone}@s.whatsapp.net`
+        );
+        isAdmin = Boolean(p?.admin);
+    } catch (_) {}
+
+    if (isAdmin) {
+        return false; // Admins bypass guard scans
+    }
+
+    // ── 1. Image messages: 2-tier security scan (Local QR + AI Vision) ────────
     const isImage = Boolean(msg.message?.imageMessage);
+    const imageBase64 = (msg as any).imageBase64 || (msg.message as any)?.imageBase64;
+
     if (isImage) {
-        console.log(`[GROUP-GUARD] Image message detected from ${senderParticipant} in ${groupJid}. Deleting (possible QR/scam image).`);
-        await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, "Images and QR codes");
+        console.log(`[GROUP-GUARD] Image message detected from ${senderParticipant} in ${groupJid}. Running 2-tier scan...`);
+
+        if (imageBase64) {
+            const imageBuffer = Buffer.from(imageBase64, "base64");
+
+            // Tier 1: Free Local QR Scanner ($0 AI cost)
+            const hasQr = detectQrCodeInImageBuffer(imageBuffer);
+            if (hasQr) {
+                console.log(`[GROUP-GUARD] 🚨 QR Code detected in image from ${senderParticipant} in ${groupJid}. Deleting.`);
+                await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, "QR codes and payment request images");
+                return true;
+            }
+
+            // Tier 2: AI Vision Scanner (Scam Banners & Fake Receipts)
+            try {
+                const { waAi } = await import("../../services/wa-ai");
+                const aiResult = await waAi.analyzeGroupImage(imageBuffer);
+                if (aiResult.isScam) {
+                    console.log(`[GROUP-GUARD] 🚨 AI Vision flagged scam image (${aiResult.reason}) from ${senderParticipant} in ${groupJid}. Deleting.`);
+                    await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, `Suspicious images (${aiResult.reason})`);
+                    return true;
+                }
+            } catch (aiErr: any) {
+                console.warn("[GROUP-GUARD] AI Vision scan skipped/failed:", aiErr?.message);
+            }
+
+            console.log(`[GROUP-GUARD] ✅ Image from ${senderParticipant} passed both local QR and AI Vision scans.`);
+            return false; // Image passed both local QR and AI Vision checks!
+        }
+
+        // If no image base64 buffer was received, delete for safety
+        await deleteOrWarn(sock, msg, groupJid, senderParticipant, senderPhone, "Unverified images");
         return true;
     }
 
