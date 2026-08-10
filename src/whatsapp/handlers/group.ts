@@ -212,12 +212,12 @@ async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<voi
 // ─── Group Welcome Templates (Telegram Parity) ────────────────────────────────
 const WELCOME_TEMPLATES = [
     (name: string) => `Welcome ${name}! Make yourself at home in our P2P trading hub 🔥`,
-    (name: string) => `Hey ${name}! Welcome to the family 🎩 Big trades ahead!`,
+    (name: string) => `Hey ${name}, welcome to the family 🎩 Big trades ahead!`,
     (name: string) => `Welcome ${name}! Fast, escrow-protected P2P exchange starts here ⚡`,
-    (name: string) => `Hey ${name}! Glad you joined us 🚀 Feel free to ask any questions!`,
+    (name: string) => `Hey ${name}, glad you joined us 🚀 Feel free to ask any questions!`,
     (name: string) => `Welcome to the squad, ${name}! 🤝 Fast escrow at your fingertips.`,
     (name: string) => `Welcome ${name}! 🎩 Glad to have another active trader in the group!`,
-    (name: string) => `Hey ${name}! Welcome aboard 🌟 Happy trading!`,
+    (name: string) => `Hey ${name}, welcome aboard 🌟 Happy trading!`,
 ];
 
 // Deduplication cache: prevent double welcoming if user rejoins quickly (clear after 10 minutes)

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"sync"
 	"syscall"
 
@@ -32,8 +33,9 @@ type SendImageReq struct {
 }
 
 type SendTextReq struct {
-	JID  string `json:"jid"`
-	Text string `json:"text"`
+	JID      string   `json:"jid"`
+	Text     string   `json:"text"`
+	Mentions []string `json:"mentions,omitempty"`
 }
 
 type ButtonItem struct {
@@ -291,8 +293,45 @@ func handleSendText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &waProto.Message{
-		Conversation: proto.String(req.Text),
+	// Auto-extract @phone mentions (e.g. @918921919540) to construct WhatsApp ContextInfo.MentionedJID
+	re := regexp.MustCompile(`@(\d{10,15})`)
+	matches := re.FindAllStringSubmatch(req.Text, -1)
+	mentionedMap := make(map[string]bool)
+
+	for _, m := range matches {
+		if len(m) > 1 {
+			mentionedMap[m[1]+"@s.whatsapp.net"] = true
+		}
+	}
+	for _, m := range req.Mentions {
+		if m != "" {
+			if !bytes.Contains([]byte(m), []byte("@")) {
+				mentionedMap[m+"@s.whatsapp.net"] = true
+			} else {
+				mentionedMap[m] = true
+			}
+		}
+	}
+
+	var mentionedJIDs []string
+	for mJID := range mentionedMap {
+		mentionedJIDs = append(mentionedJIDs, mJID)
+	}
+
+	var msg *waProto.Message
+	if len(mentionedJIDs) > 0 {
+		msg = &waProto.Message{
+			ExtendedTextMessage: &waProto.ExtendedTextMessage{
+				Text: proto.String(req.Text),
+				ContextInfo: &waProto.ContextInfo{
+					MentionedJID: mentionedJIDs,
+				},
+			},
+		}
+	} else {
+		msg = &waProto.Message{
+			Conversation: proto.String(req.Text),
+		}
 	}
 
 	_, err = client.SendMessage(context.Background(), jid, msg)
