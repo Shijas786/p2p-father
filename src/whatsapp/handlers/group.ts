@@ -249,7 +249,8 @@ export async function handleGroupJoin(
 
         recentlyWelcomed.set(cacheKey, now);
 
-        const welcomeTag = `@${phone}`;
+        const isLid = rawJid.includes("@lid") || phone.length > 12;
+        const welcomeTag = isLid ? "trader" : `@${phone}`;
         const randomTemplate = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
         const welcomeText = randomTemplate(welcomeTag);
 

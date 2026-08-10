@@ -752,9 +752,34 @@ func eventHandler(evt interface{}) {
 		joinedJIDs := v.Join
 		if len(joinedJIDs) > 0 {
 			participants := make([]string, 0, len(joinedJIDs))
-			for _, p := range joinedJIDs {
-				participants = append(participants, p.String())
+
+			// Attempt to fetch group metadata to resolve LID JIDs to Phone Number JIDs
+			var gMeta *waTypes.GroupInfo
+			if client != nil {
+				gMeta, _ = client.GetGroupInfo(v.JID)
 			}
+
+			for _, p := range joinedJIDs {
+				resolvedJID := p
+				if p.Server == "lid" {
+					if client != nil && client.Store != nil && client.Store.LIDs != nil {
+						pn, err := client.Store.LIDs.GetPNForLID(context.Background(), p)
+						if err == nil && !pn.IsEmpty() {
+							resolvedJID = pn
+						}
+					}
+					if resolvedJID.Server == "lid" && gMeta != nil {
+						for _, member := range gMeta.Participants {
+							if (member.LID.User == p.User || member.LID.String() == p.String()) && !member.JID.IsEmpty() {
+								resolvedJID = member.JID
+								break
+							}
+						}
+					}
+				}
+				participants = append(participants, resolvedJID.String())
+			}
+
 			payload := map[string]interface{}{
 				"event":        "group_participant_join",
 				"groupJid":     v.JID.String(),
