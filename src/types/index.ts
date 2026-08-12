@@ -68,6 +68,7 @@ export interface User {
     polymarket_passphrase?: string;
     polymarket_approved?: boolean;
     deposit_wallet_address?: string;
+    predictions_cache?: { last_ip?: string; last_seen_at?: string } | any;
     whatsapp_phone?: string | null;
     whatsapp_id?: string | null;
     preferred_channel?: 'telegram' | 'whatsapp' | 'both';

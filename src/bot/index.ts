@@ -11,6 +11,7 @@ import { market } from "../services/market";
 import { polymarketRelayerService } from "../services/relayer";
 import { feeCashbackService } from "../services/feeCashbackService";
 import { groupManager } from "../utils/groupManager";
+import { IpTrackerService } from "../services/ip-tracker";
 import {
     formatOrder,
     formatINR,
@@ -820,6 +821,45 @@ async function sendWelcomeMessage(ctx: any, user: { id: number; first_name: stri
     }
 }
 
+/**
+ * 🛡️ Group Guard: Checks if a user is banned or linked to a blocked scammer IP.
+ * If true, immediately kicks/bans them from the group.
+ */
+async function checkAndKickIfScammer(ctx: Context, userId: number, username?: string): Promise<boolean> {
+    try {
+        if (!ctx.chat?.id || ctx.chat.type === "private") return false;
+        
+        const dbUser = await db.getUserByTelegramId(userId);
+        let isScammer = false;
+        let reason = "";
+
+        if (dbUser?.is_banned) {
+            isScammer = true;
+            reason = "Account is flagged as banned";
+        } else if (dbUser?.predictions_cache?.last_ip && IpTrackerService.isIpBlocked(dbUser.predictions_cache.last_ip)) {
+            isScammer = true;
+            reason = `Accessing from blocked scammer IP (${dbUser.predictions_cache.last_ip})`;
+            if (dbUser.id) {
+                await IpTrackerService.banUser(dbUser.id);
+            }
+        }
+
+        if (isScammer) {
+            console.warn(`[GROUP-GUARD] 🚨 Kicking scammer user ${userId} (@${username || "no_handle"}) from chat ${ctx.chat.id}. Reason: ${reason}`);
+            try {
+                await ctx.api.banChatMember(ctx.chat.id, userId);
+                await ctx.reply(`⛔ User @${username || userId} has been kicked from the group due to security violations.`);
+            } catch (kickErr: any) {
+                console.error(`[GROUP-GUARD] ⚠️ Could not kick user ${userId} from chat ${ctx.chat.id}:`, kickErr?.message);
+            }
+            return true;
+        }
+    } catch (err: any) {
+        console.error(`[GROUP-GUARD] Exception checking scammer status for user ${userId}:`, err?.message);
+    }
+    return false;
+}
+
 // 👋 Welcome New Members in Groups (traditional service message fallback)
 bot.on("message:new_chat_members", async (ctx) => {
     try {
@@ -833,7 +873,10 @@ bot.on("message:new_chat_members", async (ctx) => {
         if (filteredMembers.length === 0) return;
 
         for (const member of filteredMembers) {
-            await sendWelcomeMessage(ctx, member);
+            const isKicked = await checkAndKickIfScammer(ctx, member.id, member.username);
+            if (!isKicked) {
+                await sendWelcomeMessage(ctx, member);
+            }
         }
     } catch (e: any) {
         console.error("Welcome new member message event error:", e);
@@ -856,7 +899,10 @@ bot.on("chat_member", async (ctx) => {
 
         if (!isJoin) return;
 
-        await sendWelcomeMessage(ctx, update.new_chat_member.user);
+        const isKicked = await checkAndKickIfScammer(ctx, update.new_chat_member.user.id, update.new_chat_member.user.username);
+        if (!isKicked) {
+            await sendWelcomeMessage(ctx, update.new_chat_member.user);
+        }
     } catch (e: any) {
         console.error("Welcome new member chat_member event error:", e);
         logger.error("Welcome new member chat_member event error", e);

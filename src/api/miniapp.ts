@@ -33,6 +33,16 @@ const supabaseStorage = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY)
 
 const router = Router();
 
+// 🛡️ Global IP Guard: Block Scammer IPs from MiniApp Access
+router.use((req: Request, res: Response, next: NextFunction) => {
+    const clientIp = IpTrackerService.getClientIp(req);
+    if (IpTrackerService.isIpBlocked(clientIp)) {
+        console.warn(`[IP-GUARD] ⛔ Access blocked for scammer IP: ${clientIp} on ${req.method} ${req.url}`);
+        return res.status(403).json({ error: "Access denied. Your IP address has been blocked due to security violations." });
+    }
+    next();
+});
+
 // ── Web Trade Room Token Helper (HMAC-SHA256) ──────────────────────────
 const TRADE_TOKEN_SECRET = process.env.JWT_SECRET || env.TELEGRAM_BOT_TOKEN || "p2pfather_trade_secret_key";
 
@@ -2925,6 +2935,60 @@ router.post("/admin/kick-ip-all", async (req: Request, res: Response) => {
         res.json({ ...result });
     } catch (err: any) {
         console.error("[ADMIN] Kick all on IP error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Admin: Block IP Address & Ban All Users ─────────────────────────────
+router.post("/admin/block-ip", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser || !env.ADMIN_IDS.includes(Number(adminUser.telegram_id))) {
+            return res.status(403).json({ error: "Admin only" });
+        }
+
+        const { ip } = req.body;
+        if (!ip) return res.status(400).json({ error: "IP address required" });
+
+        const result = await IpTrackerService.blockIp(ip);
+        res.json({ ip, ...result });
+    } catch (err: any) {
+        console.error("[ADMIN] Block IP error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Admin: Unblock IP Address ──────────────────────────────────────────
+router.post("/admin/unblock-ip", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser || !env.ADMIN_IDS.includes(Number(adminUser.telegram_id))) {
+            return res.status(403).json({ error: "Admin only" });
+        }
+
+        const { ip } = req.body;
+        if (!ip) return res.status(400).json({ error: "IP address required" });
+
+        const unblocked = IpTrackerService.unblockIp(ip);
+        res.json({ success: unblocked, ip });
+    } catch (err: any) {
+        console.error("[ADMIN] Unblock IP error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Admin: Get Blocked IPs List ────────────────────────────────────────
+router.get("/admin/blocked-ips", async (req: Request, res: Response) => {
+    try {
+        const adminUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        if (!adminUser || !env.ADMIN_IDS.includes(Number(adminUser.telegram_id))) {
+            return res.status(403).json({ error: "Admin only" });
+        }
+
+        const blockedIps = IpTrackerService.getBlockedIps();
+        res.json({ success: true, blockedIps });
+    } catch (err: any) {
+        console.error("[ADMIN] Get blocked IPs error:", err);
         res.status(500).json({ error: err.message });
     }
 });

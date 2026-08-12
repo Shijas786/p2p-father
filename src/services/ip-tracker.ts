@@ -4,7 +4,44 @@ import { db } from "../db/client";
 // In-memory cache for fast IP lookups & batching DB writes
 const userIpCache = new Map<string, { ip: string; lastSeen: string }>();
 
+// Blocked scammer IP list (initialized with known scammer IPs)
+const blockedIps = new Set<string>(["106.76.190.72"]);
+
 export class IpTrackerService {
+    /**
+     * Checks if an IP address is blocked
+     */
+    static isIpBlocked(ip: string): boolean {
+        if (!ip || ip === 'unknown') return false;
+        const cleanIp = ip.trim();
+        return blockedIps.has(cleanIp);
+    }
+
+    /**
+     * Adds an IP to the blocked scammer list and bans all associated users in DB
+     */
+    static async blockIp(ip: string): Promise<{ success: boolean; bannedCount: number }> {
+        if (!ip || ip === 'unknown') return { success: false, bannedCount: 0 };
+        const cleanIp = ip.trim();
+        blockedIps.add(cleanIp);
+        return await this.banAllOnIp(cleanIp);
+    }
+
+    /**
+     * Removes an IP from the blocked list
+     */
+    static unblockIp(ip: string): boolean {
+        if (!ip) return false;
+        return blockedIps.delete(ip.trim());
+    }
+
+    /**
+     * Gets all currently blocked IP addresses
+     */
+    static getBlockedIps(): string[] {
+        return Array.from(blockedIps);
+    }
+
     /**
      * Extracts client IP from request headers (Cloudflare, Railway proxy, or direct)
      */
@@ -28,6 +65,12 @@ export class IpTrackerService {
         if (!userId) return;
         const ip = this.getClientIp(req);
         if (!ip || ip === 'unknown' || ip === '::1' || ip === '127.0.0.1') return;
+
+        // Auto-ban user if visiting from a blocked IP
+        if (this.isIpBlocked(ip)) {
+            console.warn(`[IP-Tracker] ⛔ User ${userId} accessed from blocked scammer IP: ${ip}. Marking as banned.`);
+            await this.banUser(userId);
+        }
 
         const cached = userIpCache.get(userId);
         const now = new Date().toISOString();
@@ -104,11 +147,14 @@ export class IpTrackerService {
                 return targetKeywords.some(kw => text.includes(kw));
             });
 
+            const isBlocked = this.isIpBlocked(ip);
+
             clusters.push({
                 ip,
                 user_count: userList.length,
                 is_multi: userList.length > 1,
                 has_target: hasTarget,
+                is_blocked: isBlocked,
                 users: userList.map(u => {
                     const text = `${u.username || ''} ${u.first_name || ''} ${u.telegram_id}`.toLowerCase();
                     const isTargetUser = targetKeywords.some(kw => text.includes(kw));
