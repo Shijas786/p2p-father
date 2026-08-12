@@ -33,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const TRADE_FILTERS = [
     { key: 'all',                label: 'All' },
-    { key: 'in_escrow',         label: 'Active' },
+    { key: 'active',             label: 'Active' },
     { key: 'fiat_sent',         label: 'Fiat Sent' },
     { key: 'completed',         label: 'Completed' },
     { key: 'disputed',          label: 'Disputed' },
@@ -243,7 +243,9 @@ export function Admin({ user }: Props) {
                 if (!silent) await new Promise(r => setTimeout(r, 300));
                 const filtered = status === 'all'
                     ? DEMO_ADMIN_TRADES
-                    : DEMO_ADMIN_TRADES.filter(t => t.status === status);
+                    : (status === 'active' || status === 'in_escrow')
+                        ? DEMO_ADMIN_TRADES.filter(t => ['in_escrow', 'fiat_sent', 'fiat_confirmed', 'waiting_for_escrow'].includes(t.status))
+                        : DEMO_ADMIN_TRADES.filter(t => t.status === status);
                 setTrades(filtered as any);
                 setTradesTotal(filtered.length);
                 setTradesLoaded(true);
@@ -336,7 +338,7 @@ export function Admin({ user }: Props) {
         return (
             <div className="admin-tab-bar">
                 {([
-                    { key: 'disputes', icon: '⚡', label: 'Live Trades', badge: disputes.length },
+                    { key: 'disputes', icon: '⚡', label: 'Disputes', badge: disputes.length },
                     { key: 'stats',    icon: '📊', label: 'Stats',    badge: 0 },
                     { key: 'users',    icon: '👤', label: 'Users',    badge: 0 },
                     { key: 'trades',   icon: '📋', label: 'Trades',   badge: 0 },

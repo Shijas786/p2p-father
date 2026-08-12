@@ -1970,7 +1970,9 @@ router.get("/admin/trades", async (req: Request, res: Response) => {
             .order("created_at", { ascending: false })
             .range((page - 1) * pageSize, page * pageSize - 1);
 
-        if (status !== "all") {
+        if (status === "active" || status === "in_escrow") {
+            query = query.in("status", ["in_escrow", "fiat_sent", "fiat_confirmed", "waiting_for_escrow"]);
+        } else if (status !== "all") {
             query = query.eq("status", status);
         }
 
