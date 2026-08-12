@@ -547,8 +547,9 @@ func handleGetContactInfo(w http.ResponseWriter, r *http.Request) {
 	name := ""
 	ctx := context.Background()
 
-	if container != nil {
-		contact, err := container.GetContact(ctx, jid)
+	// 1. Try client.Store.Contacts store
+	if client != nil && client.Store != nil && client.Store.Contacts != nil {
+		contact, err := client.Store.Contacts.GetContact(ctx, jid)
 		if err == nil && contact.Found {
 			if contact.PushName != "" {
 				name = contact.PushName
@@ -560,12 +561,13 @@ func handleGetContactInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 2. Try client.GetUserInfo from WhatsApp server API
 	if name == "" && client != nil && client.IsConnected() {
-		infoMap, err := client.GetUserInfo([]waTypes.JID{jid})
-		if err == nil {
+		infoMap, err := client.GetUserInfo(ctx, []waTypes.JID{jid})
+		if err == nil && infoMap != nil {
 			if uInfo, ok := infoMap[jid]; ok {
 				if uInfo.VerifiedName != nil && uInfo.VerifiedName.Details != nil {
-					name = uInfo.VerifiedName.Details.GetVerifiedTitle()
+					name = uInfo.VerifiedName.Details.GetVerifiedName()
 				}
 			}
 		}
