@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P2PFather — Sign In</title>
-  <meta name="description" content="Sign in to P2PFather using your WhatsApp number." />
+  <title>P2PFather — Web Dashboard</title>
+  <meta name="description" content="Manage your P2P trades, post ads, chat live, and manage profile directly on the web." />
   <link rel="icon" href="/favicon.png" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
@@ -13,7 +13,7 @@
       --green:#10b981;--green-dark:#059669;--green-dim:rgba(16,185,129,0.12);
       --bg:#050505;--surface:#0d0d0d;--surface2:rgba(255,255,255,0.04);
       --border:rgba(255,255,255,0.08);--text:#f1f5f9;--muted:#64748b;--sub:#94a3b8;
-      --red:#ef4444;--blue:#3b82f6;
+      --red:#ef4444;--blue:#3b82f6;--yellow:#f59e0b;
     }
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
@@ -33,18 +33,20 @@
     .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.12);transition:background .3s}
     .dot.on{background:var(--green)}
 
-    /* ─── FORM ─── */
+    /* ─── FORM ELEMENTS ─── */
     h1{font-size:26px;font-weight:800;margin-bottom:6px}
     .subtitle{color:var(--muted);font-size:13.5px;margin-bottom:30px;line-height:1.5}
     label{display:block;font-size:11.5px;font-weight:600;color:var(--sub);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
-    select,input{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14.5px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:12px}
-    select:focus,input:focus{border-color:var(--green)}
-    input::placeholder{color:#334155}
-    select option{background:#1e293b}
-    .btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px}
+    select,input,textarea{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:12px}
+    select:focus,input:focus,textarea:focus{border-color:var(--green)}
+    input::placeholder,textarea::placeholder{color:#334155}
+    select option{background:#1e293b;color:#fff}
+    .btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
     .btn-green{background:var(--green);color:#000}.btn-green:hover{background:#0ea172}.btn-green:active{transform:scale(.98)}.btn-green:disabled{background:#047857;opacity:.7;cursor:not-allowed}
     .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--sub)}.btn-outline:hover{border-color:var(--green);color:var(--green)}
+    .btn-red{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3)}.btn-red:hover{background:rgba(239,68,68,0.25)}
     .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#2563eb}
+    .btn-sm{padding:7px 12px;font-size:12px;border-radius:8px;width:auto;margin-bottom:0}
     .btn-link{background:transparent;border:none;color:var(--muted);font-size:12.5px;font-family:inherit;cursor:pointer;text-decoration:underline;padding:4px 0;width:100%}.btn-link:hover{color:var(--sub)}
     .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:10px 13px;color:#fca5a5;font-size:12.5px;margin-bottom:12px}
     .ok{background:var(--green-dim);border:1px solid rgba(16,185,129,.25);border-radius:9px;padding:10px 13px;color:#6ee7b7;font-size:12.5px;margin-bottom:16px}
@@ -56,74 +58,95 @@
     .wa-card{background:linear-gradient(135deg,#064e3b,#047857);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:22px 20px;margin-bottom:16px}
     .wa-card p{font-size:13.5px;color:#a7f3d0;line-height:1.65}
 
-    /* ─── DASHBOARD ─── */
+    /* ─── DASHBOARD LAYOUT ─── */
     .dash{display:flex;width:100%;min-height:100vh}
 
     /* Sidebar */
-    .sidebar{flex:0 0 220px;background:#0a0a0a;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:relative}
-    .sb-brand{display:flex;align-items:center;gap:9px;padding:0 20px 28px}
+    .sidebar{flex:0 0 240px;background:#0a0a0a;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:relative}
+    .sb-brand{display:flex;align-items:center;gap:9px;padding:0 20px 24px}
     .sb-brand-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--green),var(--green-dark));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
     .sb-brand-name{font-size:15px;font-weight:800;background:linear-gradient(to right,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .sb-section{font-size:10px;font-weight:700;color:#334155;letter-spacing:1px;padding:0 20px 8px;text-transform:uppercase}
-    .sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13.5px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .15s;border-radius:0;margin:0 8px;border-radius:8px;margin-bottom:2px}
+    .sb-section{font-size:10px;font-weight:700;color:#475569;letter-spacing:1px;padding:12px 20px 6px;text-transform:uppercase}
+    .sb-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .15s;border-radius:8px;margin:0 12px 2px}
     .sb-item:hover{background:var(--surface2);color:var(--text)}
     .sb-item.active{background:var(--green-dim);color:var(--green);font-weight:600}
     .sb-item svg{width:16px;height:16px;flex-shrink:0}
     .sb-spacer{flex:1}
     .sb-user{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
     .sb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0}
-    .sb-uname{font-size:13px;font-weight:600;color:var(--text)}
+    .sb-uname{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .sb-uphone{font-size:11px;color:var(--muted)}
 
     /* Main content */
-    .main{flex:1;overflow-y:auto;background:#f8fafb;padding:32px 36px}
+    .main{flex:1;overflow-y:auto;background:#f8fafc;padding:32px 36px;color:#0f172a}
     .page{display:none}
     .page.active{display:block}
     .breadcrumb{font-size:12px;color:#94a3b8;margin-bottom:8px}
-    .breadcrumb span{color:var(--text)}
-    .page-title{font-size:26px;font-weight:800;color:#0f172a;margin-bottom:4px}
-    .page-sub{font-size:13.5px;color:#64748b;margin-bottom:28px}
+    .breadcrumb span{color:#0f172a;font-weight:600}
+    .page-title{font-size:24px;font-weight:800;color:#0f172a;margin-bottom:4px}
+    .page-sub{font-size:13px;color:#64748b;margin-bottom:24px}
 
-    /* Dashboard cards */
-    .portfolio-header{display:flex;align-items:baseline;gap:10px;margin-bottom:24px}
+    /* Cards & Components */
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03)}
+    .portfolio-header{display:flex;align-items:baseline;gap:10px;margin-bottom:20px}
     .portfolio-label{font-size:13px;color:#64748b;font-weight:500}
     .portfolio-value{font-size:36px;font-weight:800;color:#0f172a}
     .portfolio-currency{font-size:16px;color:#94a3b8}
-    .asset-row{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s}
-    .asset-row:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
-    .asset-icon{width:38px;height:38px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:17px;margin-right:12px}
-    .asset-name{font-size:14px;font-weight:600;color:#0f172a}
-    .asset-sub{font-size:12px;color:#94a3b8}
-    .asset-value{font-size:15px;font-weight:700;color:#0f172a;text-align:right}
-    .action-row{display:flex;gap:10px;margin-bottom:28px}
+
+    .asset-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .asset-icon{width:36px;height:36px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:12px}
+    .asset-name{font-size:13.5px;font-weight:600;color:#0f172a}
+    .asset-sub{font-size:11.5px;color:#94a3b8}
+    .asset-value{font-size:14.5px;font-weight:700;color:#0f172a;text-align:right}
+
+    .action-row{display:flex;gap:10px;margin-bottom:24px}
     .action-btn{flex:1;padding:11px 8px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
     .action-btn.primary{background:#0f172a;color:#fff;border-color:#0f172a}
-    .action-btn:hover{box-shadow:0 4px 10px rgba(0,0,0,.08)}
+    .action-btn:hover{box-shadow:0 4px 10px rgba(0,0,0,.06)}
+
     .section-title{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:14px}
-    .no-data{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13.5px}
-    .no-data-icon{font-size:36px;margin-bottom:10px}
-    .trade-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .trade-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px}
+    .no-data{text-align:center;padding:36px 20px;color:#94a3b8;font-size:13px}
+    .no-data-icon{font-size:32px;margin-bottom:8px}
+
+    /* Badges */
+    .trade-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px;display:inline-block}
     .badge-pending{background:#fef3c7;color:#92400e}
     .badge-active{background:#d1fae5;color:#065f46}
     .badge-completed{background:#dbeafe;color:#1e40af}
     .badge-dispute{background:#fee2e2;color:#991b1b}
-    .order-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .badge-buy{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+    .badge-sell{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
 
-    /* Account page */
-    .account-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-    .account-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;cursor:pointer;transition:box-shadow .15s;position:relative}
-    .account-card:hover{box-shadow:0 6px 16px rgba(0,0,0,.08)}
-    .action-required{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;color:#d97706;background:#fef3c7;padding:2px 8px;border-radius:6px}
-    .ac-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
-    .ac-icon.gray{background:#f1f5f9}
-    .ac-icon.blue{background:#dbeafe}
-    .ac-icon.yellow{background:#fef3c7}
-    .ac-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
-    .ac-sub{font-size:12px;color:#64748b}
-    .ac-link{font-size:12px;color:#6366f1;font-weight:600;margin-top:14px;display:flex;align-items:center;gap:4px}
+    .order-row,.trade-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 
-    /* Right panel showcase */
+    /* Toggle pill buttons */
+    .toggle-group{display:flex;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:16px;gap:2px}
+    .toggle-btn{flex:1;padding:8px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;transition:all .15s;text-align:center}
+    .toggle-btn.active-buy{background:#10b981;color:#fff}
+    .toggle-btn.active-sell{background:#ef4444;color:#fff}
+    .toggle-btn.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+
+    /* Checkbox grid */
+    .checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+    .checkbox-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155;background:#f8fafc;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer}
+    .checkbox-item input{width:auto;margin-bottom:0}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+    .modal-card{background:#fff;border-radius:16px;width:100%;max-width:440px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1)}
+
+    /* Chat UI */
+    .chat-box{display:flex;flex-direction:column;height:380px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+    .chat-messages{flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+    .msg-bubble{max-width:80%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.4}
+    .msg-mine{align-self:flex-end;background:#10b981;color:#fff;border-bottom-right-radius:2px}
+    .msg-other{align-self:flex-start;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom-left-radius:2px}
+    .msg-sys{align-self:center;background:#e2e8f0;color:#475569;font-size:11px;padding:4px 10px;border-radius:12px;text-align:center}
+    .msg-time{font-size:9.5px;opacity:0.7;margin-top:2px;text-align:right}
+    .chat-input-row{display:flex;gap:8px;padding:10px;background:#fff;border-top:1px solid #e2e8f0}
+    .chat-input-row input{margin-bottom:0;background:#f1f5f9;border-color:#cbd5e1;color:#0f172a}
+
+    /* Right panel showcase (Auth) */
     .cards-wrap{display:flex;flex-direction:column;gap:14px;width:100%;max-width:420px;position:relative;z-index:2}
     .rcard{background:rgba(255,255,255,.96);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 40px -10px rgba(0,0,0,.45)}
     .rcard:nth-child(2){margin-left:24px}
@@ -197,7 +220,7 @@
         <p>You can use P2PFather entirely from WhatsApp. Start a chat with our bot first, then come back here to sign in with your number.</p>
       </div>
 
-      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">By signing up, I agree to <a href="/privacy.html" target="_blank" style="color:#475569;">Terms of Service</a> and <a href="/privacy.html" target="_blank" style="color:#475569;">Privacy Policy</a>.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">By signing up, I agree to Terms of Service and Privacy Policy.</p>
 
       <a id="wa-create-btn" href="#" target="_blank" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;letter-spacing:.2px;">
         Create Account from WhatsApp →
@@ -208,7 +231,7 @@
     <!-- ── STEP 2b: OTP ── -->
     <div id="step-otp" style="display:none;">
       <h1 style="font-size:22px;margin-bottom:8px;">Verify your number</h1>
-      <div class="ok" id="otp-ok">✅ Code sent! Check the P2PFather WhatsApp message.</div>
+      <div class="ok" id="otp-ok">✅ Code sent! Check your WhatsApp messages.</div>
 
       <label for="otp-in">6-Digit WhatsApp Code</label>
       <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
@@ -218,7 +241,7 @@
       <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
     </div>
 
-    <div class="terms" id="auth-terms">By signing in you agree to P2PFather's <a href="/privacy.html" target="_blank">Privacy Policy</a>.</div>
+    <div class="terms" id="auth-terms">By signing in you agree to P2PFather's Terms &amp; Privacy Policy.</div>
   </div>
 
   <div class="right">
@@ -229,7 +252,7 @@
       <div class="rcard"><div class="ri y">🪙</div><div><div class="rc-title">Posted Sell Ad: 500 USDT</div><div class="rc-sub">Rate ₹91.5/USDT • 0% Trading Fees</div></div></div>
       <div class="rcard"><div class="ri p">🔒</div><div><div class="rc-title">Escrow Vault Locked</div><div class="rc-sub">BSC & Base On-Chain Non-Custodial</div></div></div>
     </div>
-    <div class="tagline">Use crypto P2P, directly in WhatsApp 💬</div>
+    <div class="tagline">Use crypto P2P directly in WhatsApp or Web 💬</div>
   </div>
 </div>
 
@@ -248,23 +271,29 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </div>
+    <div class="sb-item" onclick="showPage('post-ad-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Post Ad
+    </div>
     <div class="sb-item" onclick="showPage('market-page',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       P2P Market
     </div>
-    <div class="sb-item" onclick="showPage('trades-page',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-      My Trades
-    </div>
-    <div class="sb-item" onclick="showPage('orders-page',this)">
+
+    <div class="sb-section">Trading</div>
+    <div class="sb-item" onclick="showPage('my-ads-page',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      My Orders
+      My Ads
+    </div>
+    <div class="sb-item" onclick="showPage('active-trades-page',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      Active Trades &amp; Chat
     </div>
 
-    <div class="sb-section" style="margin-top:16px;">Management</div>
+    <div class="sb-section">Account</div>
     <div class="sb-item" onclick="showPage('account-page',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      User
+      Profile &amp; Payment
     </div>
 
     <div class="sb-spacer"></div>
@@ -278,21 +307,10 @@
   </nav>
 
   <main class="main">
-    <!-- Dashboard Page -->
+    <!-- ── 1. DASHBOARD PAGE ── -->
     <div id="dash-page" class="page active">
-      <div id="set-name-banner" style="display:none;background:linear-gradient(135deg,#064e3b,#047857);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 20px;margin-bottom:24px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">👋 Welcome to P2PFather!</div>
-          <div style="font-size:12.5px;color:#a7f3d0;">Set your display name to complete your profile.</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:340px;">
-          <input type="text" id="banner-name-in" placeholder="Enter your name (e.g. Shijas)" style="margin-bottom:0;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 14px;font-size:13.5px;" />
-          <button onclick="saveBannerName()" class="btn btn-green" id="save-banner-btn" style="width:auto;margin-bottom:0;padding:10px 18px;white-space:nowrap;font-size:13.5px;">Save</button>
-        </div>
-      </div>
-
-      <div class="breadcrumb">Dashboard</div>
-      <div class="portfolio-label" style="font-size:14px;color:#64748b;font-weight:500;margin-bottom:4px;">Portfolio Balance</div>
+      <div class="breadcrumb">Dashboard • <span>Overview</span></div>
+      <div class="portfolio-label">Portfolio Balance</div>
       <div class="portfolio-header">
         <div class="portfolio-value" id="total-balance">$0.00</div>
         <div class="portfolio-currency">USD</div>
@@ -303,90 +321,245 @@
       </div>
 
       <div class="action-row">
-        <button class="action-btn primary" onclick="alert('Use the Telegram bot to deposit: /deposit')">↙ Deposit</button>
-        <button class="action-btn" onclick="alert('Use the Telegram bot to withdraw: /withdraw')">↗ Withdraw</button>
-        <button class="action-btn" onclick="alert('Use the Telegram bot to swap: /swap')">⇄ Swap</button>
+        <button class="action-btn primary" onclick="showPage('post-ad-page', document.querySelectorAll('.sb-item')[1])">➕ Post Ad</button>
+        <button class="action-btn" onclick="showPage('market-page', document.querySelectorAll('.sb-item')[2])">🏪 Browse Market</button>
+        <button class="action-btn" onclick="showPage('active-trades-page', document.querySelectorAll('.sb-item')[4])">💬 Live Trades Chat</button>
       </div>
 
-      <div class="section-title">Recent Trade History</div>
+      <div class="section-title">Recent Trades</div>
       <div id="recent-trades"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
     </div>
 
-    <!-- P2P Market Page -->
+    <!-- ── 2. POST AD PAGE ── -->
+    <div id="post-ad-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>Post Ad</span></div>
+      <div class="page-title">Post New P2P Ad</div>
+      <div class="page-sub">Create a fixed amount Buy or Sell order on the P2P market</div>
+
+      <div class="card" style="max-width:540px;">
+        <form id="post-ad-form" onsubmit="handlePostAd(event)">
+          <label>I want to</label>
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn active-sell" id="btn-ad-sell" onclick="setAdType('sell')">Sell USDT/Crypto</button>
+            <button type="button" class="toggle-btn" id="btn-ad-buy" onclick="setAdType('buy')">Buy USDT/Crypto</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label for="ad-token">Asset</label>
+              <select id="ad-token">
+                <option value="USDT">USDT (Tether)</option>
+                <option value="USDC">USDC (USD Coin)</option>
+                <option value="BNB">BNB (Binance Coin)</option>
+              </select>
+            </div>
+            <div>
+              <label for="ad-chain">Chain</label>
+              <select id="ad-chain">
+                <option value="bsc">BSC (BEP20)</option>
+                <option value="base">Base</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label for="ad-rate">Rate (₹ / Token)</label>
+              <input type="number" step="0.01" id="ad-rate" placeholder="e.g. 91.50" required oninput="calcTotalFiat()" />
+            </div>
+            <div>
+              <label for="ad-amount">Fixed Amount (Tokens)</label>
+              <input type="number" step="0.01" id="ad-amount" placeholder="e.g. 100" required oninput="calcTotalFiat()" />
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:14px;display:flex;justify-content:space-between;font-size:13px;">
+            <span style="color:#64748b;">Total Trade Value:</span>
+            <span style="font-weight:700;color:#0f172a;" id="ad-total-fiat">₹0.00</span>
+          </div>
+
+          <label>Payment Methods Offered</label>
+          <div class="checkbox-grid">
+            <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="UPI" checked /> UPI</label>
+            <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="Bank Transfer" checked /> Bank Transfer</label>
+            <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="PhonePe" /> PhonePe</label>
+            <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="GPay" /> GPay</label>
+            <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="Paytm" /> Paytm</label>
+          </div>
+
+          <label for="ad-note">Terms / Remarks (Optional)</label>
+          <textarea id="ad-note" rows="2" placeholder="e.g. Only fast payment, no third party accounts allowed."></textarea>
+
+          <div id="post-ad-err" class="err" style="display:none;"></div>
+          <div id="post-ad-ok" class="ok" style="display:none;"></div>
+
+          <button type="submit" class="btn btn-green" id="post-ad-btn" style="margin-top:8px;">Publish Ad Now →</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── 3. P2P MARKET PAGE ── -->
     <div id="market-page" class="page">
       <div class="breadcrumb">Dashboard • <span>P2P Market</span></div>
-      <div class="page-title">P2P Market</div>
-      <div class="page-sub">Live buy/sell ads from traders</div>
-      <div id="market-list"><div class="loading-row"><div class="spin"></div> Loading orders…</div></div>
+      <div class="page-title">P2P Orderbook</div>
+      <div class="page-sub">Live buy/sell ads from verified traders</div>
+
+      <div class="toggle-group" style="max-width:320px;margin-bottom:20px;">
+        <button type="button" class="toggle-btn active" id="mkt-filter-all" onclick="filterMarket('all',this)">All Ads</button>
+        <button type="button" class="toggle-btn" id="mkt-filter-sell" onclick="filterMarket('sell',this)">Sell Ads (Buy USDT)</button>
+        <button type="button" class="toggle-btn" id="mkt-filter-buy" onclick="filterMarket('buy',this)">Buy Ads (Sell USDT)</button>
+      </div>
+
+      <div id="market-list"><div class="loading-row"><div class="spin"></div> Loading market orders…</div></div>
     </div>
 
-    <!-- My Trades Page -->
-    <div id="trades-page" class="page">
-      <div class="breadcrumb">Dashboard • <span>My Trades</span></div>
-      <div class="page-title">My Trades</div>
-      <div class="page-sub">All your active and past trades</div>
-      <div id="trades-list"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+    <!-- ── 4. MY ADS PAGE ── -->
+    <div id="my-ads-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>My Ads</span></div>
+      <div class="page-title">My Posted Ads</div>
+      <div class="page-sub">Manage your active advertisements</div>
+
+      <div id="my-ads-list"><div class="loading-row"><div class="spin"></div> Loading your ads…</div></div>
     </div>
 
-    <!-- My Orders Page -->
-    <div id="orders-page" class="page">
-      <div class="breadcrumb">Dashboard • <span>My Orders</span></div>
-      <div class="page-title">My Orders</div>
-      <div class="page-sub">Your posted buy/sell ads</div>
-      <div id="orders-list"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+    <!-- ── 5. ACTIVE TRADES & CHAT PAGE ── -->
+    <div id="active-trades-page" class="page">
+      <div class="breadcrumb">Dashboard • <span>Active Trades</span></div>
+      <div class="page-title">Active Trades &amp; Live Chat</div>
+      <div class="page-sub">Chat with buyers/sellers in real-time and execute trades</div>
+
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;">
+        <!-- Left: Trades List -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;">Select Trade</div>
+          <div id="active-trades-list"><div class="loading-row"><div class="spin"></div> Loading…</div></div>
+        </div>
+
+        <!-- Right: Chat & Trade Action Panel -->
+        <div id="chat-panel" class="card" style="margin-bottom:0;display:none;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:12px;">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:#0f172a;" id="chat-trade-title">Trade #---</div>
+              <div style="font-size:12px;color:#64748b;" id="chat-trade-sub">---</div>
+            </div>
+            <span class="trade-badge badge-active" id="chat-trade-status">---</span>
+          </div>
+
+          <!-- Trade Actions (Confirm Payment / Receipt / Dispute) -->
+          <div id="trade-action-bar" style="background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:12px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
+            <div style="font-size:12.5px;color:#475569;" id="trade-action-status-text">Status text</div>
+            <div style="display:flex;gap:6px;" id="trade-action-btns"></div>
+          </div>
+
+          <!-- Chat Window -->
+          <div class="chat-box">
+            <div class="chat-messages" id="chat-messages">
+              <div class="msg-sys">Loading chat messages…</div>
+            </div>
+            <form class="chat-input-row" onsubmit="handleSendChat(event)">
+              <input type="text" id="chat-input" placeholder="Type a message..." required autocomplete="off" />
+              <button type="submit" class="btn btn-green btn-sm" id="chat-send-btn">Send</button>
+            </form>
+          </div>
+        </div>
+        <div id="no-chat-selected" class="card" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;height:380px;">
+          Select a trade on the left to start live chat
+        </div>
+      </div>
     </div>
 
-    <!-- Account Page -->
+    <!-- ── 6. ACCOUNT & PAYMENT PAGE ── -->
     <div id="account-page" class="page">
-      <div class="breadcrumb">Dashboard • <span>User</span></div>
-      <div class="page-title">Account</div>
-      <div class="page-sub">Manage your profile, security, and referrals.</div>
-      <div class="account-cards">
-        <div class="account-card">
-          <div class="action-required">Action required</div>
-          <div class="ac-icon gray">🪪</div>
-          <div class="ac-title">Profile Information</div>
-          <div class="ac-sub">Your personal details and UPI/bank.</div>
-          <div class="ac-link">View →</div>
-        </div>
-        <div class="account-card">
-          <div class="action-required">Action required</div>
-          <div class="ac-icon blue">🔐</div>
-          <div class="ac-title">Security</div>
-          <div class="ac-sub">PIN, KYC, and account protection.</div>
-          <div class="ac-link">View →</div>
-        </div>
-        <div class="account-card">
-          <div class="ac-icon yellow">👥</div>
-          <div class="ac-title">Referrals</div>
-          <div class="ac-sub">Share your code and track usage.</div>
-          <div class="ac-link">View →</div>
-        </div>
+      <div class="breadcrumb">Dashboard • <span>Account</span></div>
+      <div class="page-title">Profile &amp; Payment Details</div>
+      <div class="page-sub">Configure your bank and UPI info for receiving payments</div>
+
+      <div class="card" style="max-width:540px;">
+        <form id="profile-form" onsubmit="handleSaveProfile(event)">
+          <div class="section-title">Personal Info</div>
+          <label for="prof-name">Display Name</label>
+          <input type="text" id="prof-name" placeholder="e.g. Shijas" />
+
+          <div class="section-title" style="margin-top:16px;">UPI Details</div>
+          <label for="prof-upi">UPI ID (VPA)</label>
+          <input type="text" id="prof-upi" placeholder="e.g. username@upi" />
+
+          <label for="prof-phone">Phone Number / GPay / PhonePe</label>
+          <input type="tel" id="prof-phone" placeholder="e.g. 9876543210" />
+
+          <div class="section-title" style="margin-top:16px;">Bank Account</div>
+          <label for="prof-bank-acc">Account Number</label>
+          <input type="text" id="prof-bank-acc" placeholder="e.g. 1234567890" />
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label for="prof-bank-ifsc">IFSC Code</label>
+              <input type="text" id="prof-bank-ifsc" placeholder="e.g. SBIN0001234" />
+            </div>
+            <div>
+              <label for="prof-bank-name">Bank Name</label>
+              <input type="text" id="prof-bank-name" placeholder="e.g. SBI / HDFC" />
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:16px;">Digital Rupee (e-Rupee)</div>
+          <label for="prof-digital-rupee">Digital Rupee VPA / ID</label>
+          <input type="text" id="prof-digital-rupee" placeholder="e.g. username@cbdc" />
+
+          <div id="prof-err" class="err" style="display:none;"></div>
+          <div id="prof-ok" class="ok" style="display:none;"></div>
+
+          <button type="submit" class="btn btn-green" id="prof-save-btn" style="margin-top:12px;">Save Payment Profile →</button>
+        </form>
       </div>
-      <div style="margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
-        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;">Profile Name</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <input type="text" id="profile-name-in" placeholder="Enter your display name (e.g. Shijas)" style="margin-bottom:0;color:#0f172a;background:#f8fafc;border:1px solid #cbd5e1;" />
-          <button class="btn btn-green" id="save-name-btn" onclick="saveProfileName()" style="width:auto;padding:12px 20px;margin-bottom:0;white-space:nowrap;flex-shrink:0;">Save Name</button>
-        </div>
-        <div id="name-save-ok" style="font-size:12px;color:#10b981;margin-top:8px;display:none;">✅ Name updated successfully!</div>
-      </div>
-      <div style="margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
-        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;">Wallet</div>
-        <div style="font-size:13px;color:#64748b;margin-bottom:8px;">Address</div>
-        <div id="wallet-addr" style="font-size:12px;color:#0f172a;font-family:monospace;background:#f8fafc;padding:10px 12px;border-radius:8px;word-break:break-all;">Loading…</div>
+
+      <div class="card" style="max-width:540px;margin-top:16px;">
+        <div class="section-title">Wallet Address</div>
+        <div id="wallet-addr" style="font-size:12px;color:#0f172a;font-family:monospace;background:#f8fafc;padding:12px;border-radius:8px;word-break:break-all;border:1px solid #e2e8f0;">Loading wallet…</div>
       </div>
     </div>
   </main>
+</div>
+
+<!-- ── TRADE INITIATION MODAL ── -->
+<div id="trade-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-size:17px;font-weight:800;color:#0f172a;" id="modal-title">Initiate Trade</h3>
+      <button onclick="closeTradeModal()" style="border:none;background:transparent;font-size:18px;cursor:pointer;color:#64748b;">✕</button>
+    </div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:16px;" id="modal-desc">---</div>
+
+    <div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+        <span style="color:#64748b;">Fixed Amount:</span>
+        <span style="font-weight:700;color:#0f172a;" id="modal-amount">-- USDT</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+        <span style="color:#64748b;">Rate:</span>
+        <span style="font-weight:700;color:#0f172a;" id="modal-rate">₹-- / USDT</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:6px;">
+        <span style="color:#0f172a;">Total Fiat Payable:</span>
+        <span style="color:#10b981;" id="modal-total-fiat">₹--</span>
+      </div>
+    </div>
+
+    <div id="modal-err" class="err" style="display:none;"></div>
+    <button class="btn btn-green" id="modal-confirm-btn" onclick="executeStartTrade()">Confirm &amp; Open Trade Chat →</button>
+  </div>
 </div>
 
 <script>
   let initData = '';
   let currentUser = null;
   let fullPhone = '';
-  let dataLoaded = { balances: false, trades: false, orders: false, market: false };
+  let selectedAdForTrade = null;
+  let activeChatTradeId = null;
+  let chatPollTimer = null;
+  let currentAdType = 'sell';
 
-  // ─── PHONE STEP ───────────────────────────────
+  // ─── AUTH LOGIC ───────────────────────────────
   function getFullPhone() {
     const cc = document.getElementById('country').value.replace('+','');
     const num = document.getElementById('phone-in').value.replace(/\D/g,'');
@@ -414,13 +587,10 @@
       if (!r.ok) throw new Error(d.error || 'Check failed');
 
       if (d.exists) {
-        // Existing user → send OTP
         await sendOtp();
       } else {
-        // New user → show registration screen
         showStep('new');
-        // Build WhatsApp link: user must text bot first
-        const waNumber = '917012751478'; // P2PFather WhatsApp bot number
+        const waNumber = '917012751478';
         const waMsg = encodeURIComponent('hi');
         document.getElementById('wa-create-btn').href = `https://wa.me/${waNumber}?text=${waMsg}`;
       }
@@ -442,7 +612,6 @@
     setTimeout(() => document.getElementById('otp-in').focus(), 100);
   }
 
-  // ─── OTP STEP ────────────────────────────────
   async function verifyOtp() {
     const btn = document.getElementById('otp-btn');
     const err = document.getElementById('otp-err');
@@ -465,7 +634,6 @@
       initData = d.initData;
       currentUser = d.user;
       localStorage.setItem('trade_init_data', initData);
-
       showDashboard();
     } catch(e) {
       err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
@@ -473,13 +641,11 @@
     }
   }
 
-  // ─── STEP HELPERS ────────────────────────────
   function showStep(name) {
     ['phone','new','otp'].forEach(s => {
       document.getElementById('step-'+s).style.display = 'none';
     });
     document.getElementById('step-'+name).style.display = 'block';
-    // Update dots
     document.getElementById('dot1').className = 'dot on';
     document.getElementById('dot2').className = 'dot ' + (name==='otp'?'on':'');
     document.getElementById('dot3').className = 'dot';
@@ -494,99 +660,40 @@
     document.getElementById('otp-in').value='';
   }
 
-  // ─── DASHBOARD ───────────────────────────────
+  // ─── DASHBOARD INIT ───────────────────────────
   function showDashboard() {
     document.getElementById('auth-view').style.display = 'none';
     document.getElementById('dash-view').style.display = 'flex';
 
-    // Populate sidebar user info
     const phone = currentUser?.whatsapp_phone || fullPhone;
-    let name = currentUser?.first_name || '';
-    const isUnconfigured = !name || /^WA_\d+$/.test(name) || name === 'Trader' || name.startsWith('+') || /^\d+$/.test(name);
-    if (isUnconfigured) {
-      name = currentUser?.username || 'WhatsApp User';
-    }
+    let name = currentUser?.first_name || currentUser?.username || 'Trader';
     const avatarChar = name.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
 
     document.getElementById('sb-name').textContent = name;
     document.getElementById('sb-phone').textContent = phone ? '+' + phone : '';
     document.getElementById('sb-avatar').textContent = avatarChar;
 
-    const banner = document.getElementById('set-name-banner');
-    if (banner) banner.style.display = isUnconfigured ? 'flex' : 'none';
-
-    const nameIn = document.getElementById('profile-name-in');
-    if (nameIn && currentUser?.first_name && !/^WA_\d+$/.test(currentUser.first_name)) {
-      nameIn.value = currentUser.first_name;
-    }
-
+    // Load initial data
     loadBalances();
-    loadTrades();
-  }
-
-  async function saveBannerName() {
-    const nameIn = document.getElementById('banner-name-in');
-    const newName = nameIn?.value?.trim();
-    if (!newName) return;
-    const btn = document.getElementById('save-banner-btn');
-    btn.textContent = 'Saving…'; btn.disabled = true;
-    try {
-      const r = await fetch('/api/miniapp/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
-        body: JSON.stringify({ first_name: newName })
-      });
-      if (r.ok) {
-        if (currentUser) currentUser.first_name = newName;
-        document.getElementById('sb-name').textContent = newName;
-        const avatarChar = newName.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
-        document.getElementById('sb-avatar').textContent = avatarChar;
-        document.getElementById('set-name-banner').style.display = 'none';
-        const pIn = document.getElementById('profile-name-in');
-        if (pIn) pIn.value = newName;
-      }
-    } catch(_) {}
-    finally {
-      btn.textContent = 'Save'; btn.disabled = false;
-    }
-  }
-
-  async function saveProfileName() {
-    const nameIn = document.getElementById('profile-name-in');
-    const newName = nameIn.value.trim();
-    if (!newName) return;
-    const btn = document.getElementById('save-name-btn');
-    btn.textContent = 'Saving…'; btn.disabled = true;
-    try {
-      const r = await fetch('/api/miniapp/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
-        body: JSON.stringify({ first_name: newName })
-      });
-      if (r.ok) {
-        if (currentUser) currentUser.first_name = newName;
-        document.getElementById('sb-name').textContent = newName;
-        const avatarChar = newName.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
-        document.getElementById('sb-avatar').textContent = avatarChar;
-        document.getElementById('set-name-banner').style.display = 'none';
-        document.getElementById('name-save-ok').style.display = 'block';
-        setTimeout(() => document.getElementById('name-save-ok').style.display = 'none', 3000);
-      }
-    } catch(_) {}
-    finally {
-      btn.textContent = 'Save Name'; btn.disabled = false;
-    }
+    loadRecentTrades();
+    loadProfileData();
   }
 
   function showPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
     document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-    el.classList.add('active');
+    if (el) el.classList.add('active');
 
-    if (pageId === 'market-page' && !dataLoaded.market) loadMarket();
-    if (pageId === 'orders-page' && !dataLoaded.orders) loadOrders();
-    if (pageId === 'trades-page' && !dataLoaded.trades) loadTrades();
+    // Stop chat timer when switching away from active trades
+    if (pageId !== 'active-trades-page' && chatPollTimer) {
+      clearInterval(chatPollTimer);
+      chatPollTimer = null;
+    }
+
+    if (pageId === 'market-page') loadMarket();
+    if (pageId === 'my-ads-page') loadMyAds();
+    if (pageId === 'active-trades-page') loadActiveTrades();
   }
 
   function apiGet(path) {
@@ -595,6 +702,23 @@
     }).then(r => r.json());
   }
 
+  function apiPost(path, body) {
+    return fetch('/api/miniapp' + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
+      body: JSON.stringify(body || {})
+    }).then(r => r.json());
+  }
+
+  function apiPut(path, body) {
+    return fetch('/api/miniapp' + path, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
+      body: JSON.stringify(body || {})
+    }).then(r => r.json());
+  }
+
+  // ─── 1. OVERVIEW / BALANCES ───────────────────
   async function loadBalances() {
     try {
       const d = await apiGet('/wallet/balances');
@@ -603,120 +727,462 @@
       const total = usdt + usdc;
 
       document.getElementById('total-balance').textContent = '$' + total.toFixed(2);
-
       const addr = d.address || currentUser?.wallet_address || null;
       document.getElementById('wallet-addr').textContent = addr || 'No wallet linked yet';
 
-      const html = `
+      document.getElementById('assets-list').innerHTML = `
         <div class="asset-row">
           <div style="display:flex;align-items:center;">
             <div class="asset-icon">💎</div>
-            <div><div class="asset-name">Crypto</div><div class="asset-sub">USDT + USDC</div></div>
+            <div><div class="asset-name">Crypto Portfolio</div><div class="asset-sub">USDT + USDC</div></div>
           </div>
           <div class="asset-value">$${total.toFixed(2)} <span style="font-size:12px;color:#94a3b8;">USD</span></div>
         </div>
         <div class="asset-row">
           <div style="display:flex;align-items:center;">
             <div class="asset-icon">🏦</div>
-            <div><div class="asset-name">Escrow Vault</div><div class="asset-sub">Locked in active trades</div></div>
+            <div><div class="asset-name">Escrow Vault Balance</div><div class="asset-sub">Locked in active trades</div></div>
           </div>
           <div class="asset-value">$${(parseFloat(d.vault_bsc_reserved||'0')+parseFloat(d.vault_base_reserved||'0')).toFixed(2)}</div>
         </div>
       `;
-      document.getElementById('assets-list').innerHTML = html;
-      dataLoaded.balances = true;
     } catch(e) {
       document.getElementById('assets-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load balances</div>';
     }
   }
 
-  async function loadTrades() {
+  async function loadRecentTrades() {
     try {
       const d = await apiGet('/trades/mine');
       const trades = d.trades || [];
-      const el = document.getElementById('trades-list');
       const recEl = document.getElementById('recent-trades');
-
       if (!trades.length) {
-        const empty = '<div class="no-data"><div class="no-data-icon">📋</div>No trades yet</div>';
-        el.innerHTML = empty; recEl.innerHTML = empty;
+        recEl.innerHTML = '<div class="no-data"><div class="no-data-icon">📋</div>No trades yet</div>';
         return;
       }
+      recEl.innerHTML = trades.slice(0, 5).map(t => renderTradeRow(t)).join('');
+    } catch(e) {}
+  }
 
-      const statusClass = { pending:'badge-pending',active:'badge-active',payment_sent:'badge-active',completed:'badge-completed',dispute:'badge-dispute',released:'badge-completed' };
-
-      const rows = trades.slice(0, 10).map(t => `
-        <div class="trade-row">
-          <div>
-            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
-            <div style="font-size:11.5px;color:#94a3b8;margin-top:2px;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
-          </div>
-          <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
+  function renderTradeRow(t) {
+    const statusClass = { pending:'badge-pending',in_escrow:'badge-active',fiat_sent:'badge-active',fiat_confirmed:'badge-completed',completed:'badge-completed',disputed:'badge-dispute' };
+    return `
+      <div class="trade-row">
+        <div>
+          <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
+          <div style="font-size:11.5px;color:#94a3b8;margin-top:2px;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
         </div>
-      `).join('');
+        <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
+      </div>
+    `;
+  }
 
-      el.innerHTML = rows;
-      recEl.innerHTML = trades.slice(0, 5).map(t => `
-        <div class="trade-row">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
-            <div style="font-size:11px;color:#94a3b8;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
-          </div>
-          <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
-        </div>
-      `).join('');
-      dataLoaded.trades = true;
-    } catch(e) {
-      document.getElementById('trades-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load trades</div>';
+  // ─── 2. POST AD ───────────────────────────────
+  function setAdType(type) {
+    currentAdType = type;
+    const btnSell = document.getElementById('btn-ad-sell');
+    const btnBuy = document.getElementById('btn-ad-buy');
+    if (type === 'sell') {
+      btnSell.className = 'toggle-btn active-sell';
+      btnBuy.className = 'toggle-btn';
+    } else {
+      btnSell.className = 'toggle-btn';
+      btnBuy.className = 'toggle-btn active-buy';
     }
   }
 
-  async function loadOrders() {
+  function calcTotalFiat() {
+    const rate = parseFloat(document.getElementById('ad-rate').value || 0);
+    const amount = parseFloat(document.getElementById('ad-amount').value || 0);
+    const total = rate * amount;
+    document.getElementById('ad-total-fiat').textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  async function handlePostAd(e) {
+    e.preventDefault();
+    const err = document.getElementById('post-ad-err');
+    const ok = document.getElementById('post-ad-ok');
+    const btn = document.getElementById('post-ad-btn');
+    err.style.display = 'none'; ok.style.display = 'none';
+
+    const token = document.getElementById('ad-token').value;
+    const chain = document.getElementById('ad-chain').value;
+    const rate = parseFloat(document.getElementById('ad-rate').value);
+    const amount = parseFloat(document.getElementById('ad-amount').value);
+    const note = document.getElementById('ad-note').value;
+
+    const checkedPay = Array.from(document.querySelectorAll('input[name="ad-pay"]:checked')).map(cb => cb.value);
+
+    if (!rate || rate <= 0 || !amount || amount <= 0) {
+      err.textContent = 'Please enter a valid rate and amount.';
+      err.style.display = 'block'; return;
+    }
+
+    if (checkedPay.length === 0) {
+      err.textContent = 'Select at least one payment method.';
+      err.style.display = 'block'; return;
+    }
+
+    btn.textContent = 'Publishing Ad…'; btn.disabled = true;
+
     try {
-      const d = await apiGet('/orders/mine');
-      const orders = d.orders || [];
-      const el = document.getElementById('orders-list');
-      if (!orders.length) { el.innerHTML = '<div class="no-data"><div class="no-data-icon">📢</div>No orders posted yet</div>'; return; }
-      el.innerHTML = orders.map(o => `
-        <div class="order-row">
-          <div>
-            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${o.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${o.amount} ${o.token}</div>
-            <div style="font-size:11.5px;color:#94a3b8;">₹${o.price}/USDT • Min ₹${o.min_order_amount||'—'}</div>
-          </div>
-          <span class="trade-badge ${o.is_active ? 'badge-active' : 'badge-completed'}">${o.is_active ? 'Active' : 'Inactive'}</span>
-        </div>
-      `).join('');
-      dataLoaded.orders = true;
-    } catch(e) {
-      document.getElementById('orders-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load orders</div>';
+      const res = await apiPost('/orders', {
+        type: currentAdType,
+        token,
+        chain,
+        rate,
+        amount,
+        payment_methods: checkedPay,
+        note
+      });
+
+      if (res.error) throw new Error(res.error);
+
+      ok.textContent = '🎉 Ad Published Successfully! View it under My Ads or P2P Market.';
+      ok.style.display = 'block';
+      document.getElementById('post-ad-form').reset();
+      calcTotalFiat();
+    } catch(errEx) {
+      err.textContent = '⚠️ ' + errEx.message;
+      err.style.display = 'block';
+    } finally {
+      btn.textContent = 'Publish Ad Now →'; btn.disabled = false;
     }
   }
 
+  // ─── 3. P2P MARKET ────────────────────────────
+  let marketOrders = [];
   async function loadMarket() {
     try {
-      const d = await apiGet('/orders?limit=20');
-      const orders = d.orders || [];
-      const el = document.getElementById('market-list');
-      if (!orders.length) { el.innerHTML = '<div class="no-data"><div class="no-data-icon">🏪</div>No active orders in market</div>'; return; }
-      el.innerHTML = orders.map(o => `
-        <div class="order-row">
-          <div>
-            <div style="font-size:13.5px;font-weight:600;color:#0f172a;">${o.type === 'buy' ? '↙ Buyer' : '↗ Seller'} — ${o.amount} ${o.token}</div>
-            <div style="font-size:11.5px;color:#94a3b8;">₹${o.price}/USDT • ${o.payment_method||'UPI'}</div>
-          </div>
-          <button style="padding:7px 14px;border-radius:8px;border:1.5px solid ${o.type==='buy'?'#10b981':'#3b82f6'};background:transparent;color:${o.type==='buy'?'#10b981':'#3b82f6'};font-size:12.5px;font-weight:700;cursor:pointer;"
-            onclick="alert('Use the Telegram bot to trade: https://t.me/P2p_fatherbot')">
-            ${o.type === 'buy' ? 'Sell' : 'Buy'}
-          </button>
-        </div>
-      `).join('');
-      dataLoaded.market = true;
+      const d = await apiGet('/orders?limit=50');
+      marketOrders = d.orders || [];
+      renderMarketList(marketOrders);
     } catch(e) {
       document.getElementById('market-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load market</div>';
     }
   }
 
-  // ─── ENTER KEY ────────────────────────────────
+  function filterMarket(type, btn) {
+    document.querySelectorAll('#market-page .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (type === 'all') renderMarketList(marketOrders);
+    else renderMarketList(marketOrders.filter(o => o.type === type));
+  }
+
+  function renderMarketList(orders) {
+    const el = document.getElementById('market-list');
+    if (!orders.length) {
+      el.innerHTML = '<div class="no-data"><div class="no-data-icon">🏪</div>No active ads in the market</div>';
+      return;
+    }
+    el.innerHTML = orders.map(o => {
+      const trader = o.users?.first_name || o.users?.username || 'Trader';
+      const isMyAd = currentUser && (o.user_id === currentUser.id);
+      return `
+        <div class="order-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="trade-badge ${o.type==='buy'?'badge-buy':'badge-sell'}">${o.type.toUpperCase()}</span>
+              <span style="font-size:14px;font-weight:700;color:#0f172a;">${o.amount} ${o.token}</span>
+              <span style="font-size:12px;color:#64748b;">by ${trader}</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+              Rate: <strong>₹${o.rate}</strong>/USDT • Total: ₹${(o.amount * o.rate).toLocaleString('en-IN')} • ${ (o.payment_methods||['UPI']).join('/') }
+            </div>
+          </div>
+          <div>
+            ${isMyAd ? `
+              <span style="font-size:12px;color:#94a3b8;font-style:italic;">Your Ad</span>
+            ` : `
+              <button class="btn btn-green btn-sm" onclick="openStartTradeModal('${o.id}')">
+                ${o.type === 'sell' ? 'Buy USDT' : 'Sell USDT'}
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Trade Modal
+  function openStartTradeModal(orderId) {
+    const order = marketOrders.find(o => o.id === orderId);
+    if (!order) return;
+    selectedAdForTrade = order;
+    const isBuying = order.type === 'sell'; // If ad is sell, responder is buying
+
+    document.getElementById('modal-title').textContent = isBuying ? 'Buy USDT from Trader' : 'Sell USDT to Trader';
+    document.getElementById('modal-desc').textContent = `Fixed trade order for ${order.amount} ${order.token}`;
+    document.getElementById('modal-amount').textContent = `${order.amount} ${order.token}`;
+    document.getElementById('modal-rate').textContent = `₹${order.rate} / ${order.token}`;
+    document.getElementById('modal-total-fiat').textContent = `₹${(order.amount * order.rate).toLocaleString('en-IN')}`;
+
+    document.getElementById('modal-err').style.display = 'none';
+    document.getElementById('trade-modal').style.display = 'flex';
+  }
+
+  function closeTradeModal() {
+    document.getElementById('trade-modal').style.display = 'none';
+    selectedAdForTrade = null;
+  }
+
+  async function executeStartTrade() {
+    if (!selectedAdForTrade) return;
+    const btn = document.getElementById('modal-confirm-btn');
+    const err = document.getElementById('modal-err');
+    err.style.display = 'none';
+    btn.textContent = 'Initiating Trade…'; btn.disabled = true;
+
+    try {
+      const res = await apiPost('/trades', {
+        order_id: selectedAdForTrade.id,
+        amount: selectedAdForTrade.amount
+      });
+
+      if (res.error) throw new Error(res.error);
+
+      closeTradeModal();
+      // Switch to Active Trades page & open the trade chat
+      showPage('active-trades-page', document.querySelectorAll('.sb-item')[4]);
+      selectTradeForChat(res.trade.id);
+    } catch(e) {
+      err.textContent = '⚠️ ' + e.message;
+      err.style.display = 'block';
+    } finally {
+      btn.textContent = 'Confirm & Open Trade Chat →'; btn.disabled = false;
+    }
+  }
+
+  // ─── 4. MY ADS ────────────────────────────────
+  async function loadMyAds() {
+    try {
+      const d = await apiGet('/orders/mine');
+      const orders = d.orders || [];
+      const el = document.getElementById('my-ads-list');
+      if (!orders.length) {
+        el.innerHTML = '<div class="no-data"><div class="no-data-icon">📢</div>No ads posted yet</div>';
+        return;
+      }
+      el.innerHTML = orders.map(o => `
+        <div class="order-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="trade-badge ${o.type==='buy'?'badge-buy':'badge-sell'}">${o.type.toUpperCase()}</span>
+              <span style="font-size:14px;font-weight:700;color:#0f172a;">${o.amount} ${o.token}</span>
+              <span class="trade-badge ${o.status==='active'?'badge-active':'badge-pending'}">${o.status}</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+              Rate: ₹${o.rate} • Total: ₹${(o.amount * o.rate).toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div>
+            ${o.status === 'active' ? `
+              <button class="btn btn-red btn-sm" onclick="cancelAd('${o.id}')">Cancel Ad</button>
+            ` : '<span style="font-size:12px;color:#94a3b8;">Inactive</span>'}
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      document.getElementById('my-ads-list').innerHTML = '<div class="loading-row" style="color:#ef4444;">Failed to load your ads</div>';
+    }
+  }
+
+  async function cancelAd(orderId) {
+    if (!confirm('Are you sure you want to cancel this ad?')) return;
+    try {
+      const r = await apiPost(`/orders/${orderId}/cancel`);
+      if (r.error) alert(r.error);
+      else loadMyAds();
+    } catch(e) {
+      alert(e.message);
+    }
+  }
+
+  // ─── 5. ACTIVE TRADES & CHAT ──────────────────
+  let userTradesList = [];
+  async function loadActiveTrades() {
+    try {
+      const d = await apiGet('/trades/mine');
+      userTradesList = d.trades || [];
+      const el = document.getElementById('active-trades-list');
+
+      if (!userTradesList.length) {
+        el.innerHTML = '<div class="no-data"><div class="no-data-icon">💬</div>No trades</div>';
+        return;
+      }
+
+      el.innerHTML = userTradesList.map(t => {
+        const isSelected = activeChatTradeId === t.id;
+        const role = t.buyer_id === currentUser.id ? 'BUY' : 'SELL';
+        return `
+          <div class="order-row" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;${isSelected?'border-color:#10b981;background:#f0fdf4;':''}" onclick="selectTradeForChat('${t.id}')">
+            <div style="display:flex;justify-content:space-between;width:100%;">
+              <span style="font-weight:700;font-size:13px;color:#0f172a;">${role} ${t.amount} ${t.token}</span>
+              <span class="trade-badge badge-active">${t.status}</span>
+            </div>
+            <div style="font-size:11px;color:#64748b;">Trade #${t.id.slice(0,8)} • ₹${t.fiat_amount||'—'}</div>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {}
+  }
+
+  async function selectTradeForChat(tradeId) {
+    activeChatTradeId = tradeId;
+    document.getElementById('no-chat-selected').style.display = 'none';
+    document.getElementById('chat-panel').style.display = 'flex';
+
+    loadActiveTrades(); // Highlight selected card
+    fetchAndRenderChat();
+
+    // Start 4-second polling timer
+    if (chatPollTimer) clearInterval(chatPollTimer);
+    chatPollTimer = setInterval(fetchAndRenderChat, 4000);
+  }
+
+  async function fetchAndRenderChat() {
+    if (!activeChatTradeId) return;
+    try {
+      const tradeRes = await apiGet(`/trades/${activeChatTradeId}`);
+      const trade = tradeRes.trade;
+      if (!trade) return;
+
+      const isBuyer = trade.buyer_id === currentUser.id;
+      document.getElementById('chat-trade-title').textContent = `${isBuyer ? 'BUYING' : 'SELLING'} ${trade.amount} ${trade.token}`;
+      document.getElementById('chat-trade-sub').textContent = `Total Fiat: ₹${trade.fiat_amount} • Trade #${trade.id.slice(0,8)}`;
+      document.getElementById('chat-trade-status').textContent = trade.status.toUpperCase();
+
+      // Action bar logic
+      const actionText = document.getElementById('trade-action-status-text');
+      const actionBtns = document.getElementById('trade-action-btns');
+      actionBtns.innerHTML = '';
+
+      if (trade.status === 'in_escrow' || trade.status === 'pending') {
+        if (isBuyer) {
+          actionText.textContent = 'USDT in Escrow. Please transfer funds to Seller and click Confirm Payment.';
+          actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="confirmTradePayment('${trade.id}')">Confirm Payment Sent</button>`;
+        } else {
+          actionText.textContent = 'Waiting for Buyer to transfer fiat funds...';
+        }
+      } else if (trade.status === 'fiat_sent') {
+        if (!isBuyer) {
+          actionText.textContent = 'Buyer marked payment sent! Verify in your bank account and release crypto.';
+          actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="confirmTradeReceipt('${trade.id}')">Confirm Receipt &amp; Release Crypto</button>`;
+        } else {
+          actionText.textContent = 'Payment confirmed! Waiting for Seller to verify and release crypto.';
+        }
+      } else if (trade.status === 'completed' || trade.status === 'fiat_confirmed') {
+        actionText.textContent = '🎉 Trade completed and settled successfully!';
+      } else if (trade.status === 'disputed') {
+        actionText.textContent = '⚠️ Trade is under dispute. Admin will review the chat.';
+      }
+
+      // Fetch chat messages
+      const msgsRes = await apiGet(`/trades/${activeChatTradeId}/messages`);
+      const msgs = msgsRes.messages || [];
+      const msgBox = document.getElementById('chat-messages');
+
+      if (!msgs.length) {
+        msgBox.innerHTML = '<div class="msg-sys">No messages yet. Send a message below.</div>';
+        return;
+      }
+
+      msgBox.innerHTML = msgs.map(m => {
+        if (m.sender_type === 'system') {
+          return `<div class="msg-sys">${m.text || m.content}</div>`;
+        }
+        const isMine = m.sender_id === currentUser.id;
+        const time = new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        return `
+          <div class="msg-bubble ${isMine ? 'msg-mine' : 'msg-other'}">
+            <div>${m.text || m.content}</div>
+            <div class="msg-time">${time}</div>
+          </div>
+        `;
+      }).join('');
+
+      msgBox.scrollTop = msgBox.scrollHeight;
+    } catch(e) {}
+  }
+
+  async function handleSendChat(e) {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || !activeChatTradeId) return;
+
+    input.value = '';
+    try {
+      await apiPost(`/trades/${activeChatTradeId}/messages`, { text });
+      fetchAndRenderChat();
+    } catch(e) {}
+  }
+
+  async function confirmTradePayment(tradeId) {
+    if (!confirm('Have you made the fiat transfer to the seller?')) return;
+    try {
+      const r = await apiPost(`/trades/${tradeId}/confirm-payment`);
+      if (r.error) alert(r.error);
+      else fetchAndRenderChat();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function confirmTradeReceipt(tradeId) {
+    if (!confirm('Did you receive the payment in your bank/UPI account? This will release crypto to buyer.')) return;
+    try {
+      const r = await apiPost(`/trades/${tradeId}/confirm-receipt`);
+      if (r.error) alert(r.error);
+      else fetchAndRenderChat();
+    } catch(e) { alert(e.message); }
+  }
+
+  // ─── 6. ACCOUNT & PROFILE ─────────────────────
+  async function loadProfileData() {
+    try {
+      const d = await apiGet('/profile');
+      const u = d.user;
+      if (!u) return;
+      document.getElementById('prof-name').value = u.first_name || '';
+      document.getElementById('prof-upi').value = u.upi_id || '';
+      document.getElementById('prof-phone').value = u.phone_number || '';
+      document.getElementById('prof-bank-acc').value = u.bank_account_number || '';
+      document.getElementById('prof-bank-ifsc').value = u.bank_ifsc || '';
+      document.getElementById('prof-bank-name').value = u.bank_name || '';
+      document.getElementById('prof-digital-rupee').value = u.digital_rupee_id || '';
+    } catch(e) {}
+  }
+
+  async function handleSaveProfile(e) {
+    e.preventDefault();
+    const err = document.getElementById('prof-err');
+    const ok = document.getElementById('prof-ok');
+    const btn = document.getElementById('prof-save-btn');
+    err.style.display = 'none'; ok.style.display = 'none';
+    btn.textContent = 'Saving Profile…'; btn.disabled = true;
+
+    try {
+      const r = await apiPut('/profile', {
+        first_name: document.getElementById('prof-name').value,
+        upi_id: document.getElementById('prof-upi').value,
+        phone_number: document.getElementById('prof-phone').value,
+        bank_account_number: document.getElementById('prof-bank-acc').value,
+        bank_ifsc: document.getElementById('prof-bank-ifsc').value,
+        bank_name: document.getElementById('prof-bank-name').value,
+        digital_rupee_id: document.getElementById('prof-digital-rupee').value
+      });
+
+      if (r.error) throw new Error(r.error);
+      ok.textContent = '✅ Profile and payment details updated successfully!';
+      ok.style.display = 'block';
+    } catch(ex) {
+      err.textContent = '⚠️ ' + ex.message;
+      err.style.display = 'block';
+    } finally {
+      btn.textContent = 'Save Payment Profile →'; btn.disabled = false;
+    }
+  }
+
+  // ─── ENTER KEY AUTH ──────────────────────────
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     const phone = document.getElementById('step-phone');
