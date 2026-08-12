@@ -270,7 +270,19 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
             user = await db.getOrCreateUserByPhone(cleanPhone);
         }
 
-        const providedName = (first_name || name || "").trim();
+        let providedName = (first_name || name || "").trim();
+
+        // Automatically fetch contact pushName from Hypermeow bridge if user name is unconfigured
+        if (!providedName && (!user.first_name || /^WA_\d+$/.test(user.first_name))) {
+            try {
+                const { hypermeowClient } = await import("../whatsapp/hypermeowClient");
+                if (hypermeowClient.isConfigured()) {
+                    const fetchedName = await hypermeowClient.getContactName(cleanPhone);
+                    if (fetchedName) providedName = fetchedName;
+                }
+            } catch (_) {}
+        }
+
         if (providedName) {
             try {
                 await db.updateUser(user.id, { first_name: providedName } as any);

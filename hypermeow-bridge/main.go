@@ -203,6 +203,7 @@ func main() {
 	mux.HandleFunc("/send-buttons", handleSendButtons)
 	mux.HandleFunc("/send-list", handleSendList)
 	mux.HandleFunc("/delete-message", handleDeleteMessage)
+	mux.HandleFunc("/contact-info", handleGetContactInfo)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -518,6 +519,63 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "sent_fallback", "jid": req.JID})
+}
+
+func handleGetContactInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	phone := r.URL.Query().Get("phone")
+	if phone == "" {
+		http.Error(w, "missing phone parameter", http.StatusBadRequest)
+		return
+	}
+
+	jidStr := phone
+	if !regexp.MustCompile(`@`).MatchString(jidStr) {
+		jidStr = phone + "@s.whatsapp.net"
+	}
+
+	jid, err := resolveJID(jidStr)
+	if err != nil {
+		http.Error(w, "Invalid JID format", http.StatusBadRequest)
+		return
+	}
+
+	name := ""
+	ctx := context.Background()
+
+	if container != nil {
+		contact, err := container.GetContact(ctx, jid)
+		if err == nil && contact.Found {
+			if contact.PushName != "" {
+				name = contact.PushName
+			} else if contact.FullName != "" {
+				name = contact.FullName
+			} else if contact.BusinessName != "" {
+				name = contact.BusinessName
+			}
+		}
+	}
+
+	if name == "" && client != nil && client.IsConnected() {
+		infoMap, err := client.GetUserInfo([]waTypes.JID{jid})
+		if err == nil {
+			if uInfo, ok := infoMap[jid]; ok {
+				if uInfo.VerifiedName != nil && uInfo.VerifiedName.Details != nil {
+					name = uInfo.VerifiedName.Details.GetVerifiedTitle()
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"phone": phone,
+		"name":  name,
+	})
 }
 
 

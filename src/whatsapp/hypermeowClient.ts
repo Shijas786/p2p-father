@@ -118,6 +118,18 @@ export class HypermeowClient {
             return false;
         }
     }
+
+    public async getContactName(phone: string): Promise<string | null> {
+        try {
+            const res = await axios.get(`${this.baseUrl}/contact-info`, {
+                params: { phone },
+                timeout: 4000
+            });
+            return res.data?.name || null;
+        } catch {
+            return null;
+        }
+    }
 }
 
 export const hypermeowClient = new HypermeowClient();
