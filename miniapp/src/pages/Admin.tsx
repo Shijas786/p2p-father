@@ -16,7 +16,8 @@ interface Dispute {
     amount: string;
     token: string;
     fiat_amount: number;
-    dispute_reason: string;
+    status: string;
+    dispute_reason?: string;
     buyer: { username: string; first_name: string; trust_score?: number };
     seller: { username: string; first_name: string; upi_id?: string; phone_number?: string; trust_score?: number };
     payment_proofs?: { utr: string }[];
@@ -338,7 +339,7 @@ export function Admin({ user }: Props) {
         return (
             <div className="admin-tab-bar">
                 {([
-                    { key: 'disputes', icon: '⚡', label: 'Disputes', badge: disputes.length },
+                    { key: 'disputes', icon: '⚡', label: 'Live Trades', badge: disputes.length },
                     { key: 'stats',    icon: '📊', label: 'Stats',    badge: 0 },
                     { key: 'users',    icon: '👤', label: 'Users',    badge: 0 },
                     { key: 'trades',   icon: '📋', label: 'Trades',   badge: 0 },
@@ -373,9 +374,12 @@ export function Admin({ user }: Props) {
                 {disputes.length === 0 ? (
                     <div className="admin-empty">
                         <div className="admin-empty-icon">🕊️</div>
-                        No active disputes
+                        No active live trades right now
                     </div>
-                ) : disputes.map(d => (
+                ) : disputes.map(d => {
+                    const isDisputed = d.status === 'disputed' || d.status === 'DISPUTED';
+                    const statusKey  = (d.status || '').toLowerCase().replace(/\s+/g, '_');
+                    return (
                     <div key={d.id} className="card flex-col" style={{ gap: 12 }}>
                         {/* Header */}
                         <div className="flex justify-between items-start" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
@@ -383,6 +387,9 @@ export function Admin({ user }: Props) {
                                 <div className="flex items-center" style={{ gap: 8, marginBottom: 4 }}>
                                     <span className="badge badge-red font-mono" style={{ textTransform: 'lowercase' }}>#{d.id.slice(0, 8)}</span>
                                     <span className="font-bold" style={{ fontSize: '0.875rem', color: '#fff' }}>{d.amount} {d.token}</span>
+                                    <span className={`admin-trade-status-badge status-${statusKey}`} style={{ fontSize: 10 }}>
+                                        {STATUS_LABELS[statusKey] || d.status}
+                                    </span>
                                 </div>
                                 <div className="text-muted" style={{ fontSize: 10 }}>{new Date(d.created_at).toLocaleString()}</div>
                             </div>
@@ -403,40 +410,44 @@ export function Admin({ user }: Props) {
                             </div>
                         </div>
 
-                        {/* Escrow Status */}
-                        <div style={{ padding: 8, backgroundColor: 'var(--orange-bg)', border: '1px solid rgba(240,185,11,0.2)', borderRadius: 'var(--radius-md)' }}>
-                            <span className="font-bold" style={{ fontSize: 10, color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                🔒 SECURE ESCROW: {d.amount} {d.token}
+                        {/* Escrow Status Banner */}
+                        <div style={{ padding: 8, backgroundColor: isDisputed ? 'var(--orange-bg)' : 'rgba(16, 185, 129, 0.1)', border: isDisputed ? '1px solid rgba(240,185,11,0.2)' : '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)' }}>
+                            <span className="font-bold" style={{ fontSize: 10, color: isDisputed ? 'var(--orange)' : '#10b981', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {isDisputed ? `🔒 DISPUTED ESCROW: ${d.amount} ${d.token}` : `🟢 LIVE TRADE (${(STATUS_LABELS[statusKey] || d.status).toUpperCase()}): ${d.amount} ${d.token}`}
                             </span>
                             <div className="text-muted" style={{ fontSize: 9, marginTop: 2, lineHeight: 1.2 }}>
-                                Release → Buyer gets funds | Refund → Seller gets funds
+                                {isDisputed ? 'Release → Buyer gets funds | Refund → Seller gets funds' : 'Live P2P Trade — Monitor chat and reply to traders in real time'}
                             </div>
                         </div>
 
-                        {/* Dispute Reason */}
-                        <div className="flex-col" style={{ gap: 8, padding: 10, backgroundColor: 'rgba(246,70,93,0.05)', border: '1px solid rgba(246,70,93,0.1)', borderRadius: 'var(--radius-md)' }}>
-                            <div style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚩 Dispute Reason</div>
-                            <div style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--text-primary)' }}>{d.dispute_reason}</div>
-                            <div className="flex flex-wrap" style={{ gap: 12, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                                {d.payment_proofs?.[0]?.utr && (
-                                    <div className="flex-col">
-                                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>UTR / REF NO</span>
-                                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--blue)' }}>{d.payment_proofs[0].utr}</span>
-                                    </div>
-                                )}
-                                {d.seller?.upi_id && (
-                                    <div className="flex-col">
-                                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER UPI</span>
-                                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--green)' }}>{d.seller.upi_id}</span>
-                                    </div>
-                                )}
-                                {d.seller?.phone_number && (
-                                    <div className="flex-col">
-                                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER CONTACT</span>
-                                        <span style={{ fontSize: 10, color: 'var(--text-primary)' }}>{d.seller.phone_number}</span>
-                                    </div>
-                                )}
+                        {/* Dispute Reason (if disputed) */}
+                        {isDisputed && d.dispute_reason && (
+                            <div className="flex-col" style={{ gap: 8, padding: 10, backgroundColor: 'rgba(246,70,93,0.05)', border: '1px solid rgba(246,70,93,0.1)', borderRadius: 'var(--radius-md)' }}>
+                                <div style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚩 Dispute Reason</div>
+                                <div style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--text-primary)' }}>{d.dispute_reason}</div>
                             </div>
+                        )}
+
+                        {/* Payment Details / UTR Proof */}
+                        <div className="flex flex-wrap" style={{ gap: 12, padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            {d.payment_proofs?.[0]?.utr && (
+                                <div className="flex-col">
+                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>UTR / REF NO</span>
+                                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--blue)' }}>{d.payment_proofs[0].utr}</span>
+                                </div>
+                            )}
+                            {d.seller?.upi_id && (
+                                <div className="flex-col">
+                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER UPI</span>
+                                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--green)' }}>{d.seller.upi_id}</span>
+                                </div>
+                            )}
+                            {d.seller?.phone_number && (
+                                <div className="flex-col">
+                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER CONTACT</span>
+                                    <span style={{ fontSize: 10, color: 'var(--text-primary)' }}>{d.seller.phone_number}</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Chat */}
@@ -508,7 +519,7 @@ export function Admin({ user }: Props) {
                             </div>
                         </div>
 
-                        {/* Resolution */}
+                        {/* Resolution — available for all live trades */}
                         <div className="flex" style={{ gap: 8, paddingTop: 4 }}>
                             <button className="btn btn-block btn-sm" style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)', flex: 1 }} onClick={() => resolve(d.id, true)} disabled={actionLoading}>
                                 <span className="flex-col items-center"><span className="font-bold">RELEASE</span><span style={{ fontSize: 8, opacity: 0.7 }}>To Buyer</span></span>
@@ -518,7 +529,8 @@ export function Admin({ user }: Props) {
                             </button>
                         </div>
                     </div>
-                ))}
+                );
+                })}
             </div>
         );
     }
