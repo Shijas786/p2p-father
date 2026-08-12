@@ -353,9 +353,9 @@ export async function routeMessage(
         user = await db.getOrCreateUserByPhone(senderPhone);
     }
 
-    // ── Persist pushName (WhatsApp display name) if not yet stored ────────────
+    // ── Persist/refresh pushName (WhatsApp display name) whenever it changes ──
     const pushName = msg.pushName?.trim();
-    if (pushName && user && (!user.first_name || /^WA_\d+$/.test(user.first_name))) {
+    if (pushName && user && user.first_name !== pushName) {
         try {
             await db.getClient().from("users").update({ first_name: pushName }).eq("id", user.id);
             user.first_name = pushName;

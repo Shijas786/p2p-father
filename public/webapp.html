@@ -213,9 +213,6 @@
       <label for="otp-in">6-Digit WhatsApp Code</label>
       <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
 
-      <label for="name-otp-in" style="margin-top:10px;">Display Name (Optional)</label>
-      <input type="text" id="name-otp-in" placeholder="Enter your name (e.g. Shijas)" style="margin-bottom:14px;" />
-
       <div id="otp-err" class="err" style="display:none;"></div>
       <button class="btn btn-green" id="otp-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
       <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
@@ -455,15 +452,12 @@
       err.textContent = 'Please enter the full 6-digit code.';
       err.style.display = 'block'; return;
     }
-    const nameVal = document.getElementById('name-otp-in')?.value?.trim();
-    const payload = { phone: fullPhone, otp };
-    if (nameVal) payload.first_name = nameVal;
 
     btn.textContent = 'Verifying…'; btn.disabled = true;
     try {
       const r = await fetch('/api/miniapp/auth/wa-verify-otp', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ phone: fullPhone, otp })
       });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || 'Invalid OTP');
