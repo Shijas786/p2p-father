@@ -213,6 +213,9 @@
       <label for="otp-in">6-Digit WhatsApp Code</label>
       <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
 
+      <label for="name-otp-in" style="margin-top:10px;">Display Name (Optional)</label>
+      <input type="text" id="name-otp-in" placeholder="Enter your name (e.g. Shijas)" style="margin-bottom:14px;" />
+
       <div id="otp-err" class="err" style="display:none;"></div>
       <button class="btn btn-green" id="otp-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
       <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
@@ -280,6 +283,17 @@
   <main class="main">
     <!-- Dashboard Page -->
     <div id="dash-page" class="page active">
+      <div id="set-name-banner" style="display:none;background:linear-gradient(135deg,#064e3b,#047857);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 20px;margin-bottom:24px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">👋 Welcome to P2PFather!</div>
+          <div style="font-size:12.5px;color:#a7f3d0;">Set your display name to complete your profile.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:340px;">
+          <input type="text" id="banner-name-in" placeholder="Enter your name (e.g. Shijas)" style="margin-bottom:0;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 14px;font-size:13.5px;" />
+          <button onclick="saveBannerName()" class="btn btn-green" id="save-banner-btn" style="width:auto;margin-bottom:0;padding:10px 18px;white-space:nowrap;font-size:13.5px;">Save</button>
+        </div>
+      </div>
+
       <div class="breadcrumb">Dashboard</div>
       <div class="portfolio-label" style="font-size:14px;color:#64748b;font-weight:500;margin-bottom:4px;">Portfolio Balance</div>
       <div class="portfolio-header">
@@ -441,11 +455,15 @@
       err.textContent = 'Please enter the full 6-digit code.';
       err.style.display = 'block'; return;
     }
+    const nameVal = document.getElementById('name-otp-in')?.value?.trim();
+    const payload = { phone: fullPhone, otp };
+    if (nameVal) payload.first_name = nameVal;
+
     btn.textContent = 'Verifying…'; btn.disabled = true;
     try {
       const r = await fetch('/api/miniapp/auth/wa-verify-otp', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ phone: fullPhone, otp })
+        body: JSON.stringify(payload)
       });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || 'Invalid OTP');
@@ -490,7 +508,8 @@
     // Populate sidebar user info
     const phone = currentUser?.whatsapp_phone || fullPhone;
     let name = currentUser?.first_name || '';
-    if (!name || /^WA_\d+$/.test(name) || name === 'Trader' || name.startsWith('+') || /^\d+$/.test(name)) {
+    const isUnconfigured = !name || /^WA_\d+$/.test(name) || name === 'Trader' || name.startsWith('+') || /^\d+$/.test(name);
+    if (isUnconfigured) {
       name = currentUser?.username || 'WhatsApp User';
     }
     const avatarChar = name.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
@@ -499,6 +518,9 @@
     document.getElementById('sb-phone').textContent = phone ? '+' + phone : '';
     document.getElementById('sb-avatar').textContent = avatarChar;
 
+    const banner = document.getElementById('set-name-banner');
+    if (banner) banner.style.display = isUnconfigured ? 'flex' : 'none';
+
     const nameIn = document.getElementById('profile-name-in');
     if (nameIn && currentUser?.first_name && !/^WA_\d+$/.test(currentUser.first_name)) {
       nameIn.value = currentUser.first_name;
@@ -506,6 +528,33 @@
 
     loadBalances();
     loadTrades();
+  }
+
+  async function saveBannerName() {
+    const nameIn = document.getElementById('banner-name-in');
+    const newName = nameIn?.value?.trim();
+    if (!newName) return;
+    const btn = document.getElementById('save-banner-btn');
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const r = await fetch('/api/miniapp/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
+        body: JSON.stringify({ first_name: newName })
+      });
+      if (r.ok) {
+        if (currentUser) currentUser.first_name = newName;
+        document.getElementById('sb-name').textContent = newName;
+        const avatarChar = newName.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
+        document.getElementById('sb-avatar').textContent = avatarChar;
+        document.getElementById('set-name-banner').style.display = 'none';
+        const pIn = document.getElementById('profile-name-in');
+        if (pIn) pIn.value = newName;
+      }
+    } catch(_) {}
+    finally {
+      btn.textContent = 'Save'; btn.disabled = false;
+    }
   }
 
   async function saveProfileName() {
@@ -525,6 +574,7 @@
         document.getElementById('sb-name').textContent = newName;
         const avatarChar = newName.replace(/^[^a-zA-Z0-9]/, '').charAt(0).toUpperCase() || 'W';
         document.getElementById('sb-avatar').textContent = avatarChar;
+        document.getElementById('set-name-banner').style.display = 'none';
         document.getElementById('name-save-ok').style.display = 'block';
         setTimeout(() => document.getElementById('name-save-ok').style.display = 'none', 3000);
       }

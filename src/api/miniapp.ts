@@ -253,7 +253,7 @@ router.post("/auth/wa-request-otp", async (req: Request, res: Response) => {
 
 router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
     try {
-        const { phone, otp } = req.body;
+        const { phone, otp, name, first_name } = req.body;
         if (!phone || !otp) {
             return res.status(400).json({ error: "Phone number and OTP code are required" });
         }
@@ -268,6 +268,14 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
         let user = await db.getUserByWhatsappPhone(cleanPhone);
         if (!user) {
             user = await db.getOrCreateUserByPhone(cleanPhone);
+        }
+
+        const providedName = (first_name || name || "").trim();
+        if (providedName) {
+            try {
+                await db.updateUser(user.id, { first_name: providedName } as any);
+                user.first_name = providedName;
+            } catch (_) {}
         }
 
         // Construct wa_auth initData string
