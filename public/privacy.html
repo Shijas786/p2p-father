@@ -278,93 +278,114 @@
             <div class="section-title">1. Our Privacy Commitment</div>
             <div class="card">
                 <div class="card-desc">
-                    P2PFather is built as a **privacy-first** peer-to-peer exchange. We operate under a strict minimal-data processing framework. We do not track users, run analytics cookies, or harvest metadata that is not required for running the P2P escrow mechanism.
+                    P2PFather is built with a **privacy-first, security-driven** philosophy for peer-to-peer digital asset trading. We operate under a strict minimal-data processing framework. We do not sell user data, run invasive ad trackers, or collect unnecessary personal information beyond what is strictly required to execute escrow transactions, prevent fraud, and facilitate safe P2P settlement.
                 </div>
             </div>
         </div>
 
-        <!-- Section 2: Data We Do NOT Collect -->
+        <!-- Section 2: Data Protections & Zero Tracking -->
         <div class="section">
-            <div class="section-title">2. Information We Do NOT Collect</div>
+            <div class="section-title">2. Data Protections &amp; Zero Tracking</div>
             <div class="card">
                 <div class="card-desc">
-                    To eliminate legal and security risks for both our operators and our users, the system enforces the following guarantees:
+                    To eliminate security risks and protect our community members, our platform enforces the following guarantees:
                     <ul>
-                        <li><strong>No IP Address Logging:</strong> We do not capture or store your server IP logs.</li>
-                        <li><strong>No User Agent Logging:</strong> Your browser and device User Agent strings are never stored.</li>
-                        <li><strong>No KYC verification:</strong> We do not request user identification documents, government IDs, real names, or billing addresses.</li>
+                        <li><strong>No Invasive Web Tracking:</strong> We do not track you across third-party websites or deploy third-party advertising cookies.</li>
+                        <li><strong>No Server Storage of Raw ID Documents:</strong> When you complete identity verification, your physical identity documents and biometric scans are verified through our certified compliance partner (<a href="https://didit.me" target="_blank" rel="noopener" style="color:#0ecb81;text-decoration:underline;">Didit Protocol</a>) using bank-grade encryption; raw images of your identity documents are never stored directly on P2PFather application servers.</li>
+                        <li><strong>No Selling of User Data:</strong> Your contact numbers, wallet addresses, and trading records are never sold, rented, or commercialized.</li>
                     </ul>
                 </div>
             </div>
             <div class="alert">
                 <div class="alert-icon">🛡️</div>
-                <div>Any request that fails initialization is rejected immediately. The system logs only a generic warning status to avoid writing trace info into host logs.</div>
+                <div>All API interactions are authenticated via cryptographic signatures and HMAC validation. Unauthorized or malformed requests are rejected immediately without storing unnecessary request logs.</div>
             </div>
         </div>
 
-        <!-- Section 3: Data We Process & Store -->
+        <!-- Section 3: Information We Process & Store -->
         <div class="section">
             <div class="section-title">3. Information We Process &amp; Store</div>
             <div class="card">
                 <div class="card-desc">
-                    We process and store only the minimal parameters needed to match ads, execute smart contracts, and handle dispute resolution:
+                    We process and store only the parameters necessary to manage your account, match trading orders, secure smart contract escrows, and conduct dispute mediation:
                     <ul>
-                        <li><strong>Telegram Identity:</strong> Your Telegram ID, username, and first name to identify you within the Telegram Mini App and coordinate notifications.</li>
-                        <li><strong>Wallet Address:</strong> Your derived hot wallet index or connected external wallet address is stored to check on-chain ledger balances.</li>
-                        <li><strong>UPI ID &amp; Phone Number:</strong> We collect your UPI ID and/or Phone Number to enable order creation and trade execution. These details are stored in our secure database and are shared **only** with your counterparty during an active trade to facilitate the P2P fiat transfer.</li>
-                        <li><strong>Dispute &amp; Chat Data:</strong> Chat logs, screenshot files (uploaded to Supabase Storage), and transaction UTRs provided as evidence during active disputes are stored to let administrators resolve conflicts.</li>
+                        <li><strong>Authentication &amp; Account Identifiers:</strong> Your Telegram User ID, username, and/or WhatsApp Phone Number to authenticate your web dashboard and bot sessions, deliver real-time trade notifications, and send one-time login codes (OTPs).</li>
+                        <li><strong>Wallet Addresses:</strong> Your custodial wallet index and connected external wallet addresses to monitor on-chain deposit, escrow, and withdrawal balances across supported blockchains.</li>
+                        <li><strong>Payment Handles (UPI &amp; Bank Details):</strong> Your UPI ID, bank account name, or payment address to enable ad creation and peer-to-peer fiat settlement. These details are stored in our secure database and are shared <strong>only</strong> with your active trade counterparty during an open order.</li>
+                        <li><strong>KYC Verification Status:</strong> For users who complete identity verification, we store the verification status (<span class="chip">VERIFIED</span>, <span class="chip">UNVERIFIED</span>, or <span class="chip">UNDER REVIEW</span>), Didit Session ID, and verification timestamp to display your "Verified Trader" badge.</li>
+                        <li><strong>Dispute Evidence:</strong> Chat records, transaction UTR numbers, and payment receipt screenshots submitted voluntarily during an arbitration to allow admins to resolve disputed trades fairly.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Section 4: Public Blockchain Data -->
+        <!-- Section 4: Identity Verification (KYC) via Didit Protocol -->
         <div class="section">
-            <div class="section-title">4. Blockchain &amp; Public Data</div>
+            <div class="section-title">4. Identity Verification (KYC) &amp; Fraud Prevention</div>
             <div class="card">
                 <div class="card-desc">
-                    By locking or releasing stablecoins inside our P2P Escrow smart contracts, you broadcast data to public blockchain ledgers (e.g. Base or BSC).
+                    To combat scams, prevent fraudulent banking disputes, and foster a safe trading ecosystem, P2PFather offers optional <strong>Identity Verification (KYC)</strong>:
+                    <ul>
+                        <li><strong>Verification Partner:</strong> Identity verification workflows are powered by <strong>Didit Protocol</strong> (<a href="https://didit.me" target="_blank" rel="noopener" style="color:#0ecb81;text-decoration:underline;">didit.me</a>), an enterprise-grade, privacy-preserving identity verification provider.</li>
+                        <li><strong>Document &amp; Biometric Verification:</strong> During KYC, Didit securely processes your government-issued ID (e.g. Passport, Driving License, National ID) and a 3D liveness selfie check to verify proof of personhood.</li>
+                        <li><strong>Encryption &amp; Privacy:</strong> All biometric and document transmissions are encrypted in transit (TLS 1.3) and at rest (AES-256) by Didit in full compliance with global data protection standards (including GDPR).</li>
+                        <li><strong>Verified Trader Badge:</strong> Once verified, your profile displays the green <em>Verified Trader</em> badge, giving your trading counterparties greater trust and safety during peer-to-peer transfers.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Public Blockchain Data -->
+        <div class="section">
+            <div class="section-title">5. Blockchain &amp; Public Data</div>
+            <div class="card">
+                <div class="card-desc">
+                    When you lock or release tokens inside our P2P Escrow smart contracts, transactions are broadcast to public blockchain networks (e.g., Base, BSC, Polygon).
                     <br><br>
-                    Blockchain records—including wallet addresses, transaction hashes, timestamps, and contract interaction details—are **permanently public, immutable, and accessible by anyone**. P2PFather cannot modify or purge on-chain ledger logs.
+                    Blockchain records—including public wallet addresses, smart contract interaction hashes, token amounts, and timestamps—are <strong>permanently public, immutable, and accessible by anyone on global block explorers</strong>. P2PFather does not have the ability to modify, censor, or purge on-chain records.
                 </div>
             </div>
         </div>
 
-        <!-- Section 5: Third-Party Integrations -->
+        <!-- Section 6: Third-Party Integrations -->
         <div class="section">
-            <div class="section-title">5. Third-Party Integrations</div>
+            <div class="section-title">6. Third-Party Integrations</div>
             <div class="card">
                 <div class="card-desc">
-                    Various features integrate with external APIs that follow their own policies:
+                    To deliver reliable service, P2PFather interfaces with trusted third-party providers:
                     <ul>
-                        <li><strong>Telegram messenger:</strong> The app interface operates within Telegram, which handles user session data in accordance with their privacy policy.</li>
-                        <li><strong>RPC Node Infrastructure:</strong> On-chain state checks are routed through blockchain node providers.</li>
-                        <li><strong>LI.FI Protocol:</strong> Cross-chain bridge quotes and transactions are processed by LI.FI nodes.</li>
+                        <li><strong>Didit Protocol:</strong> Encrypted biometric verification and automated identity validation (<a href="https://didit.me" target="_blank" rel="noopener" style="color:#0ecb81;text-decoration:underline;">Didit Privacy Policy</a>).</li>
+                        <li><strong>WhatsApp Business API (Meta):</strong> Automated dispatch of trade notifications and one-time verification passcodes.</li>
+                        <li><strong>Telegram Messenger:</strong> Telegram Bot and Telegram Mini App interfaces operate within Telegram's infrastructure.</li>
+                        <li><strong>Blockchain RPC Providers &amp; LI.FI:</strong> Node infrastructure for blockchain interaction and cross-chain bridging.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Section 6: Security and Retention -->
+        <!-- Section 7: Security, Retention & User Rights -->
         <div class="section">
-            <div class="section-title">6. Security and Retention</div>
+            <div class="section-title">7. Security, Retention &amp; User Rights</div>
             <div class="card">
                 <div class="card-desc">
-                    - All backend API interactions are guarded by SHA-256 HMAC validations of Telegram init data.
-                    <br>
-                    - You can update or clear your payment credentials (such as your UPI address) instantly under your Mini App Profile page.
+                    <ul>
+                        <li><strong>Session Security:</strong> All web and bot communication uses HTTPS/WSS encryption and SHA-256 HMAC verification.</li>
+                        <li><strong>Profile Management:</strong> You can edit or delete your saved UPI payment details anytime directly from your profile settings on the Web Dashboard or Mini App.</li>
+                        <li><strong>Account Unlinking:</strong> You may unlink your Telegram or WhatsApp accounts at any time from your account settings.</li>
+                        <li><strong>Data Deletion Requests:</strong> You may request the deletion of your off-chain profile data by contacting our support team via Telegram or WhatsApp.</li>
+                    </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Section 7: Disclaimer & Account Freeze Liability -->
+        <!-- Section 8: Disclaimer & Account Freeze Liability -->
         <div class="section">
-            <div class="section-title">7. Disclaimer &amp; Account Freeze Liability</div>
+            <div class="section-title">8. Disclaimer &amp; Account Freeze Liability</div>
             <div class="card" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.04);">
                 <div class="card-desc">
-                    P2PFather is a decentralized peer-to-peer escrow matchmaking tool. We do not hold fiat currency (INR/Rupees) and are not involved in the actual banking transfers between buyers and sellers.
+                    P2PFather provides a non-custodial smart contract escrow and order matchmaking software interface. We do not hold fiat currency (INR/AED/USD) and are never party to the direct banking or UPI transfers between buyers and sellers.
                     <br><br>
-                    <strong>Important Warning:</strong> You are solely responsible for cross-verifying the identity of your trade counterparty, checking matching bank account names with Telegram profiles, and validating payment UTRs before releasing escrow. P2PFather and its operators are <strong>not responsible</strong> for any bank account freezes, Cyber Cell reports, financial losses, or disputes arising from peer-to-peer fiat payments. All trades are conducted at your own risk.
+                    <strong>Important Notice:</strong> You are solely responsible for cross-verifying the identity of your trade counterparty, verifying that bank account holder names match verified profiles, and validating genuine bank credit before releasing escrow. P2PFather and its developers are <strong>not responsible</strong> for any bank account freezes, Cyber Cell inquiries, third-party payment fraud, or financial disputes arising from peer-to-peer fiat payments. All trades are conducted at your own risk.
                 </div>
             </div>
         </div>
