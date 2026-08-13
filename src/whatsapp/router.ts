@@ -482,7 +482,8 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
         return;
     }
 
-    const isGreeting = ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help", ""].includes(text);
+    const isRegistration = text.includes("register") || text.includes("sign up") || text.includes("signup") || text.includes("i want to register");
+    const isGreeting = isRegistration || ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help", ""].includes(text);
     if (isGreeting) {
         await (db as any).clearWhatsappState(user.id);
         // New user with no wallet yet — show welcome screen
