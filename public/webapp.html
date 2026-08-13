@@ -323,7 +323,9 @@
         <p style="font-size:13px;color:#047857;line-height:1.5;">You can use P2PFather entirely from WhatsApp. Start a chat with our bot first, then come back here to sign in with your number.</p>
       </div>
 
-      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">By signing up, I agree to Terms of Service and Privacy Policy.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">
+        By signing up, I agree to <a href="#" onclick="openLegalModal('terms');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Terms and Conditions</a> and <a href="#" onclick="openLegalModal('privacy');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Privacy Policy</a>.
+      </p>
 
       <a id="wa-create-btn" href="#" target="_blank" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;letter-spacing:.2px;">
         Create Account from WhatsApp →
@@ -344,7 +346,9 @@
       <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
     </div>
 
-    <div class="terms" id="auth-terms" style="font-size:11.5px;color:var(--muted);margin-top:28px;">By signing in you agree to P2PFather's Terms &amp; Privacy Policy.</div>
+    <div class="terms" id="auth-terms" style="font-size:11.5px;color:var(--muted);margin-top:28px;">
+      By signing in you agree to P2PFather's <a href="#" onclick="openLegalModal('terms');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Terms &amp; Conditions</a> and <a href="#" onclick="openLegalModal('privacy');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Privacy Policy</a>.
+    </div>
   </div>
 
   <div class="right">
@@ -1098,6 +1102,29 @@
   </div>
 </div>
 
+<!-- ── TERMS & PRIVACY MODAL ── -->
+<div id="legal-modal" class="modal-overlay" style="display:none;" onclick="closeLegalModal()">
+  <div class="modal-card" style="max-width:540px;max-height:85vh;display:flex;flex-direction:column;padding:24px;border-radius:20px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <!-- Toggle Tabs -->
+      <div style="display:flex;gap:6px;background:#f1f5f9;padding:4px;border-radius:10px;">
+        <button id="legal-tab-privacy" onclick="showLegalTab('privacy')" style="padding:6px 14px;border-radius:8px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;background:#ffffff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,0.08);">Privacy Policy</button>
+        <button id="legal-tab-terms" onclick="showLegalTab('terms')" style="padding:6px 14px;border-radius:8px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);">Terms &amp; Conditions</button>
+      </div>
+      <button onclick="closeLegalModal()" style="border:none;background:transparent;font-size:22px;cursor:pointer;color:var(--muted);padding:4px;line-height:1;">✕</button>
+    </div>
+
+    <div id="legal-modal-content" style="flex:1;overflow-y:auto;padding-right:6px;font-size:13px;line-height:1.6;color:#334155;">
+      <!-- Content populated by showLegalTab() -->
+    </div>
+
+    <div style="border-top:1px solid #e2e8f0;padding-top:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--muted);font-weight:500;">✉️ p2pfatherhere@gmail.com</span>
+      <button class="btn btn-green" onclick="closeLegalModal()" style="padding:8px 20px;font-size:13px;width:auto;">I Understand →</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let initData = '';
   let currentUser = null;
@@ -1106,6 +1133,57 @@
   let activeChatTradeId = null;
   let chatPollTimer = null;
   let currentAdType = 'sell';
+
+  const LEGAL_CONTENT = {
+    privacy: `
+      <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔒 Privacy Policy</h3>
+      <p style="margin-bottom:10px;"><strong>1. Introduction</strong><br>At P2PFather, we respect your privacy and are committed to protecting your personal data. This policy outlines how we collect, use, and safeguard your information.</p>
+      <p style="margin-bottom:10px;"><strong>2. Data Collection</strong><br>We collect personal information such as your phone number, Telegram identity, wallet address, and transaction/trade details on our platform.</p>
+      <p style="margin-bottom:10px;"><strong>3. Data Usage</strong><br>We use your information to enhance our services, ensure transaction security, coordinate escrow-protected trades, and provide a personalized trading experience.</p>
+      <p style="margin-bottom:10px;"><strong>4. Sharing with Third Parties</strong><br>We do not share or sell your data with third parties without your consent, except with verified trade counterparties to complete transactions or where required by law.</p>
+      <p style="margin-bottom:10px;"><strong>5. Security &amp; Encryption</strong><br>We implement advanced cryptographic security measures to protect your personal data and escrow funds from unauthorized access and attacks.</p>
+      <p style="margin-bottom:10px;"><strong>6. Modifications</strong><br>We reserve the right to modify this Privacy Policy at any time. Changes will be posted on this page.</p>
+      <p style="margin-bottom:4px;"><strong>7. Contact</strong><br>If you have any questions about this Privacy Policy, feel free to contact us at <a href="mailto:p2pfatherhere@gmail.com" style="color:#059669;font-weight:700;">p2pfatherhere@gmail.com</a>.</p>
+    `,
+    terms: `
+      <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:12px;">📋 Terms and Conditions</h3>
+      <p style="margin-bottom:10px;"><strong>1. Introduction</strong><br>Welcome to P2PFather, a smart contract P2P platform for WhatsApp, Web &amp; Telegram. By using our application, you agree to comply with the following Terms and Conditions.</p>
+      <p style="margin-bottom:10px;"><strong>2. Use of P2PFather</strong><br>P2PFather allows you to buy, sell, and manage digital assets within WhatsApp, Web, and Telegram using blockchain technology. You agree that you are solely responsible for transactions and trades made.</p>
+      <p style="margin-bottom:10px;"><strong>3. Security</strong><br>You agree to keep your account, phone number, and wallet credentials confidential. P2PFather is not liable for losses due to unauthorized access or releasing escrow before confirming genuine bank payment.</p>
+      <p style="margin-bottom:10px;"><strong>4. Privacy Policy</strong><br>We respect your privacy. For more information on how we handle your personal data, please refer to our <a href="#" onclick="showLegalTab('privacy');return false;" style="color:#059669;font-weight:700;">Privacy Policy</a>.</p>
+      <p style="margin-bottom:10px;"><strong>5. Modifications</strong><br>P2PFather reserves the right to modify these Terms and Conditions at any time. Updates will be posted on this page.</p>
+      <p style="margin-bottom:4px;"><strong>6. Contact &amp; Support</strong><br>For any questions or dispute assistance, contact us at <a href="mailto:p2pfatherhere@gmail.com" style="color:#059669;font-weight:700;">p2pfatherhere@gmail.com</a> or via Telegram <a href="https://t.me/p2p_fatherbot" target="_blank" style="color:#059669;font-weight:700;">@p2p_fatherbot</a>.</p>
+    `
+  };
+
+  function openLegalModal(tab = 'privacy') {
+    const modal = document.getElementById('legal-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      showLegalTab(tab);
+    }
+  }
+
+  function closeLegalModal() {
+    const modal = document.getElementById('legal-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function showLegalTab(tab) {
+    const contentEl = document.getElementById('legal-modal-content');
+    const tabPrivacy = document.getElementById('legal-tab-privacy');
+    const tabTerms = document.getElementById('legal-tab-terms');
+
+    if (contentEl) contentEl.innerHTML = LEGAL_CONTENT[tab] || LEGAL_CONTENT.privacy;
+
+    if (tab === 'terms') {
+      if (tabTerms) { tabTerms.style.background = '#ffffff'; tabTerms.style.color = '#0f172a'; tabTerms.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }
+      if (tabPrivacy) { tabPrivacy.style.background = 'transparent'; tabPrivacy.style.color = 'var(--muted)'; tabPrivacy.style.boxShadow = 'none'; }
+    } else {
+      if (tabPrivacy) { tabPrivacy.style.background = '#ffffff'; tabPrivacy.style.color = '#0f172a'; tabPrivacy.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }
+      if (tabTerms) { tabTerms.style.background = 'transparent'; tabTerms.style.color = 'var(--muted)'; tabTerms.style.boxShadow = 'none'; }
+    }
+  }
 
   function openMobileSidebar() {
     const sb = document.getElementById('sidebar');
