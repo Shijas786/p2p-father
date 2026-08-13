@@ -2374,7 +2374,7 @@ router.post("/telegram/link-code", async (req: Request, res: Response) => {
         if (!user) return res.status(404).json({ error: "User not found" });
 
         const code = await db.createWhatsappLinkCode(user.id);
-        const botUsername = process.env.BOT_USERNAME || "P2PKeralaBot";
+        const botUsername = process.env.BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME || "p2p_fatherbot";
 
         res.json({
             code,

@@ -514,7 +514,7 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
             return;
         }
 
-        const botUsername = process.env.TELEGRAM_BOT_USERNAME || "P2p_fatherbot";
+        const botUsername = process.env.TELEGRAM_BOT_USERNAME || process.env.BOT_USERNAME || "p2p_fatherbot";
         const botLink = `https://t.me/${botUsername}?start=linkwa`;
         await reply(
             sock,
