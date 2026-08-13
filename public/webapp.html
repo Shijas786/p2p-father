@@ -496,14 +496,12 @@
             <div class="portfolio-currency">USD</div>
           </div>
 
-          <!-- WALLET VS ESCROW VAULT BALANCE BREAKDOWN BADGES -->
+          <!-- ESCROW VAULT BALANCE BREAKDOWN BADGE -->
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-            <div style="font-size:12px;font-weight:700;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;">
-              💼 Custodial Wallet: <span id="dash-wallet-bal">$0.00</span>
-            </div>
             <div style="font-size:12px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;">
               🔒 Escrow Vault: <span id="dash-vault-tokens-badge">0 USDT • 0 USDC</span>
             </div>
+            <span id="dash-wallet-bal" style="display:none;">$0.00</span>
           </div>
 
           <!-- MINIMAL INLINE ESCROW LOCKS (DIRECTLY UNDER WALLET) -->
@@ -751,6 +749,34 @@
               ✈️ Open Telegram &amp; Link Now →
             </a>
           </div>
+        </div>
+
+        <!-- KYC IDENTITY VERIFICATION CARD -->
+        <div class="card" style="margin-bottom:18px;padding:16px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:#ecfdf5;border:1px solid #a7f3d0;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(16,185,129,0.1);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="#059669" fill-opacity="0.15" stroke="#10b981" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M9 12l2 2 4-4" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:15px;font-weight:800;color:#0f172a;">KYC Identity Verification</span>
+                  <span id="kyc-badge-status" class="trade-badge badge-pending" style="font-size:11px;padding:2px 8px;">UNVERIFIED</span>
+                </div>
+                <div id="kyc-details-str" style="font-size:12.5px;color:var(--muted);margin-top:2px;">Complete 1-minute Didit verification to unlock high-volume trading.</div>
+              </div>
+            </div>
+            <div id="kyc-action-area">
+              <button class="btn btn-green btn-sm" id="didit-kyc-btn" onclick="startDiditKyc()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,0.2);margin-bottom:0;font-weight:700;">
+                ⚡ Verify Identity →
+              </button>
+            </div>
+          </div>
+          <div id="kyc-err" class="err" style="display:none;margin-top:8px;"></div>
+          <div id="kyc-ok" class="ok" style="display:none;margin-top:8px;"></div>
         </div>
 
         <!-- RECEIVE WALLET ADDRESS BANNER -->
