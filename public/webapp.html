@@ -2262,8 +2262,10 @@
       const tgDisp = document.getElementById('prof-disp-telegram');
       const tgActionArea = document.getElementById('tg-link-action-area');
       if (tgDisp && tgActionArea) {
-        if (u.telegram_id || u.telegram_username) {
-          tgDisp.textContent = `Linked: @${u.telegram_username || u.telegram_id}`;
+        const isTgLinked = u.telegram_id && Number(u.telegram_id) > 0;
+        if (isTgLinked) {
+          const tgHandle = u.username || u.telegram_username || u.telegram_id;
+          tgDisp.textContent = `Linked: @${tgHandle}`;
           tgDisp.style.color = '#059669';
           tgDisp.style.fontWeight = '700';
           tgActionArea.innerHTML = `<button onclick="handleUnlinkTelegram()" style="background:transparent;border:none;color:#ef4444;font-weight:800;font-size:13.5px;cursor:pointer;">Unlink</button>`;

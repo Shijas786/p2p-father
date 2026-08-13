@@ -1230,9 +1230,10 @@ class Database {
         // Update target user with Telegram credentials
         const updates: any = {
             telegram_id: Number(telegramId),
+            preferred_channel: "both",
             updated_at: new Date().toISOString(),
         };
-        if (username) updates.telegram_username = username;
+        if (username) updates.username = username;
         if (firstName) updates.first_name = firstName;
 
         const { data: updatedUser, error } = await db
@@ -1242,7 +1243,10 @@ class Database {
             .select()
             .single();
 
-        if (error || !updatedUser) return null;
+        if (error || !updatedUser) {
+            console.error("[linkTelegramByCode] Update error:", error);
+            return null;
+        }
 
         // Clear link code state
         await db.from("whatsapp_states").delete().eq("user_id", targetUserId);
@@ -1253,11 +1257,14 @@ class Database {
     /** Unlink Telegram account from user profile */
     async unlinkTelegram(userId: string): Promise<void> {
         const db = this.getClient();
+        // Reset telegram_id to null or a negative synthetic placeholder
+        const dummyTgId = -Math.floor(100000000 + Math.random() * 900000000);
         await db
             .from("users")
             .update({
-                telegram_id: null,
-                telegram_username: null,
+                telegram_id: dummyTgId,
+                username: null,
+                preferred_channel: "whatsapp",
                 updated_at: new Date().toISOString(),
             })
             .eq("id", userId);
