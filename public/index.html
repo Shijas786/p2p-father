@@ -189,8 +189,24 @@
   --teal:#0d9488;
   --red:#ef4444;
 }
-html{scroll-behavior:smooth;}
-body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+html{
+  scroll-behavior:smooth;
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'DM Sans',sans-serif;
+  font-weight:300;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  position:relative;
+}
 
 /* reveals */
 .r{opacity:0;transform:translateY(28px);transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1);}
@@ -207,6 +223,8 @@ nav{
   padding:1.3rem 3rem;
   transition:background .3s,border-color .3s,backdrop-filter .3s;
   border-bottom:1px solid transparent;
+  width:100%;
+  box-sizing:border-box;
 }
 nav.solid{background:rgba(255,255,255,.93);backdrop-filter:blur(18px);border-bottom-color:var(--rule);}
 .logo{font-family:'Caveat',cursive;font-size:1.65rem;font-weight:700;color:var(--ink);text-decoration:none;}
@@ -637,10 +655,12 @@ hr.rule{border:none;border-top:1px solid var(--rule);}
 /* footer */
 footer{
   border-top:1px solid var(--rule);padding:2.5rem 3rem;
-  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;
   background:var(--paper);
+  width:100%;
+  box-sizing:border-box;
 }
-.footer-links{display:flex;gap:2rem;}
+.footer-links{display:flex;flex-wrap:wrap;gap:1rem 1.75rem;align-items:center;}
 .footer-links a{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);text-decoration:none;transition:color .2s;}
 .footer-links a:hover{color:var(--gold);}
 .footer-copy{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--ink-muted);}
@@ -648,28 +668,31 @@ footer{
 @keyframes fadeup{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);}}
 
 @media(max-width:900px){
-  nav{padding:1rem 1.2rem; gap:0.5rem;}
+  nav{padding:0.85rem 1.2rem; gap:0.5rem; width:100%; box-sizing:border-box;}
   .navlinks{display:none;}
-  .hero{padding:6rem 1.2rem 3rem;}
+  .hero{padding:5.5rem 1.2rem 2.5rem; width:100%; box-sizing:border-box;}
   .hero-phone-wrap{display:none;}
-  h1{font-size:clamp(2.4rem,8vw,4.5rem); margin-bottom: 1.5rem;}
+  h1{font-size:clamp(2.2rem,7.5vw,4.2rem); margin-bottom: 1.25rem;}
   .hero-sub { font-size: 0.95rem; line-height: 1.6; }
-  .section,.section-wide{padding:3.5rem 1.2rem;}
+  .section,.section-wide{padding:3.5rem 1.2rem; width:100%; box-sizing:border-box;}
   .stats{grid-template-columns:1fr; gap:0;}
-  .stat{border-bottom:1px solid var(--rule); border-right:none; padding:1.8rem 1.5rem;}
+  .stat{border-bottom:1px solid var(--rule); border-right:none; padding:1.8rem 1.2rem;}
   .stat:last-child{border-bottom:none;}
   .miniapp-grid{grid-template-columns:1fr;gap:2rem;}
   .tok-row{grid-template-columns:1fr;}
-  footer{flex-direction:column;align-items:flex-start;gap:1.2rem; padding:3rem 1.2rem;}
+  footer{flex-direction:column;align-items:flex-start;gap:1.5rem; padding:2.5rem 1.2rem; width:100%; box-sizing:border-box;}
+  .footer-links{gap:0.75rem 1.25rem; width:100%;}
 }
 @media(max-width:600px){
-  .logo span{font-size:1.3rem;}
-  .navcta{font-size:0.8rem; padding:0.4rem 0.8rem;}
-  .hero-btns { flex-direction: column; width: 100%; gap: 1rem; }
+  nav{padding:0.75rem 0.85rem;}
+  .logo span{font-size:1.15rem !important;}
+  .navcta{font-size:0.75rem !important; padding:0.35rem 0.65rem !important;}
+  .hero-btns { flex-direction: column; width: 100%; gap: 0.85rem; }
   .btn { width: 100%; justify-content: center; }
-  .nav-right-wrap { gap: 0.5rem !important; }
-  #custom-connect-btn { padding: 0.5rem 0.8rem !important; font-size: 0.8rem !important; }
+  .nav-right-wrap { gap: 0.4rem !important; }
+  #custom-connect-btn { padding: 0.45rem 0.65rem !important; font-size: 0.75rem !important; }
   .hero-pulse-container { height: 200px; }
+  .footer-links{gap:0.6rem 1rem;}
 }
 
 /* Profile UI */
