@@ -867,19 +867,28 @@ class Database {
         try {
             const db = this.getClient();
             const clean = phone.replace(/[^0-9]/g, "");
+            if (!clean) return null;
             const last10 = clean.length >= 10 ? clean.slice(-10) : clean;
 
             const { data, error } = await db
                 .from("users")
                 .select("*")
-                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.endsWith.${last10},phone_number.eq.${clean},phone_number.endsWith.${last10}`)
+                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.ilike.%${last10},phone_number.eq.${clean},phone_number.ilike.%${last10}`)
                 .order("created_at", { ascending: true })
                 .limit(1)
                 .maybeSingle();
 
             if (error) {
                 console.warn(`[DB] getUserByWhatsappPhone warning: ${error.message}`);
-                return null;
+                // Fallback to exact match on whatsapp_phone
+                const { data: fallback } = await db
+                    .from("users")
+                    .select("*")
+                    .eq("whatsapp_phone", clean)
+                    .order("created_at", { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+                return fallback as User | null;
             }
             if (data && !data.whatsapp_phone) {
                 await db.from("users").update({ whatsapp_phone: clean }).eq("id", data.id);
@@ -897,9 +906,10 @@ class Database {
      */
     async getOrCreateUserByPhone(phone: string): Promise<User> {
         const db = this.getClient();
+        const clean = phone.replace(/[^0-9]/g, "");
 
         try {
-            const existing = await this.getUserByWhatsappPhone(phone);
+            const existing = await this.getUserByWhatsappPhone(clean || phone);
             if (existing) return existing;
         } catch (_) {}
 
@@ -929,8 +939,8 @@ class Database {
         const insertPayload: Record<string, any> = {
             telegram_id:       syntheticTelegramId,
             username:          null,
-            first_name:        `WA_${phone.slice(-4)}`,
-            whatsapp_phone:    phone,
+            first_name:        `WA_${(clean || phone).slice(-4)}`,
+            whatsapp_phone:    clean || phone,
             preferred_channel: "whatsapp",
             wallet_index:      nextIndex,
             wallet_address:    null,
@@ -950,8 +960,14 @@ class Database {
             error = retry.error;
         }
 
+        if (error && (error.message.includes("unique") || error.code === "23505")) {
+            // Concurrency race condition or duplicate key: fetch existing user
+            const fallbackUser = await this.getUserByWhatsappPhone(clean || phone);
+            if (fallbackUser) return fallbackUser;
+        }
+
         if (error || !newUser) throw new Error(`Failed to create WhatsApp user: ${error?.message}`);
-        console.log(`[DB] Created unassigned WA user record for ${newUser.id} (phone=${phone})`);
+        console.log(`[DB] Created unassigned WA user record for ${newUser.id} (phone=${clean || phone})`);
         return newUser as User;
     }
 
