@@ -47,7 +47,7 @@
     .btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);margin-bottom:8px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
     .btn-green{background:var(--primary-gradient);color:#fff;box-shadow:0 6px 18px rgba(16,185,129,0.3)}.btn-green:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,185,129,0.4)}.btn-green:active{transform:scale(.98)}.btn-green:disabled{opacity:.6;cursor:not-allowed;transform:none}
     .btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--sub)}.btn-outline:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
-    .btn-demo{background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700}.btn-demo:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,0.15)}
+    .btn-primary-soft{background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700}.btn-primary-soft:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,0.15)}
     .btn-red{background:var(--red-bg);color:var(--red);border:1px solid #fecaca}.btn-red:hover{background:#fee2e2}
     .btn-blue{background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.25)}.btn-blue:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(59,130,246,0.35)}
     .btn-sm{padding:8px 14px;font-size:12.5px;border-radius:9px;width:auto;margin-bottom:0}
@@ -303,13 +303,6 @@
 
       <div id="phone-err" class="err" style="display:none;"></div>
       <button class="btn btn-green" id="phone-btn" onclick="checkPhone()">Continue →</button>
-
-      <div style="text-align:center;margin:16px 0 12px;font-size:12px;color:var(--muted);position:relative;">
-        <span style="background:#fff;padding:0 10px;z-index:1;position:relative;font-weight:600;">OR FOR UI TESTING</span>
-        <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border);"></div>
-      </div>
-
-      <button class="btn btn-demo" onclick="skipSignIn()">⚡ Skip Sign In (Demo Mode) →</button>
     </div>
 
     <!-- ── STEP 2a: NEW USER ── -->
@@ -442,9 +435,9 @@
               <div class="notif-item">
                 <div class="notif-item-title">
                   <span>🔒 Escrow Locked</span>
-                  <span class="notif-item-time">2m ago</span>
+                  <span class="notif-item-time">Just now</span>
                 </div>
-                <div class="notif-item-sub">250.00 USDT locked in escrow for Buy Trade #demo_tr_101.</div>
+                <div class="notif-item-sub">Crypto reserved and locked in escrow contract.</div>
               </div>
               <div class="notif-item">
                 <div class="notif-item-title">
@@ -468,25 +461,17 @@
 
           <!-- Floating Profile Popover Menu -->
           <div class="profile-popover" id="profile-popover" onclick="event.stopPropagation()">
-            <div class="popover-name" id="popover-name-text">Shijas</div>
-            <div class="popover-phone" id="popover-phone-text">919876543210</div>
+            <div class="popover-name" id="popover-name-text">User</div>
+            <div class="popover-phone" id="popover-phone-text"></div>
             <div class="popover-divider"></div>
             <div class="popover-item" onclick="showPage('account-page', document.querySelectorAll('.sb-item')[5]); closePopovers();">
               <span>👤 Account</span>
             </div>
-            <div class="popover-item logout" onclick="exitDemoMode()">
+            <div class="popover-item logout" onclick="handleLogout()">
               <span>Logout</span>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- DEMO BANNER -->
-      <div id="demo-banner" style="display:none;background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:10px;padding:12px 18px;margin-bottom:18px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-sm);">
-        <div style="font-size:13.5px;color:#1e40af;font-weight:600;">
-          ⚡ <strong>Demo Mode Active</strong> — Previewing clean P2PFather UI components.
-        </div>
-        <button class="btn btn-outline btn-sm" onclick="exitDemoMode()" style="width:auto;margin-bottom:0;background:#fff;color:#1e40af;border-color:#93c5fd;">Sign In Real Account →</button>
       </div>
 
       <!-- ── 1. DASHBOARD PAGE ── -->
@@ -499,7 +484,7 @@
             
             <!-- CLEAN ADDRESS & COPY BUTTON ONLY -->
             <div style="display:flex;align-items:center;gap:6px;">
-              <span id="wallet-addr-dash" data-full-addr="0x71C7656EC7ab88b098defB751B7401B5f6d8976F" style="font-size:12.5px;font-weight:700;color:#0f172a;font-family:'JetBrains Mono',monospace;">0x71C7...8976F</span>
+              <span id="wallet-addr-dash" data-full-addr="" style="font-size:12.5px;font-weight:700;color:#0f172a;font-family:'JetBrains Mono',monospace;">Loading…</span>
               <button onclick="copyDashAddress()" id="dash-copy-btn" style="background:transparent;border:none;color:#64748b;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s ease;" title="Copy Wallet Address">
                 📋 Copy
               </button>
@@ -507,17 +492,17 @@
           </div>
 
           <div class="portfolio-header" style="margin-bottom:10px;">
-            <div class="portfolio-value" id="total-balance">$1750.00</div>
+            <div class="portfolio-value" id="total-balance">$0.00</div>
             <div class="portfolio-currency">USD</div>
           </div>
 
           <!-- WALLET VS ESCROW VAULT BALANCE BREAKDOWN BADGES -->
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
             <div style="font-size:12px;font-weight:700;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;">
-              💼 Custodial Wallet: <span id="dash-wallet-bal">$1400.00</span>
+              💼 Custodial Wallet: <span id="dash-wallet-bal">$0.00</span>
             </div>
             <div style="font-size:12px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;">
-              🔒 Escrow Vault: <span id="dash-vault-tokens-badge">250 USDT • 100 USDC</span>
+              🔒 Escrow Vault: <span id="dash-vault-tokens-badge">0 USDT • 0 USDC</span>
             </div>
           </div>
 
@@ -525,17 +510,10 @@
           <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:20px;">
             <div style="font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
               <span>🔒 Active Trade Escrow Locks</span>
-              <span id="active-locks-count-badge" style="font-size:11px;color:#059669;font-weight:700;">2 Trades</span>
+              <span id="active-locks-count-badge" style="font-size:11px;color:#059669;font-weight:700;">0 Trades</span>
             </div>
             <div id="active-locks-list">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
-                <span style="font-weight:700;color:#0f172a;">↙ Buy 250 USDT <span style="color:var(--muted);font-weight:500;">(#demo_tr_101)</span></span>
-                <span class="trade-badge badge-active">In Escrow</span>
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px;">
-                <span style="font-weight:700;color:#0f172a;">↗ Sell 100 USDC <span style="color:var(--muted);font-weight:500;">(#demo_tr_102)</span></span>
-                <span class="trade-badge badge-pending">Fiat Sent</span>
-              </div>
+              <div style="font-size:12px;color:var(--muted);padding:4px 0;">No active trade locks in vault</div>
             </div>
           </div>
 
@@ -698,17 +676,6 @@
                 <div class="step-circle">5</div>
                 <div class="step-title">Completed</div>
               </div>
-            </div>
-
-            <!-- DEMO STEPPER PROGRESS SWITCHER FOR TESTING ALL STATUSES -->
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;background:#f8fafc;padding:10px 14px;border-radius:12px;border:1.5px solid var(--border);">
-              <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-right:4px;">Demo Progress Switcher:</span>
-              <button type="button" class="btn btn-outline btn-sm" onclick="previewTradeProgress('waiting_for_escrow')" style="padding:4px 9px;font-size:11px;">1. Lock</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="previewTradeProgress('in_escrow')" style="padding:4px 9px;font-size:11px;">2. Escrow 🔒</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="previewTradeProgress('fiat_sent')" style="padding:4px 9px;font-size:11px;">3. Sent 💳</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="previewTradeProgress('fiat_confirmed')" style="padding:4px 9px;font-size:11px;">4. Confirmed ✅</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="previewTradeProgress('completed')" style="padding:4px 9px;font-size:11px;">5. Done 🎉</button>
-              <button type="button" class="btn btn-red btn-sm" onclick="previewTradeProgress('disputed')" style="padding:4px 9px;font-size:11px;">⚠️ Disputed</button>
             </div>
 
             <div id="trade-action-bar" style="background:#f8fafc;padding:12px 16px;border-radius:12px;border:1px solid var(--border);margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;">
@@ -1069,42 +1036,6 @@
   let activeChatTradeId = null;
   let chatPollTimer = null;
   let currentAdType = 'sell';
-  let isDemoMode = false;
-
-  const MOCK_USER = {
-    id: 'demo_user_123',
-    first_name: 'Demo Trader',
-    username: 'demotrader',
-    whatsapp_phone: '919876543210',
-    wallet_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
-    upi_id: 'demotrader@upi',
-    phone_number: '9876543210',
-    bank_account_number: '987654321098',
-    bank_ifsc: 'SBIN0001234',
-    bank_name: 'State Bank of India'
-  };
-
-  const MOCK_TRADES = [
-    { id: 'demo_tr_101', type: 'buy', amount: 250, token: 'USDT', fiat_amount: 22875, status: 'in_escrow', created_at: new Date().toISOString(), buyer_id: 'demo_user_123', seller_id: 'trader_xyz' },
-    { id: 'demo_tr_102', type: 'sell', amount: 100, token: 'USDT', fiat_amount: 9150, status: 'fiat_sent', created_at: new Date(Date.now()-3600000).toISOString(), buyer_id: 'trader_abc', seller_id: 'demo_user_123' },
-    { id: 'demo_tr_103', type: 'buy', amount: 500, token: 'USDC', fiat_amount: 45750, status: 'completed', created_at: new Date(Date.now()-86400000).toISOString(), buyer_id: 'demo_user_123', seller_id: 'trader_qrs' }
-  ];
-
-  const MOCK_ORDERS = [
-    { id: 'demo_ord_1', type: 'sell', amount: 500, token: 'USDT', rate: 91.50, payment_methods: ['UPI', 'Bank Transfer'], users: { first_name: 'Rahul (⭐99%)' } },
-    { id: 'demo_ord_2', type: 'buy', amount: 200, token: 'USDT', rate: 91.20, payment_methods: ['UPI', 'GPay'], users: { first_name: 'Vikram (⭐98%)' } },
-    { id: 'demo_ord_3', type: 'sell', amount: 1000, token: 'USDC', rate: 91.80, payment_methods: ['Bank Transfer', 'PhonePe'], users: { first_name: 'Ananya (⭐100%)' } }
-  ];
-
-  const MOCK_MESSAGES = {
-    'demo_tr_101': [
-      { sender_type: 'system', message: '🔒 250 USDT locked in Escrow. Buyer please send ₹22,875 via UPI.', created_at: '2026-08-12T18:00:00Z' },
-      { sender_id: 'trader_xyz', message: 'Hi! Please send ₹22,875 to UPI ID: trader_xyz@upi (GPay / PhonePe / Paytm).', created_at: '2026-08-12T18:01:00Z' },
-      { sender_id: 'demo_user_123', message: 'Sending now! Will share payment proof screenshot once done.', created_at: '2026-08-12T18:02:00Z' },
-      { sender_id: 'demo_user_123', type: 'image', image_url: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80', message: 'Payment receipt', created_at: '2026-08-12T18:03:00Z' },
-      { sender_id: 'trader_xyz', message: 'Payment received in bank account! Releasing crypto now 👍', created_at: '2026-08-12T18:04:00Z' }
-    ]
-  };
 
   function openMobileSidebar() {
     const sb = document.getElementById('sidebar');
@@ -1129,15 +1060,10 @@
     }
   }
 
-  function skipSignIn() {
-    isDemoMode = true;
-    currentUser = MOCK_USER;
-    document.getElementById('demo-banner').style.display = 'flex';
-    showDashboard();
-  }
-
-  function exitDemoMode() {
-    isDemoMode = false;
+  function handleLogout() {
+    localStorage.removeItem('trade_init_data');
+    initData = '';
+    currentUser = null;
     document.getElementById('dash-view').style.display = 'none';
     document.getElementById('auth-view').style.display = 'flex';
     showStep('phone');
@@ -1318,33 +1244,12 @@
   }
 
   function apiGet(path) {
-    if (isDemoMode) {
-      if (path.includes('/wallet/balances')) return Promise.resolve({ usdt: '1250.00', usdc: '500.00', vault_bsc_reserved: '350.00', address: MOCK_USER.wallet_address });
-      if (path.includes('/trades/mine')) return Promise.resolve({ trades: MOCK_TRADES });
-      if (path.includes('/messages')) return Promise.resolve({ messages: MOCK_MESSAGES[activeChatTradeId] || MOCK_MESSAGES['demo_tr_101'] });
-      if (path.includes('/orders/mine')) return Promise.resolve({ orders: [MOCK_ORDERS[0]] });
-      if (path.includes('/orders')) return Promise.resolve({ orders: MOCK_ORDERS });
-      if (path.includes('/trades/')) return Promise.resolve({ trade: MOCK_TRADES.find(t => t.id === activeChatTradeId) || MOCK_TRADES[0] });
-      if (path.includes('/profile')) return Promise.resolve({ user: MOCK_USER });
-    }
     return fetch('/api/miniapp' + path, {
       headers: { 'x-telegram-init-data': initData }
     }).then(r => r.json());
   }
 
   function apiPost(path, body) {
-    if (isDemoMode) {
-      if (path.includes('/vault/deposit')) return Promise.resolve({ txHash: '0xabc123demo987' });
-      if (path.includes('/orders/')) return Promise.resolve({ success: true });
-      if (path.includes('/orders')) return Promise.resolve({ order: { ...body, id: 'demo_ord_new', status: 'active' } });
-      if (path.includes('/trades')) return Promise.resolve({ trade: { id: 'demo_tr_101', status: 'in_escrow' } });
-      if (path.includes('/messages')) {
-        if (!MOCK_MESSAGES[activeChatTradeId]) MOCK_MESSAGES[activeChatTradeId] = [];
-        MOCK_MESSAGES[activeChatTradeId].push({ sender_id: currentUser.id, text: body.text, created_at: new Date().toISOString() });
-        return Promise.resolve({ success: true });
-      }
-      return Promise.resolve({ success: true });
-    }
     return fetch('/api/miniapp' + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
@@ -1353,7 +1258,6 @@
   }
 
   function apiPut(path, body) {
-    if (isDemoMode) return Promise.resolve({ user: { ...MOCK_USER, ...body } });
     return fetch('/api/miniapp' + path, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
@@ -1369,10 +1273,10 @@
       const d = await apiGet('/wallet/balances');
       cachedWalletBalances = d;
 
-      const usdtWallet = parseFloat(d.usdt || '1000.00');
-      const usdcWallet = parseFloat(d.usdc || '400.00');
-      const vaultUsdt = parseFloat(d.vault_bsc_usdt || d.vault_usdt || '250.00');
-      const vaultUsdc = parseFloat(d.vault_base_usdc || d.vault_usdc || '100.00');
+      const usdtWallet = parseFloat(d.usdt || '0');
+      const usdcWallet = parseFloat(d.usdc || '0');
+      const vaultUsdt = parseFloat(d.vault_bsc_usdt || d.vault_usdt || '0');
+      const vaultUsdc = parseFloat(d.vault_base_usdc || d.vault_usdc || '0');
 
       const usdt = usdtWallet + vaultUsdt;
       const usdc = usdcWallet + vaultUsdc;
@@ -1381,7 +1285,7 @@
       const vaultReserved = vaultUsdt + vaultUsdc;
 
       const total = usdt + usdc + (bnb * 300) + (eth * 3000);
-      rawTotalBalance = '$' + (total || 1750.00).toFixed(2);
+      rawTotalBalance = '$' + total.toFixed(2);
       if (!isBalanceHidden) {
         document.getElementById('total-balance').textContent = rawTotalBalance;
         const stackEl = document.getElementById('crypto-stack-val');
@@ -1393,10 +1297,10 @@
 
       const walletOnly = Math.max(0, total - vaultReserved);
       const dashWallet = document.getElementById('dash-wallet-bal');
-      if (dashWallet) dashWallet.textContent = '$' + (walletOnly || 1400.00).toFixed(2);
+      if (dashWallet) dashWallet.textContent = '$' + walletOnly.toFixed(2);
 
       const dashVaultTokens = document.getElementById('dash-vault-tokens-badge');
-      if (dashVaultTokens) dashVaultTokens.textContent = `${vaultUsdt} USDT • ${vaultUsdc} USDC`;
+      if (dashVaultTokens) dashVaultTokens.textContent = `${vaultUsdt.toFixed(2)} USDT • ${vaultUsdc.toFixed(2)} USDC`;
 
       const vUsdtEl = document.getElementById('vault-usdt-locked-str');
       if (vUsdtEl) vUsdtEl.textContent = `${vaultUsdt.toFixed(2)} USDT`;
@@ -1404,48 +1308,55 @@
       const vUsdcEl = document.getElementById('vault-usdc-locked-str');
       if (vUsdcEl) vUsdcEl.textContent = `${vaultUsdc.toFixed(2)} USDC`;
 
-      const addr = d.address || currentUser?.wallet_address || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
+      const addr = d.address || currentUser?.wallet_address || '';
       const addrDash = document.getElementById('wallet-addr-dash');
       if (addrDash) {
-        addrDash.textContent = addr.slice(0,6) + '...' + addr.slice(-5);
+        addrDash.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-5)) : '—';
         addrDash.dataset.fullAddr = addr;
       }
       const addrSub = document.getElementById('custodial-addr-sub');
-      if (addrSub) addrSub.textContent = addr.slice(0,6) + '...' + addr.slice(-5);
+      if (addrSub) addrSub.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-5)) : '—';
 
       renderAssetsGrid(d);
       renderActiveTradeLocks();
     } catch(e) {}
   }
 
-  function renderActiveTradeLocks() {
+  async function renderActiveTradeLocks() {
     const el = document.getElementById('active-locks-list');
     const badge = document.getElementById('active-locks-count-badge');
     if (!el) return;
 
-    const activeTrades = MOCK_TRADES.filter(t => ['in_escrow', 'fiat_sent', 'waiting_for_escrow', 'pending'].includes(t.status));
-    
-    if (!activeTrades.length) {
+    try {
+      const d = await apiGet('/trades/mine');
+      const trades = d.trades || [];
+      const activeTrades = trades.filter(t => ['in_escrow', 'fiat_sent', 'waiting_for_escrow', 'pending'].includes(t.status));
+      
+      if (!activeTrades.length) {
+        if (badge) badge.textContent = '0 Trades';
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;">✨ No active trade locks in vault</div>';
+        return;
+      }
+
+      if (badge) badge.textContent = `${activeTrades.length} Trades`;
+      const statusBadges = { pending: 'badge-pending', in_escrow: 'badge-active', fiat_sent: 'badge-active' };
+
+      el.innerHTML = activeTrades.map((t, idx) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;${idx < activeTrades.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:12px;cursor:pointer;" onclick="showPage('active-trades-page', document.querySelectorAll('.sb-item')[4]); selectTradeForChat('${t.id}')">
+          <span style="font-weight:700;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token} <span style="color:var(--muted);font-weight:500;">(#${t.id.slice(0,8)})</span></span>
+          <span class="trade-badge ${statusBadges[t.status] || 'badge-active'}">${t.status.replace('_', ' ')}</span>
+        </div>
+      `).join('');
+    } catch(e) {
       if (badge) badge.textContent = '0 Trades';
       el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;">✨ No active trade locks in vault</div>';
-      return;
     }
-
-    if (badge) badge.textContent = `${activeTrades.length} Trades`;
-    const statusBadges = { pending: 'badge-pending', in_escrow: 'badge-active', fiat_sent: 'badge-active' };
-
-    el.innerHTML = activeTrades.map((t, idx) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;${idx < activeTrades.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:12px;">
-        <span style="font-weight:700;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token} <span style="color:var(--muted);font-weight:500;">(#${t.id.slice(0,10)})</span></span>
-        <span class="trade-badge ${statusBadges[t.status] || 'badge-active'}">${t.status.replace('_', ' ')}</span>
-      </div>
-    `).join('');
   }
 
   function copyDashAddress() {
     const el = document.getElementById('wallet-addr-dash');
-    const addr = el?.dataset?.fullAddr || el?.textContent?.trim() || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
-    if (navigator.clipboard) {
+    const addr = el?.dataset?.fullAddr || el?.textContent?.trim() || '';
+    if (addr && navigator.clipboard) {
       navigator.clipboard.writeText(addr);
       const btn = document.getElementById('dash-copy-btn');
       if (btn) {
@@ -1471,12 +1382,12 @@
     const el = document.getElementById('assets-grid');
     if (!el) return;
 
-    const usdtBase = parseFloat(d.usdt || '1250.00').toFixed(2);
+    const usdtBase = parseFloat(d.usdt || '0.00').toFixed(2);
     const usdtBsc = parseFloat(d.vault_bsc_usdt || '0.00').toFixed(2);
-    const usdcBase = (parseFloat(d.usdc || '500.00') + parseFloat(d.vault_base_usdc || '0')).toFixed(2);
+    const usdcBase = (parseFloat(d.usdc || '0.00') + parseFloat(d.vault_base_usdc || '0')).toFixed(2);
     const usdcBsc = parseFloat(d.vault_bsc_usdc || '0.00').toFixed(2);
-    const bnbBsc = parseFloat(d.bnb || d.vault_bsc_bnb || '0.0500').toFixed(4);
-    const ethBase = parseFloat(d.eth || '0.0200').toFixed(4);
+    const bnbBsc = parseFloat(d.bnb || d.vault_bsc_bnb || '0.0000').toFixed(4);
+    const ethBase = parseFloat(d.eth || '0.0000').toFixed(4);
 
     const assetItems = [
       { token: 'USDT', chain: 'base', name: 'Tether USD', bal: usdtBase, symbol: 'USDT' },
@@ -1605,7 +1516,7 @@
       const res = await apiPost('/wallet/send', { to, amount, token, chain });
       if (res.error) throw new Error(res.error);
 
-      ok.textContent = `🚀 Transaction Sent! TxHash: ${res.txHash ? res.txHash.slice(0,14)+'...' : '0xabc123demo987'}`;
+      ok.textContent = `🚀 Transaction Sent! TxHash: ${res.txHash ? res.txHash.slice(0,14)+'...' : 'Confirmed'}`;
       ok.style.display = 'block';
       loadBalances();
       setTimeout(closeSendModal, 2200);
@@ -2070,33 +1981,6 @@
     }
   }
 
-  function previewTradeProgress(status) {
-    const badge = document.getElementById('chat-trade-status');
-    if (badge) badge.textContent = status.toUpperCase();
-    updateStepperUI(status);
-
-    const actionText = document.getElementById('trade-action-status-text');
-    const actionBtns = document.getElementById('trade-action-btns');
-    if (!actionText || !actionBtns) return;
-
-    actionBtns.innerHTML = '';
-    if (status === 'waiting_for_escrow' || status === 'pending') {
-      actionText.textContent = 'Seller needs to lock tokens into Escrow smart contract.';
-      actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="previewTradeProgress('in_escrow')">Lock Funds Now</button>`;
-    } else if (status === 'in_escrow') {
-      actionText.textContent = 'Tokens locked in Escrow. Buyer please send ₹22,875 fiat transfer via UPI.';
-      actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="previewTradeProgress('fiat_sent')">Confirm Payment Sent</button>`;
-    } else if (status === 'fiat_sent') {
-      actionText.textContent = 'Buyer marked payment sent. Seller check bank account then release crypto.';
-      actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="previewTradeProgress('completed')">Confirm Receipt &amp; Release</button>`;
-    } else if (status === 'fiat_confirmed' || status === 'completed') {
-      actionText.textContent = '🎉 Trade completed! Escrow released to Buyer.';
-    } else if (status === 'disputed') {
-      actionText.textContent = '⚠️ Trade in dispute! Admin is reviewing chat logs and payment proofs.';
-      actionBtns.innerHTML = `<button class="btn btn-outline btn-sm">Contact Admin</button>`;
-    }
-  }
-
   let selectedChatFile = null;
 
   function handleFileSelect(e) {
@@ -2144,32 +2028,6 @@
         const formData = new FormData();
         formData.append('image', selectedChatFile);
         if (text) formData.append('caption', text);
-
-        if (isDemoMode) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const msgBox = document.getElementById('chat-messages');
-            const dataUrl = ev.target.result;
-            const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-            msgBox.innerHTML += `
-              <div style="align-self:flex-end;margin-bottom:6px;">
-                <div class="msg-img-bubble" onclick="openLightbox('${dataUrl}')">
-                  <img src="${dataUrl}" alt="Payment proof" />
-                  <div class="msg-img-label">
-                    <span>📸 Tap to expand</span>
-                    <span>${time} <span class="msg-status-tick seen">✓✓</span></span>
-                  </div>
-                </div>
-              </div>
-            `;
-            msgBox.scrollTop = msgBox.scrollHeight;
-            cancelChatImage();
-            input.value = '';
-            sendBtn.disabled = false; sendBtn.textContent = 'Send';
-          };
-          reader.readAsDataURL(selectedChatFile);
-          return;
-        }
 
         const res = await fetch(`/api/miniapp/trades/${activeChatTradeId}/messages/upload`, {
           method: 'POST',
@@ -2395,7 +2253,7 @@
         if (detailsStr) detailsStr.textContent = '⏳ KYC Verification Active — Checking status...';
         if (actionArea) actionArea.innerHTML = `
           <button class="btn btn-outline" onclick="loadKycStatus()" style="width:auto;margin-bottom:0;">🔄 Refresh Status</button>
-          <button class="btn btn-demo" onclick="startDiditKyc()" style="width:auto;margin-bottom:0;margin-left:8px;">Resume Verification</button>
+          <button class="btn btn-primary-soft" onclick="startDiditKyc()" style="width:auto;margin-bottom:0;margin-left:8px;">Resume Verification</button>
         `;
       } else {
         badge.textContent = 'UNVERIFIED';
@@ -2419,20 +2277,6 @@
     if (btn) { btn.textContent = 'Opening Verification…'; btn.disabled = true; }
 
     try {
-      if (isDemoMode) {
-        window.open('https://verify.didit.me/session/lY9kM9UHxM3c', '_blank');
-        if (ok) {
-          ok.textContent = '⚡ Didit verification session launched in new window!';
-          ok.style.display = 'block';
-        }
-        const badge = document.getElementById('kyc-badge-status');
-        if (badge) {
-          badge.textContent = 'UNDER REVIEW ⏳';
-          badge.className = 'trade-badge badge-active';
-        }
-        return;
-      }
-
       const res = await apiPost('/kyc/start');
       if (res.error) throw new Error(res.error);
 
