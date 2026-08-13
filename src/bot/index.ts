@@ -1002,24 +1002,25 @@ bot.command(["start", "open"], async (ctx) => {
         }
     }
 
-    // Deep link from WhatsApp: guide user to link their WA account
-    if (payload === "linkwa") {
-        const user = await ensureUser(ctx);
-        const profileUrl = "https://p2pfather.com/miniapp/profile";
-        const keyboard = new InlineKeyboard()
-            .webApp("⚙️ Open Profile → Link WA", profileUrl);
+    // Deep link from Web Dashboard: link Telegram to Web account
+    if (payload && payload.startsWith("link_")) {
+        const inputCode = payload.replace("link_", "").trim();
+        const linked = await db.linkTelegramByCode(
+            ctx.from?.id!,
+            ctx.from?.username || null,
+            ctx.from?.first_name || null,
+            inputCode
+        );
 
-        if (user.whatsapp_phone) {
+        if (linked) {
             await ctx.reply(
-                `✅ *WhatsApp Already Linked!*\n\nYour WhatsApp number \`+${user.whatsapp_phone}\` is already connected to this account\\.`,
+                `🎉 *Telegram Account Linked Successfully!*\n\nYour Telegram account (@${escapeMarkdown(ctx.from?.username || ctx.from?.first_name || "")}) is now connected to your P2PFather profile.\n\nYou can now receive trade notifications and trade seamlessly across Web and Telegram.`,
                 { parse_mode: "Markdown" }
             );
         } else {
             await ctx.reply(
-                `🔗 *Link Your WhatsApp Account*\n\n` +
-                `Tap the button below to open your Profile, then tap *"Link WA"* to get your 6\\-digit code\\.\n\n` +
-                `Send that code in the WhatsApp bot chat to complete linking\\.`,
-                { parse_mode: "Markdown", reply_markup: keyboard }
+                `❌ *Invalid or Expired Link Code*\n\nPlease generate a new link code from your Web Dashboard Profile and try again.`,
+                { parse_mode: "Markdown" }
             );
         }
         return;
@@ -1904,6 +1905,31 @@ bot.command("profile", async (ctx) => {
 });
 
 bot.command("link", async (ctx) => {
+    const text = ctx.message?.text?.trim() || "";
+    const parts = text.split(/\s+/);
+    const passedCode = parts[1];
+
+    if (passedCode && /^\d{6}$/.test(passedCode)) {
+        const linked = await db.linkTelegramByCode(
+            ctx.from?.id!,
+            ctx.from?.username || null,
+            ctx.from?.first_name || null,
+            passedCode
+        );
+        if (linked) {
+            await ctx.reply(
+                `🎉 *Telegram Account Linked Successfully!*\n\nYour Telegram account is now connected to your P2PFather profile!`,
+                { parse_mode: "Markdown" }
+            );
+        } else {
+            await ctx.reply(
+                `❌ *Invalid or Expired Link Code*\n\nPlease generate a new code from your Web Dashboard Profile.`,
+                { parse_mode: "Markdown" }
+            );
+        }
+        return;
+    }
+
     const user = await ensureUser(ctx);
     const code = await db.createWhatsappLinkCode(user.id);
     const waBotNumber = process.env.WA_BOT_NUMBER || "";
@@ -1915,12 +1941,12 @@ bot.command("link", async (ctx) => {
 
     await ctx.reply(
         [
-            "📱 *Link Your Account to WhatsApp*",
+            "📱 *Link Your Account*",
             "",
             `Your 6-digit OTP code is: \`${code}\``,
             "_(Valid for 10 minutes)_",
             "",
-            "👉 *Tap the button below* to open WhatsApp and link instantly, or manually send `/link " + code + "` to the WhatsApp bot.",
+            "👉 Send `/link " + code + "` in the WhatsApp chat to link.",
         ].join("\n"),
         { parse_mode: "Markdown", reply_markup: kb }
     );

@@ -2361,6 +2361,49 @@ router.put("/whatsapp/preference", async (req: Request, res: Response) => {
     }
 });
 
+// ── Generate Telegram Link Code for Web Dashboard UI ─────────────────────────
+router.post("/telegram/link-code", async (req: Request, res: Response) => {
+    try {
+        const telegramUser = req.telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        let user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user) {
+            user = await db.getOrCreateUser(telegramUser as any);
+        }
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const code = await db.createWhatsappLinkCode(user.id);
+        const botUsername = process.env.BOT_USERNAME || "P2PKeralaBot";
+
+        res.json({
+            code,
+            expires_in_seconds: 600,
+            bot_username: botUsername,
+            tg_link: `https://t.me/${botUsername}?start=link_${code}`,
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Unlink Telegram Account ───────────────────────────────────────────────
+router.post("/telegram/unlink", async (req: Request, res: Response) => {
+    try {
+        const telegramUser = req.telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        let user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        await db.unlinkTelegram(user.id);
+        const updatedUser = await db.getUserById(user.id);
+        res.json({ success: true, user: updatedUser });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Unlink WhatsApp Account ───────────────────────────────────────────────
 router.post("/whatsapp/unlink", async (req: Request, res: Response) => {
     try {

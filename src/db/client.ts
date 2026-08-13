@@ -866,14 +866,24 @@ class Database {
     async getUserByWhatsappPhone(phone: string): Promise<User | null> {
         try {
             const db = this.getClient();
+            const clean = phone.replace(/[^0-9]/g, "");
+            const last10 = clean.length >= 10 ? clean.slice(-10) : clean;
+
             const { data, error } = await db
                 .from("users")
                 .select("*")
-                .eq("whatsapp_phone", phone)
+                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.endsWith.${last10},phone_number.eq.${clean},phone_number.endsWith.${last10}`)
+                .order("created_at", { ascending: true })
+                .limit(1)
                 .maybeSingle();
+
             if (error) {
                 console.warn(`[DB] getUserByWhatsappPhone warning: ${error.message}`);
                 return null;
+            }
+            if (data && !data.whatsapp_phone) {
+                await db.from("users").update({ whatsapp_phone: clean }).eq("id", data.id);
+                data.whatsapp_phone = clean;
             }
             return data as User | null;
         } catch {
@@ -889,13 +899,8 @@ class Database {
         const db = this.getClient();
 
         try {
-            const { data: existing } = await db
-                .from("users")
-                .select("*")
-                .eq("whatsapp_phone", phone)
-                .maybeSingle();
-
-            if (existing) return existing as User;
+            const existing = await this.getUserByWhatsappPhone(phone);
+            if (existing) return existing;
         } catch (_) {}
 
         // Find next wallet index to satisfy NOT NULL constraints
@@ -1168,6 +1173,91 @@ class Database {
             .update({
                 whatsapp_phone: null,
                 preferred_channel: "telegram",
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", userId);
+    }
+
+    /** Verify link code provided by Telegram user and link telegram_id/username to target user account */
+    async linkTelegramByCode(
+        telegramId: number | string,
+        username: string | null,
+        firstName: string | null,
+        inputCode: string
+    ): Promise<User | null> {
+        const db = this.getClient();
+
+        // Find state matching the OTP code
+        const { data: states } = await db
+            .from("whatsapp_states")
+            .select("user_id, data")
+            .eq("key", "LINK_CODE");
+
+        if (!states) return null;
+
+        const match = states.find((s: any) => s.data?.code === inputCode && s.data?.expires_at > Date.now());
+        if (!match) return null;
+
+        const targetUserId = match.user_id; // The Web user's ID
+
+        // Check if there's already an existing Telegram-only user for this telegramId
+        const { data: tgOnlyUser } = await db
+            .from("users")
+            .select("*")
+            .eq("telegram_id", Number(telegramId))
+            .maybeSingle();
+
+        if (tgOnlyUser && tgOnlyUser.id !== targetUserId) {
+            // MERGE: Transfer trades and orders from TG account → Target account
+            try { await db.from("orders").update({ user_id: targetUserId }).eq("user_id", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("trades").update({ seller_id: targetUserId }).eq("seller_id", tgOnlyUser.id); } catch (_) {}
+
+            // If target user has no wallet, inherit TG wallet
+            const { data: targetUser } = await db.from("users").select("wallet_address, wallet_index").eq("id", targetUserId).single();
+            if (!targetUser?.wallet_address && tgOnlyUser.wallet_address) {
+                await db.from("users").update({
+                    wallet_address: tgOnlyUser.wallet_address,
+                    wallet_index: tgOnlyUser.wallet_index,
+                    wallet_type: "bot",
+                }).eq("id", targetUserId);
+            }
+
+            // Delete orphaned TG-only user row
+            await db.from("users").delete().eq("id", tgOnlyUser.id);
+        }
+
+        // Update target user with Telegram credentials
+        const updates: any = {
+            telegram_id: Number(telegramId),
+            updated_at: new Date().toISOString(),
+        };
+        if (username) updates.telegram_username = username;
+        if (firstName) updates.first_name = firstName;
+
+        const { data: updatedUser, error } = await db
+            .from("users")
+            .update(updates)
+            .eq("id", targetUserId)
+            .select()
+            .single();
+
+        if (error || !updatedUser) return null;
+
+        // Clear link code state
+        await db.from("whatsapp_states").delete().eq("user_id", targetUserId);
+
+        return updatedUser as User;
+    }
+
+    /** Unlink Telegram account from user profile */
+    async unlinkTelegram(userId: string): Promise<void> {
+        const db = this.getClient();
+        await db
+            .from("users")
+            .update({
+                telegram_id: null,
+                telegram_username: null,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", userId);

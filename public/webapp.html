@@ -715,7 +715,43 @@
       <div id="account-page" class="page">
         <div class="breadcrumb">Dashboard • <span>Account</span></div>
         <div class="page-title">Profile &amp; Payment Details</div>
-        <div class="page-sub">Configure your crypto receive address and payment methods for trades</div>
+        <!-- TELEGRAM ACCOUNT INTEGRATION CARD -->
+        <div class="card" style="margin-bottom:18px;padding:16px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,0.1);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M21.5 2L2 9.5l7 3.5 1.5 7 4-4.5 5.5 4.5L21.5 2z" fill="#2563eb" fill-opacity="0.15" stroke="#2563eb" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+                  <path d="M9 13l6.5-6.5" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:800;color:#0f172a;">Telegram Account</div>
+                <div id="prof-disp-telegram" style="font-size:12.5px;color:var(--muted);margin-top:2px;">Not linked to Telegram</div>
+              </div>
+            </div>
+            <div id="tg-link-action-area">
+              <button id="tg-link-action-btn" onclick="generateTelegramLinkCode()" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;cursor:pointer;">
+                Link Telegram
+              </button>
+            </div>
+          </div>
+
+          <!-- DYNAMIC TELEGRAM LINK CODE BOX -->
+          <div id="tg-link-code-box" style="display:none;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-top:14px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Link Code OTP</span>
+              <button onclick="closeTgLinkBox()" style="border:none;background:transparent;cursor:pointer;color:var(--muted);font-size:14px;">✕</button>
+            </div>
+            <div id="tg-link-code-val" style="font-size:24px;font-weight:800;letter-spacing:6px;color:#0f172a;font-family:'JetBrains Mono',monospace;margin:6px 0;">
+              000000
+            </div>
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Valid 10m • Send to Telegram Bot or tap below</div>
+            <a id="tg-open-link-btn" href="#" target="_blank" class="btn btn-green btn-sm" style="width:100%;text-decoration:none;display:inline-flex;justify-content:center;margin-bottom:0;">
+              ✈️ Open Telegram &amp; Link Now →
+            </a>
+          </div>
+        </div>
 
         <!-- RECEIVE WALLET ADDRESS BANNER -->
         <div style="background:#ffffff;border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);flex-wrap:wrap;gap:12px;">
@@ -2174,41 +2210,58 @@
   async function loadProfileData() {
     try {
       const d = await apiGet('/profile');
-      const u = d.user || MOCK_USER;
+      const u = d.user || {};
       const pName = document.getElementById('popover-name-text');
       const pPhone = document.getElementById('popover-phone-text');
-      const phoneNum = u.phone_number || '919876543210';
-      if (pName) pName.textContent = u.first_name || 'Shijas';
+      const phoneNum = u.phone_number || '';
+      if (pName) pName.textContent = u.first_name || 'Trader';
       if (pPhone) pPhone.textContent = phoneNum;
 
       // Update top-right toolbar country flag based on WhatsApp phone country code
       const flagEl = document.getElementById('top-country-flag');
-      if (flagEl) {
+      if (flagEl && phoneNum) {
         flagEl.textContent = getCountryFlagFromPhone(phoneNum);
         flagEl.title = `Country Flag (+${phoneNum.slice(0,2)})`;
       }
 
       const profNameEl = document.getElementById('prof-name');
       if (profNameEl) profNameEl.value = u.first_name || '';
-      document.getElementById('prof-upi').value = u.upi_id || 'muhammadpammu111-1@okhdfcbank';
-      document.getElementById('prof-phone').value = u.phone_number || '919876543210';
+      document.getElementById('prof-upi').value = u.upi_id || '';
+      document.getElementById('prof-phone').value = u.phone_number || '';
       document.getElementById('prof-bank-acc').value = u.bank_account_number || '';
       document.getElementById('prof-bank-ifsc').value = u.bank_ifsc || '';
       document.getElementById('prof-bank-name').value = u.bank_name || '';
+
+      // Telegram Account Linking display
+      const tgDisp = document.getElementById('prof-disp-telegram');
+      const tgActionArea = document.getElementById('tg-link-action-area');
+      if (tgDisp && tgActionArea) {
+        if (u.telegram_id || u.telegram_username) {
+          tgDisp.textContent = `Linked: @${u.telegram_username || u.telegram_id}`;
+          tgDisp.style.color = '#059669';
+          tgDisp.style.fontWeight = '700';
+          tgActionArea.innerHTML = `<button onclick="handleUnlinkTelegram()" style="background:transparent;border:none;color:#ef4444;font-weight:800;font-size:13.5px;cursor:pointer;">Unlink</button>`;
+        } else {
+          tgDisp.textContent = 'Not linked to Telegram';
+          tgDisp.style.color = 'var(--muted)';
+          tgDisp.style.fontWeight = 'normal';
+          tgActionArea.innerHTML = `<button id="tg-link-action-btn" onclick="generateTelegramLinkCode()" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;cursor:pointer;">Link Telegram</button>`;
+        }
+      }
 
       // Update payment methods list displays
       const upiDisp = document.getElementById('prof-disp-upi');
       const upiBtn = document.getElementById('pm-btn-upi');
       if (upiDisp) {
-        upiDisp.textContent = u.upi_id || 'muhammadpammu111-1@okhdfcbank';
-        if (upiBtn) upiBtn.textContent = 'Edit';
+        upiDisp.textContent = u.upi_id || 'Not set';
+        if (upiBtn) upiBtn.textContent = u.upi_id ? 'Edit' : 'Add';
       }
 
       const phoneDisp = document.getElementById('prof-disp-phone');
       const phoneBtn = document.getElementById('pm-btn-phone');
       if (phoneDisp) {
-        phoneDisp.textContent = u.phone_number || '919876543210';
-        if (phoneBtn) phoneBtn.textContent = 'Edit';
+        phoneDisp.textContent = u.phone_number || 'Not set';
+        if (phoneBtn) phoneBtn.textContent = u.phone_number ? 'Edit' : 'Add';
       }
 
       const bankDisp = document.getElementById('prof-disp-bank');
@@ -2231,6 +2284,43 @@
 
       loadKycStatus();
     } catch(e) {}
+  }
+
+  async function generateTelegramLinkCode() {
+    const btn = document.getElementById('tg-link-action-btn');
+    if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
+    try {
+      const res = await apiPost('/telegram/link-code');
+      if (res.error) throw new Error(res.error);
+      const box = document.getElementById('tg-link-code-box');
+      const valEl = document.getElementById('tg-link-code-val');
+      const openBtn = document.getElementById('tg-open-link-btn');
+      if (box && valEl && openBtn) {
+        valEl.textContent = res.code;
+        openBtn.href = res.tg_link;
+        box.style.display = 'block';
+      }
+    } catch(e) {
+      alert(e.message || 'Failed to generate Telegram link code');
+    } finally {
+      if (btn) { btn.textContent = 'Link Telegram'; btn.disabled = false; }
+    }
+  }
+
+  function closeTgLinkBox() {
+    const box = document.getElementById('tg-link-code-box');
+    if (box) box.style.display = 'none';
+  }
+
+  async function handleUnlinkTelegram() {
+    if (!confirm('Unlink your Telegram account from this P2PFather profile?')) return;
+    try {
+      const res = await apiPost('/telegram/unlink');
+      if (res.error) throw new Error(res.error);
+      loadProfileData();
+    } catch(e) {
+      alert(e.message || 'Failed to unlink Telegram');
+    }
   }
 
   async function loadKycStatus() {
