@@ -279,10 +279,18 @@
       <div class="dot" id="dot3"></div>
     </div>
 
-    <!-- ── STEP 1: PHONE ── -->
+    <!-- ── STEP 1: PHONE (SIGN IN / CREATE ACCOUNT) ── -->
     <div id="step-phone">
-      <h1>Sign in to P2PFather</h1>
-      <p class="subtitle">Enter your WhatsApp number to get started.</p>
+      <h1 id="auth-main-title" style="font-size:26px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;margin-bottom:6px;">Sign in to P2PFather</h1>
+      
+      <p class="subtitle" style="font-size:14px;color:var(--muted);margin-bottom:10px;">
+        <span id="auth-toggle-label">New User?</span> 
+        <a href="#" id="auth-toggle-link" onclick="toggleAuthMode(event)" style="color:#059669;font-weight:700;text-decoration:none;cursor:pointer;">Create an account</a>
+      </p>
+
+      <p id="auth-desc-text" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:20px;">
+        You can use P2PFather entirely from WhatsApp. Come back to p2pfather.com anytime to manage your account from the web or trade on prediction markets.
+      </p>
 
       <label for="country">Country</label>
       <select id="country">
@@ -298,7 +306,7 @@
         <option value="+1">🇺🇸 USA (+1)</option>
       </select>
 
-      <label for="phone-in">WhatsApp Number</label>
+      <label for="phone-in">WhatsApp Phone Number</label>
       <input type="tel" id="phone-in" placeholder="e.g. 9876543210" />
 
       <div id="phone-err" class="err" style="display:none;"></div>
@@ -1119,6 +1127,29 @@
       closeMobileSidebar();
     } else {
       openMobileSidebar();
+    }
+  }
+
+  let authMode = 'signin';
+
+  function toggleAuthMode(event) {
+    if (event) event.preventDefault();
+    authMode = authMode === 'signin' ? 'signup' : 'signin';
+    const titleEl = document.getElementById('auth-main-title');
+    const labelEl = document.getElementById('auth-toggle-label');
+    const linkEl = document.getElementById('auth-toggle-link');
+    const btnEl = document.getElementById('phone-btn');
+    
+    if (authMode === 'signup') {
+      if (titleEl) titleEl.textContent = 'Create your P2PFather Account';
+      if (labelEl) labelEl.textContent = 'Already have an account?';
+      if (linkEl) linkEl.textContent = 'Sign in';
+      if (btnEl) btnEl.textContent = 'Continue to WhatsApp →';
+    } else {
+      if (titleEl) titleEl.textContent = 'Sign in to P2PFather';
+      if (labelEl) labelEl.textContent = 'New User?';
+      if (linkEl) linkEl.textContent = 'Create an account';
+      if (btnEl) btnEl.textContent = 'Continue →';
     }
   }
 
