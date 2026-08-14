@@ -3985,6 +3985,10 @@ function playFlow(flow) {
       toast.classList.add('show');
     }, 15900));
 
+    demoTimeouts.push(setTimeout(() => { toast.classList.remove('show'); }, 18500));
+  }
+}
+
 // Start first flow
 setTimeout(() => {
   playFlow('profile');
