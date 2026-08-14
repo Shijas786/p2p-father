@@ -6,21 +6,21 @@
     <meta name="google-site-verification" content="iop7ZibRxmWzzCI7EeQ66mg3aFGbXkCiLFkCCpAY_IA">
     <link rel="canonical" href="https://p2pfather.com/">
     <title>P2PFather — Trusted P2P Crypto Community in Kerala | Buy & Sell USDT</title>
-    <meta name="description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. P2PFather is India's trusted peer-to-peer crypto exchange with zero fees, no KYC, and 100% secure smart contract escrow.">
-    <meta name="keywords" content="usdt, p2p, p2p kerala, buy dollar, buy usdt, sell usdt, buy usdt kerala, sell usdt kerala, buy usdt in india, sell usdt in india, usdt p2p india, buy usdt upi, sell usdt upi, usdc p2p, p2p crypto exchange india, buy dollar kerala, zero fee crypto escrow, telegram p2p bot, p2p community, USDT P2P Kerala, INR to USDC Base, Telegram escrow bot, no KYC crypto exchange India, P2PFather, peer-to-peer crypto exchange, trade crypto with UPI, smart contract escrow P2P, buy USDT with UPI India, zero fee USDC trade, Base network P2P, BSC P2P crypto">
+    <meta name="description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. P2PFather offers verified KYC traders, clean P2P settlement, and 100% secure smart contract escrow on Base & BSC.">
+    <meta name="keywords" content="usdt, p2p, p2p kerala, buy dollar, buy usdt, sell usdt, buy usdt kerala, sell usdt kerala, buy usdt in india, sell usdt in india, usdt p2p india, buy usdt upi, sell usdt upi, usdc p2p, p2p crypto exchange india, buy dollar kerala, verified kyc p2p, secure crypto p2p, telegram p2p bot, p2p community, USDT P2P Kerala, INR to USDC Base, Telegram escrow bot, KYC verified crypto exchange India, P2PFather, peer-to-peer crypto exchange, trade crypto with UPI, smart contract escrow P2P, buy USDT with UPI India, zero fee USDC trade, Base network P2P, BSC P2P crypto">
     
     <!-- Open Graph / Facebook SEO -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://p2pfather.com/">
-    <meta property="og:title" content="P2PFather — Trusted P2P Crypto Community in Kerala">
-    <meta property="og:description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. Secure smart contract escrow with 0% fee option.">
+    <meta property="og:title" content="P2PFather — Trusted P2P Crypto Community with KYC Verification">
+    <meta property="og:description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. Verified KYC traders, clean P2P settlement, and 100% smart contract escrow.">
     <meta property="og:image" content="https://p2pfather.com/favicon.png">
 
     <!-- Twitter SEO -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://p2pfather.com/">
-    <meta property="twitter:title" content="P2PFather — Trusted P2P Crypto Community in Kerala">
-    <meta property="twitter:description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. Secure smart contract escrow with 0% fee option.">
+    <meta property="twitter:title" content="P2PFather — Trusted P2P Crypto Community with KYC Verification">
+    <meta property="twitter:description" content="Buy USDT, sell USDT, and trade crypto with UPI in India & Kerala. Verified KYC traders, clean P2P settlement, and 100% smart contract escrow.">
     <meta property="twitter:image" content="https://p2pfather.com/favicon.png">
 
     <link rel="icon" href="/favicon.png" type="image/png">
@@ -58,7 +58,6 @@
       "paymentAccepted": "UPI, IMPS, NEFT, Bank Transfer",
       "priceRange": "Free / 0%",
       "sameAs": [
-        "https://x.com/P2pFather",
         "https://www.instagram.com/p2p.father/",
         "https://t.me/P2pFather0",
         "https://t.me/P2p_fatherbot"
@@ -94,14 +93,7 @@
             "text": "P2PFather connects crypto traders in Kerala and across India in a trusted, local community network with non-custodial smart contract escrow on Base and BSC networks."
           }
         },
-        {
-          "@type": "Question",
-          "name": "Do I pay gas fees when creating an ad?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. Creating a buy or sell ad is completely off-chain and free. You only pay a minimal gas fee when you deposit crypto into the smart contract escrow vault before a trade starts."
-          }
-        },
+
         {
           "@type": "Question",
           "name": "Which blockchains does P2PFather support?",
@@ -769,6 +761,132 @@ footer{
   clip-path: polygon(2% 8%, 18% 12%, 38% 3%, 58% 10%, 78% 2%, 98% 14%, 96% 82%, 76% 75%, 56% 88%, 36% 76%, 16% 92%, 1% 72%);
 }
 
+/* --- KYC & VERIFIED TRADER STYLES --- */
+.kyc-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #059669;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.kyc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+.kyc-card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+.kyc-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.07);
+}
+.kyc-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  flex-shrink: 0;
+}
+.kyc-card-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+.kyc-card-desc {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  font-weight: 300;
+}
+.kyc-interactive-box {
+  margin-top: 3.5rem;
+  background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.15), transparent 45%), radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08), transparent 50%), #0a0e17;
+  border-radius: 24px;
+  padding: 3rem 2.75rem;
+  color: #fff;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35), 0 0 30px rgba(16, 185, 129, 0.08);
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.kyc-interactive-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981, #06b6d4, transparent);
+}
+.kyc-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 18px;
+  padding: 1.5rem 1.75rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.kyc-check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+}
+.kyc-check-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+  color: #10b981;
+  display: flex;
+  align-items: center;
+}
+@media(max-width:900px){
+  .kyc-card-grid { grid-template-columns: 1fr; }
+  .kyc-interactive-box { grid-template-columns: 1fr; padding: 1.8rem; gap: 1.8rem; }
+}
+
 </style>
 
 <style>
@@ -951,6 +1069,8 @@ footer{
   .phone-shell { transform: scale(0.85); transform-origin: top center; margin-bottom: -50px; }
 }
 
+/* WhatsApp Demo Specifics */
+.wa-demo-container { display: flex; gap: 3rem; align-items: center; justify-content: center; margin-top: 2rem; }
 
 </style>
 
@@ -1084,7 +1204,9 @@ footer{
 <!-- NAV -->
 <nav id="nav" class="solid">
   <a class="logo" href="/#" style="display:flex; align-items:center; gap:0.25rem; text-decoration:none;">
-    <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
+    <span style="font-family: 'Inter', sans-serif; font-size:1.45rem; font-weight:800; letter-spacing:-0.5px; display:inline-block;">
+      <span style="color:#111827;">P2P</span><span style="color:#4b5563;">Father</span>
+    </span>
   </a>
 </nav>
 
@@ -1095,7 +1217,7 @@ footer{
   <h1 data-text-pressure>Buy &amp; sell crypto<br>with <span class="marker-yellow"><em>real people</em></span>—<br><span class="marker-green">safely.</span></h1>
 
   <p class="hero-sub">
-    No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Every trade is locked in a smart contract until both sides are happy. All inside Telegram.
+    No more getting <span style="color: #ef4444; font-weight: 600;">blocked</span> after you send INR. Trade with verified counterparties with 100% smart contract escrow protection. Available instantly via WhatsApp and Telegram.
   </p>
 
   <div class="hero-btns" style="display:flex; flex-wrap:wrap; align-items:center; gap:1.25rem;">
@@ -1373,7 +1495,116 @@ footer{
       <div>
         <div style="font-size:1.15rem; font-weight:700;">Shijas</div>
         <div style="font-size:0.85rem; color:var(--ink-soft); line-height:1.2;">Founder of P2PFather</div>
-        <a href="https://x.com/cryptowolf07" target="_blank" style="font-family:'Space Mono', monospace; font-size:0.75rem; color:var(--gold); text-decoration:none; display:inline-block; margin-top:0.15rem;">@cryptowolf07</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KYC & VERIFIED TRADER SECTION -->
+<section class="section-wide" id="kyc" style="background: var(--paper2); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 6rem 3rem;">
+  <div class="eyebrow r on" style="color: #059669;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" style="margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+    KYC Identity Verification
+  </div>
+  
+  <h2 class="story-h r d1 on" style="margin-bottom: 1.2rem;">
+    Identity-Verified P2P Escrow.<br><span class="marker-green">Trade with real people safely.</span>
+  </h2>
+  
+  <p class="r d2 on" style="font-size: 1.05rem; color: var(--ink-soft); max-width: 620px; line-height: 1.85; font-weight: 300;">
+    Every trade is protected by identity verification and non-custodial smart contract escrow. Deal with authentic counterparties and ensure all fiat payments originate from matching verified accounts.
+  </p>
+
+  <div class="kyc-card-grid r d3 on">
+    <!-- Card 1: 60s Fast Verification -->
+    <div class="kyc-card">
+      <div class="kyc-card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 11l-3 3-2-2"></path></svg>
+      </div>
+      <div class="kyc-card-title">60-Second Instant KYC</div>
+      <div class="kyc-card-desc">
+        Seamless, automated verification powered by Didit. Instant verification of government ID (Aadhaar, Passport, DL) paired with real-time 3D liveness detection.
+      </div>
+    </div>
+
+    <!-- Card 2: Clean & Matched Accounts -->
+    <div class="kyc-card">
+      <div class="kyc-card-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <div class="kyc-card-title">Clean &amp; Matched Accounts</div>
+      <div class="kyc-card-desc">
+        Trades are conducted with matching bank and UPI account holders, protecting you against unknown third-party transfers, chargebacks, and payment disputes.
+      </div>
+    </div>
+
+    <!-- Card 3: Verified Badge -->
+    <div class="kyc-card">
+      <div class="kyc-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      </div>
+      <div class="kyc-card-title">Verified Trader Badge</div>
+      <div class="kyc-card-desc">
+        Display the trusted 🛡️ Verified Trader badge on your profile and ads. Verified ads rank higher, build instant counterparty confidence, and match up to 4x faster.
+      </div>
+    </div>
+
+    <!-- Card 4: High Volume & Priority Escrow -->
+    <div class="kyc-card">
+      <div class="kyc-card-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+      </div>
+      <div class="kyc-card-title">High Limits &amp; VIP Escrow</div>
+      <div class="kyc-card-desc">
+        Unlock high-volume trading tiers, instant automated escrow releases, and 24/7 prioritized dispute resolution with on-chain cryptographic settlement.
+      </div>
+    </div>
+  </div>
+
+  <!-- KYC Features & Verification Checklist Box -->
+  <div class="kyc-interactive-box r d4 on">
+    <!-- Subtle Background KYC Shield Watermark -->
+    <svg style="position: absolute; right: -30px; bottom: -40px; width: 260px; height: 260px; opacity: 0.03; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; color: #10b981;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+        </div>
+        <h3 style="font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.01em;">
+          Didit Identity Protocol
+        </h3>
+      </div>
+      
+      <p style="font-size: 0.92rem; color: #94a3b8; line-height: 1.75; margin: 0;">
+        Automated identity verification connects directly into our escrow workflow, ensuring counterparties trade under authenticated names with verified banking credentials.
+      </p>
+    </div>
+
+    <div class="kyc-checklist">
+      <div class="kyc-check-item">
+        <span class="kyc-check-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span>Government ID Approved (Aadhaar / Passport / DL)</span>
+      </div>
+      <div class="kyc-check-item">
+        <span class="kyc-check-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span>3D Liveness &amp; Facial Biometric Matched</span>
+      </div>
+      <div class="kyc-check-item">
+        <span class="kyc-check-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span>Bank Account &amp; UPI Holder Name Matched</span>
+      </div>
+      <div class="kyc-check-item">
+        <span class="kyc-check-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span>Escrow Fast-Track: <strong>Enabled</strong></span>
       </div>
     </div>
   </div>
@@ -1563,13 +1794,63 @@ footer{
 
 <hr class="rule">
 
+<!-- WHATSAPP DEMO -->
+<section class="section-wide" id="whatsapp-demo">
+  <div class="wa-demo-container">
+    <div style="flex:1.2;">
+      <div class="eyebrow r on">WhatsApp Integration</div>
+      <h2 class="miniapp-h r d1 on" style="font-size: clamp(2rem, 3.5vw, 3.2rem);">Trade directly on <em>WhatsApp</em></h2>
+      <p class="miniapp-body r d2 on" style="font-size: 1.05rem; max-width: 480px; margin-bottom: 2rem;">
+        Prefer WhatsApp? No problem. P2PFather runs entirely within WhatsApp too. Get an instant multi-chain wallet, check your balance, and get trade alerts — right in your chats.
+      </p>
+      
+      <div class="r d3 on" style="display:flex; flex-direction:column; gap:1.2rem;">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+          <div style="background:rgba(16, 185, 129, 0.1); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#10b981; flex-shrink:0; margin-top:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <div>
+            <div style="font-weight:700; color:var(--ink); font-size:1.05rem; margin-bottom:0.2rem;">Natural Chat Interface</div>
+            <div style="color:var(--ink-soft); font-size:0.9rem;">Just type "balance" or "send 50 USDT". The bot understands plain english.</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+          <div style="background:rgba(16, 185, 129, 0.1); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#10b981; flex-shrink:0; margin-top:2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <div>
+            <div style="font-weight:700; color:var(--ink); font-size:1.05rem; margin-bottom:0.2rem;">Instant Escrow Alerts</div>
+            <div style="color:var(--ink-soft); font-size:0.9rem;">Get notified instantly on WhatsApp when someone accepts your trade or releases funds.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wa-demo-chat-window r d4 on" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 16px; max-width: 320px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+
+        
+        <!-- Image -->
+        <img src="wa-chat-img.png" alt="WhatsApp Chat Demo" style="width: 100%; height: auto; display: block; border-radius: 4px;" />
+        
+        <!-- Bottom Caption -->
+        <div style="margin-top: 24px; color: #6b7280; font-family: Inter, sans-serif; font-size: 16px; line-height: 1.5;">
+          Secure and instant Escrow — trade safely directly through our WhatsApp Bot.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
 <!-- CTA -->
 <section class="cta-section" style="position: relative; overflow: hidden; text-align: center;">
   <div class="soft-aurora-container" style="position: absolute; inset: 0; z-index: 0; opacity: 0.8; pointer-events: none;"></div>
   <div style="position: relative; z-index: 1;">
-    <div class="eyebrow r on" style="justify-content:center; margin-bottom: 1rem;">Ready to trade safely?</div>
-    <h2 class="cta-h r d1 on" data-blur-text style="margin-bottom: 1.5rem;">No more getting<br><span style="color: #ef4444;">blocked</span>.</h2>
-    <p class="cta-sub r d2 on" style="margin-bottom: 3rem;">Open the bot, browse live offers, and make your first escrow-protected trade — right inside Telegram.</p>
+    <div class="eyebrow r on" style="justify-content:center; margin-bottom: 1rem;">Trade safely, anywhere.</div>
+    <h2 class="cta-h r d1 on" data-blur-text style="margin-bottom: 1.5rem;">Say goodbye to<br><span style="color: #ef4444;">blocked accounts</span>.</h2>
+    <p class="cta-sub r d2 on" style="margin-bottom: 3rem;">Access live P2P offers directly through WhatsApp or our Telegram Mini App. Instant escrow protection, right in your favorite chat app.</p>
     <a href="https://t.me/P2p_fatherbot" class="btn btn-dark shiny-border r d3 on" style="display:inline-flex;font-size:1.15rem;padding:.9rem 2.4rem; background: var(--ink);">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21.5 3L12 21.5L10 14L3 12L21.5 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       Open P2PFather
@@ -1626,19 +1907,10 @@ footer{
 
   <div class="faq-grid" style="margin-top:0;">
 
-    <div class="faq-item r on">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">01</span>Do I pay gas fees when creating an ad?</span>
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a"><div class="faq-a-inner">
-        <strong>No.</strong> Creating a buy or sell ad is completely <span class="chip">off-chain</span> and free. You only pay a gas fee when you actually deposit crypto into the escrow vault before a trade starts. That's a one-time on-chain transaction on Base or BSC — usually under $0.05.
-      </div></div>
-    </div>
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">02</span>Which blockchains does P2PFather support?</span>
+        <span><span class="faq-num">01</span>Which blockchains does P2PFather support?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
@@ -1648,7 +1920,7 @@ footer{
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">03</span>What tokens can I trade?</span>
+        <span><span class="faq-num">02</span>What tokens can I trade?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
@@ -1658,7 +1930,7 @@ footer{
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">04</span>How does the escrow work? Is my crypto safe?</span>
+        <span><span class="faq-num">03</span>How does the escrow work? Is my crypto safe?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
@@ -1668,31 +1940,51 @@ footer{
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">05</span>What are the fees?</span>
+        <span><span class="faq-num">04</span>What are the fees?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
-        P2PFather charges <span class="chip">0.25%</span> on BSC and <span class="chip">0%</span> on Base — deducted from the released crypto. There are no hidden charges, no monthly subscriptions, no KYC fees.
+        P2PFather charges <span class="chip">0.25%</span> on BSC and <span class="chip">0%</span> on Base — deducted from the released crypto. There are no hidden charges, no subscription costs, and KYC identity verification is 100% free.
       </div></div>
     </div>
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">06</span>Do I need to install any app or create an account?</span>
+        <span><span class="faq-num">05</span>Do I need to install any app or create an account?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
-        No. Everything runs inside <span class="chip">Telegram</span> as a Mini App. Just open @P2p_fatherbot, connect your wallet, and you're trading. No new app download, no sign-up form, no seed phrase entry.
+        No. Everything runs inside <span class="chip">Telegram</span> as a Mini App or via our Web App. Just open @P2p_fatherbot, connect your wallet, and you're trading. No new app download, no sign-up form, no seed phrase entry.
       </div></div>
     </div>
 
     <div class="faq-item r on">
       <div class="faq-q" onclick="toggleFaq(this)">
-        <span><span class="faq-num">07</span>What happens if a seller doesn't release my crypto after I pay INR?</span>
+        <span><span class="faq-num">06</span>What happens if a seller doesn't release my crypto after I pay INR?</span>
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-a"><div class="faq-a-inner">
         You can raise a dispute directly in the Telegram trade chat. An admin will review the payment screenshot and transaction evidence. If your payment is verified, the smart contract can be triggered to release the crypto to you. Your funds are always secured on-chain — no one can just disappear with them.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span><span class="faq-num">07</span>How does KYC verification protect me from bank account freezes?</span>
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        Bank account freezes and cyber-cell liens usually happen when receiving funds from compromised or third-party bank accounts. On P2PFather, verified KYC traders must send payments exclusively from bank/UPI accounts registered under their own verified legal name. This eliminates third-party fraud and keeps your banking records 100% clean.
+      </div></div>
+    </div>
+
+    <div class="faq-item r on">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span><span class="faq-num">08</span>How do I complete KYC and how long does it take?</span>
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        Verification takes less than <strong>60 seconds</strong>. In the Mini App or Web App, tap on <strong>Profile → KYC Verification</strong>. You'll complete a quick automated document scan (Aadhaar, Passport, or DL) and a 3D selfie liveness check powered by Didit. Once approved, the 🛡️ Verified Trader badge appears immediately on your profile and ads.
       </div></div>
     </div>
 
@@ -1714,16 +2006,14 @@ footer{
 <!-- FOOTER -->
 <footer>
   <span class="logo" style="display:flex; align-items:center; gap:0.25rem;">
-    <span class="shining-logo" style="font-size:1.35rem;">P2PFather</span>
+    <span style="font-family: 'Inter', sans-serif; font-size:1.45rem; font-weight:800; letter-spacing:-0.5px; display:inline-block; margin-bottom:1rem;">
+      <span style="color:#111827;">P2P</span><span style="color:#4b5563;">Father</span>
+    </span>
   </span>
   <div class="footer-links">
-    <a href="https://x.com/P2pFather" target="_blank" rel="noopener">Twitter (X)</a>
     <a href="https://www.instagram.com/p2p.father/" target="_blank" rel="noopener">Instagram</a>
     <a href="https://t.me/P2p_fatherbot" target="_blank" rel="noopener">Telegram Bot</a>
     <a href="https://t.me/P2pFather0" target="_blank" rel="noopener">Telegram Group</a>
-    <a href="/buy-sell-usdt.html">Buy & Sell USDT</a>
-    <a href="/kerala-crypto.html">P2P Kerala</a>
-    <a href="/reward-hub.html">Reward Hub</a>
     <a href="/guide.html">User Guide</a>
     <a href="/how-it-works.html">Safety Guide</a>
     <a href="/faq.html">Scam FAQ</a>
@@ -3695,14 +3985,13 @@ function playFlow(flow) {
       toast.classList.add('show');
     }, 15900));
 
-    demoTimeouts.push(setTimeout(() => { toast.classList.remove('show'); }, 18500));
-  }
-}
-
 // Start first flow
-setTimeout(() => playFlow('profile'), 500);
+setTimeout(() => {
+  playFlow('profile');
+}, 500);
 
 </script>
+
 
 <script type="module">
   import { createAppKit } from 'https://esm.sh/@reown/appkit@1.8.18?bundle'
