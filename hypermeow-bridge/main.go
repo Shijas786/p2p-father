@@ -626,46 +626,29 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sections := make([]*waProto.ListMessage_Section, 0)
-	for _, sec := range req.Sections {
-		rows := make([]*waProto.ListMessage_Row, 0)
-		for _, r := range sec.Rows {
-			rows = append(rows, &waProto.ListMessage_Row{
-				RowID:       proto.String(r.ID),
-				Title:       proto.String(r.Title),
-				Description: proto.String(r.Description),
-			})
-		}
-		sections = append(sections, &waProto.ListMessage_Section{
-			Title: proto.String(sec.Title),
-			Rows:  rows,
-		})
-	}
+	// Build native single_select InteractiveMessage (WhatsApp native bottom sheet modal)
+	singleSelectJSON, _ := json.Marshal(map[string]interface{}{
+		"title":    req.ButtonText,
+		"sections": req.Sections,
+	})
 
-	textWithInlineList := req.Title
-	if len(req.Sections) > 0 {
-		textWithInlineList += "\n\n━━━━━━━━━━━━━━━━━━━━"
-		for _, sec := range req.Sections {
-			if sec.Title != "" {
-				textWithInlineList += "\n\n📌 *" + sec.Title + "*"
-			}
-			for _, r := range sec.Rows {
-				textWithInlineList += fmt.Sprintf("\n• *%s*", r.Title)
-				if r.Description != "" {
-					textWithInlineList += fmt.Sprintf("\n  └ %s", r.Description)
-				}
-				textWithInlineList += fmt.Sprintf("\n  👉 Send: `%s`", r.ID)
-			}
-		}
-		textWithInlineList += "\n━━━━━━━━━━━━━━━━━━━━"
+	nativeFlowBtns := []*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+		{
+			Name:             proto.String("single_select"),
+			ButtonParamsJSON: proto.String(string(singleSelectJSON)),
+		},
 	}
 
 	msg := &waProto.Message{
-		ListMessage: &waProto.ListMessage{
-			Title:      proto.String(textWithInlineList),
-			ButtonText: proto.String(req.ButtonText),
-			ListType:   waProto.ListMessage_SINGLE_SELECT.Enum(),
-			Sections:   sections,
+		InteractiveMessage: &waProto.InteractiveMessage{
+			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Title)},
+			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String("P2PFather Escrow Exchange")},
+			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
+				NativeFlowMessage: &waProto.InteractiveMessage_NativeFlowMessage{
+					MessageVersion: proto.Int32(1),
+					Buttons:        nativeFlowBtns,
+				},
+			},
 		},
 	}
 
