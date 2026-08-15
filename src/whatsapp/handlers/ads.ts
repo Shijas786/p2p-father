@@ -71,11 +71,13 @@ export async function handleAdCommand(
                     const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
                     const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
                     const trust  = o.users?.trust_score ?? 0;
-                    const pay    = (o.payment_methods ?? []).join("/");
+                    const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
+                    const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
+                    const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round(o.amount * o.rate)}`;
                     return {
                         id:          `trade_ad_${o.id}`,
                         title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
-                        description: `Limits: ₹${o.min_amount}–${o.max_amount} • ${pay}`,
+                        description: `Limits: ${minL}–${maxL} • ${pay}`,
                     };
                 }),
             });
@@ -88,11 +90,13 @@ export async function handleAdCommand(
                     const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
                     const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
                     const trust  = o.users?.trust_score ?? 0;
-                    const pay    = (o.payment_methods ?? []).join("/");
+                    const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
+                    const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
+                    const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round(o.amount * o.rate)}`;
                     return {
                         id:          `trade_ad_${o.id}`,
                         title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
-                        description: `Limits: ₹${o.min_amount}–${o.max_amount} • ${pay}`,
+                        description: `Limits: ${minL}–${maxL} • ${pay}`,
                     };
                 }),
             });
