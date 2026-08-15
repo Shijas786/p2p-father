@@ -1234,7 +1234,9 @@
 
   function getFullPhone() {
     const cc = document.getElementById('country').value.replace('+','');
-    const num = document.getElementById('phone-in').value.replace(/\D/g,'');
+    let num = document.getElementById('phone-in').value.replace(/\D/g,'');
+    if (num.startsWith('0')) num = num.slice(1);
+    if (num.startsWith(cc) && num.length > cc.length + 6) num = num.slice(cc.length);
     return cc + num;
   }
 

@@ -306,8 +306,14 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
             ? user.first_name
             : null;
 
+        if (user.telegram_id === null || user.telegram_id === undefined) {
+            const syntheticTelegramId = -Math.abs(Math.floor((Date.now() % 10000000) * 100) + Math.floor(Math.random() * 100));
+            await db.getClient().from("users").update({ telegram_id: syntheticTelegramId }).eq("id", user.id);
+            user.telegram_id = syntheticTelegramId;
+        }
+
         const tgUserObj = {
-            id: user.telegram_id || Math.abs(parseInt(cleanPhone.slice(-9)) || 88888888),
+            id: user.telegram_id,
             first_name: realName || user.username || "WhatsApp User",
             username: user.username || `wa_${cleanPhone.slice(-4)}`,
             is_wa_user: true,
