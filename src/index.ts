@@ -60,6 +60,7 @@ async function main() {
         const { startExpiryJob, startLiquiditySyncJob, startTradeReconciliationJob, startPredictionSyncJob, startPredictionResolutionJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
         const { bridgeMonitor } = await import("./services/bridge-monitor");
+        const { startMetaWhatsAppMonitor } = await import("./services/wa-meta-monitor");
         // 🚀 Deposit Monitor disabled globally - now runs on-demand via API
         
         // 🚀 Start background services
@@ -69,6 +70,7 @@ async function main() {
         // startPredictionSyncJob(); // Disabled — prediction feature sunset
         // startPredictionResolutionJob(); // Disabled — prediction feature sunset
         bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
+        startMetaWhatsAppMonitor(); // 🔍 Track Meta WhatsApp Web client updates & alert Shijas on TG
     }
 
     // Hypermeow Go bridge is the active WhatsApp engine — Baileys removed
