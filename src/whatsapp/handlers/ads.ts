@@ -99,8 +99,9 @@ Choose your trade direction below to view verified rates:
             const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Verified Trader");
             const trust  = o.users?.trust_score ?? 100;
             const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
-            const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
-            const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round((o.amount || 100) * (o.rate || 90))}`;
+            const minL   = o.min_amount ? `₹${Number(o.min_amount).toLocaleString("en-IN")}` : "₹500";
+            const maxVal = o.max_amount || Math.round((o.amount || 100) * (o.rate || 90));
+            const maxL   = `₹${Number(maxVal).toLocaleString("en-IN")}`;
 
             const numEmoji = idx === 0 ? "1️⃣" : "2️⃣";
             adCardText += `${numEmoji} *₹${o.rate} / USDT* — ${trader}\n`;
