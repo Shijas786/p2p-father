@@ -462,6 +462,9 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 	// Clean body text for native interactive button card (no duplicate inline text instructions)
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
+			Header: &waProto.InteractiveMessage_Header{
+				HasMediaAttachment: proto.Bool(false),
+			},
 			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Text)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String(req.Footer)},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{
@@ -641,6 +644,9 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 
 	msg := &waProto.Message{
 		InteractiveMessage: &waProto.InteractiveMessage{
+			Header: &waProto.InteractiveMessage_Header{
+				HasMediaAttachment: proto.Bool(false),
+			},
 			Body:   &waProto.InteractiveMessage_Body{Text: proto.String(req.Title)},
 			Footer: &waProto.InteractiveMessage_Footer{Text: proto.String("P2PFather Escrow Exchange")},
 			InteractiveMessage: &waProto.InteractiveMessage_NativeFlowMessage_{

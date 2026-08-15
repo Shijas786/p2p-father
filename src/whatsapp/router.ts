@@ -164,6 +164,22 @@ export async function replyWithList(
     if (hypermeowClient.isConfigured()) {
         const ok = await hypermeowClient.sendList(jid, text, buttonTitle, sections);
         if (ok) return;
+
+        // Fallback: if native single_select rejected, deliver formatted interactive text menu
+        const divider = "━━━━━━━━━━━━━━━━━━━━";
+        let formattedText = `${text}\n\n${divider}\n📋 *${buttonTitle}*\n`;
+        let rowCounter = 1;
+        sections.forEach((s) => {
+            formattedText += `\n📌 *${s.title}*\n`;
+            s.rows.forEach((r) => {
+                const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][rowCounter - 1] ?? `${rowCounter}.`;
+                formattedText += `${num} *${r.title}*${r.description ? ` — _${r.description}_` : ""}\n   👉 Send: \`${r.id}\`\n`;
+                rowCounter++;
+            });
+        });
+        formattedText += `\n${divider}\n_${footer}_`;
+        await hypermeowClient.sendText(jid, formattedText.trim());
+        return;
     }
 
     // ── Try native single_select list picker (unlimited rows, DM only) ────────
