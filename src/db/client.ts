@@ -873,14 +873,13 @@ class Database {
             const { data, error } = await db
                 .from("users")
                 .select("*")
-                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.ilike.%${last10},phone_number.eq.${clean},phone_number.ilike.%${last10}`)
+                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.ilike.%${last10}`)
                 .order("created_at", { ascending: true })
                 .limit(1)
                 .maybeSingle();
 
             if (error) {
                 console.warn(`[DB] getUserByWhatsappPhone warning: ${error.message}`);
-                // Fallback to exact match on whatsapp_phone
                 const { data: fallback } = await db
                     .from("users")
                     .select("*")
@@ -889,10 +888,6 @@ class Database {
                     .limit(1)
                     .maybeSingle();
                 return fallback as User | null;
-            }
-            if (data && !data.whatsapp_phone) {
-                await db.from("users").update({ whatsapp_phone: clean }).eq("id", data.id);
-                data.whatsapp_phone = clean;
             }
             return data as User | null;
         } catch {

@@ -75,16 +75,7 @@ export class WhatsAppOtpService {
             console.error(`[WA-OTP] Failed to send OTP to ${phone} via Hypermeow:`, err?.message || err);
         }
 
-        // Also check if user exists in DB, if not create user record on first login
-        try {
-            let user = await db.getUserByWhatsappPhone(phone);
-            if (!user) {
-                user = await db.getOrCreateUserByPhone(phone);
-                console.log(`[WA-OTP] Created new WhatsApp user record: ${user.id} for phone ${phone}`);
-            }
-        } catch (dbErr: any) {
-            console.warn(`[WA-OTP] DB user lookup/creation warning:`, dbErr?.message);
-        }
+
 
         return {
             success: true,

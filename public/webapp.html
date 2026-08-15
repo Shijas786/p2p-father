@@ -316,19 +316,21 @@
     <!-- ── STEP 2a: NEW USER ── -->
     <div id="step-new" style="display:none;">
       <div style="font-size:36px;margin-bottom:12px;">👋</div>
-      <h1 style="font-size:22px;margin-bottom:8px;">Get started</h1>
-      <p class="subtitle">Already have an account? <a href="#" onclick="goBack();return false;" style="color:var(--primary-dark);font-weight:600;text-decoration:none;">Sign in</a></p>
+      <h1 style="font-size:22px;margin-bottom:8px;">Create Account First</h1>
+      <p class="subtitle" style="margin-bottom:16px;">No account found for this phone number yet.</p>
 
       <div style="background:#ecfdf5;padding:16px;border-radius:14px;border:1px solid var(--primary-border);margin-bottom:20px;">
-        <p style="font-size:13px;color:#047857;line-height:1.5;">You can use P2PFather entirely from WhatsApp. Start a chat with our bot first, then come back here to sign in with your number.</p>
+        <p style="font-size:13px;color:#047857;line-height:1.5;margin:0;">
+          To use P2PFather on the web, please create your account from WhatsApp first. Message our official bot to activate your wallet, then come back here to sign in!
+        </p>
       </div>
 
       <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">
-        By signing up, I agree to <a href="#" onclick="openLegalModal('terms');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Terms and Conditions</a> and <a href="#" onclick="openLegalModal('privacy');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Privacy Policy</a>.
+        By signing up, you agree to <a href="#" onclick="openLegalModal('terms');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Terms &amp; Conditions</a> and <a href="#" onclick="openLegalModal('privacy');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Privacy Policy</a>.
       </p>
 
       <a id="wa-create-btn" href="#" target="_blank" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;letter-spacing:.2px;">
-        Create Account from WhatsApp →
+        💬 Create Account on WhatsApp →
       </a>
       <button class="btn-link" onclick="goBack()">← Use a different number</button>
     </div>
@@ -432,10 +434,10 @@
           <!-- Language / Country Flag -->
           <div class="icon-btn" id="top-country-flag" title="Country Flag: India (+91)">🇮🇳</div>
           
-          <!-- Notifications Bell with Red Numeric Counter Badge -->
-          <div class="icon-btn" onclick="toggleNotifPopover(event)" id="top-notif-btn" title="Real-Time Notifications">
+          <!-- Notifications Bell -->
+          <div class="icon-btn" onclick="toggleNotifPopover(event)" id="top-notif-btn" title="Notifications">
             🔔
-            <span class="badge-dot" id="notif-badge-count">2</span>
+            <span class="badge-dot" id="notif-badge-count" style="display:none;">0</span>
           </div>
 
           <!-- Floating Notification Popover Menu -->
@@ -444,24 +446,13 @@
               <span>🔔 Notifications</span>
             </div>
             <div id="notif-list-container">
-              <div class="notif-item">
-                <div class="notif-item-title">
-                  <span>🔒 Escrow Locked</span>
-                  <span class="notif-item-time">Just now</span>
-                </div>
-                <div class="notif-item-sub">Crypto reserved and locked in escrow contract.</div>
-              </div>
-              <div class="notif-item">
-                <div class="notif-item-title">
-                  <span>📢 P2PFather News</span>
-                  <span class="notif-item-time">1h ago</span>
-                </div>
-                <div class="notif-item-sub">0% P2P Trading Fees actively enabled across all Base &amp; BSC markets!</div>
+              <div style="text-align:center;padding:24px 12px;color:var(--muted);font-size:12.5px;font-weight:600;">
+                ✨ No new notifications
               </div>
             </div>
             <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;text-align:center;">
               <button onclick="clearAllNotifications()" style="background:transparent;border:none;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;padding:4px 12px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2'" onmouseout="this.style.color='#64748b';this.style.background='transparent'">
-                🗑️ Clear All Notifications
+                🗑️ Clear All
               </button>
             </div>
           </div>
