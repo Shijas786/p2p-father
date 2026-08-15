@@ -100,7 +100,7 @@ You can now post P2P Ads on *🧪 BSC Testnet* and test live trades with zero fi
 Choose an option below to start testing 👇`,
                 [
                     { id: "/post",  label: "➕ Post Testnet Ad" },
-                    { id: "/ads",   label: "📊 Browse Ads" },
+                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
                     { id: "/start", label: "🏠 Main Menu" },
                 ]
             );
@@ -140,7 +140,7 @@ Choose an option below to start testing 👇`,
             await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
                 { id: "/start",   label: "🏠 Main Menu" },
                 { id: "/profile", label: "👤 My Profile" },
-                { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
             ]);
         } catch (err) {
             await reply(sock, jid, fmtDepositAddress(user), msg);
@@ -378,7 +378,7 @@ Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
             await replyWithButtons(sock, jid, `🧭 *NAVIGATION MENU*`, [
                 { id: "/start",   label: "🏠 Main Menu" },
                 { id: "/profile", label: "👤 My Profile" },
-                { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
             ]);
             return;
         }

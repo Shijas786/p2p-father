@@ -939,7 +939,7 @@ Choose an action from the menu below:`;
         jid,
         `⚡ *P2P MARKETPLACE & PROFILE*`,
         [
-            { id: "/ads",     label: "📊 Browse Ads" },
+            { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
             { id: "/my_ads",  label: "📋 My Ads" },
             { id: "/profile", label: "👤 Profile" },
         ]

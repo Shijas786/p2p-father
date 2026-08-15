@@ -232,8 +232,8 @@ ${sellerPayDetails}
     if (text === "/trades") {
         const trades = await db.getActiveTradesForUser(user.id);
         if (trades.length === 0) {
-            await replyWithButtons(sock, jid, "📋 *No active trades.*\n\nBrowse ads to start trading!", [
-                { id: "/ads", label: "📊 Browse Ads" },
+            await replyWithButtons(sock, jid, "📋 *No active trades.*\n\nOpen Web Dashboard to start trading!", [
+                { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
             ]);
             return;
         }
@@ -480,7 +480,7 @@ ${webUrl}`;
             await replyWithButtons(sock, jid, `🧭 *TRADE MENU*`, [
                 { id: "/start",   label: "🏠 Main Menu" },
                 { id: "/profile", label: "👤 My Profile" },
-                { id: "/ads",     label: "📊 Browse Ads" },
+                { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
             ]);
         } catch (err: any) {
             await reply(sock, jid, "❌ Failed to load active trades. Try again.", msg);
