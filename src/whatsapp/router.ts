@@ -352,6 +352,7 @@ export async function routeMessage(
     }
 
     // ── DM: get or create user ────────────────────────────────────────────────
+    console.log(`[WA-Router] 📩 Incoming DM from ${senderPhone}: "${text}"`);
     let user = await db.getUserByWhatsappPhone(senderPhone);
     if (!user) {
         user = await db.getOrCreateUserByPhone(senderPhone);
