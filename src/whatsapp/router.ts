@@ -446,6 +446,43 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
         return;
     }
 
+    // ── Direct Quick-Reply Button Click Matching (with emojis & labels) ───────
+    if (text.includes("browse ads") || text.includes("browse ad") || text === "/ads" || text === "ads") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleAdCommand(sock, msg, jid, user, "/ads");
+        return;
+    }
+    if (text.includes("wallet balance") || text.includes("view balance") || text === "/balance" || text === "balance") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
+        return;
+    }
+    if (text.includes("top up vault") || text.includes("lock to vault") || text === "vault_deposit" || text === "/vault") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "vault_deposit");
+        return;
+    }
+    if (text.includes("create ad") || text.includes("post new ad") || text.includes("post my ad") || text.includes("post ad") || text === "/post" || text === "post") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleAdCommand(sock, msg, jid, user, "/post");
+        return;
+    }
+    if (text.includes("my ads") || text.includes("my ad") || text === "/my_ads" || text === "my_ads") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleAdCommand(sock, msg, jid, user, "/my_ads");
+        return;
+    }
+    if (text.includes("profile") || text === "/profile") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleProfileCommand(sock, msg, jid, user, "/profile");
+        return;
+    }
+    if (text.includes("deposit usdt") || text === "/deposit" || text === "deposit") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/deposit");
+        return;
+    }
+
     // ── Number Shortcuts (1, 2, 3, 4, 5) ──────────────────────────────────────
     if (text === "1" || text === "1️⃣") {
         await (db as any).clearWhatsappState(user.id);
