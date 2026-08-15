@@ -41,6 +41,7 @@ type SendTextReq struct {
 type ButtonItem struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
+	URL   string `json:"url,omitempty"`
 }
 
 type SendButtonsReq struct {
@@ -426,18 +427,35 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("[SendButtons] resolved JID: %s (server=%s)\n", jid.String(), jid.Server)
 
-	// Build native quick_reply buttons (max 3, WhatsApp limit)
+	// Build native quick_reply or cta_url buttons (max 3, WhatsApp limit)
 	nativeFlowBtns := make([]*waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton, 0)
 	for i, btn := range req.Buttons {
 		if i >= 3 {
 			break
 		}
-		paramsJSON, _ := json.Marshal(map[string]string{"display_text": btn.Label, "id": btn.ID})
-		fmt.Printf("[SendButtons] Button: name=quick_reply params=%s\n", string(paramsJSON))
-		nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
-			Name:             proto.String("quick_reply"),
-			ButtonParamsJSON: proto.String(string(paramsJSON)),
-		})
+		if btn.URL != "" || strings.HasPrefix(btn.ID, "http") {
+			targetURL := btn.URL
+			if targetURL == "" {
+				targetURL = btn.ID
+			}
+			paramsJSON, _ := json.Marshal(map[string]string{
+				"display_text": btn.Label,
+				"url":          targetURL,
+				"merchant_url": targetURL,
+			})
+			fmt.Printf("[SendButtons] Button: name=cta_url params=%s\n", string(paramsJSON))
+			nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+				Name:             proto.String("cta_url"),
+				ButtonParamsJSON: proto.String(string(paramsJSON)),
+			})
+		} else {
+			paramsJSON, _ := json.Marshal(map[string]string{"display_text": btn.Label, "id": btn.ID})
+			fmt.Printf("[SendButtons] Button: name=quick_reply params=%s\n", string(paramsJSON))
+			nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+				Name:             proto.String("quick_reply"),
+				ButtonParamsJSON: proto.String(string(paramsJSON)),
+			})
+		}
 	}
 
 	// Clean body text for native interactive button card (no duplicate inline text instructions)
@@ -505,7 +523,15 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		if i < len(nums) {
 			num = nums[i]
 		}
-		fallbackText += fmt.Sprintf("\n%s %s", num, btn.Label)
+		if btn.URL != "" || strings.HasPrefix(btn.ID, "http") {
+			targetURL := btn.URL
+			if targetURL == "" {
+				targetURL = btn.ID
+			}
+			fallbackText += fmt.Sprintf("\n%s %s:\n   👉 %s", num, btn.Label, targetURL)
+		} else {
+			fallbackText += fmt.Sprintf("\n%s %s", num, btn.Label)
+		}
 	}
 	fallbackText += "\n━━━━━━━━━━━━━━━━━━━━\n_" + req.Footer + "_"
 	fallbackMsg := &waProto.Message{Conversation: proto.String(fallbackText)}

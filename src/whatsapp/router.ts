@@ -66,7 +66,7 @@ export async function replyWithButtons(
     sock: WASocket,
     jid: string,
     text: string,
-    buttons: { id: string; label: string }[],
+    buttons: { id: string; label: string; url?: string }[],
     footer = "P2PFather Escrow Exchange",
     quoted?: IWebMessageInfo
 ): Promise<void> {
@@ -106,6 +106,10 @@ export async function replyWithButtons(
         const divider = "━━━━━━━━━━━━━━━━━━━━";
         const optionLines = buttons.map((b, i) => {
             const num = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"][i] ?? `${i + 1}.`;
+            if (b.url || b.id.startsWith("http")) {
+                const targetUrl = b.url || b.id;
+                return `${num} ${b.label}:\n   👉 ${targetUrl}`;
+            }
             return `${num} ${b.label}`;
         });
         formattedText += `\n\n${divider}\n💬 *Reply with a number to continue:*\n${optionLines.join("\n")}\n${divider}\n_${footer}_`;
@@ -416,7 +420,7 @@ Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
         const { waOtpService } = await import("../services/wa-otp");
         const otpResult = await waOtpService.sendOtp(senderPhone);
 
-        const webUrl = `https://p2pfather.com/miniapp/`;
+        const webUrl = `https://p2pfather.com/webapp`;
 
         await reply(
             sock,
@@ -587,7 +591,7 @@ Your P2PFather multi-chain crypto wallet is ready 🎉
 Select an option below to start trading 👇`,
                 [
                     { id: "/deposit", label: "📥 Deposit USDT" },
-                    { id: "/ads",     label: "📊 Browse P2P Ads" },
+                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
                     { id: "/post",    label: "➕ Post New Ad" },
                 ]
             );
@@ -866,7 +870,7 @@ Check balance first: /balance 💰`,
                     MAIN_MENU,
                     [
                         { id: "/balance", label: "💰 Balance & Wallet" },
-                        { id: "/ads",     label: "📊 Browse P2P Ads" },
+                        { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
                         { id: "/post",    label: "➕ Post New Ad" },
                     ]
                 );
