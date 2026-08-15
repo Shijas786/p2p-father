@@ -694,7 +694,7 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		var rows []*waProto.ListMessage_Row
 		for _, r := range sec.Rows {
 			rows = append(rows, &waProto.ListMessage_Row{
-				RowId:       proto.String(r.ID),
+				RowID:       proto.String(r.ID),
 				Title:       proto.String(r.Title),
 				Description: proto.String(r.Description),
 			})
