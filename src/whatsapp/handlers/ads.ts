@@ -39,82 +39,90 @@ export async function handleAdCommand(
     text: string
 ): Promise<void> {
     // ─── /ads — Browse live ads ─────────────────────────────────────────────────
-    if (text === "/ads" || text.startsWith("/ads ")) {
-        const typeFilter = text.includes("buy") ? "buy" : text.includes("sell") ? "sell" : undefined;
-        const orders = await db.getActiveOrders(typeFilter, "USDT", 8);
-        const label = typeFilter ?? "all";
+    if (text === "/ads" || text === "ads" || text.includes("browse ads") || text.startsWith("/ads")) {
+        const isSpecificBuy = text.includes("buy");
+        const isSpecificSell = text.includes("sell");
 
-        if (orders.length === 0) {
+        // If user tapped general "Browse Ads" without selecting buy/sell yet:
+        if (!isSpecificBuy && !isSpecificSell) {
             await replyWithButtons(
                 sock,
                 jid,
-                `📊 *No active ${typeFilter?.toUpperCase() ?? ""} ads right now.*\n\nBe the first to post an ad!`,
+                `📊 *P2PFATHER LIVE P2P MARKETPLACE*
+
+Choose your trade direction below to view verified rates:
+
+🟢 *BUY USDT* — Pay INR via UPI/IMPS to receive USDT
+🔴 *SELL USDT* — Sell your USDT for instant INR in your bank
+
+🔒 *100% Escrow Protection* — 0% fee on P2PFather.`,
                 [
-                    { id: "/ads sell", label: "🟢 SELL Ads" },
-                    { id: "/ads buy",  label: "🔴 BUY Ads"  },
-                    { id: "/post",     label: "➕ Post My Ad" },
+                    { id: "/ads buy",  label: "🟢 BUY USDT Ads" },
+                    { id: "/ads sell", label: "🔴 SELL USDT Ads" },
+                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
                 ]
             );
             return;
         }
 
-        // Group ads into sections by type for single_select list
-        const sellAds = (orders as any[]).filter((o) => o.type === "sell");
-        const buyAds  = (orders as any[]).filter((o) => o.type === "buy");
+        // Target active orders:
+        // When user wants to "BUY USDT", they look for sellers (order.type === 'sell' or all active ads)
+        // When user wants to "SELL USDT", they look for buyers (order.type === 'buy' or all active ads)
+        const orderType = isSpecificBuy ? "sell" : "buy";
+        let orders = await db.getActiveOrders(orderType, "USDT", 4);
 
-        const sections: { title: string; rows: { id: string; title: string; description: string }[] }[] = [];
-
-        if (sellAds.length > 0) {
-            sections.push({
-                title: "🟢 SELL USDT — Buy from these traders",
-                rows: sellAds.map((o) => {
-                    const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
-                    const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
-                    const trust  = o.users?.trust_score ?? 0;
-                    const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
-                    const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
-                    const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round(o.amount * o.rate)}`;
-                    return {
-                        id:          `trade_ad_${o.id}`,
-                        title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
-                        description: `Limits: ${minL}–${maxL} • ${pay}`,
-                    };
-                }),
-            });
+        // Fallback: if no ads for that specific direction, show any active ads
+        if (orders.length === 0) {
+            orders = await db.getActiveOrders(undefined, "USDT", 4);
         }
 
-        if (buyAds.length > 0) {
-            sections.push({
-                title: "🔴 BUY USDT — Sell to these traders",
-                rows: buyAds.map((o) => {
-                    const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
-                    const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Trader");
-                    const trust  = o.users?.trust_score ?? 0;
-                    const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
-                    const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
-                    const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round(o.amount * o.rate)}`;
-                    return {
-                        id:          `trade_ad_${o.id}`,
-                        title:       `₹${o.rate} / USDT — ${trader} (⭐${trust}%)`,
-                        description: `Limits: ${minL}–${maxL} • ${pay}`,
-                    };
-                }),
-            });
+        if (orders.length === 0) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `📊 *No active ${isSpecificBuy ? "BUY" : "SELL"} ads right now.*\n\nBe the first to create an ad and start trading!`,
+                [
+                    { id: "/post", label: "➕ Post New Ad" },
+                    { id: "/ads",  label: "📊 Other Ads" },
+                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
+                ]
+            );
+            return;
         }
 
-        const headerText = label === "buy"
-            ? "📊 *LIVE BUY ADS — Sell your USDT*"
-            : label === "sell"
-                ? "📊 *LIVE SELL ADS — Buy USDT*"
-                : "📊 *P2PFATHER LIVE ORDERBOOK*";
+        const modeLabel = isSpecificBuy ? "BUY USDT (Get Crypto)" : "SELL USDT (Get INR)";
+        let adCardText = `📊 *LIVE ${modeLabel}*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+        const buttons: { id: string; label: string; url?: string }[] = [];
 
-        await replyWithList(
-            sock,
-            jid,
-            headerText,
-            "Choose a trader to trade instantly",
-            sections
-        );
+        orders.slice(0, 2).forEach((o: any, idx: number) => {
+            const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
+            const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Verified Trader");
+            const trust  = o.users?.trust_score ?? 100;
+            const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
+            const minL   = o.min_amount ? `₹${o.min_amount}` : "₹500";
+            const maxL   = o.max_amount ? `₹${o.max_amount}` : `₹${Math.round((o.amount || 100) * (o.rate || 90))}`;
+
+            const numEmoji = idx === 0 ? "1️⃣" : "2️⃣";
+            adCardText += `${numEmoji} *₹${o.rate} / USDT* — ${trader}\n`;
+            adCardText += `   ⭐ Trust: *${trust}%* | Stock: *${o.amount} USDT*\n`;
+            adCardText += `   💳 Limits: *${minL} – ${maxL}*\n`;
+            adCardText += `   ⚡ Methods: *${pay}*\n\n`;
+
+            buttons.push({
+                id: `trade_ad_${o.id}`,
+                label: `⚡ Trade with #${idx + 1} (₹${o.rate})`,
+            });
+        });
+
+        adCardText += `━━━━━━━━━━━━━━━━━━━━\n_Tap a button below to start trading instantly with escrow:_`;
+
+        buttons.push({
+            id: "https://p2pfather.com/webapp",
+            url: "https://p2pfather.com/webapp",
+            label: "🌐 Full Web Orderbook",
+        });
+
+        await replyWithButtons(sock, jid, adCardText.trim(), buttons);
         return;
     }
 

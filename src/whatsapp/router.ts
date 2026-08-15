@@ -464,9 +464,19 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     }
 
     // ── Direct Quick-Reply Button Click Matching (with emojis & labels) ───────
-    if (text.includes("browse ads") || text.includes("browse ad") || text === "/ads" || text === "ads") {
+    if (text.includes("buy usdt") || text.includes("buy ads") || text === "/ads buy" || text === "ads buy") {
         await (db as any).clearWhatsappState(user.id);
-        await handleAdCommand(sock, msg, jid, user, "/ads");
+        await handleAdCommand(sock, msg, jid, user, "/ads buy");
+        return;
+    }
+    if (text.includes("sell usdt") || text.includes("sell ads") || text === "/ads sell" || text === "ads sell") {
+        await (db as any).clearWhatsappState(user.id);
+        await handleAdCommand(sock, msg, jid, user, "/ads sell");
+        return;
+    }
+    if (text.includes("browse ads") || text.includes("browse ad") || text === "/ads" || text === "ads" || text.startsWith("/ads")) {
+        await (db as any).clearWhatsappState(user.id);
+        await handleAdCommand(sock, msg, jid, user, text);
         return;
     }
     if (text.includes("wallet balance") || text.includes("view balance") || text === "/balance" || text === "balance") {
