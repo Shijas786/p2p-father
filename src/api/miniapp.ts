@@ -1204,10 +1204,12 @@ router.post("/orders", async (req: Request, res: Response) => {
             fiat_currency: "INR",
             payment_methods: payment_methods || ["UPI"],
             expires_at: expiresAt as any,
+            source: (user.preferred_channel === "whatsapp" || user.whatsapp_phone || (req.telegramUser as any)?.is_wa_user) ? "whatsapp" : "telegram",
             payment_details: {
                 upi: user.upi_id || "",
                 group_id: group_id ? parseInt(group_id.toString()) : undefined,
                 note: note ? note.toString().slice(0, 200) : undefined,
+                publish_channel: req.body.publish_channel || "both",
                 excluded_dealers: resolvedDealerIds,
                 excluded_usernames: excludedUsernames,
                 new_traders_only: !!new_traders_only,
@@ -1217,16 +1219,26 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         res.json({ order });
 
-        // Broadcast new ad to all groups
+        const publishChannel = req.body.publish_channel || "both"; // 'both' | 'whatsapp' | 'telegram'
         const orderWithUserData = {
             ...order,
+            source: (user.preferred_channel === "whatsapp" || user.whatsapp_phone || (req.telegramUser as any)?.is_wa_user) ? "whatsapp" : "telegram",
             username: user.username || user.first_name || "anon",
             trust_score: user.trust_score ?? 100,
             is_verified: Boolean(user.is_verified || user.kyc_status === 'approved')
         };
-        import("../bot").then(({ broadcastAd }) => {
-            broadcastAd(orderWithUserData, user).catch(console.error);
-        }).catch(console.error);
+
+        if (publishChannel === "telegram" || publishChannel === "both") {
+            import("../bot").then(({ broadcastAd }) => {
+                broadcastAd(orderWithUserData, user).catch(console.error);
+            }).catch(console.error);
+        }
+
+        if (publishChannel === "whatsapp" || publishChannel === "both") {
+            import("../whatsapp/handlers/group").then(({ broadcastNewAdToGroups }) => {
+                broadcastNewAdToGroups(orderWithUserData).catch(console.error);
+            }).catch(console.error);
+        }
     } catch (err: any) {
         console.error("[MINIAPP] Create order error:", err);
         res.status(500).json({ error: err.message });
@@ -1364,6 +1376,30 @@ router.post("/trades", async (req: Request, res: Response) => {
                     error: "This merchant requires Identity Verification (KYC). Please complete verification in your Profile before taking this order."
                 });
             }
+        }
+
+        // WhatsApp Merchant Order Rule: Telegram MiniApp users must trade via WhatsApp bot or Web Dashboard
+        const sellerUser = await db.getUserById(order.user_id);
+        const isWaMerchantOrder = Boolean(
+            order.source === "whatsapp" ||
+            sellerUser?.preferred_channel === "whatsapp" ||
+            (sellerUser?.whatsapp_phone && !sellerUser?.telegram_id)
+        );
+
+        const isCallingFromWeb = Boolean(
+            (req.telegramUser as any)?.is_wa_user ||
+            req.headers["x-client-platform"] === "web" ||
+            req.headers["origin"]?.includes("p2pfather.com")
+        );
+
+        if (isWaMerchantOrder && !isCallingFromWeb) {
+            const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
+            return res.status(400).json({
+                error: "💬 This ad was posted by a WhatsApp merchant. To trade with this merchant, please open the trade via WhatsApp Bot or on the Web Dashboard (p2pfather.com/webapp).",
+                is_wa_redirect: true,
+                wa_url: `https://wa.me/${waBotPhone}?text=trade_ad_${order.id}`,
+                web_url: "https://p2pfather.com/webapp"
+            });
         }
 
         const tradeAmount = amount || order.amount;

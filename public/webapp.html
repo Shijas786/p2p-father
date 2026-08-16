@@ -597,6 +597,13 @@
               <label class="checkbox-item"><input type="checkbox" name="ad-pay" value="Paytm" /> Paytm</label>
             </div>
 
+            <label for="ad-publish-channel">Where to publish this ad?</label>
+            <select id="ad-publish-channel" style="margin-bottom:16px;">
+              <option value="both" selected>🌐 Both WhatsApp &amp; Telegram (Maximum Reach)</option>
+              <option value="whatsapp">💬 WhatsApp Groups &amp; Bot Only</option>
+              <option value="telegram">✈️ Telegram Groups &amp; Channel Only</option>
+            </select>
+
             <label for="ad-note">Terms / Remarks (Optional)</label>
             <textarea id="ad-note" rows="2" placeholder="e.g. Fast payment, no third party accounts."></textarea>
 
@@ -1796,6 +1803,7 @@
     const chain = document.getElementById('ad-chain').value;
     const rate = parseFloat(document.getElementById('ad-rate').value);
     const amount = parseFloat(document.getElementById('ad-amount').value);
+    const publishChannel = document.getElementById('ad-publish-channel')?.value || 'both';
     const note = document.getElementById('ad-note').value;
     const checkedPay = Array.from(document.querySelectorAll('input[name="ad-pay"]:checked')).map(cb => cb.value);
 
@@ -1814,6 +1822,7 @@
         rate,
         amount,
         payment_methods: checkedPay,
+        publish_channel: publishChannel,
         note
       });
 

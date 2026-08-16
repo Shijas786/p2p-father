@@ -991,6 +991,27 @@ bot.command(["start", "open"], async (ctx) => {
         const orderId = payload.replace("buy_", "").replace("trade_", "");
         const order = await db.getOrderById(orderId);
         if (order && order.status === "active") {
+            const seller = await db.getUserById(order.user_id);
+            const isWaMerchant = Boolean(
+                order.source === "whatsapp" ||
+                seller?.preferred_channel === "whatsapp" ||
+                (seller?.whatsapp_phone && !seller?.telegram_id)
+            );
+
+            if (isWaMerchant) {
+                const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
+                const keyboard = new InlineKeyboard()
+                    .url("💬 Trade via WhatsApp Bot", `https://wa.me/${waBotPhone}?text=trade_ad_${order.id}`)
+                    .row()
+                    .url("🌐 Open Web Dashboard", "https://p2pfather.com/webapp");
+
+                await ctx.reply(
+                    `💬 *WhatsApp Merchant Ad*\n\nThis ad was posted by a verified WhatsApp merchant (${escapeMarkdown(seller?.first_name || "Merchant")}).\n\nTo trade safely with this merchant, please open the trade in WhatsApp or on the Web Dashboard:`,
+                    { parse_mode: "Markdown", reply_markup: keyboard }
+                );
+                return;
+            }
+
             const cacheBuster = `?v=${Date.now()}`;
             const miniAppUrl = `https://p2pfather.com/miniapp/trade/new/${orderId}${cacheBuster}`;
             const keyboard = new InlineKeyboard().webApp(`⚡ Open Trade`, miniAppUrl);
