@@ -895,10 +895,29 @@ func eventHandler(evt interface{}) {
 			return
 		}
 
+		chatJID := v.Info.Chat
+		senderJID := v.Info.Sender
+
+		// Auto-resolve LID to real phone number if WhatsApp Multi-Device session used LID routing
+		if chatJID.Server == "lid" && client != nil && client.Store != nil && client.Store.LIDs != nil {
+			pn, err := client.Store.LIDs.GetPNForLID(context.Background(), chatJID)
+			if err == nil && !pn.IsEmpty() {
+				fmt.Printf("[Hypermeow LID Resolution] Resolved chat %s -> %s\n", chatJID.String(), pn.String())
+				chatJID = pn
+			}
+		}
+		if senderJID.Server == "lid" && client != nil && client.Store != nil && client.Store.LIDs != nil {
+			pn, err := client.Store.LIDs.GetPNForLID(context.Background(), senderJID)
+			if err == nil && !pn.IsEmpty() {
+				fmt.Printf("[Hypermeow LID Resolution] Resolved sender %s -> %s\n", senderJID.String(), pn.String())
+				senderJID = pn
+			}
+		}
+
 		payload := WebhookPayload{
-			JID:         v.Info.Chat.String(),
+			JID:         chatJID.String(),
 			Text:        text,
-			Sender:      v.Info.Sender.String(),
+			Sender:      senderJID.String(),
 			PushName:    v.Info.PushName,
 			AudioBase64: audioBase64,
 			ImageBase64: imageBase64,

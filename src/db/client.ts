@@ -873,7 +873,7 @@ class Database {
             const { data, error } = await db
                 .from("users")
                 .select("*")
-                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.ilike.%${last10}`)
+                .or(`whatsapp_phone.eq.${clean},whatsapp_phone.ilike.%${last10},whatsapp_id.eq.${clean},phone_number.eq.${clean},phone_number.ilike.%${last10}`)
                 .order("created_at", { ascending: true })
                 .limit(1)
                 .maybeSingle();
@@ -883,7 +883,7 @@ class Database {
                 const { data: fallback } = await db
                     .from("users")
                     .select("*")
-                    .eq("whatsapp_phone", clean)
+                    .or(`whatsapp_phone.eq.${clean},whatsapp_id.eq.${clean},phone_number.eq.${clean}`)
                     .order("created_at", { ascending: true })
                     .limit(1)
                     .maybeSingle();
