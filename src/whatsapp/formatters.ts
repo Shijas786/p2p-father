@@ -328,7 +328,7 @@ export function fmtGroupAdBroadcast(order: any): string {
     const totalFiat = Math.round(amount * rate);
 
     const chainRaw = (order.chain || "base").toLowerCase();
-    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia");
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || order.source === "whatsapp" || Boolean(order.users?.whatsapp_phone);
     const chainLabel = isTestnet
         ? `🧪 DEMO / TESTNET (${chainRaw.toUpperCase()}) — ⚠️ NO REAL MONEY`
         : chainRaw.toUpperCase();
@@ -343,7 +343,7 @@ export function fmtGroupAdBroadcast(order: any): string {
     const paymentLine = `💳 Payment: ${payMethods}`;
 
     const lines = [
-        header,
+        isTestnet ? `🧪 *[DEMO / TESTNET AD]*\n${header}` : header,
         "",
         orderLine,
         rateLine,

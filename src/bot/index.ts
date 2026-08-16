@@ -322,7 +322,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const orderLine = `${emoji} ${username}${avgSpeedText} ${actionVerb} ${amountStr}`;
 
     const chainRaw = (order.chain || "base").toLowerCase();
-    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia");
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || order.source === "whatsapp" || Boolean(user?.whatsapp_phone);
     const chainLabel = isTestnet
         ? `🧪 DEMO / TESTNET (${escapeHTML(chainRaw.toUpperCase())}) — ⚠️ NO REAL MONEY`
         : escapeHTML(chainRaw.toUpperCase());
@@ -333,7 +333,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
 
     const lines = [
-        header,
+        isTestnet ? `🧪 <b>[DEMO / TESTNET AD]</b>\n${header}` : header,
         "",
         orderLine,
         rateLine,

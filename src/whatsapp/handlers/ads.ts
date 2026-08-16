@@ -97,6 +97,8 @@ Choose your trade direction below to view verified rates:
         orders.slice(0, 2).forEach((o: any, idx: number) => {
             const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
             const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Verified Trader");
+            const isDemo = Boolean(o.source === "whatsapp" || o.chain?.includes("testnet") || o.users?.whatsapp_phone);
+            const demoTag = isDemo ? " (🧪 Demo)" : "";
             const trust  = o.users?.trust_score ?? 100;
             const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
             const minL   = o.min_amount ? `₹${Number(o.min_amount).toLocaleString("en-IN")}` : "₹500";
@@ -104,7 +106,7 @@ Choose your trade direction below to view verified rates:
             const maxL   = `₹${Number(maxVal).toLocaleString("en-IN")}`;
 
             const numEmoji = idx === 0 ? "1️⃣" : "2️⃣";
-            adCardText += `${numEmoji} *₹${o.rate} / USDT* — ${trader}\n`;
+            adCardText += `${numEmoji} *₹${o.rate} / USDT* — ${trader}${demoTag}\n`;
             adCardText += `   ⭐ Trust: *${trust}%* | Stock: *${o.amount} USDT*\n`;
             adCardText += `   💳 Limits: *${minL} – ${maxL}*\n`;
             adCardText += `   ⚡ Methods: *${pay}*\n\n`;
