@@ -40,9 +40,10 @@ type SendTextReq struct {
 }
 
 type ButtonItem struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
-	URL   string `json:"url,omitempty"`
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	URL      string `json:"url,omitempty"`
+	CopyCode string `json:"copyCode,omitempty"`
 }
 
 type SendButtonsReq struct {
@@ -434,7 +435,21 @@ func handleSendButtons(w http.ResponseWriter, r *http.Request) {
 		if i >= 3 {
 			break
 		}
-		if btn.URL != "" || strings.HasPrefix(btn.ID, "http") {
+		if btn.CopyCode != "" || btn.ID == "copy_code" {
+			codeToCopy := btn.CopyCode
+			if codeToCopy == "" {
+				codeToCopy = btn.ID
+			}
+			paramsJSON, _ := json.Marshal(map[string]string{
+				"display_text": btn.Label,
+				"copy_code":    codeToCopy,
+			})
+			fmt.Printf("[SendButtons] Button: name=cta_copy params=%s\n", string(paramsJSON))
+			nativeFlowBtns = append(nativeFlowBtns, &waProto.InteractiveMessage_NativeFlowMessage_NativeFlowButton{
+				Name:             proto.String("cta_copy"),
+				ButtonParamsJSON: proto.String(string(paramsJSON)),
+			})
+		} else if btn.URL != "" || strings.HasPrefix(btn.ID, "http") {
 			targetURL := btn.URL
 			if targetURL == "" {
 				targetURL = btn.ID
