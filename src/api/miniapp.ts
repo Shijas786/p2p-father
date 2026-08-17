@@ -1271,6 +1271,7 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         res.json({ order });
 
+        const publishChannel = req.body.publish_channel || "both"; // 'both' | 'whatsapp' | 'telegram'
         const isWaOrigin = (user.preferred_channel === "whatsapp" || Boolean(user.whatsapp_phone) || Boolean((req.telegramUser as any)?.is_wa_user));
         const orderWithUserData = {
             ...order,
