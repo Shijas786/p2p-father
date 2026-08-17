@@ -352,6 +352,14 @@ export function fmtGroupAdBroadcast(order: any): string {
         paymentLine,
     ];
 
+    if (order.payment_details?.require_kyc) {
+        lines.push("🛡️ Requirement: *KYC Verified Only*");
+    }
+
+    if (order.payment_details?.allowed_dealers && order.payment_details.allowed_dealers.length > 0) {
+        lines.push("👥 Target: *Specific Whitelisted Dealers Only*");
+    }
+
     if (isTestnet) {
         lines.push("⚠️ *DEMO AD ONLY — FOR TESTING (NO REAL MONEY INVOLVED)*");
     }

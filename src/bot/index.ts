@@ -350,6 +350,10 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         lines.push(`🛡️ Requirement: <b>KYC Verified Only</b>`);
     }
 
+    if (order.payment_details?.allowed_dealers && order.payment_details.allowed_dealers.length > 0) {
+        lines.push(`👥 Target: <b>Specific Whitelisted Dealers Only</b>`);
+    }
+
     const traderNote = order.payment_details?.note;
     if (traderNote) {
         lines.push(`📝 Note: ${escapeHTML(traderNote)}`);

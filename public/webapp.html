@@ -615,6 +615,45 @@
               <option value="telegram">✈️ Telegram Groups &amp; Channel Only</option>
             </select>
 
+            <!-- ── ADVANCED OPTIONS ── -->
+            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAdvOptions()">
+                <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;color:#0f172a;">
+                  <span>⚙️</span> Advanced Options (KYC &amp; Dealer Filters)
+                </div>
+                <span id="adv-arrow" style="font-size:12px;color:#64748b;font-weight:700;transition:transform .2s;">▼</span>
+              </div>
+
+              <div id="adv-options-body" style="display:none;margin-top:14px;padding-top:12px;border-top:1px dashed #cbd5e1;">
+                <!-- 1. Only KYC Verified Users -->
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:14px;text-transform:none;font-size:13px;font-weight:normal;">
+                  <input type="checkbox" id="ad-require-kyc" style="width:18px;height:18px;margin-top:2px;accent-color:#10b981;cursor:pointer;" />
+                  <div>
+                    <div style="font-weight:700;color:#0f172a;">🛡️ Only KYC Verified Users</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">Only traders who have verified their Govt ID / Aadhaar KYC can trade on this ad.</div>
+                  </div>
+                </label>
+
+                <!-- 2. Specific Allowed Dealers (Whitelist) -->
+                <div style="margin-bottom:14px;">
+                  <label for="ad-allowed-dealers" style="text-transform:none;font-size:12.5px;font-weight:700;color:#0f172a;margin-bottom:4px;">
+                    👥 Specific Dealers Only (Whitelisted)
+                  </label>
+                  <input type="text" id="ad-allowed-dealers" placeholder="e.g. @dealer1, 919876543210, @shijas" style="font-size:13px;padding:10px 12px;" />
+                  <div style="font-size:11.5px;color:#64748b;margin-top:3px;">Leave blank to allow all traders, or enter specific usernames / WhatsApp phone numbers allowed to take this ad.</div>
+                </div>
+
+                <!-- 3. Excluded Dealers (Blacklist) -->
+                <div>
+                  <label for="ad-excluded-dealers" style="text-transform:none;font-size:12.5px;font-weight:700;color:#0f172a;margin-bottom:4px;">
+                    🚫 Blocked / Excluded Dealers
+                  </label>
+                  <input type="text" id="ad-excluded-dealers" placeholder="e.g. @badtrader, @spammer" style="font-size:13px;padding:10px 12px;" />
+                  <div style="font-size:11.5px;color:#64748b;margin-top:3px;">Block specific usernames or phone numbers from taking this ad.</div>
+                </div>
+              </div>
+            </div>
+
             <label for="ad-note">Terms / Remarks (Optional)</label>
             <textarea id="ad-note" rows="2" placeholder="e.g. Fast payment, no third party accounts."></textarea>
 
@@ -1803,6 +1842,14 @@
     document.getElementById('ad-total-fiat').textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function toggleAdvOptions() {
+    const body = document.getElementById('adv-options-body');
+    const arrow = document.getElementById('adv-arrow');
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
   async function handlePostAd(e) {
     e.preventDefault();
     const err = document.getElementById('post-ad-err');
@@ -1817,6 +1864,11 @@
     const publishChannel = document.getElementById('ad-publish-channel')?.value || 'both';
     const note = document.getElementById('ad-note').value;
     const checkedPay = Array.from(document.querySelectorAll('input[name="ad-pay"]:checked')).map(cb => cb.value);
+
+    // Advanced Options
+    const requireKyc = document.getElementById('ad-require-kyc')?.checked || false;
+    const allowedDealers = document.getElementById('ad-allowed-dealers')?.value.trim() || '';
+    const excludedDealers = document.getElementById('ad-excluded-dealers')?.value.trim() || '';
 
     if (!rate || rate <= 0 || !amount || amount <= 0) {
       err.textContent = 'Please enter a valid rate and amount.';
@@ -1834,6 +1886,9 @@
         amount,
         payment_methods: checkedPay,
         publish_channel: publishChannel,
+        require_kyc: requireKyc,
+        allowed_dealers: allowedDealers,
+        excluded_dealers: excludedDealers,
         note
       });
 
@@ -1880,6 +1935,9 @@
       const trader = o.users?.first_name || o.users?.username || 'Trader';
       const isMyAd = currentUser && (o.user_id === currentUser.id);
       const isDemo = Boolean(o.source === 'whatsapp' || (o.chain && o.chain.includes('testnet')) || o.users?.whatsapp_phone);
+      const reqKyc = Boolean(o.payment_details?.require_kyc);
+      const hasWhitelist = Boolean(o.payment_details?.allowed_dealers && o.payment_details.allowed_dealers.length > 0);
+
       return `
         <div class="order-row">
           <div>
@@ -1887,6 +1945,8 @@
               <span class="trade-badge ${o.type==='buy'?'badge-buy':'badge-sell'}">${o.type.toUpperCase()}</span>
               <span style="font-size:15px;font-weight:800;color:#0f172a;">${o.amount} ${o.token}</span>
               <span style="font-size:12px;color:var(--muted);font-weight:600;">by ${trader}</span>
+              ${reqKyc ? `<span style="font-size:11px;background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #bfdbfe;">🛡️ KYC REQUIRED</span>` : ''}
+              ${hasWhitelist ? `<span style="font-size:11px;background:#f5f3ff;color:#6d28d9;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #ddd6fe;">👥 SPECIFIC DEALERS</span>` : ''}
               ${isDemo ? `<span style="font-size:11px;background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #fde68a;">🧪 DEMO / TESTNET</span>` : ''}
             </div>
             <div style="font-size:12.5px;color:var(--sub);margin-top:4px;">

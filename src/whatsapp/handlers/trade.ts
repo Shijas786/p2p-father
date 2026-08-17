@@ -92,6 +92,57 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
             return;
         }
 
+        // 🛡️ 1. Check KYC Verification Requirement
+        if (order.payment_details?.require_kyc) {
+            const isVerified = Boolean(user.is_verified || user.kyc_status === "approved");
+            if (!isVerified) {
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `🛡️ *KYC VERIFICATION REQUIRED*\n\nThis merchant requires Govt ID / KYC verification before trading.\n\nPlease complete verification to trade on this ad.`,
+                    [{ id: "/profile", label: "👤 My Profile & KYC" }]
+                );
+                return;
+            }
+        }
+
+        // 👥 2. Check Whitelist (Specific Allowed Dealers Only)
+        const allowedDealers = order.payment_details?.allowed_dealers || [];
+        if (allowedDealers.length > 0) {
+            const isAllowed = allowedDealers.some((id: any) =>
+                String(id) === String(user.telegram_id) ||
+                String(id) === String(user.id) ||
+                (user.whatsapp_phone && String(id) === String(user.whatsapp_phone)) ||
+                (user.phone_number && String(id) === String(user.phone_number)) ||
+                (user.username && String(id).toLowerCase() === String(user.username).toLowerCase())
+            );
+            if (!isAllowed) {
+                await reply(
+                    sock,
+                    jid,
+                    `🔒 *RESTRICTED AD*\n\nThis ad is restricted to specific approved dealers chosen by the merchant. You cannot accept this ad.`,
+                    msg
+                );
+                return;
+            }
+        }
+
+        // 🚫 3. Check Blacklist (Excluded Dealers)
+        const excludedDealers = order.payment_details?.excluded_dealers || [];
+        if (excludedDealers.length > 0) {
+            const isExcluded = excludedDealers.some((id: any) =>
+                String(id) === String(user.telegram_id) ||
+                String(id) === String(user.id) ||
+                (user.whatsapp_phone && String(id) === String(user.whatsapp_phone)) ||
+                (user.phone_number && String(id) === String(user.phone_number)) ||
+                (user.username && String(id).toLowerCase() === String(user.username).toLowerCase())
+            );
+            if (isExcluded) {
+                await reply(sock, jid, "⚠️ This ad is not available for your account.", msg);
+                return;
+            }
+        }
+
         const isBuyer = order.type === "sell";
         const buyerId = isBuyer ? user.id : order.user_id;
         const sellerId = isBuyer ? order.user_id : user.id;

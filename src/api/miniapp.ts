@@ -1104,7 +1104,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers, new_traders_only } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers, allowed_dealers, new_traders_only, require_kyc } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -1124,16 +1124,66 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         if (excludedUsernames.length > 0) {
             const dbInstance = (db as any).getClient();
+            const orConditions: string[] = [];
+            for (const uname of excludedUsernames) {
+                orConditions.push(`username.ilike.${uname}`);
+                orConditions.push(`phone_number.ilike.%${uname}%`);
+                orConditions.push(`whatsapp_phone.ilike.%${uname}%`);
+            }
             const { data: matchedUsers } = await dbInstance
                 .from("users")
-                .select("id, telegram_id")
-                .or(excludedUsernames.map(uname => `username.ilike.${uname}`).join(','));
+                .select("id, telegram_id, whatsapp_phone, phone_number")
+                .or(orConditions.join(','));
 
             if (matchedUsers) {
                 for (const u of matchedUsers) {
-                    resolvedDealerIds.push(String(u.telegram_id));
-                    resolvedDealerIds.push(String(u.id));
+                    if (u.telegram_id) resolvedDealerIds.push(String(u.telegram_id));
+                    if (u.id) resolvedDealerIds.push(String(u.id));
+                    if (u.whatsapp_phone) resolvedDealerIds.push(String(u.whatsapp_phone));
+                    if (u.phone_number) resolvedDealerIds.push(String(u.phone_number));
                 }
+            }
+        }
+
+        // 👥 Whitelist / Specific Dealers Resolution
+        let resolvedAllowedDealerIds: string[] = [];
+        let allowedUsernames: string[] = [];
+
+        if (typeof allowed_dealers === 'string' && allowed_dealers.trim()) {
+            allowedUsernames = allowed_dealers.split(',')
+                .map(u => u.trim().replace('@', ''))
+                .filter(u => u.length > 0);
+        } else if (Array.isArray(allowed_dealers)) {
+            allowedUsernames = allowed_dealers
+                .map(u => String(u).trim().replace('@', ''))
+                .filter(u => u.length > 0);
+        }
+
+        if (allowedUsernames.length > 0) {
+            const dbInstance = (db as any).getClient();
+            const orConditions: string[] = [];
+            for (const uname of allowedUsernames) {
+                orConditions.push(`username.ilike.${uname}`);
+                orConditions.push(`phone_number.ilike.%${uname}%`);
+                orConditions.push(`whatsapp_phone.ilike.%${uname}%`);
+            }
+            const { data: matchedUsers } = await dbInstance
+                .from("users")
+                .select("id, telegram_id, whatsapp_phone, phone_number, username")
+                .or(orConditions.join(','));
+
+            if (matchedUsers) {
+                for (const u of matchedUsers) {
+                    if (u.telegram_id) resolvedAllowedDealerIds.push(String(u.telegram_id));
+                    if (u.id) resolvedAllowedDealerIds.push(String(u.id));
+                    if (u.whatsapp_phone) resolvedAllowedDealerIds.push(String(u.whatsapp_phone));
+                    if (u.phone_number) resolvedAllowedDealerIds.push(String(u.phone_number));
+                    if (u.username) resolvedAllowedDealerIds.push(String(u.username).toLowerCase());
+                }
+            }
+            // Also retain literal raw tokens for direct match
+            for (const uname of allowedUsernames) {
+                resolvedAllowedDealerIds.push(uname.toLowerCase());
             }
         }
 
@@ -1212,8 +1262,10 @@ router.post("/orders", async (req: Request, res: Response) => {
                 publish_channel: req.body.publish_channel || "both",
                 excluded_dealers: resolvedDealerIds,
                 excluded_usernames: excludedUsernames,
+                allowed_dealers: resolvedAllowedDealerIds,
+                allowed_usernames: allowedUsernames,
                 new_traders_only: !!new_traders_only,
-                require_kyc: !!req.body.require_kyc
+                require_kyc: !!require_kyc || !!req.body.require_kyc
             },
         });
 
@@ -1351,11 +1403,31 @@ router.post("/trades", async (req: Request, res: Response) => {
         const excludedDealers = order.payment_details?.excluded_dealers || [];
         if (excludedDealers.length > 0) {
             const isExcluded = excludedDealers.some((id: any) =>
-                String(id) === String(user.telegram_id) || String(id) === String(user.id)
+                String(id) === String(user.telegram_id) || String(id) === String(user.id) ||
+                (user.whatsapp_phone && String(id) === String(user.whatsapp_phone)) ||
+                (user.phone_number && String(id) === String(user.phone_number)) ||
+                (user.username && String(id).toLowerCase() === String(user.username).toLowerCase())
             );
             if (isExcluded) {
                 return res.status(400).json({
                     error: "This order is not available to you. The creator has restricted access for your account."
+                });
+            }
+        }
+
+        // Check if the order is restricted to specific allowed dealers only (Whitelist)
+        const allowedDealers = order.payment_details?.allowed_dealers || [];
+        if (allowedDealers.length > 0) {
+            const isAllowed = allowedDealers.some((id: any) =>
+                String(id) === String(user.telegram_id) ||
+                String(id) === String(user.id) ||
+                (user.whatsapp_phone && String(id) === String(user.whatsapp_phone)) ||
+                (user.phone_number && String(id) === String(user.phone_number)) ||
+                (user.username && String(id).toLowerCase() === String(user.username).toLowerCase())
+            );
+            if (!isAllowed) {
+                return res.status(400).json({
+                    error: "🔒 This order is restricted to specific approved dealers only chosen by the merchant."
                 });
             }
         }
