@@ -367,16 +367,63 @@ The seller has been notified to check their bank account/UPI.`,
             return;
         }
 
+        if (trade.buyer_id !== user.id && trade.seller_id !== user.id) {
+            await reply(sock, jid, "❌ You are not a party to this trade.", msg);
+            return;
+        }
+
+        if (!["in_escrow", "fiat_sent"].includes(trade.status)) {
+            await reply(sock, jid, `⚠️ Cannot dispute this trade in its current state (*${trade.status.toUpperCase()}*).`, msg);
+            return;
+        }
+
+        // 🛡️ ENFORCE 30-MINUTE DISPUTE DELAY (Same as MiniApp)
+        const baseTimeStr = trade.fiat_sent_at || trade.escrow_locked_at || trade.created_at;
+        if (baseTimeStr) {
+            const startTime = new Date(baseTimeStr).getTime();
+            const now = Date.now();
+            const diff = now - startTime;
+            const thirtyMins = 30 * 60 * 1000;
+
+            if (diff < thirtyMins) {
+                const remaining = Math.ceil((thirtyMins - diff) / 60000);
+                await reply(
+                    sock,
+                    jid,
+                    `⏳ *DISPUTE COOLDOWN ACTIVE*\n\nPlease allow time for payment & banking clearance.\n\nYou can open a dispute in *${remaining} minutes* if payment or release has not arrived.`,
+                    msg
+                );
+                return;
+            }
+        }
+
         try {
-            await db.updateTrade(tradeId, { status: "disputed", dispute_reason: "Raised via WhatsApp bot" });
+            const isSeller = trade.seller_id === user.id;
+            const role = isSeller ? "Seller" : "Buyer";
+            const disputeReason = `[WhatsApp] Raised by ${role} ${user.first_name || user.username || ""}`.trim();
+
+            await db.updateTrade(tradeId, {
+                status: "disputed",
+                dispute_reason: disputeReason,
+            });
 
             if (trade.on_chain_trade_id) {
                 try {
-                    await escrow.raiseDispute(trade.on_chain_trade_id, "Dispute via WA Bot", trade.chain as any);
+                    await escrow.raiseDispute(trade.on_chain_trade_id, disputeReason, trade.chain as any);
                 } catch (e: any) {
                     console.error("[WA] On-chain dispute error:", e.message);
                 }
             }
+
+            // Record system message in trade chat
+            try {
+                await db.createTradeMessage({
+                    trade_id: trade.id,
+                    user_id: user.id,
+                    message: `⚠️ Dispute raised by ${role} via WhatsApp. Admin team has been notified and is reviewing evidence.`,
+                    type: "system",
+                });
+            } catch (_) {}
 
             await reply(sock, jid, fmtDisputeOpened(trade), msg);
 
@@ -386,7 +433,11 @@ The seller has been notified to check their bank account/UPI.`,
                 await sendUserAlert(otherUser, `⚠️ *DISPUTE OPENED* on Trade \`${trade.id.slice(0, 8)}\` by counterparty. Admin team is reviewing.`);
             }
 
+            // Alert admins on Telegram with 1-tap resolution buttons
+            await alertAdminsDisputeOpened(trade);
+
         } catch (err) {
+            console.error("[WA] Dispute error:", err);
             await reply(sock, jid, "❌ Failed to open dispute. Contact @P2PFatherSupport", msg);
         }
         return;
