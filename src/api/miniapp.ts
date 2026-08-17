@@ -1271,22 +1271,24 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         res.json({ order });
 
-        const publishChannel = req.body.publish_channel || "both"; // 'both' | 'whatsapp' | 'telegram'
+        const isWaOrigin = (user.preferred_channel === "whatsapp" || Boolean(user.whatsapp_phone) || Boolean((req.telegramUser as any)?.is_wa_user));
         const orderWithUserData = {
             ...order,
-            source: (user.preferred_channel === "whatsapp" || user.whatsapp_phone || (req.telegramUser as any)?.is_wa_user) ? "whatsapp" : "telegram",
+            source: isWaOrigin ? "whatsapp" : "telegram",
             username: user.username || user.first_name || "anon",
             trust_score: user.trust_score ?? 100,
             is_verified: Boolean(user.is_verified || user.kyc_status === 'approved')
         };
 
-        if (publishChannel === "telegram" || publishChannel === "both") {
+        // Broadcast to Telegram channels/groups if origin is Telegram or explicitly set
+        if (!isWaOrigin || publishChannel === "telegram" || publishChannel === "both") {
             import("../bot").then(({ broadcastAd }) => {
                 broadcastAd(orderWithUserData, user).catch(console.error);
             }).catch(console.error);
         }
 
-        if (publishChannel === "whatsapp" || publishChannel === "both") {
+        // ONLY broadcast to WhatsApp groups if ad was explicitly created on WhatsApp
+        if (isWaOrigin && (publishChannel === "whatsapp" || publishChannel === "both")) {
             import("../whatsapp/handlers/group").then(({ broadcastNewAdToGroups }) => {
                 broadcastNewAdToGroups(orderWithUserData).catch(console.error);
             }).catch(console.error);
