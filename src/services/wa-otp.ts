@@ -67,12 +67,14 @@ export class WhatsAppOtpService {
         rateLimitStore.set(phone, timestamps);
 
         // Send OTP via Hypermeow WhatsApp bridge
-        const messageText = `🔑 *P2PFATHER WEB LOGIN CODE*\n\nYour login code is: *${otp}*\n\n_Valid for 10 minutes. Do not share this code with anyone._`;
+        const messageText = `🔑 *P2PFATHER WEB LOGIN CODE*\n\nYour login code is: *${otp}*\n\n_Tap the code below to copy it, then paste on the web dashboard._\n_Valid for 10 minutes. Do not share this code with anyone._`;
 
         let sent = false;
         try {
             if (hypermeowClient.isConfigured()) {
                 await hypermeowClient.sendText(`${phone}@s.whatsapp.net`, messageText);
+                // Send code as a separate standalone message so user can long-press & copy instantly
+                await hypermeowClient.sendText(`${phone}@s.whatsapp.net`, otp);
                 sent = true;
             }
         } catch (err: any) {
