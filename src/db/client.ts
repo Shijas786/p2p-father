@@ -1010,6 +1010,7 @@ class Database {
                 .from("users")
                 .select("wallet_index")
                 .not("wallet_index", "is", null)
+                .lt("wallet_index", 900000)
                 .order("wallet_index", { ascending: false })
                 .limit(1)
                 .maybeSingle();
