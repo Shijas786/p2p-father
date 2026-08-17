@@ -14,7 +14,7 @@ import { broadcastNewAdToGroups } from "./group";
 import { hasPaymentMethods } from "./profile";
 
 /** Multi-step Post Ad flow state machine */
-type AdStep = "TYPE" | "TOKEN" | "RATE" | "AMOUNT" | "PAYMENT" | "EXPIRY" | "KYC_REQ" | "NOTE" | "CONFIRM";
+type AdStep = "TYPE" | "TOKEN" | "RATE" | "AMOUNT" | "PAYMENT" | "EXPIRY" | "KYC_REQ" | "DEALERS" | "NOTE" | "CONFIRM";
 
 interface AdDraft {
     step: AdStep;
@@ -28,6 +28,8 @@ interface AdDraft {
     payment_methods?: string[];
     expiry_minutes?: number;
     require_kyc?: boolean;
+    allowed_dealers?: string[];
+    allowed_usernames?: string[];
     note?: string;
 }
 
@@ -519,13 +521,36 @@ Please deposit more USDT and lock it to your Vault before posting this ad.`,
         case "KYC_REQ": {
             const requireKyc = text.includes("yes") || text.includes("kyc_yes") || text.includes("verified");
             draft.require_kyc = requireKyc;
+            draft.step = "DEALERS";
+            await (db as any).setWhatsappState(user.id, "POST_AD", draft);
+
+            await replyWithButtons(
+                sock,
+                jid,
+                `✅ *KYC Filter: ${requireKyc ? "🛡️ Verified Traders Only" : "🌐 All Traders"}*\n\n⚙️ *ADVANCED SETTING — Specific Whitelisted Dealers (Optional)*:\nReply with specific usernames or WhatsApp phone numbers allowed to take this ad (e.g. \`@dealer1, 919876543210\`) or tap Skip Whitelist to allow all traders:`,
+                [
+                    { id: "ad_dealers_skip", label: "⏭️ Skip Whitelist (All Traders)" },
+                ]
+            );
+            return;
+        }
+
+        // ── Step 8: Whitelisted Dealers ───────────────────────────────────────
+        case "DEALERS": {
+            if (!text.includes("skip")) {
+                const rawDealers = text.split(",").map((s: string) => s.trim().replace("@", "")).filter(Boolean);
+                if (rawDealers.length > 0) {
+                    draft.allowed_usernames = rawDealers;
+                    draft.allowed_dealers = rawDealers.map((d: string) => d.toLowerCase());
+                }
+            }
             draft.step = "NOTE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *KYC Filter: ${requireKyc ? "🛡️ Verified Traders Only" : "🌐 All Traders"}*\n\n⚙️ *ADVANCED SETTING — Trader Note (Optional)*:\nReply with special terms (e.g. \`UPI transfer only, no third party payment\`) or tap Skip Note:`,
+                `✅ *Whitelisted Dealers: ${draft.allowed_usernames && draft.allowed_usernames.length > 0 ? draft.allowed_usernames.join(", ") : "🌐 Anyone"}*\n\n⚙️ *ADVANCED SETTING — Trader Note (Optional)*:\nReply with special terms (e.g. \`UPI transfer only, no third party payment\`) or tap Skip Note:`,
                 [
                     { id: "ad_note_skip", label: "⏭️ Skip Trader Note" },
                 ]
@@ -533,7 +558,7 @@ Please deposit more USDT and lock it to your Vault before posting this ad.`,
             return;
         }
 
-        // ── Step 8: Trader Note → Confirm ─────────────────────────────────────
+        // ── Step 9: Trader Note → Confirm ─────────────────────────────────────
         case "NOTE": {
             if (!text.includes("skip")) {
                 draft.note = text.trim();
@@ -556,6 +581,7 @@ Please deposit more USDT and lock it to your Vault before posting this ad.`,
 • *Payment:* ${draft.payment_methods!.join(", ")}
 • *Expiry:* ${draft.expiry_minutes ? `${draft.expiry_minutes / 60}h` : "1h"}
 • *KYC Filter:* ${draft.require_kyc ? "🛡️ Verified Only" : "🌐 All Traders"}
+• *Specific Dealers:* ${draft.allowed_usernames && draft.allowed_usernames.length > 0 ? `👥 ${draft.allowed_usernames.join(", ")}` : "🌐 Anyone"}
 ${draft.note ? `• *Note:* _${draft.note}_` : ""}
 
 Where do you want to publish this ad? 👇`,
@@ -568,7 +594,7 @@ Where do you want to publish this ad? 👇`,
             return;
         }
 
-        // ── Step 9: Final Publish ──────────────────────────────────────────────
+        // ── Step 10: Final Publish ─────────────────────────────────────────────
         case "CONFIRM": {
             if (text.includes("no") || text.includes("cancel")) {
                 await (db as any).clearWhatsappState(user.id);
@@ -643,6 +669,8 @@ Please top up your Vault and try again.`,
                     source:          "whatsapp",
                     payment_details: {
                         require_kyc: Boolean(draft.require_kyc),
+                        allowed_dealers: draft.allowed_dealers || [],
+                        allowed_usernames: draft.allowed_usernames || [],
                         note: draft.note || undefined,
                     },
                 });
