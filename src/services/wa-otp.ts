@@ -66,14 +66,13 @@ export class WhatsAppOtpService {
         timestamps.push(Date.now());
         rateLimitStore.set(phone, timestamps);
 
-        // Send OTP via Hypermeow WhatsApp bridge — format matching ChatterPay
+        // Send OTP via Hypermeow WhatsApp bridge — pure native copy button (no browser URL)
         const messageText = `*${otp}* is your verification code. For your security, do not share this code.`;
-        const copyUrl = `https://p2pfather.com/copy?c=${otp}`;
 
         let sent = false;
         try {
             if (hypermeowClient.isConfigured()) {
-                // Send with copyCode (native cta_copy button) & fallback url
+                // Send with pure copyCode (native cta_copy button)
                 const btnSent = await hypermeowClient.sendButtons(
                     `${phone}@s.whatsapp.net`,
                     messageText,
@@ -81,8 +80,7 @@ export class WhatsAppOtpService {
                         {
                             id: "copy_code",
                             label: "Copy code",
-                            copyCode: otp,
-                            url: copyUrl
+                            copyCode: otp
                         }
                     ],
                     "Expires in 10 minutes."
