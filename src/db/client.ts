@@ -908,7 +908,7 @@ class Database {
             if (existing) return existing;
         } catch (_) {}
 
-        // Find next wallet index to satisfy NOT NULL constraints
+        // Find next wallet index to satisfy NOT NULL constraints (filter out synthetic test indexes >= 900000)
         let nextIndex = 1;
         let walletAddress: string | null = null;
         try {
@@ -916,6 +916,7 @@ class Database {
                 .from("users")
                 .select("wallet_index")
                 .not("wallet_index", "is", null)
+                .lt("wallet_index", 900000)
                 .order("wallet_index", { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -936,9 +937,10 @@ class Database {
             username:          null,
             first_name:        `WA_${(clean || phone).slice(-4)}`,
             whatsapp_phone:    clean || phone,
+            phone_number:      clean || phone,
             preferred_channel: "whatsapp",
             wallet_index:      nextIndex,
-            wallet_address:    null,
+            wallet_address:    walletAddress,
             wallet_type:       "bot",
         };
 
