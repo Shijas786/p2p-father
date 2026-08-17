@@ -70,7 +70,7 @@ export class HypermeowClient {
     public async sendButtons(
         jid: string,
         text: string,
-        buttons: { id: string; label: string; url?: string }[],
+        buttons: { id: string; label: string; url?: string; copyCode?: string }[],
         footer = "P2PFather Escrow Exchange"
     ): Promise<boolean> {
         try {
