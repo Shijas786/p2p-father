@@ -393,6 +393,36 @@ Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
             return;
         }
 
+        // ════ VALIDATION: Prevent Withdrawal of Funds Reserved for Active Sell Ads ════
+        const { wallet } = await import("../../services/wallet");
+        const reserved = await (db as any).getReservedAmount(user.id, token, chain);
+        let currentBalance = 0;
+        try {
+            const bals = await wallet.getBalances(user.wallet_address ?? "");
+            currentBalance = parseFloat((bals as any)[token] || "0");
+        } catch (_) {}
+
+        const available = Math.max(0, currentBalance - reserved);
+        if (amount > available && reserved > 0) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `❌ *INSUFFICIENT AVAILABLE BALANCE* 🔒
+
+• *Wallet Balance:* ${currentBalance.toFixed(2)} ${token}
+• *🔒 Locked in Active Ads:* ${reserved.toFixed(2)} ${token}
+• *✅ Max Withdrawable:* ${available.toFixed(2)} ${token}
+
+Your funds are frozen for active sell ads to guarantee buyer escrow. 
+To withdraw, please cancel or complete your active sell ads first.`,
+                [
+                    { id: "/my_ads",  label: "📋 My Active Ads" },
+                    { id: "/balance", label: "💰 Wallet Balance" }
+                ]
+            );
+            return;
+        }
+
         const gasCoin = (chain === "bsc" || chain === "bsc_testnet") ? "tBNB" : chain === "polygon" ? "POL" : "ETH";
 
         // Direct 1-tap confirmation step
@@ -421,13 +451,25 @@ Proceed to execute on-chain transfer?`,
 
         const toAddress = parts[0];
         const amountStr = parts[1] || "10";
+        const withdrawAmount = parseFloat(amountStr);
         let chainKey  = (parts[2] || "bsc_testnet").toLowerCase();
         if (chainKey === "bsc") chainKey = "bsc_testnet";
 
         try {
+            // Re-verify reserved funds lock
+            const reserved = await (db as any).getReservedAmount(user.id, "USDT", chainKey);
+            const { wallet } = await import("../../services/wallet");
+            const bals = await wallet.getBalances(user.wallet_address ?? "");
+            const currentBal = parseFloat((bals as any)["USDT"] || "0");
+            const available = Math.max(0, currentBal - reserved);
+
+            if (withdrawAmount > available && reserved > 0) {
+                await reply(sock, jid, `❌ Withdrawal blocked: ${reserved} USDT is locked in active sell ads. Cancel your ads to release funds.`, msg);
+                return;
+            }
+
             await reply(sock, jid, "⏳ Executing withdrawal... Please wait.", msg);
 
-            const { wallet } = await import("../../services/wallet");
             const { env } = await import("../../config/env");
 
             let tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
