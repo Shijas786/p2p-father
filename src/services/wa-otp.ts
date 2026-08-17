@@ -66,15 +66,24 @@ export class WhatsAppOtpService {
         timestamps.push(Date.now());
         rateLimitStore.set(phone, timestamps);
 
-        // Send OTP via Hypermeow WhatsApp bridge
-        const messageText = `🔑 *P2PFATHER WEB LOGIN CODE*\n\nYour login code is: *${otp}*\n\n_Tap the code below to copy it, then paste on the web dashboard._\n_Valid for 10 minutes. Do not share this code with anyone._`;
+        // Send OTP via Hypermeow WhatsApp bridge — one message with a Copy button
+        const messageText = `🔑 *P2PFATHER WEB LOGIN CODE*\n\nYour login code is: *${otp}*\n\n_Valid for 10 minutes. Do not share this code with anyone._`;
+        const copyUrl = `https://p2pfather.com/copy?c=${otp}`;
 
         let sent = false;
         try {
             if (hypermeowClient.isConfigured()) {
-                await hypermeowClient.sendText(`${phone}@s.whatsapp.net`, messageText);
-                // Send code as a separate standalone message so user can long-press & copy instantly
-                await hypermeowClient.sendText(`${phone}@s.whatsapp.net`, otp);
+                // Try sending with a URL button first (tap to auto-copy)
+                const btnSent = await hypermeowClient.sendButtons(
+                    `${phone}@s.whatsapp.net`,
+                    messageText,
+                    [{ id: "copy_otp", label: "📋 Copy Code", url: copyUrl }],
+                    "P2PFather — First Onchain Escrow P2P Marketplace"
+                );
+                if (!btnSent) {
+                    // Fallback: plain text if buttons not supported
+                    await hypermeowClient.sendText(`${phone}@s.whatsapp.net`, messageText);
+                }
                 sent = true;
             }
         } catch (err: any) {
