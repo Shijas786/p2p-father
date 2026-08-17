@@ -20,7 +20,11 @@ export class WhatsAppOtpService {
      * e.g. "+91 81379 56320" -> "919876543210"
      */
     cleanPhone(rawPhone: string): string {
-        return rawPhone.replace(/[^0-9]/g, "");
+        let cleaned = rawPhone.replace(/[^0-9]/g, "");
+        if (cleaned.length === 10) {
+            cleaned = "91" + cleaned;
+        }
+        return cleaned;
     }
 
     /**
