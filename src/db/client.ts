@@ -53,15 +53,17 @@ class Database {
         while (attempts < MAX_ATTEMPTS) {
             attempts++;
 
-            // Get current max index
+            // Get current max real index (filter out synthetic demo-merchant indexes >= 900000)
             const { data: maxResult } = await db
                 .from("users")
                 .select("wallet_index")
+                .not("wallet_index", "is", null)
+                .lt("wallet_index", 900000)
                 .order("wallet_index", { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
-            const nextIndex = (maxResult?.wallet_index ?? 0) + 1;
+            const nextIndex = ((maxResult as any)?.wallet_index ?? 0) + 1;
 
             // Derive wallet address immediately (prevents the old bug where
             // wallet was only derived on first /auth call)
@@ -968,7 +970,7 @@ class Database {
         return newUser as User;
     }
 
-    /** Safely fetch the next available HD wallet index */
+    /** Safely fetch the next available HD wallet index (excludes synthetic demo-merchant indexes >= 900000) */
     async getNextWalletIndex(): Promise<number> {
         const db = this.getClient();
         try {
@@ -976,6 +978,7 @@ class Database {
                 .from("users")
                 .select("wallet_index")
                 .not("wallet_index", "is", null)
+                .lt("wallet_index", 900000)
                 .order("wallet_index", { ascending: false })
                 .limit(1)
                 .maybeSingle();
