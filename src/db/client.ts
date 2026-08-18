@@ -1127,16 +1127,14 @@ class Database {
             .maybeSingle();
 
         if (waOnlyUser && waOnlyUser.id !== targetUserId) {
-            // ── MERGE: Transfer trades and orders from WA account → Telegram account ──
-            try {
-                await db.from("orders").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id);
-            } catch (_) {}
-            try {
-                await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", waOnlyUser.id);
-            } catch (_) {}
-            try {
-                await db.from("trades").update({ seller_id: targetUserId }).eq("seller_id", waOnlyUser.id);
-            } catch (_) {}
+            // ── MERGE: Transfer all related records from WA account → Telegram account ──
+            try { await db.from("orders").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id); } catch (_) {}
+            try { await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", waOnlyUser.id); } catch (_) {}
+            try { await db.from("trades").update({ seller_id: targetUserId }).eq("seller_id", waOnlyUser.id); } catch (_) {}
+            try { await db.from("payment_proofs").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id); } catch (_) {}
+            try { await db.from("user_ips").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id); } catch (_) {}
+            try { await db.from("disputes").update({ raised_by: targetUserId }).eq("raised_by", waOnlyUser.id); } catch (_) {}
+            try { await db.from("dispute_messages").update({ sender_id: targetUserId }).eq("sender_id", waOnlyUser.id); } catch (_) {}
 
             // ── If Telegram user has no wallet yet, inherit the WA wallet ─────
             const { data: telegramUser } = await db
@@ -1157,6 +1155,8 @@ class Database {
 
             // ── Delete the orphaned WA-only user row ──────────────────────────
             await db.from("whatsapp_states").delete().eq("user_id", waOnlyUser.id);
+            // Clear any unique fields first to avoid constraint conflicts if delete fails
+            await db.from("users").update({ whatsapp_phone: null, telegram_id: null }).eq("id", waOnlyUser.id);
             await db.from("users").delete().eq("id", waOnlyUser.id);
 
             console.log(`[LINK] Merged WA-only user ${waOnlyUser.id} into Telegram user ${targetUserId}`);
@@ -1225,10 +1225,14 @@ class Database {
             .maybeSingle();
 
         if (tgOnlyUser && tgOnlyUser.id !== targetUserId) {
-            // MERGE: Transfer trades and orders from TG account → Target account
+            // MERGE: Transfer trades, orders, and payment proofs from TG account → Target account
             try { await db.from("orders").update({ user_id: targetUserId }).eq("user_id", tgOnlyUser.id); } catch (_) {}
             try { await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", tgOnlyUser.id); } catch (_) {}
             try { await db.from("trades").update({ seller_id: targetUserId }).eq("seller_id", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("payment_proofs").update({ user_id: targetUserId }).eq("user_id", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("user_ips").update({ user_id: targetUserId }).eq("user_id", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("disputes").update({ raised_by: targetUserId }).eq("raised_by", tgOnlyUser.id); } catch (_) {}
+            try { await db.from("dispute_messages").update({ sender_id: targetUserId }).eq("sender_id", tgOnlyUser.id); } catch (_) {}
 
             // If target user has no wallet, inherit TG wallet
             const { data: targetUser } = await db.from("users").select("wallet_address, wallet_index").eq("id", targetUserId).single();
@@ -1240,7 +1244,10 @@ class Database {
                 }).eq("id", targetUserId);
             }
 
+            // Unlink telegram_id from the old row first to avoid duplicate key constraint error!
+            await db.from("users").update({ telegram_id: null, username: null }).eq("id", tgOnlyUser.id);
             // Delete orphaned TG-only user row
+            await db.from("whatsapp_states").delete().eq("user_id", tgOnlyUser.id);
             await db.from("users").delete().eq("id", tgOnlyUser.id);
         }
 
