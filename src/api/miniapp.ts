@@ -2612,7 +2612,14 @@ router.post("/whatsapp/unlink", async (req: Request, res: Response) => {
 
 router.put("/profile", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         const {
@@ -2643,7 +2650,7 @@ router.put("/profile", async (req: Request, res: Response) => {
             await db.updateUser(user.id, updates as any);
         }
 
-        const updatedUser = await db.getUserByTelegramId(req.telegramUser!.id);
+        const updatedUser = await db.getUserById(user.id);
         res.json({ user: updatedUser });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -2652,7 +2659,14 @@ router.put("/profile", async (req: Request, res: Response) => {
 
 router.post("/profile/export-key", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         // Generate the private key on the fly. Do NOT log this.
@@ -2849,7 +2863,14 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
 
 router.post("/kyc/start", validateInitData, async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
         const apiKey = env.DIDIT_API_KEY;
@@ -2906,7 +2927,14 @@ router.post("/kyc/start", validateInitData, async (req: Request, res: Response) 
 
 router.get("/kyc/status", validateInitData, async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
         const supabase = (db as any).getClient();

@@ -2473,7 +2473,7 @@
       const u = d.user || {};
       const pName = document.getElementById('popover-name-text');
       const pPhone = document.getElementById('popover-phone-text');
-      const phoneNum = u.phone_number || '';
+      const phoneNum = u.phone_number || u.whatsapp_phone || '';
       if (pName) pName.textContent = u.first_name || 'Trader';
       if (pPhone) pPhone.textContent = phoneNum;
 
@@ -2486,11 +2486,16 @@
 
       const profNameEl = document.getElementById('prof-name');
       if (profNameEl) profNameEl.value = u.first_name || '';
-      document.getElementById('prof-upi').value = u.upi_id || '';
-      document.getElementById('prof-phone').value = u.phone_number || '';
-      document.getElementById('prof-bank-acc').value = u.bank_account_number || '';
-      document.getElementById('prof-bank-ifsc').value = u.bank_ifsc || '';
-      document.getElementById('prof-bank-name').value = u.bank_name || '';
+      const upiIn = document.getElementById('prof-upi');
+      if (upiIn) upiIn.value = u.upi_id || '';
+      const phoneIn = document.getElementById('prof-phone');
+      if (phoneIn) phoneIn.value = u.phone_number || '';
+      const bankAccIn = document.getElementById('prof-bank-acc');
+      if (bankAccIn) bankAccIn.value = u.bank_account_number || '';
+      const ifscIn = document.getElementById('prof-bank-ifsc');
+      if (ifscIn) ifscIn.value = u.bank_ifsc || '';
+      const bankNameIn = document.getElementById('prof-bank-name');
+      if (bankNameIn) bankNameIn.value = u.bank_name || '';
 
       // Telegram Account Linking display
       const tgDisp = document.getElementById('prof-disp-telegram');
@@ -2522,8 +2527,8 @@
       const phoneDisp = document.getElementById('prof-disp-phone');
       const phoneBtn = document.getElementById('pm-btn-phone');
       if (phoneDisp) {
-        phoneDisp.textContent = u.phone_number || 'Not set';
-        if (phoneBtn) phoneBtn.textContent = u.phone_number ? 'Edit' : 'Add';
+        phoneDisp.textContent = u.phone_number || u.whatsapp_phone || 'Not set';
+        if (phoneBtn) phoneBtn.textContent = (u.phone_number || u.whatsapp_phone) ? 'Edit' : 'Add';
       }
 
       const bankDisp = document.getElementById('prof-disp-bank');
@@ -2545,7 +2550,9 @@
       }
 
       loadKycStatus();
-    } catch(e) {}
+    } catch(e) {
+      console.error('[loadProfileData Error]:', e);
+    }
   }
 
   let tgLinkPollTimer = null;
