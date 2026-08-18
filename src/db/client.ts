@@ -942,8 +942,8 @@ class Database {
             phone_number:      clean || phone,
             preferred_channel: "whatsapp",
             wallet_index:      nextIndex,
-            wallet_address:    walletAddress,
-            wallet_type:       "bot",
+            wallet_address:    null,
+            wallet_type:       null,
         };
 
         let { data: newUser, error } = await db
