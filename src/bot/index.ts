@@ -4014,6 +4014,46 @@ bot.on("message:text", async (ctx) => {
 
     const user = await ensureUser(ctx);
 
+    // ── 6-DIGIT LINK CODE HANDLER (Link Web Dashboard Account) ──
+    const codeMatch = text.trim().match(/^(?:\/link\s+)?(\d{6})$/);
+    if (codeMatch && ctx.chat.type === "private") {
+        const inputCode = codeMatch[1];
+        const supabase = db.getClient();
+        const { data: states } = await supabase
+            .from("whatsapp_states")
+            .select("user_id, data")
+            .eq("key", "LINK_CODE");
+
+        const match = states?.find((s: any) => s.data?.code === inputCode && s.data?.expires_at > Date.now());
+
+        if (match) {
+            const webUserId = match.user_id;
+            const from = ctx.from!;
+            await supabase
+                .from("users")
+                .update({
+                    telegram_id: from.id,
+                    username: from.username || null,
+                    first_name: from.first_name || null
+                })
+                .eq("id", webUserId);
+
+            await supabase.from("whatsapp_states").delete().eq("user_id", webUserId).eq("key", "LINK_CODE");
+
+            await ctx.reply(
+                `🎉 *Account Linked Successfully!*\n\nYour Telegram account (@${escapeMarkdown(from.username || from.first_name || "")}) is now linked to your P2PFather Web Dashboard profile.\n\nYou can return to the Web Dashboard now! 🚀`,
+                { parse_mode: "Markdown" }
+            );
+            return;
+        } else {
+            await ctx.reply(
+                `❌ *Invalid or Expired Link Code*\n\nPlease generate a fresh link code from your Web Dashboard Profile and try again.`,
+                { parse_mode: "Markdown" }
+            );
+            return;
+        }
+    }
+
     // Handle awaiting input states
     if (ctx.session.awaiting_input === "wallet_address") {
         // Validate Ethereum address
