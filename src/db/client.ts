@@ -1139,18 +1139,41 @@ class Database {
             // ── If Telegram user has no wallet yet, inherit the WA wallet ─────
             const { data: telegramUser } = await db
                 .from("users")
-                .select("wallet_address, wallet_index")
+                .select("*")
                 .eq("id", targetUserId)
                 .single();
 
+            const updatesFromWa: any = {};
             if (!telegramUser?.wallet_address && waOnlyUser.wallet_address) {
-                await db.from("users").update({
-                    wallet_address: waOnlyUser.wallet_address,
-                    wallet_index:   waOnlyUser.wallet_index,
-                    wallet_type:    "bot",
-                }).eq("id", targetUserId);
+                updatesFromWa.wallet_address = waOnlyUser.wallet_address;
+                updatesFromWa.wallet_index = waOnlyUser.wallet_index;
+                updatesFromWa.wallet_type = "bot";
+            }
 
-                console.log(`[LINK] Inherited WA wallet ${waOnlyUser.wallet_address} → Telegram user ${targetUserId}`);
+            // 🛡️ KYC & Identity Inheritance
+            if (waOnlyUser.is_verified || waOnlyUser.kyc_status === 'approved' || waOnlyUser.kyc_status === 'verified') {
+                updatesFromWa.is_verified = true;
+                updatesFromWa.kyc_status = 'approved';
+                if (waOnlyUser.kyc_session_id) updatesFromWa.kyc_session_id = waOnlyUser.kyc_session_id;
+                if (waOnlyUser.kyc_document_type) updatesFromWa.kyc_document_type = waOnlyUser.kyc_document_type;
+                if (waOnlyUser.kyc_country) updatesFromWa.kyc_country = waOnlyUser.kyc_country;
+                if (waOnlyUser.kyc_verified_at) updatesFromWa.kyc_verified_at = waOnlyUser.kyc_verified_at;
+            }
+
+            // 🏦 Payment details & ratings inheritance
+            if (!telegramUser?.upi_id && waOnlyUser.upi_id) updatesFromWa.upi_id = waOnlyUser.upi_id;
+            if (!telegramUser?.bank_account_number && waOnlyUser.bank_account_number) {
+                updatesFromWa.bank_account_number = waOnlyUser.bank_account_number;
+                updatesFromWa.bank_ifsc = waOnlyUser.bank_ifsc;
+                updatesFromWa.bank_name = waOnlyUser.bank_name;
+            }
+            if ((telegramUser?.trade_count || 0) < (waOnlyUser.trade_count || 0)) {
+                updatesFromWa.trade_count = waOnlyUser.trade_count;
+                updatesFromWa.completed_trades = waOnlyUser.completed_trades;
+            }
+
+            if (Object.keys(updatesFromWa).length > 0) {
+                await db.from("users").update(updatesFromWa).eq("id", targetUserId);
             }
 
             // ── Delete the orphaned WA-only user row ──────────────────────────
@@ -1245,9 +1268,9 @@ class Database {
             }
 
             // 🛡️ KYC & Identity Inheritance: Carry over verified KYC status if Telegram user completed it
-            if (tgOnlyUser.is_verified || tgOnlyUser.kyc_status === 'verified') {
+            if (tgOnlyUser.is_verified || tgOnlyUser.kyc_status === 'approved' || tgOnlyUser.kyc_status === 'verified') {
                 updatesFromTg.is_verified = true;
-                updatesFromTg.kyc_status = 'verified';
+                updatesFromTg.kyc_status = 'approved';
                 if (tgOnlyUser.kyc_session_id) updatesFromTg.kyc_session_id = tgOnlyUser.kyc_session_id;
                 if (tgOnlyUser.kyc_document_type) updatesFromTg.kyc_document_type = tgOnlyUser.kyc_document_type;
                 if (tgOnlyUser.kyc_country) updatesFromTg.kyc_country = tgOnlyUser.kyc_country;
