@@ -2631,17 +2631,17 @@
       } else if (status === 'pending') {
         badge.textContent = 'UNDER REVIEW ⏳';
         badge.className = 'trade-badge badge-active';
-        if (detailsStr) detailsStr.textContent = '⏳ KYC Verification Active — Checking status...';
+        if (detailsStr) detailsStr.textContent = 'Verification in progress or awaiting document submission.';
         if (actionArea) actionArea.innerHTML = `
           <button class="btn btn-outline" onclick="loadKycStatus()" style="width:auto;margin-bottom:0;">🔄 Refresh Status</button>
-          <button class="btn btn-primary-soft" onclick="startDiditKyc()" style="width:auto;margin-bottom:0;margin-left:8px;">Resume Verification</button>
+          <button class="btn btn-primary-soft" id="didit-kyc-btn" onclick="startDiditKyc()" style="width:auto;margin-bottom:0;margin-left:8px;">Resume / Start Verification →</button>
         `;
       } else {
         badge.textContent = 'UNVERIFIED';
         badge.className = 'trade-badge badge-pending';
-        if (detailsStr) detailsStr.textContent = 'Status: Unverified';
+        if (detailsStr) detailsStr.textContent = 'Complete 1-minute Didit verification to unlock high-volume trading.';
         if (actionArea) actionArea.innerHTML = `
-          <button class="btn btn-green" id="didit-kyc-btn" onclick="startDiditKyc()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,0.25);">
+          <button class="btn btn-green" id="didit-kyc-btn" onclick="startDiditKyc()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,0.25);width:auto;margin-bottom:0;">
             ⚡ Verify Identity →
           </button>
         `;

@@ -2976,7 +2976,7 @@ router.get("/kyc/status", validateInitData, async (req: Request, res: Response) 
                             .from("users")
                             .update({ kyc_status: "rejected" })
                             .eq("id", user.id);
-                    } else if (["expired", "abandoned", "failed", "cancelled"].includes(statusStr)) {
+                    } else if (["not started", "expired", "abandoned", "failed", "cancelled"].includes(statusStr)) {
                         kycStatus = "unverified";
                         await supabase
                             .from("users")
