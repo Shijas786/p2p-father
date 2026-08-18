@@ -363,12 +363,18 @@
       <div class="ok" id="otp-ok">✅ Code sent! Check the P2PFather WhatsApp message.</div>
 
       <label for="otp-in">6-Digit WhatsApp Code</label>
-      <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+      <div style="position:relative;display:flex;gap:8px;align-items:center;">
+        <input type="text" id="otp-in" class="otp-in" placeholder="------" maxlength="6" inputmode="numeric" autocomplete="one-time-code" oninput="onOtpInput()" style="flex:1;" />
+        <button onclick="pasteOtp()" title="Paste code" style="flex-shrink:0;height:52px;padding:0 14px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--sub);font-weight:600;transition:all .15s;" onmouseover="this.style.borderColor='#10b981';this.style.color='#059669';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--sub)';">
+          📋 <span style="font-size:12px;">Paste</span>
+        </button>
+      </div>
 
       <div id="otp-err" class="err" style="display:none;"></div>
       <button class="btn btn-green" id="otp-btn" onclick="verifyOtp()">Verify &amp; Open Dashboard →</button>
       <button class="btn-link" onclick="goBack()">← Change Phone Number</button>
     </div>
+
 
     <div class="terms" id="auth-terms" style="font-size:11.5px;color:var(--muted);margin-top:28px;">
       By signing in you agree to P2PFather's <a href="#" onclick="openLegalModal('terms');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Terms &amp; Conditions</a> and <a href="#" onclick="openLegalModal('privacy');return false;" style="color:#059669;font-weight:600;text-decoration:none;">Privacy Policy</a>.
@@ -1386,6 +1392,31 @@
     } catch(e) {
       err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
       btn.textContent = 'Verify & Open Dashboard →'; btn.disabled = false;
+    }
+  }
+
+  function onOtpInput() {
+    const input = document.getElementById('otp-in');
+    const val = input.value.replace(/\D/g, '').slice(0, 6);
+    input.value = val;
+    if (val.length === 6) {
+      verifyOtp();
+    }
+  }
+
+  async function pasteOtp() {
+    const input = document.getElementById('otp-in');
+    try {
+      const text = await navigator.clipboard.readText();
+      const code = text.replace(/\D/g, '').slice(0, 6);
+      if (code) {
+        input.value = code;
+        if (code.length === 6) {
+          verifyOtp();
+        }
+      }
+    } catch (e) {
+      input.focus();
     }
   }
 
