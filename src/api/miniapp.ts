@@ -2522,7 +2522,11 @@ router.post("/telegram/unlink", async (req: Request, res: Response) => {
         const telegramUser = req.telegramUser;
         if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
 
-        let user = await db.getUserByTelegramId(telegramUser.id);
+        const tgAny = telegramUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && telegramUser.id) user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         await db.unlinkTelegram(user.id);
@@ -2536,7 +2540,14 @@ router.post("/telegram/unlink", async (req: Request, res: Response) => {
 // ── Unlink WhatsApp Account ───────────────────────────────────────────────
 router.post("/whatsapp/unlink", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const telegramUser = req.telegramUser;
+        if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = telegramUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && telegramUser.id) user = await db.getUserByTelegramId(telegramUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         await db.unlinkWhatsapp(user.id);

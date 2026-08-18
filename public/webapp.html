@@ -2547,6 +2547,8 @@
     } catch(e) {}
   }
 
+  let tgLinkPollTimer = null;
+
   async function generateTelegramLinkCode() {
     const btn = document.getElementById('tg-link-action-btn');
     if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
@@ -2560,6 +2562,22 @@
         valEl.textContent = res.code;
         openBtn.href = res.tg_link;
         box.style.display = 'block';
+
+        // 🔄 Auto-poll every 2.5s to detect when Telegram bot completes linking
+        if (tgLinkPollTimer) clearInterval(tgLinkPollTimer);
+        tgLinkPollTimer = setInterval(async () => {
+          try {
+            const fresh = await apiGet('/auth/me');
+            const u = fresh.user || fresh;
+            if (u && u.telegram_id && Number(u.telegram_id) > 0) {
+              clearInterval(tgLinkPollTimer);
+              tgLinkPollTimer = null;
+              closeTgLinkBox();
+              currentUser = u;
+              loadProfileData();
+            }
+          } catch (_) {}
+        }, 2500);
       }
     } catch(e) {
       alert(e.message || 'Failed to generate Telegram link code');
@@ -2569,6 +2587,10 @@
   }
 
   function closeTgLinkBox() {
+    if (tgLinkPollTimer) {
+      clearInterval(tgLinkPollTimer);
+      tgLinkPollTimer = null;
+    }
     const box = document.getElementById('tg-link-code-box');
     if (box) box.style.display = 'none';
   }
