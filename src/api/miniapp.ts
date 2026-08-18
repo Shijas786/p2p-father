@@ -563,6 +563,28 @@ router.post("/auth", async (req: Request, res: Response) => {
     }
 });
 
+// ── GET /auth/me & /profile (Fresh Profile lookup for polling & sync) ───
+router.get(["/auth/me", "/profile"], async (req: Request, res: Response) => {
+    try {
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
+        if (!user) user = await db.getOrCreateUser(tgUser as any);
+
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        return res.json({ user });
+    } catch (err: any) {
+        console.error("[MINIAPP] /auth/me error:", err);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Web Trade Token Auth (Magic link for Web Trade Room) ─────────────────
 router.post("/auth/trade-token", async (req: Request, res: Response) => {
     try {
