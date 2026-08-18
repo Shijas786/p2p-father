@@ -1027,27 +1027,20 @@ bot.command(["start", "open"], async (ctx) => {
         }
     }
 
-    // Deep link from Web Dashboard: link Telegram to Web account
-    if (payload && payload.startsWith("link_")) {
-        const inputCode = payload.replace("link_", "").trim();
-        const linked = await db.linkTelegramByCode(
-            ctx.from?.id!,
-            ctx.from?.username || null,
-            ctx.from?.first_name || null,
-            inputCode
-        );
+    // Deep link from WhatsApp: generate link code for WhatsApp user
+    if (payload === "linkwa" || payload === "link_wa") {
+        const user = await ensureUser(ctx);
+        const code = await db.createWhatsappLinkCode(user.id);
+        const waPhone = env.WA_BOT_NUMBER || "917012751478";
+        const waLink = `https://wa.me/${waPhone}?text=/link%20${code}`;
 
-        if (linked) {
-            await ctx.reply(
-                `🎉 *Telegram Account Linked Successfully!*\n\nYour Telegram account (@${escapeMarkdown(ctx.from?.username || ctx.from?.first_name || "")}) is now connected to your P2PFather profile.\n\nYou can now receive trade notifications and trade seamlessly across Web and Telegram.`,
-                { parse_mode: "Markdown" }
-            );
-        } else {
-            await ctx.reply(
-                `❌ *Invalid or Expired Link Code*\n\nPlease generate a new link code from your Web Dashboard Profile and try again.`,
-                { parse_mode: "Markdown" }
-            );
-        }
+        const keyboard = new InlineKeyboard()
+            .url("💬 Send Code to WhatsApp", waLink);
+
+        await ctx.reply(
+            `🔗 *LINK YOUR WHATSAPP ACCOUNT*\n\nYour 6-digit WhatsApp Link Code is:\n\n🔑 \`${code}\`\n\n*How to finish linking:*\n1. Tap the button below to open WhatsApp\n2. Or send \`/link ${code}\` to our WhatsApp bot (+${waPhone})\n\n⏳ _Code is valid for 10 minutes._`,
+            { parse_mode: "Markdown", reply_markup: keyboard }
+        );
         return;
     }
 
