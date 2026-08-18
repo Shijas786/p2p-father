@@ -203,16 +203,18 @@ async function showProfilePage1(
     const ifscDisplay = user.bank_ifsc ? `\`${user.bank_ifsc}\`` : "❌ Not set";
     const eRupeeDisplay = user.digital_rupee_id ? `\`${user.digital_rupee_id}\`` : "❌ Not set";
 
-    const tgLinkStatus = user.telegram_id
-        ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
+    const isTgLinked = Boolean(user.telegram_id && Number(user.telegram_id) > 0);
+    const tgLinkStatus = isTgLinked
+        ? `✅ Linked (@${user.username || user.first_name || "Telegram User"})`
         : "❌ Not linked (Tap /link to connect)";
 
-    const isKyc = Boolean(user.is_verified || user.kyc_status === 'approved');
-    const badge = isKyc ? " [🛡️ KYC Verified]" : "";
+    const isKyc = Boolean(user.is_verified || user.kyc_status === 'verified' || user.kyc_status === 'approved');
+    const kycBadge = isKyc ? "✅ Verified" : "⏳ Unverified";
 
     const profileText = `👤 *YOUR P2PFATHER PROFILE* (Page 1/2)
 
-• *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}${badge}
+• *Trader:* ${user.username ? `@${user.username}` : (user.first_name || "Trader")}
+• *KYC Status:* ${kycBadge}
 • *Telegram Sync:* ${tgLinkStatus}
 • *P2P Wallet:* \`${user.wallet_address || "N/A"}\`
 • *Networks:* Base & BSC
@@ -246,19 +248,24 @@ async function showProfilePage2(
     user: User,
     msg: IWebMessageInfo
 ): Promise<void> {
-    const tgLinkStatus = user.telegram_id
-        ? `✅ Linked (@${user.username || user.first_name || "Telegram User"} | ID: \`${user.telegram_id}\`)`
+    const isTgLinked = Boolean(user.telegram_id && Number(user.telegram_id) > 0);
+    const tgLinkStatus = isTgLinked
+        ? `✅ Linked (@${user.username || user.first_name || "Telegram User"})`
         : "❌ Not linked (Tap /link to connect)";
+
+    const isKyc = Boolean(user.is_verified || user.kyc_status === 'verified' || user.kyc_status === 'approved');
+    const kycBadge = isKyc ? "✅ Verified" : "⏳ Unverified";
 
     const actionsText = `⚡ *TRADE HISTORY & SYNC* (Page 2/2)
 
 📊 *ORDER & TRADE HISTORY*
+• *KYC Status:* ${kycBadge}
 • *Completed Trades:* ${user.completed_trades ?? 0}
 • *Trust Score:* ⭐ ${user.trust_score ?? 100}%
 • *Total Volume:* $${((user as any).total_volume ?? 0).toFixed(2)} USDT
 
 ✈️ *TELEGRAM & MINIAPP SYNC*
-• Status: ${tgLinkStatus}`;
+• *Telegram Sync:* ${tgLinkStatus}`;
 
     await replyWithButtons(sock, jid, actionsText, [
         { id: "/trades",        label: "📜 Trade History" },

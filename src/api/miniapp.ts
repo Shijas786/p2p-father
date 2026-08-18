@@ -2529,6 +2529,21 @@ router.post("/telegram/unlink", async (req: Request, res: Response) => {
         if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
 
+        // 🛡️ Safeguard: Check if user has active trades in escrow
+        const supabase = db.getClient();
+        const { data: activeTrades } = await supabase
+            .from("trades")
+            .select("id, status")
+            .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+            .in("status", ["matched", "in_escrow", "fiat_sent", "fiat_confirmed", "disputed"])
+            .limit(1);
+
+        if (activeTrades && activeTrades.length > 0) {
+            return res.status(400).json({
+                error: "Cannot unlink Telegram while you have active trades in escrow. Please finish or cancel your trades first."
+            });
+        }
+
         await db.unlinkTelegram(user.id);
         const updatedUser = await db.getUserById(user.id);
         res.json({ success: true, user: updatedUser });
@@ -2549,6 +2564,21 @@ router.post("/whatsapp/unlink", async (req: Request, res: Response) => {
         if (!user && telegramUser.id) user = await db.getUserByTelegramId(telegramUser.id);
         if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(404).json({ error: "User not found" });
+
+        // 🛡️ Safeguard: Check if user has active trades in escrow
+        const supabase = db.getClient();
+        const { data: activeTrades } = await supabase
+            .from("trades")
+            .select("id, status")
+            .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+            .in("status", ["matched", "in_escrow", "fiat_sent", "fiat_confirmed", "disputed"])
+            .limit(1);
+
+        if (activeTrades && activeTrades.length > 0) {
+            return res.status(400).json({
+                error: "Cannot unlink WhatsApp while you have active trades in escrow. Please finish or cancel your trades first."
+            });
+        }
 
         await db.unlinkWhatsapp(user.id);
         const updatedUser = await db.getUserById(user.id);
