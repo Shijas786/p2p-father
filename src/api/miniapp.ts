@@ -2484,16 +2484,17 @@ router.post("/telegram/link-code", async (req: Request, res: Response) => {
         const telegramUser = req.telegramUser;
         if (!telegramUser) return res.status(401).json({ error: "Unauthorized" });
 
-        let user: User | null = null;
+        let user: any = null;
 
-        if (telegramUser.whatsapp_phone) {
-            user = await db.getUserByWhatsappPhone(telegramUser.whatsapp_phone);
+        const tgAny = telegramUser as any;
+        if (tgAny.whatsapp_phone) {
+            user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
         }
         if (!user && telegramUser.id) {
             user = await db.getUserByTelegramId(telegramUser.id);
         }
-        if (!user && (telegramUser as any).id) {
-            user = await db.getUserById((telegramUser as any).id);
+        if (!user && tgAny.id) {
+            user = await db.getUserById(tgAny.id);
         }
         if (!user) {
             user = await db.getOrCreateUser(telegramUser as any);
