@@ -1235,13 +1235,39 @@ class Database {
             try { await db.from("dispute_messages").update({ sender_id: targetUserId }).eq("sender_id", tgOnlyUser.id); } catch (_) {}
 
             // If target user has no wallet, inherit TG wallet
-            const { data: targetUser } = await db.from("users").select("wallet_address, wallet_index").eq("id", targetUserId).single();
+            const { data: targetUser } = await db.from("users").select("*").eq("id", targetUserId).single();
+            const updatesFromTg: any = {};
+
             if (!targetUser?.wallet_address && tgOnlyUser.wallet_address) {
-                await db.from("users").update({
-                    wallet_address: tgOnlyUser.wallet_address,
-                    wallet_index: tgOnlyUser.wallet_index,
-                    wallet_type: "bot",
-                }).eq("id", targetUserId);
+                updatesFromTg.wallet_address = tgOnlyUser.wallet_address;
+                updatesFromTg.wallet_index = tgOnlyUser.wallet_index;
+                updatesFromTg.wallet_type = "bot";
+            }
+
+            // 🛡️ KYC & Identity Inheritance: Carry over verified KYC status if Telegram user completed it
+            if (tgOnlyUser.is_verified || tgOnlyUser.kyc_status === 'verified') {
+                updatesFromTg.is_verified = true;
+                updatesFromTg.kyc_status = 'verified';
+                if (tgOnlyUser.kyc_session_id) updatesFromTg.kyc_session_id = tgOnlyUser.kyc_session_id;
+                if (tgOnlyUser.kyc_document_type) updatesFromTg.kyc_document_type = tgOnlyUser.kyc_document_type;
+                if (tgOnlyUser.kyc_country) updatesFromTg.kyc_country = tgOnlyUser.kyc_country;
+                if (tgOnlyUser.kyc_verified_at) updatesFromTg.kyc_verified_at = tgOnlyUser.kyc_verified_at;
+            }
+
+            // 🏦 Payment details & ratings inheritance if not already set on web
+            if (!targetUser?.upi_id && tgOnlyUser.upi_id) updatesFromTg.upi_id = tgOnlyUser.upi_id;
+            if (!targetUser?.bank_account_number && tgOnlyUser.bank_account_number) {
+                updatesFromTg.bank_account_number = tgOnlyUser.bank_account_number;
+                updatesFromTg.bank_ifsc = tgOnlyUser.bank_ifsc;
+                updatesFromTg.bank_name = tgOnlyUser.bank_name;
+            }
+            if ((targetUser?.trade_count || 0) < (tgOnlyUser.trade_count || 0)) {
+                updatesFromTg.trade_count = tgOnlyUser.trade_count;
+                updatesFromTg.completed_trades = tgOnlyUser.completed_trades;
+            }
+
+            if (Object.keys(updatesFromTg).length > 0) {
+                await db.from("users").update(updatesFromTg).eq("id", targetUserId);
             }
 
             // Unlink telegram_id from the old row first to avoid duplicate key constraint error!
