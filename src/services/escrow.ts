@@ -174,7 +174,9 @@ class EscrowService {
             return ethers.formatUnits(balance, decimals);
         } catch (err: any) {
             console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err?.message || err);
-            return "0";
+            // DO NOT return "0" on RPC errors, as sync jobs would falsely cancel user ads.
+            // Throw so callers know the RPC read failed.
+            throw err;
         }
     }
 
