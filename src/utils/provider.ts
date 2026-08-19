@@ -1,21 +1,25 @@
 import { ethers, JsonRpcProvider, Network } from "ethers";
 import { env } from "../config/env";
 
-const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER";
-const ALCHEMY_KEY_2 = "alch_REDACTED";
+const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER"; // Full multi-chain enabled
+const ALCHEMY_KEY_2 = "qMlL6xWpv9OsGOolPeTtR"; // Full multi-chain enabled
+const ALCHEMY_KEY_3 = "alch_REDACTED"; // BSC, Base, Eth enabled
 
 const BASE_RPCS = [
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
+    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
     "https://base-rpc.publicnode.com",
     "https://mainnet.base.org",
 ].filter(Boolean);
 
 const BSC_RPCS = [
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
     `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
+    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
     "https://bsc-dataseed.binance.org",
     "https://bsc-dataseed1.defibit.io",
+    "https://bsc.publicnode.com",
 ].filter(Boolean);
 
 const BSC_TESTNET_RPCS = [
