@@ -74,18 +74,15 @@ class EscrowService {
     private providers: Record<string, ethers.Provider | null> = {};
     private relayers: Record<string, ethers.Wallet | null> = {};
 
-    private getProvider(chain: Chain = 'base'): ethers.Provider {
-        return getFastProvider(chain);
+    private getProvider(chain: Chain = 'base', rpcIndex: number = 0): ethers.Provider {
+        return getFastProvider(chain, rpcIndex);
     }
 
-    private getRelayer(chain: Chain = 'base'): ethers.Wallet {
-        if (!this.relayers[chain]) {
-            if (!env.RELAYER_PRIVATE_KEY) {
-                throw new Error("Relayer private key not configured");
-            }
-            this.relayers[chain] = new ethers.Wallet(env.RELAYER_PRIVATE_KEY, this.getProvider(chain));
+    private getRelayer(chain: Chain = 'base', rpcIndex: number = 0): ethers.Wallet {
+        if (!env.RELAYER_PRIVATE_KEY) {
+            throw new Error("Relayer private key not configured");
         }
-        return this.relayers[chain]!;
+        return new ethers.Wallet(env.RELAYER_PRIVATE_KEY, this.getProvider(chain, rpcIndex));
     }
 
     private getContractAddress(chain: Chain = 'base'): string {
@@ -94,9 +91,9 @@ class EscrowService {
         return chain === 'base' ? env.ESCROW_CONTRACT_ADDRESS : env.ESCROW_CONTRACT_ADDRESS_BSC;
     }
 
-    private getEscrowContract(chain: Chain = 'base'): ethers.Contract {
+    private getEscrowContract(chain: Chain = 'base', rpcIndex: number = 0): ethers.Contract {
         const address = this.getContractAddress(chain);
-        return new ethers.Contract(address, ESCROW_ABI, this.getRelayer(chain));
+        return new ethers.Contract(address, ESCROW_ABI, this.getRelayer(chain, rpcIndex));
     }
 
     // ═══════════════════════════════════════
@@ -144,40 +141,44 @@ class EscrowService {
     }
 
     async getVaultBalance(userAddress: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
-        try {
-            const contract = this.getEscrowContract(chain);
+        const maxAttempts = 3;
+        let lastErr: any;
 
-            if (chain === ('bsc_testnet' as any) && (!tokenAddress || tokenAddress === "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd")) {
-                const [b1, b2] = await Promise.all([
-                    (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n),
-                    (contract.balances(userAddress, "0x21d4945A5499107F19F819dA1ab9133902A58EAB") as Promise<bigint>).catch(() => 0n)
-                ]);
-                const maxB = b1 > b2 ? b1 : b2;
-                return ethers.formatUnits(maxB, 18);
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const contract = this.getEscrowContract(chain, attempt);
+
+                if (chain === ('bsc_testnet' as any) && (!tokenAddress || tokenAddress === "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd")) {
+                    const [b1, b2] = await Promise.all([
+                        (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n),
+                        (contract.balances(userAddress, "0x21d4945A5499107F19F819dA1ab9133902A58EAB") as Promise<bigint>).catch(() => 0n)
+                    ]);
+                    const maxB = b1 > b2 ? b1 : b2;
+                    return ethers.formatUnits(maxB, 18);
+                }
+
+                // 3.5s timeout wrapper per RPC read
+                const balancePromise = contract.balances(userAddress, tokenAddress) as Promise<bigint>;
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error("RPC read timeout")), 3500)
+                );
+
+                const balance: bigint = await Promise.race([balancePromise, timeoutPromise]);
+
+                let decimals = 18;
+                if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
+                    decimals = 6;
+                } else if (chain === 'bsc' && tokenAddress !== "0x0000000000000000000000000000000000000000") {
+                    decimals = 18;
+                }
+
+                return ethers.formatUnits(balance, decimals);
+            } catch (err: any) {
+                lastErr = err;
+                console.warn(`[ESCROW] Failed to get vault balance on ${chain} (Attempt ${attempt + 1}/${maxAttempts}):`, err?.message || err);
             }
-
-            // 3.5s timeout wrapper to prevent slow RPC providers from stalling ad creation
-            const balancePromise = contract.balances(userAddress, tokenAddress) as Promise<bigint>;
-            const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("RPC read timeout")), 3500)
-            );
-
-            const balance: bigint = await Promise.race([balancePromise, timeoutPromise]);
-
-            let decimals = 18;
-            if (chain === 'base' && (tokenAddress === env.USDC_ADDRESS || tokenAddress === env.USDT_ADDRESS)) {
-                decimals = 6;
-            } else if (chain === 'bsc' && tokenAddress !== "0x0000000000000000000000000000000000000000") {
-                decimals = 18;
-            }
-
-            return ethers.formatUnits(balance, decimals);
-        } catch (err: any) {
-            console.error(`[ESCROW] Failed to get vault balance on ${chain}:`, err?.message || err);
-            // DO NOT return "0" on RPC errors, as sync jobs would falsely cancel user ads.
-            // Throw so callers know the RPC read failed.
-            throw err;
         }
+        throw lastErr;
     }
 
     /**
@@ -191,46 +192,61 @@ class EscrowService {
         duration: number,
         chain: Chain = 'base'
     ): Promise<string> {
-        const contract = this.getEscrowContract(chain);
-
         let decimals = 18;
         if (chain === 'base' && (token === env.USDC_ADDRESS || token === env.USDT_ADDRESS)) {
             decimals = 6;
         }
 
         const amountUnits = ethers.parseUnits(amount, decimals);
+        const maxAttempts = 3;
+        let lastErr: any;
 
-        const txOptions: any = {};
-        if (chain === 'bsc') {
-            txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
-            txOptions.gasLimit = 500000;
-        }
-
-        const tx = await contract.createTradeByRelayer(
-            seller,
-            buyer,
-            token,
-            amountUnits,
-            duration,
-            txOptions
-        );
-
-        const receipt = await tx.wait();
-
-        for (const log of receipt.logs) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
-                const parsed = contract.interface.parseLog(log);
-                if (parsed && parsed.name === "TradeCreated") {
-                    const tradeId = parsed.args.tradeId.toString();
-                    console.log(`[ESCROW] Trade created on-chain! ID: ${tradeId}`);
-                    return tradeId;
+                const contract = this.getEscrowContract(chain, attempt);
+
+                const txOptions: any = {};
+                if (chain === 'bsc') {
+                    txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
+                    txOptions.gasLimit = 500000;
                 }
-            } catch (e) {
-                // ignore
+
+                console.log(`[ESCROW] Calling createTradeByRelayer on ${chain} (Attempt ${attempt + 1}/${maxAttempts})...`);
+                const tx = await contract.createTradeByRelayer(
+                    seller,
+                    buyer,
+                    token,
+                    amountUnits,
+                    duration,
+                    txOptions
+                );
+
+                const receipt = await tx.wait();
+
+                for (const log of receipt.logs) {
+                    try {
+                        const parsed = contract.interface.parseLog(log);
+                        if (parsed && parsed.name === "TradeCreated") {
+                            const tradeId = parsed.args.tradeId.toString();
+                            console.log(`[ESCROW] Trade created on-chain! ID: ${tradeId}`);
+                            return tradeId;
+                        }
+                    } catch (e) {
+                        // ignore log parse error
+                    }
+                }
+
+                throw new Error("TradeCreated event not found in receipt");
+            } catch (err: any) {
+                lastErr = err;
+                console.error(`[ESCROW] createRelayedTrade attempt ${attempt + 1} failed:`, err?.message || err);
+                if (attempt < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                }
             }
         }
 
-        throw new Error("TradeCreated event not found in receipt");
+        throw lastErr || new Error("Failed to create relayed trade after multiple RPC attempts");
     }
 
     /**
@@ -243,7 +259,7 @@ class EscrowService {
         while (attempts < maxAttempts) {
             attempts++;
             try {
-                const contract = this.getEscrowContract(chain);
+                const contract = this.getEscrowContract(chain, attempts - 1);
                 if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Releasing trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
 
@@ -275,7 +291,7 @@ class EscrowService {
         while (attempts < maxAttempts) {
             attempts++;
             try {
-                const contract = this.getEscrowContract(chain);
+                const contract = this.getEscrowContract(chain, attempts - 1);
                 if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Marking trade ${tradeId} as paid on-chain (${chain}) (Attempt ${attempts})...`);
 
@@ -307,7 +323,7 @@ class EscrowService {
         while (attempts < maxAttempts) {
             attempts++;
             try {
-                const contract = this.getEscrowContract(chain);
+                const contract = this.getEscrowContract(chain, attempts - 1);
                 if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Refunding trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
 
@@ -339,7 +355,7 @@ class EscrowService {
         while (attempts < maxAttempts) {
             attempts++;
             try {
-                const contract = this.getEscrowContract(chain);
+                const contract = this.getEscrowContract(chain, attempts - 1);
                 if (!contract) throw new Error(`Escrow contract not configured for ${chain}`);
                 console.log(`[ESCROW] Raising dispute for trade ${tradeId} on ${chain} (Attempt ${attempts})...`);
 

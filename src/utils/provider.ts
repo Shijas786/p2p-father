@@ -31,33 +31,36 @@ const BASE_SEPOLIA_RPCS = [
 
 const providerCache: Record<string, ethers.JsonRpcProvider> = {};
 
+export function getRpcList(chain: string = 'base'): string[] {
+    if (chain === 'bsc') return BSC_RPCS;
+    if (chain === 'bsc_testnet') return BSC_TESTNET_RPCS;
+    if (chain === 'base_sepolia') return BASE_SEPOLIA_RPCS;
+    return BASE_RPCS;
+}
+
+export function getChainId(chain: string = 'base'): number {
+    if (chain === 'bsc') return 56;
+    if (chain === 'bsc_testnet') return 97;
+    if (chain === 'base_sepolia') return 84532;
+    return 8453;
+}
+
 /**
  * Creates a low-latency JsonRpcProvider with staticNetwork: true enabled.
  * Static network mode eliminates startup 'failed to detect network' errors completely.
  */
-export function getFastProvider(chain: string = 'base'): ethers.JsonRpcProvider {
-    if (providerCache[chain]) {
-        return providerCache[chain];
-    }
-
-    let chainId = 8453;
-    let rpcList = BASE_RPCS;
-
-    if (chain === 'bsc') {
-        chainId = 56;
-        rpcList = BSC_RPCS;
-    } else if (chain === 'bsc_testnet') {
-        chainId = 97;
-        rpcList = BSC_TESTNET_RPCS;
-    } else if (chain === 'base_sepolia') {
-        chainId = 84532;
-        rpcList = BASE_SEPOLIA_RPCS;
-    }
-
-    const primaryUrl = rpcList[0];
+export function getFastProvider(chain: string = 'base', rpcIndex: number = 0): ethers.JsonRpcProvider {
+    const chainId = getChainId(chain);
+    const rpcList = getRpcList(chain);
+    const primaryUrl = rpcList[rpcIndex % rpcList.length];
     const staticNet = Network.from(chainId);
 
-    const provider = new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: true });
-    providerCache[chain] = provider;
-    return provider;
+    return new JsonRpcProvider(primaryUrl, staticNet, { staticNetwork: true });
+}
+
+export function getCachedProvider(chain: string = 'base'): ethers.JsonRpcProvider {
+    if (!providerCache[chain]) {
+        providerCache[chain] = getFastProvider(chain);
+    }
+    return providerCache[chain];
 }
