@@ -1111,7 +1111,14 @@ if (env.NODE_ENV === 'development') {
 
 router.post("/orders", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
         if (!user) return res.status(401).json({ error: "User not found" });
 
         if (user.is_banned) {
@@ -1210,7 +1217,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             }
         }
 
-        const orderChain = chain || 'base';
+        const orderChain = chain || 'bsc';
         const parsedAmount = parseFloat(amount);
         const parsedRate = parseFloat(rate);
 
@@ -1267,6 +1274,9 @@ router.post("/orders", async (req: Request, res: Response) => {
             }
         }
 
+        const isWaSession = Boolean(tgAny.is_wa_user);
+        const orderSource = isWaSession ? "whatsapp" : "telegram";
+
         const order = await db.createOrder({
             user_id: user.id,
             type,
@@ -1277,7 +1287,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             fiat_currency: "INR",
             payment_methods: payment_methods || ["UPI"],
             expires_at: expiresAt as any,
-            source: (user.preferred_channel === "whatsapp" || user.whatsapp_phone || (req.telegramUser as any)?.is_wa_user) ? "whatsapp" : "telegram",
+            source: orderSource,
             payment_details: {
                 upi: user.upi_id || "",
                 group_id: group_id ? parseInt(group_id.toString()) : undefined,
@@ -1295,24 +1305,23 @@ router.post("/orders", async (req: Request, res: Response) => {
         res.json({ order });
 
         const publishChannel = req.body.publish_channel || "both"; // 'both' | 'whatsapp' | 'telegram'
-        const isWaOrigin = (user.preferred_channel === "whatsapp" || Boolean(user.whatsapp_phone) || Boolean((req.telegramUser as any)?.is_wa_user));
         const orderWithUserData = {
             ...order,
-            source: isWaOrigin ? "whatsapp" : "telegram",
+            source: orderSource,
             username: user.username || user.first_name || "anon",
             trust_score: user.trust_score ?? 100,
             is_verified: Boolean(user.is_verified || user.kyc_status === 'approved')
         };
 
-        // Broadcast to Telegram channels/groups if origin is Telegram or explicitly set
-        if (!isWaOrigin || publishChannel === "telegram" || publishChannel === "both") {
+        // Broadcast to Telegram channels/groups
+        if (publishChannel === "telegram" || publishChannel === "both" || !isWaSession) {
             import("../bot").then(({ broadcastAd }) => {
                 broadcastAd(orderWithUserData, user).catch(console.error);
             }).catch(console.error);
         }
 
-        // ONLY broadcast to WhatsApp groups if ad was explicitly created on WhatsApp
-        if (isWaOrigin && (publishChannel === "whatsapp" || publishChannel === "both")) {
+        // Broadcast to WhatsApp groups
+        if (publishChannel === "whatsapp" || publishChannel === "both" || isWaSession) {
             import("../whatsapp/handlers/group").then(({ broadcastNewAdToGroups }) => {
                 broadcastNewAdToGroups(orderWithUserData).catch(console.error);
             }).catch(console.error);
