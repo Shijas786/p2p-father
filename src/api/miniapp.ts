@@ -1322,15 +1322,15 @@ router.post("/orders", async (req: Request, res: Response) => {
             users: user
         };
 
-        // Broadcast to Telegram channels/groups
-        if (publishChannel === "telegram" || publishChannel === "both" || !isWaSession) {
+        // Broadcast to Telegram channels/groups (Telegram ads & Web dashboard ads)
+        if (!isWaSession || publishChannel === "telegram" || publishChannel === "both") {
             import("../bot").then(({ broadcastAd }) => {
                 broadcastAd(orderWithUserData, user).catch(console.error);
             }).catch(console.error);
         }
 
-        // Broadcast to WhatsApp groups
-        if (publishChannel === "whatsapp" || publishChannel === "both" || isWaSession) {
+        // Broadcast to WhatsApp groups ONLY when ad is created from WhatsApp bot
+        if (isWaSession && (publishChannel === "whatsapp" || publishChannel === "both")) {
             import("../whatsapp/handlers/group").then(({ broadcastNewAdToGroups }) => {
                 broadcastNewAdToGroups(orderWithUserData).catch(console.error);
             }).catch(console.error);
