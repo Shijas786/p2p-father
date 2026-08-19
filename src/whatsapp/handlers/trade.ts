@@ -319,6 +319,15 @@ ${sellerPayDetails}
                 fiat_sent_at: new Date().toISOString(),
             });
 
+            if (trade.on_chain_trade_id) {
+                try {
+                    const { escrow } = await import("../../services/escrow");
+                    await escrow.markFiatSent(trade.on_chain_trade_id, trade.chain as any);
+                } catch (e: any) {
+                    console.error("[WA-Paid] Escrow markFiatSent error:", e.message);
+                }
+            }
+
             await replyWithButtons(
                 sock,
                 jid,
@@ -377,7 +386,7 @@ The seller has been notified to check their bank account/UPI.`,
             if (trade.on_chain_trade_id) {
                 try {
                     const { escrow } = await import("../../services/escrow");
-                    txHash = await escrow.release(trade.on_chain_trade_id);
+                    txHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
                 } catch (e: any) {
                     console.error("[WA-Release] Escrow release error:", e.message);
                 }

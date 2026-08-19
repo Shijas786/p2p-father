@@ -3500,7 +3500,7 @@ bot.on("callback_query:data", async (ctx) => {
 
             try {
                 // Relayer calls Smart Contract Release
-                const txHash = await escrow.release(trade.on_chain_trade_id!);
+                const txHash = await escrow.release(trade.on_chain_trade_id!, trade.chain as any);
 
                 await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: txHash });
 
