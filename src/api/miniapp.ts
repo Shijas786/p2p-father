@@ -639,7 +639,15 @@ router.post("/auth/trade-token", async (req: Request, res: Response) => {
 
 router.get("/wallet/balances", async (req: Request, res: Response) => {
     try {
-        const user = await db.getUserByTelegramId(req.telegramUser!.id);
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
+
         if (!user?.wallet_address) {
             return res.json({
                 eth: "0",

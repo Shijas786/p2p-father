@@ -1546,8 +1546,13 @@
 
       const usdtWallet = parseFloat(d.usdt || '0');
       const usdcWallet = parseFloat(d.usdc || '0');
-      const vaultUsdt = parseFloat(d.vault_bsc_usdt || d.vault_usdt || '0');
-      const vaultUsdc = parseFloat(d.vault_base_usdc || d.vault_usdc || '0');
+      const vaultBaseUsdt = parseFloat(d.vault_base_usdt || '0');
+      const vaultBscUsdt = parseFloat(d.vault_bsc_usdt || '0');
+      const vaultBaseUsdc = parseFloat(d.vault_base_usdc || '0');
+      const vaultBscUsdc = parseFloat(d.vault_bsc_usdc || '0');
+      
+      const vaultUsdt = vaultBaseUsdt + vaultBscUsdt;
+      const vaultUsdc = vaultBaseUsdc + vaultBscUsdc;
 
       const usdt = usdtWallet + vaultUsdt;
       const usdc = usdcWallet + vaultUsdc;
@@ -1555,7 +1560,7 @@
       const eth = parseFloat(d.eth || '0');
       const vaultReserved = vaultUsdt + vaultUsdc;
 
-      const total = usdt + usdc + (bnb * 300) + (eth * 3000);
+      const total = usdt + usdc + (bnb * 600) + (eth * 2600);
       rawTotalBalance = '$' + total.toFixed(2);
       if (!isBalanceHidden) {
         document.getElementById('total-balance').textContent = rawTotalBalance;
