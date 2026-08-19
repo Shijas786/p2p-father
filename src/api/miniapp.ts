@@ -1636,7 +1636,7 @@ router.post("/trades", async (req: Request, res: Response) => {
                     fee_percentage: feePercent as any,
                     buyer_receives: buyerReceives as any,
                     escrow_tx_hash: escrowTxHash as any,
-                    on_chain_trade_id: onChainTradeId as any,
+                    on_chain_trade_id: onChainTradeId ? Number(onChainTradeId) : null,
                     escrow_locked_at: lockedAt as any,
                 });
             } catch (dbErr: any) {
@@ -1691,11 +1691,15 @@ router.post("/trades", async (req: Request, res: Response) => {
         } catch (tradeErr: any) {
             console.error("[MINIAPP] Unexpected trade error:", tradeErr);
             await db.revertFillOrder(order_id, tradeAmount);
-            throw tradeErr;
+            if (!res.headersSent) {
+                return res.status(500).json({ error: tradeErr?.message || "Internal trade creation error" });
+            }
         }
     } catch (err: any) {
         console.error("[MINIAPP] Create trade error:", err);
-        res.status(500).json({ error: err.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: err.message });
+        }
     }
 });
 
