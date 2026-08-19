@@ -1619,29 +1619,45 @@ router.post("/trades", async (req: Request, res: Response) => {
                 return res.status(500).json({ error: "Failed to create trade on-chain: " + err.message });
             }
 
-            const trade = await db.createTrade({
-                order_id,
-                seller_id: seller.id,
-                buyer_id: buyer.id,
-                amount: tradeAmount,
-                token: order.token,
-                chain: order.chain,
-                buyer_custom_address: receiveAddress,
-                fiat_amount: fiatAmount as any,
-                fiat_currency: "INR",
-                rate: order.rate,
-                status: "in_escrow",
-                fee_amount: feeAmount as any,
-                fee_percentage: feePercent as any,
-                buyer_receives: buyerReceives as any,
-                escrow_tx_hash: escrowTxHash as any,
-                on_chain_trade_id: onChainTradeId as any,
-                escrow_locked_at: lockedAt as any,
-            });
+            let trade: any;
+            try {
+                trade = await db.createTrade({
+                    order_id,
+                    seller_id: seller.id,
+                    buyer_id: buyer.id,
+                    amount: tradeAmount,
+                    token: order.token,
+                    chain: order.chain,
+                    buyer_custom_address: receiveAddress,
+                    fiat_amount: fiatAmount as any,
+                    fiat_currency: "INR",
+                    rate: order.rate,
+                    status: "in_escrow",
+                    fee_amount: feeAmount as any,
+                    fee_percentage: feePercent as any,
+                    buyer_receives: buyerReceives as any,
+                    escrow_tx_hash: escrowTxHash as any,
+                    on_chain_trade_id: onChainTradeId as any,
+                    escrow_locked_at: lockedAt as any,
+                });
+            } catch (dbErr: any) {
+                console.error("[MINIAPP] db.createTrade failed:", dbErr);
+                // If on-chain trade was already locked, refund it back to seller
+                if (onChainTradeId && order.chain) {
+                    try {
+                        console.log(`[MINIAPP] Rolling back on-chain trade #${onChainTradeId} due to DB error...`);
+                        await escrow.refund(onChainTradeId, order.chain as any);
+                    } catch (refundErr: any) {
+                        console.error(`[MINIAPP] Failed to rollback on-chain trade #${onChainTradeId}:`, refundErr.message);
+                    }
+                }
+                await db.revertFillOrder(order_id, tradeAmount);
+                return res.status(500).json({ error: "Failed to record trade in database: " + dbErr.message });
+            }
 
             res.json({ trade });
 
-            // Update the Telegram broadcast message live status
+            // Update the Telegram broadcast message live status (background non-blocking)
             db.getOrderById(order_id).then(async (o) => {
                 if (o) {
                     const orderUser = (o.user_id === seller?.id) ? seller : ((o.user_id === buyer?.id) ? buyer : await db.getUserById(o.user_id));
@@ -1655,31 +1671,26 @@ router.post("/trades", async (req: Request, res: Response) => {
                 }
             }).catch(console.error);
 
-            // BACKGROUND NOTIFICATIONS
-            const coin = trade.token;
-            const amountStr = trade.amount;
-            const fiat = trade.fiat_amount;
+            // BACKGROUND NOTIFICATIONS (non-blocking)
+            try {
+                const coin = trade.token;
+                const amountStr = trade.amount;
+                const fiat = trade.fiat_amount;
 
-            // 1. Notify Seller
-            await notifyTradeUpdate(seller.id,
-                `🤝 <b>Trade Matched!</b>\n\nBuyer <b>${escapeHTML(buyer.first_name || 'User')}</b> is ready to buy <b>${amountStr} ${coin}</b> for <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b>.\n\nFunds are locked in Escrow. Please wait for payment UTR.`
-            );
+                // 1. Notify Seller
+                notifyTradeUpdate(seller.id,
+                    `🤝 <b>Trade Matched!</b>\n\nBuyer <b>${escapeHTML(buyer.first_name || 'User')}</b> is ready to buy <b>${amountStr} ${coin}</b> for <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b>.\n\nFunds are locked in Escrow. Please wait for payment UTR.`
+                ).catch(console.error);
 
-            // 2. Notify Buyer
-            await notifyTradeUpdate(buyer.id,
-                `💸 <b>Funds in Escrow!</b>\n\nYou are buying <b>${amountStr} ${coin}</b> from <b>${escapeHTML(seller.first_name || 'User')}</b>.\n\nPlease transfer <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b> to the seller's UPI and submit the UTR.`
-            );
-        } catch (tradeErr) {
-            // If on-chain trade was already locked, refund it back to seller
-            if (onChainTradeId && order.chain) {
-                try {
-                    console.log(`[MINIAPP] Rolling back on-chain trade #${onChainTradeId} due to DB error...`);
-                    await escrow.refund(onChainTradeId, order.chain as any);
-                } catch (refundErr: any) {
-                    console.error(`[MINIAPP] Failed to rollback on-chain trade #${onChainTradeId}:`, refundErr.message);
-                }
+                // 2. Notify Buyer
+                notifyTradeUpdate(buyer.id,
+                    `💸 <b>Funds in Escrow!</b>\n\nYou are buying <b>${amountStr} ${coin}</b> from <b>${escapeHTML(seller.first_name || 'User')}</b>.\n\nPlease transfer <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b> to the seller's UPI and submit the UTR.`
+                ).catch(console.error);
+            } catch (notifyErr) {
+                console.error("[MINIAPP] Trade notification error:", notifyErr);
             }
-            // Revert the fill if trade creation fails
+        } catch (tradeErr: any) {
+            console.error("[MINIAPP] Unexpected trade error:", tradeErr);
             await db.revertFillOrder(order_id, tradeAmount);
             throw tradeErr;
         }
