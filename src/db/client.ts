@@ -1257,14 +1257,14 @@ class Database {
             try { await db.from("disputes").update({ raised_by: targetUserId }).eq("raised_by", tgOnlyUser.id); } catch (_) {}
             try { await db.from("dispute_messages").update({ sender_id: targetUserId }).eq("sender_id", tgOnlyUser.id); } catch (_) {}
 
-            // If target user has no wallet, inherit TG wallet
+            // 💼 Wallet Priority: Prioritize existing Telegram bot wallet so Telegram user keeps their original funds/address
             const { data: targetUser } = await db.from("users").select("*").eq("id", targetUserId).single();
             const updatesFromTg: any = {};
 
-            if (!targetUser?.wallet_address && tgOnlyUser.wallet_address) {
+            if (tgOnlyUser.wallet_address) {
                 updatesFromTg.wallet_address = tgOnlyUser.wallet_address;
                 updatesFromTg.wallet_index = tgOnlyUser.wallet_index;
-                updatesFromTg.wallet_type = "bot";
+                updatesFromTg.wallet_type = tgOnlyUser.wallet_type || "bot";
             }
 
             // 🛡️ KYC & Identity Inheritance: Carry over verified KYC status if Telegram user completed it
