@@ -381,13 +381,11 @@ export async function broadcastAd(order: any, user: any) {
         const actionLabel = order.type === 'sell' ? '⚡ Buy Now' : '⚡ Sell Now';
         const botUsername = botUser.username;
 
-        // If ad originated from WhatsApp (or user is WhatsApp-only), direct button to WhatsApp DM
+        // If ad originated from WhatsApp (or user is WhatsApp-only without telegram), direct button to WhatsApp DM
         const isWaAd = Boolean(
             order?.source === "whatsapp" ||
-            user?.preferred_channel === "whatsapp" ||
-            user?.whatsapp_phone ||
-            (user?.phone_number && !user?.telegram_id) ||
-            order?.users?.whatsapp_phone
+            (!user?.telegram_id && (user?.whatsapp_phone || user?.phone_number)) ||
+            (!order?.users?.telegram_id && order?.users?.whatsapp_phone)
         );
 
         const waBotPhone = env.WA_BOT_NUMBER || "917012751478";

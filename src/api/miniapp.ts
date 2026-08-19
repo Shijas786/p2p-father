@@ -1494,12 +1494,11 @@ router.post("/trades", async (req: Request, res: Response) => {
             }
         }
 
-        // WhatsApp Merchant Order Rule: Telegram MiniApp users must trade via WhatsApp bot or Web Dashboard
+        // WhatsApp Merchant Order Rule: Only redirect to WhatsApp if the ad was created on WhatsApp OR seller is pure WhatsApp-only (no Telegram)
         const sellerUser = await db.getUserById(order.user_id);
         const isWaMerchantOrder = Boolean(
             order.source === "whatsapp" ||
-            sellerUser?.preferred_channel === "whatsapp" ||
-            (sellerUser?.whatsapp_phone && !sellerUser?.telegram_id)
+            (!sellerUser?.telegram_id && (sellerUser?.whatsapp_phone || sellerUser?.phone_number))
         );
 
         const isCallingFromWeb = Boolean(
