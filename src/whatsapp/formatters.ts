@@ -327,8 +327,8 @@ export function fmtGroupAdBroadcast(order: any): string {
     const token = order.token || "USDT";
     const totalFiat = Math.round(amount * rate);
 
-    const chainRaw = (order.chain || "base").toLowerCase();
-    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || order.source === "whatsapp" || Boolean(order.users?.whatsapp_phone);
+    const chainRaw = (order.chain || "bsc").toLowerCase();
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || chainRaw.includes("devnet");
     const chainLabel = isTestnet
         ? `🧪 DEMO / TESTNET (${chainRaw.toUpperCase()}) — ⚠️ NO REAL MONEY`
         : chainRaw.toUpperCase();

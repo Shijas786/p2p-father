@@ -321,8 +321,8 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
     const orderLine = `${emoji} ${username}${avgSpeedText} ${actionVerb} ${amountStr}`;
 
-    const chainRaw = (order.chain || "base").toLowerCase();
-    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || order.source === "whatsapp" || Boolean(user?.whatsapp_phone);
+    const chainRaw = (order.chain || "bsc").toLowerCase();
+    const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || chainRaw.includes("devnet");
     const chainLabel = isTestnet
         ? `🧪 DEMO / TESTNET (${escapeHTML(chainRaw.toUpperCase())}) — ⚠️ NO REAL MONEY`
         : escapeHTML(chainRaw.toUpperCase());
