@@ -182,16 +182,18 @@ class EscrowService {
     }
 
     /**
-     * Relayer starts a trade (locks funds) for a match found in DB
+     * Submit a relayed trade tx and return txHash IMMEDIATELY (no block wait).
+     * Use this for the HTTP request path so the client never times out.
+     * Call confirmRelayedTrade(txHash, chain) in the background to get the on-chain tradeId.
      */
-    async createRelayedTrade(
+    async submitRelayedTrade(
         seller: string,
         buyer: string,
         token: string,
         amount: string,
         duration: number,
         chain: Chain = 'base'
-    ): Promise<string> {
+    ): Promise<{ txHash: string; contract: ethers.Contract }> {
         let decimals = 18;
         if (chain === 'base' && (token === env.USDC_ADDRESS || token === env.USDT_ADDRESS)) {
             decimals = 6;
@@ -211,7 +213,7 @@ class EscrowService {
                     txOptions.gasLimit = 500000;
                 }
 
-                console.log(`[ESCROW] Calling createTradeByRelayer on ${chain} (Attempt ${attempt + 1}/${maxAttempts})...`);
+                console.log(`[ESCROW] Submitting createTradeByRelayer on ${chain} (Attempt ${attempt + 1}/${maxAttempts})...`);
                 const tx = await contract.createTradeByRelayer(
                     seller,
                     buyer,
@@ -221,14 +223,48 @@ class EscrowService {
                     txOptions
                 );
 
-                const receipt = await tx.wait();
+                console.log(`[ESCROW] Trade tx submitted on ${chain}: ${tx.hash}`);
+                // Return immediately — do NOT await tx.wait() here
+                return { txHash: tx.hash, contract };
+            } catch (err: any) {
+                lastErr = err;
+                console.error(`[ESCROW] submitRelayedTrade attempt ${attempt + 1} failed:`, err?.message || err);
+                if (attempt < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+                }
+            }
+        }
+
+        throw lastErr || new Error("Failed to submit relayed trade after multiple RPC attempts");
+    }
+
+    /**
+     * Wait for a previously submitted tx to be mined and extract the on-chain tradeId.
+     * Call this in a background process AFTER responding to the client.
+     */
+    async confirmRelayedTrade(
+        txHash: string,
+        chain: Chain = 'base'
+    ): Promise<string> {
+        const maxAttempts = 3;
+        let lastErr: any;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const contract = this.getEscrowContract(chain, attempt);
+                const provider = this.getProvider(chain, attempt);
+
+                console.log(`[ESCROW] Waiting for tx confirmation on ${chain}: ${txHash} (Attempt ${attempt + 1})...`);
+                const receipt = await provider.waitForTransaction(txHash, 1, 60000); // 60s timeout
+
+                if (!receipt) throw new Error("Transaction receipt not found");
 
                 for (const log of receipt.logs) {
                     try {
                         const parsed = contract.interface.parseLog(log);
                         if (parsed && parsed.name === "TradeCreated") {
                             const tradeId = parsed.args.tradeId.toString();
-                            console.log(`[ESCROW] Trade created on-chain! ID: ${tradeId}`);
+                            console.log(`[ESCROW] Trade confirmed on-chain! ID: ${tradeId}, TxHash: ${txHash}`);
                             return tradeId;
                         }
                     } catch (e) {
@@ -239,14 +275,30 @@ class EscrowService {
                 throw new Error("TradeCreated event not found in receipt");
             } catch (err: any) {
                 lastErr = err;
-                console.error(`[ESCROW] createRelayedTrade attempt ${attempt + 1} failed:`, err?.message || err);
+                console.error(`[ESCROW] confirmRelayedTrade attempt ${attempt + 1} failed:`, err?.message || err);
                 if (attempt < maxAttempts - 1) {
-                    await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                    await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
                 }
             }
         }
 
-        throw lastErr || new Error("Failed to create relayed trade after multiple RPC attempts");
+        throw lastErr || new Error("Failed to confirm relayed trade after multiple RPC attempts");
+    }
+
+    /**
+     * Legacy blocking version — kept for admin/manual use only.
+     * DO NOT use in HTTP request handlers (will cause client timeout).
+     */
+    async createRelayedTrade(
+        seller: string,
+        buyer: string,
+        token: string,
+        amount: string,
+        duration: number,
+        chain: Chain = 'base'
+    ): Promise<string> {
+        const { txHash } = await this.submitRelayedTrade(seller, buyer, token, amount, duration, chain);
+        return this.confirmRelayedTrade(txHash, chain);
     }
 
     /**

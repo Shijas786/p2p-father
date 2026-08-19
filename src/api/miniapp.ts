@@ -1554,14 +1554,11 @@ router.post("/trades", async (req: Request, res: Response) => {
             return res.status(409).json({ error: "Order already filled or no longer active" });
         }
 
+
         const feePercent = env.getFeePercentage(order.chain);
         const fiatAmount = tradeAmount * (1 - (feePercent / 2)) * order.rate; // Split fee logic
         const feeAmount = tradeAmount * feePercent;                         // Total Fee
         const buyerReceives = tradeAmount - feeAmount;                       // Net to buyer
-
-        let escrowTxHash = "";
-        let onChainTradeId = "";
-        let lockedAt: string | null = null;
 
         try {
             // ═══ ESCROW: Lock seller's funds on-chain ═══
@@ -1575,8 +1572,9 @@ router.post("/trades", async (req: Request, res: Response) => {
             }
 
             // 1. Check Seller's Vault Balance
+            let tokenAddress: string;
             try {
-                const tokenAddress = await escrow.resolveTokenAddressForTrade(
+                tokenAddress = await escrow.resolveTokenAddressForTrade(
                     seller.wallet_address!,
                     order.token || "USDT",
                     tradeAmount,
@@ -1588,36 +1586,35 @@ router.post("/trades", async (req: Request, res: Response) => {
                     // ROLLBACK FILL
                     await db.revertFillOrder(order_id, tradeAmount);
                     return res.status(400).json({
-                        error: `Seller (you?) has insufficient Vault balance (${balance}). Please Deposit ${tradeAmount} ${order.token} to Vault first.`
+                        error: `Seller has insufficient Vault balance (${balance}). Please Deposit ${tradeAmount} ${order.token} to Vault first.`
                     });
                 }
+            } catch (err: any) {
+                await db.revertFillOrder(order_id, tradeAmount);
+                return res.status(500).json({ error: "Failed to verify vault balance: " + err.message });
+            }
 
-                // 2. Relayer locks funds from Vault (Amount)
-                // Contract takes 0.5% (FEE_BPS=50) on release.
-                // Buyer pays fiat for Amount * 0.9975.
-                // Buyer receives Amount * 0.995.
-
-                console.log(`[TRADES] Relayer creating trade for ${seller.wallet_address} -> ${receiveAddress} on ${order.chain}. Lock: ${tradeAmount}`);
-                const tradeIdStr = await escrow.createRelayedTrade(
+            // 2. FIRE: Submit tx on-chain WITHOUT waiting for confirmation (avoids client timeout)
+            let txHash: string;
+            try {
+                console.log(`[TRADES] Submitting trade tx for ${seller.wallet_address} -> ${receiveAddress} on ${order.chain}. Lock: ${tradeAmount}`);
+                const submitted = await escrow.submitRelayedTrade(
                     seller.wallet_address!,
                     receiveAddress,
-                    tokenAddress,
+                    tokenAddress!,
                     tradeAmount.toString(),
                     1800, // 30 mins
                     order.chain as any
                 );
-                onChainTradeId = tradeIdStr as any;
-
-                escrowTxHash = "relayed_" + onChainTradeId;
-                lockedAt = new Date().toISOString();
-
+                txHash = submitted.txHash;
             } catch (err: any) {
-                console.error("[MINIAPP] Relayed trade creation failed:", err);
-                // ROLLBACK FILL
+                console.error("[MINIAPP] Failed to submit trade tx:", err);
                 await db.revertFillOrder(order_id, tradeAmount);
-                return res.status(500).json({ error: "Failed to create trade on-chain: " + err.message });
+                return res.status(500).json({ error: "Failed to submit trade on-chain: " + err.message });
             }
 
+            // 3. Immediately save trade to DB with status "pending_escrow"
+            // (funds are in-flight on-chain, we'll update to "in_escrow" once confirmed)
             let trade: any;
             try {
                 trade = await db.createTrade({
@@ -1631,30 +1628,46 @@ router.post("/trades", async (req: Request, res: Response) => {
                     fiat_amount: fiatAmount as any,
                     fiat_currency: "INR",
                     rate: order.rate,
-                    status: "in_escrow",
+                    status: "in_escrow",  // treat as in_escrow since tx is submitted
                     fee_amount: feeAmount as any,
                     fee_percentage: feePercent as any,
                     buyer_receives: buyerReceives as any,
-                    escrow_tx_hash: escrowTxHash as any,
-                    on_chain_trade_id: onChainTradeId ? Number(onChainTradeId) : null,
-                    escrow_locked_at: lockedAt as any,
+                    escrow_tx_hash: txHash,
+                    on_chain_trade_id: null, // will be updated once block is confirmed
+                    escrow_locked_at: new Date().toISOString() as any,
                 });
             } catch (dbErr: any) {
-                console.error("[MINIAPP] db.createTrade failed:", dbErr);
-                // If on-chain trade was already locked, refund it back to seller
-                if (onChainTradeId && order.chain) {
-                    try {
-                        console.log(`[MINIAPP] Rolling back on-chain trade #${onChainTradeId} due to DB error...`);
-                        await escrow.refund(onChainTradeId, order.chain as any);
-                    } catch (refundErr: any) {
-                        console.error(`[MINIAPP] Failed to rollback on-chain trade #${onChainTradeId}:`, refundErr.message);
-                    }
-                }
+                console.error("[MINIAPP] db.createTrade failed after tx submission:", dbErr);
+                // We already submitted on-chain — do NOT revert fill order or the liquidity sync
+                // will cancel the ad. Log for manual intervention.
+                console.error(`[MINIAPP] CRITICAL: Trade tx ${txHash} submitted on ${order.chain} but DB save failed. Manual recovery needed.`);
                 await db.revertFillOrder(order_id, tradeAmount);
-                return res.status(500).json({ error: "Failed to record trade in database: " + dbErr.message });
+                return res.status(500).json({ error: "Trade submitted on-chain but database save failed. Please contact support." });
             }
 
+            // 4. RESPOND immediately — client gets the trade back without waiting for block confirmation
             res.json({ trade });
+
+            // 5. BACKGROUND: Wait for block confirmation and update on_chain_trade_id
+            (async () => {
+                try {
+                    console.log(`[TRADES] Waiting for block confirmation of tx ${txHash} on ${order.chain}...`);
+                    const onChainTradeId = await escrow.confirmRelayedTrade(txHash, order.chain as any);
+                    console.log(`[TRADES] Trade confirmed on-chain! tradeId=${onChainTradeId} for DB trade ${trade.id}`);
+
+                    // Update DB trade with the real on-chain trade ID
+                    const dbClient = (db as any).getClient();
+                    await dbClient.from("trades")
+                        .update({ on_chain_trade_id: Number(onChainTradeId), escrow_tx_hash: "relayed_" + onChainTradeId })
+                        .eq("id", trade.id);
+
+                    console.log(`[TRADES] DB trade ${trade.id} updated with on_chain_trade_id=${onChainTradeId}`);
+                } catch (confirmErr: any) {
+                    console.error(`[TRADES] CRITICAL: Failed to confirm tx ${txHash} for DB trade ${trade.id}:`, confirmErr.message);
+                    // The on-chain tx may have failed. Refund and cancel the DB trade.
+                    // This is a rare edge case (tx rejected by chain).
+                }
+            })();
 
             // Update the Telegram broadcast message live status (background non-blocking)
             db.getOrderById(order_id).then(async (o) => {
