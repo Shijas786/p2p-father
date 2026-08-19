@@ -1560,9 +1560,12 @@ router.post("/trades", async (req: Request, res: Response) => {
         const feeAmount = tradeAmount * feePercent;                         // Total Fee
         const buyerReceives = tradeAmount - feeAmount;                       // Net to buyer
 
+        let escrowTxHash = "";
+        let onChainTradeId = "";
+        let lockedAt: string | null = null;
+
         try {
             // ═══ ESCROW: Lock seller's funds on-chain ═══
-
 
             const sellerWalletType = (seller as any).wallet_type || 'bot';
 
@@ -1571,10 +1574,6 @@ router.post("/trades", async (req: Request, res: Response) => {
             if (!receiveAddress) {
                 return res.status(400).json({ error: "Buyer has no receive address configured" });
             }
-
-            let escrowTxHash = "";
-            let onChainTradeId = "";
-            let lockedAt: string | null = null;
 
             // 1. Check Seller's Vault Balance
             try {
@@ -1671,6 +1670,15 @@ router.post("/trades", async (req: Request, res: Response) => {
                 `💸 <b>Funds in Escrow!</b>\n\nYou are buying <b>${amountStr} ${coin}</b> from <b>${escapeHTML(seller.first_name || 'User')}</b>.\n\nPlease transfer <b>₹${parseFloat(fiat.toString()).toLocaleString()}</b> to the seller's UPI and submit the UTR.`
             );
         } catch (tradeErr) {
+            // If on-chain trade was already locked, refund it back to seller
+            if (onChainTradeId && order.chain) {
+                try {
+                    console.log(`[MINIAPP] Rolling back on-chain trade #${onChainTradeId} due to DB error...`);
+                    await escrow.refund(onChainTradeId, order.chain as any);
+                } catch (refundErr: any) {
+                    console.error(`[MINIAPP] Failed to rollback on-chain trade #${onChainTradeId}:`, refundErr.message);
+                }
+            }
             // Revert the fill if trade creation fails
             await db.revertFillOrder(order_id, tradeAmount);
             throw tradeErr;
