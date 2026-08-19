@@ -2030,8 +2030,13 @@ router.post("/trades/:id/refund", async (req: Request, res: Response) => {
                 const onChainId = typeof trade.on_chain_trade_id === 'string' ? trade.on_chain_trade_id : trade.on_chain_trade_id.toString();
                 refundTxHash = await escrow.refund(onChainId as any, trade.chain as any);
             } catch (escrowErr: any) {
-                console.error("[MINIAPP] Escrow refund failed:", escrowErr);
-                return res.status(500).json({ error: "Failed to refund on-chain: " + escrowErr.message });
+                const errMsg = escrowErr?.message || "";
+                if (errMsg.includes("Trade not in refundable state") || errMsg.includes("already refunded") || errMsg.includes("Not authorized to refund") || errMsg.includes("Cannot cancel after fiat sent")) {
+                    console.log(`[MINIAPP] Trade #${trade.on_chain_trade_id} was already refunded/closed on-chain. Marking as refunded in DB.`);
+                } else {
+                    console.error("[MINIAPP] Escrow refund failed:", escrowErr);
+                    return res.status(500).json({ error: "Failed to refund on-chain: " + escrowErr.message });
+                }
             }
         }
 
@@ -2252,7 +2257,16 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
             // Refund to seller
             let txHash: string | null = null;
             if (trade.on_chain_trade_id) {
-                txHash = await escrow.refund(trade.on_chain_trade_id, trade.chain as any);
+                try {
+                    txHash = await escrow.refund(trade.on_chain_trade_id, trade.chain as any);
+                } catch (refundErr: any) {
+                    const errMsg = refundErr?.message || "";
+                    if (errMsg.includes("Trade not in refundable state") || errMsg.includes("already refunded") || errMsg.includes("Not authorized to refund") || errMsg.includes("Cannot cancel after fiat sent") || errMsg.includes("Trade not disputed")) {
+                        console.log(`[ADMIN] Trade #${trade.on_chain_trade_id} was already refunded/closed on-chain. Marking as refunded in DB.`);
+                    } else {
+                        throw refundErr;
+                    }
+                }
             }
             await db.updateTrade(trade.id, { status: "refunded" } as any);
             // Revert the fill on the parent order/ad
