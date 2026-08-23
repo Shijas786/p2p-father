@@ -846,7 +846,6 @@ router.post("/wallet/connect", async (req: Request, res: Response) => {
         await db.updateUser(user.id, {
             wallet_address: normalisedAddress,
             wallet_type: 'external',
-            receive_address: null, // Clear any custom receive address to avoid cross-wallet payout confusion
         } as any);
 
         res.json({ success: true });
@@ -877,7 +876,6 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
             wallet_index: walletIndex,
             wallet_address: derived.address,
             wallet_type: 'bot',
-            receive_address: null, // Clear any custom receive address from previous wallet
         } as any);
 
         console.log(`[MINIAPP-WALLET] 🟢 Successfully set Bot Wallet ${derived.address} (index=${walletIndex}) for user ${user.id}`);
