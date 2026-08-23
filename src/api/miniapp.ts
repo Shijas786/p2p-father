@@ -1840,11 +1840,21 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         if (trade.on_chain_trade_id) {
             try {
                 releaseTxHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
+                if (releaseTxHash === "already_released") {
+                    releaseTxHash = trade.release_tx_hash || trade.escrow_tx_hash || null;
+                }
             } catch (escrowErr: any) {
                 console.error("[MINIAPP] Escrow release failed:", escrowErr);
-                // Revert to 'fiat_sent' so user can retry
-                await db.updateTrade(trade.id, { status: "fiat_sent" });
-                return res.status(500).json({ error: "Failed to release escrow: " + escrowErr.message });
+                // Check if trade is actually completed on-chain
+                const onChainStatus = await escrow.getOnChainTradeStatus(trade.on_chain_trade_id, trade.chain as any);
+                if (onChainStatus === 4) {
+                    console.log(`[MINIAPP] On-chain trade ${trade.on_chain_trade_id} is already completed. Finalizing DB state.`);
+                    releaseTxHash = trade.release_tx_hash || trade.escrow_tx_hash || null;
+                } else {
+                    // Revert to 'fiat_sent' so user can retry
+                    await db.updateTrade(trade.id, { status: "fiat_sent" });
+                    return res.status(500).json({ error: "Failed to release escrow: " + escrowErr.message });
+                }
             }
         }
 

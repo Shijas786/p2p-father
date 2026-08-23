@@ -362,7 +362,14 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     if (status === "locked" || status === "filled") {
         lines.push(`🔒 Status: <b>Locked / Trade in Progress</b>`);
     } else if (status === "completed") {
-        lines.push(`✅ Status: <b>Completed</b>`);
+        const txHash = order.release_tx_hash || order.escrow_tx_hash || (order as any).tx_hash;
+        const chain = (order.chain || "bsc").toLowerCase();
+        const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
+        if (txHash && txHash.startsWith('0x')) {
+            lines.push(`✅ Status: <b>Completed</b> (<a href="${escapeHTML(explorer)}${escapeHTML(txHash)}">View Tx</a>)`);
+        } else {
+            lines.push(`✅ Status: <b>Completed</b>`);
+        }
     } else if (status === "cancelled") {
         lines.push(`❌ Status: <b>Cancelled</b>`);
     } else if (status === "expired") {
@@ -525,6 +532,24 @@ export async function deleteAdBroadcasts(orderId: string, statusOverride?: strin
         if (order) {
             console.log(`[Bot] Retaining/updating ${broadcasts.length} broadcast messages in group for order ${orderId} (Type: ${order.type}, Status: ${statusOverride || order.status}).`);
             const user = await db.getUserById(order.user_id);
+
+            // If order completed, fetch associated trade's release_tx_hash for the tx link
+            if (statusOverride === "completed" || (order.status as string) === "completed") {
+                try {
+                    const { data: trades } = await db.getClient()
+                        .from("trades")
+                        .select("release_tx_hash, escrow_tx_hash")
+                        .eq("order_id", orderId)
+                        .order("created_at", { ascending: false })
+                        .limit(1);
+                    if (trades && trades[0]) {
+                        (order as any).release_tx_hash = trades[0].release_tx_hash || trades[0].escrow_tx_hash;
+                    }
+                } catch (tradeErr) {
+                    console.error("[Bot] Failed to fetch trade tx for ad broadcast:", tradeErr);
+                }
+            }
+
             const processed = await updateAdBroadcasts(order, user, statusOverride || order.status);
 
             // Delete only the successfully processed broadcasts from database
@@ -3501,19 +3526,22 @@ bot.on("callback_query:data", async (ctx) => {
             try {
                 // Relayer calls Smart Contract Release
                 const txHash = await escrow.release(trade.on_chain_trade_id!, trade.chain as any);
+                const finalTxHash = txHash === "already_released" ? (trade.escrow_tx_hash || "already_released") : txHash;
 
-                await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: txHash });
+                await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: finalTxHash });
 
                 // Process VIP Fee Cashback (e.g. 0.25% rebate for @vip_trader on new ads)
                 feeCashbackService.processTradeFeeCashback(tradeId).catch(console.error);
+
+                const txLinkText = finalTxHash && finalTxHash.startsWith("0x") ? `🔗 [View Transaction](${getExplorerUrl(finalTxHash, trade.chain as any)})` : "";
 
                 await ctx.editMessageText(
                     [
                         "✅ *Crypto Released!*",
                         "",
                         "Trade completed successfully.",
-                        `🔗 [View Transaction](${getExplorerUrl(txHash)})`,
-                    ].join("\n"),
+                        txLinkText,
+                    ].filter(Boolean).join("\n"),
                     { parse_mode: "Markdown" }
                 );
 

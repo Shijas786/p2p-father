@@ -386,7 +386,8 @@ The seller has been notified to check their bank account/UPI.`,
             if (trade.on_chain_trade_id) {
                 try {
                     const { escrow } = await import("../../services/escrow");
-                    txHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
+                    const resHash = await escrow.release(trade.on_chain_trade_id, trade.chain as any);
+                    txHash = resHash === "already_released" ? (trade.escrow_tx_hash || "already_released") : resHash;
                 } catch (e: any) {
                     console.error("[WA-Release] Escrow release error:", e.message);
                 }

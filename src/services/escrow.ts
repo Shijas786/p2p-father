@@ -302,6 +302,20 @@ class EscrowService {
     }
 
     /**
+     * Get on-chain trade status (0: None, 1: Active, 2: FiatSent, 3: Disputed, 4: Completed, 5: Refunded, 6: Cancelled)
+     */
+    async getOnChainTradeStatus(tradeId: string | number, chain: Chain = 'base'): Promise<number | null> {
+        try {
+            const contract = this.getEscrowContract(chain, 0);
+            const onChainTrade = await contract.getTrade(tradeId);
+            return Number(onChainTrade.status ?? onChainTrade[1]);
+        } catch (err: any) {
+            console.error(`[ESCROW] Failed to fetch on-chain trade ${tradeId} status on ${chain}:`, err.message);
+            return null;
+        }
+    }
+
+    /**
      * Release funds to buyer (called by Relayer when Seller confirms)
      */
     async release(tradeId: string | number, chain: Chain = 'base'): Promise<string> {
@@ -326,6 +340,21 @@ class EscrowService {
                 return tx.hash;
             } catch (err: any) {
                 console.error(`[ESCROW] Release attempt ${attempts} failed:`, err.message);
+
+                // If transaction reverted, verify if trade was already completed on-chain (idempotency guard)
+                if (err.message && (err.message.includes("Trade not in releasable state") || err.message.includes("execution reverted"))) {
+                    try {
+                        const status = await this.getOnChainTradeStatus(tradeId, chain);
+                        // Status 4 is TradeStatus.Completed
+                        if (status === 4) {
+                            console.log(`[ESCROW] Trade ${tradeId} is ALREADY Completed on ${chain}. Treating release as success.`);
+                            return "already_released";
+                        }
+                    } catch (checkErr: any) {
+                        console.error(`[ESCROW] Failed to verify on-chain status on revert for trade ${tradeId}:`, checkErr.message);
+                    }
+                }
+
                 if (attempts >= maxAttempts) throw err;
                 await new Promise(r => setTimeout(r, 2000 * attempts));
             }
@@ -358,6 +387,21 @@ class EscrowService {
                 return tx.hash;
             } catch (err: any) {
                 console.error(`[ESCROW] Mark paid attempt ${attempts} failed:`, err.message);
+
+                // If transaction reverted, verify if trade is already marked FiatSent or Completed
+                if (err.message && (err.message.includes("Trade not active") || err.message.includes("execution reverted"))) {
+                    try {
+                        const status = await this.getOnChainTradeStatus(tradeId, chain);
+                        // Status 2 is FiatSent, 4 is Completed
+                        if (status === 2 || status === 4) {
+                            console.log(`[ESCROW] Trade ${tradeId} is ALREADY FiatSent/Completed on ${chain}. Treating markFiatSent as success.`);
+                            return "already_marked_paid";
+                        }
+                    } catch (checkErr: any) {
+                        console.error(`[ESCROW] Failed to verify on-chain status for markFiatSent ${tradeId}:`, checkErr.message);
+                    }
+                }
+
                 if (attempts >= maxAttempts) throw err;
                 await new Promise(r => setTimeout(r, 2000 * attempts));
             }
@@ -390,6 +434,21 @@ class EscrowService {
                 return tx.hash;
             } catch (err: any) {
                 console.error(`[ESCROW] Refund attempt ${attempts} failed:`, err.message);
+
+                // If transaction reverted, verify if trade was already refunded or cancelled
+                if (err.message && (err.message.includes("Trade not in refundable state") || err.message.includes("execution reverted"))) {
+                    try {
+                        const status = await this.getOnChainTradeStatus(tradeId, chain);
+                        // Status 5 is Refunded, 6 is Cancelled
+                        if (status === 5 || status === 6) {
+                            console.log(`[ESCROW] Trade ${tradeId} is ALREADY Refunded/Cancelled on ${chain}. Treating refund as success.`);
+                            return "already_refunded";
+                        }
+                    } catch (checkErr: any) {
+                        console.error(`[ESCROW] Failed to verify on-chain status on revert for refund ${tradeId}:`, checkErr.message);
+                    }
+                }
+
                 if (attempts >= maxAttempts) throw err;
                 await new Promise(r => setTimeout(r, 2000 * attempts));
             }
