@@ -40,6 +40,10 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     const [receiveAddrInput, setReceiveAddrInput] = useState(user?.receive_address || '');
     const [editingReceiveAddr, setEditingReceiveAddr] = useState(false);
 
+    useEffect(() => {
+        setReceiveAddrInput(user?.receive_address || '');
+    }, [user?.receive_address]);
+
     // Bio & Socials State
     const [bioInput, setBioInput] = useState(user?.bio || '');
     const [instagramInput, setInstagramInput] = useState(user?.instagram_handle || '');
@@ -230,13 +234,16 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
     }
 
     async function saveReceiveAddr() {
-        // Full EVM address validation: must be 0x + exactly 40 hex characters
-        const isValidEVMAddress = /^0x[a-fA-F0-9]{40}$/.test(receiveAddrInput);
-        if (receiveAddrInput && !isValidEVMAddress) {
-            setMessage('error:Enter a valid EVM wallet address (0x + 40 hex characters)');
-            return;
+        const trimmed = receiveAddrInput.trim();
+        if (trimmed) {
+            // Full EVM address validation: must be 0x + exactly 40 hex characters
+            const isValidEVMAddress = /^0x[a-fA-F0-9]{40}$/.test(trimmed);
+            if (!isValidEVMAddress) {
+                setMessage('error:Enter a valid EVM wallet address (0x + 40 hex characters)');
+                return;
+            }
         }
-        await saveField({ receive_address: receiveAddrInput || null }, 'Receive address updated!');
+        await saveField({ receive_address: trimmed || null }, 'Receive address updated!');
     }
 
     async function useDefaultWallet() {
