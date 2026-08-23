@@ -362,14 +362,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     if (status === "locked" || status === "filled") {
         lines.push(`🔒 Status: <b>Locked / Trade in Progress</b>`);
     } else if (status === "completed") {
-        const txHash = order.release_tx_hash || order.escrow_tx_hash || (order as any).tx_hash;
-        const chain = (order.chain || "bsc").toLowerCase();
-        const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
-        if (txHash && txHash.startsWith('0x')) {
-            lines.push(`✅ Status: <b>Completed</b> (<a href="${escapeHTML(explorer)}${escapeHTML(txHash)}">View Tx</a>)`);
-        } else {
-            lines.push(`✅ Status: <b>Completed</b>`);
-        }
+        lines.push(`✅ Status: <b>Completed</b>`);
     } else if (status === "cancelled") {
         lines.push(`❌ Status: <b>Cancelled</b>`);
     } else if (status === "expired") {
@@ -409,13 +402,17 @@ export async function broadcastAd(order: any, user: any) {
         }
 
         const msgText = buildAdMessageText(order, user);
-        const sentMessages = await broadcast(msgText, keyboard, "HTML");
-        if (sentMessages && sentMessages.length > 0) {
-            await db.saveAdBroadcasts(sentMessages.map(m => ({
+        const results = await broadcast(msgText, keyboard, "HTML");
+
+        // Save broadcast record so we can edit/delete it when filled/expired/cancelled
+        if (results.length > 0) {
+            const records = results.map(r => ({
                 order_id: order.id,
-                chat_id: m.chatId,
-                message_id: m.messageId
-            })));
+                chat_id: r.chatId,
+                message_id: r.messageId
+            }));
+            await db.saveAdBroadcasts(records);
+            console.log(`[Bot] Saved ${records.length} broadcast records for order ${order.id}`);
         }
     } catch (e) {
         console.error("BroadcastAd error:", e);
@@ -490,7 +487,8 @@ export async function updateAdBroadcasts(order: any, user: any, statusOverride?:
             try {
                 await bot.api.editMessageText(b.chat_id, b.message_id, msgText, {
                     parse_mode: "HTML",
-                    reply_markup: keyboard
+                    reply_markup: keyboard,
+                    link_preview_options: { is_disabled: true }
                 });
                 success = true;
             } catch (err: any) {
@@ -532,24 +530,6 @@ export async function deleteAdBroadcasts(orderId: string, statusOverride?: strin
         if (order) {
             console.log(`[Bot] Retaining/updating ${broadcasts.length} broadcast messages in group for order ${orderId} (Type: ${order.type}, Status: ${statusOverride || order.status}).`);
             const user = await db.getUserById(order.user_id);
-
-            // If order completed, fetch associated trade's release_tx_hash for the tx link
-            if (statusOverride === "completed" || (order.status as string) === "completed") {
-                try {
-                    const { data: trades } = await db.getClient()
-                        .from("trades")
-                        .select("release_tx_hash, escrow_tx_hash")
-                        .eq("order_id", orderId)
-                        .order("created_at", { ascending: false })
-                        .limit(1);
-                    if (trades && trades[0]) {
-                        (order as any).release_tx_hash = trades[0].release_tx_hash || trades[0].escrow_tx_hash;
-                    }
-                } catch (tradeErr) {
-                    console.error("[Bot] Failed to fetch trade tx for ad broadcast:", tradeErr);
-                }
-            }
-
             const processed = await updateAdBroadcasts(order, user, statusOverride || order.status);
 
             // Delete only the successfully processed broadcasts from database
