@@ -616,25 +616,9 @@ _Code is valid for 10 minutes._`,
         }
 
         try {
-            await reply(sock, jid, "⏳ Generating your secure multi-chain wallet & crediting Testnet USDT...", msg);
+            await reply(sock, jid, "⏳ Generating your secure multi-chain wallet on BSC & Base...", msg);
             const updatedUser = await (db as any).assignWalletToWaUser(user.id);
             user = updatedUser;
-
-            // 🚀 Automatic Faucet: Mint 1,000 Demo USDT + 0.05 tBNB Gas Fee on BSC Testnet
-            if (updatedUser.wallet_address) {
-                wallet.dispenseAutoTestnetFaucet(updatedUser.wallet_address).then(async (res: any) => {
-                    console.log(`[AutoFaucet] Credited 1,000 USDT + 0.05 BNB to ${updatedUser.wallet_address}`);
-                    const supabase = db.getClient();
-                    const cache = (updatedUser as any).predictions_cache || {};
-                    await supabase.from("users").update({
-                        predictions_cache: {
-                            ...cache,
-                            testnet_usdt: res.usdt || "1000.00",
-                            testnet_bnb: res.bnb || "0.05"
-                        }
-                    } as any).eq("id", updatedUser.id);
-                }).catch((err: any) => console.error("[AutoFaucet Error]:", err));
-            }
 
             await replyWithButtons(
                 sock,
@@ -646,11 +630,8 @@ Your P2PFather multi-chain crypto wallet is ready 🎉
 💳 *Wallet Address:*
 \`${updatedUser.wallet_address}\`
 
-🧪 *Testnet Balance Credited:*
-• *1,000.00 USDT* (BSC Testnet)
-• *0.05 BNB* (Gas fee)
-
-🔒 *Security Note:* Your wallet is protected by smart-contract escrow. You can deposit, trade, or withdraw anytime.
+Supported Networks: *BSC* & *Base* (USDT / USDC)
+🔒 *Security Note:* Your wallet is non-custodial and protected by on-chain smart-contract escrow. You can deposit, trade, or withdraw anytime.
 
 Select an option below to start trading 👇`,
                 [

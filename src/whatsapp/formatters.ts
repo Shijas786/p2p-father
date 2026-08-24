@@ -31,25 +31,22 @@ export function fmtWalletBalance(
     const address = user.wallet_address ?? "Not set";
 
     const labelMap: Record<string, string> = {
-        testnet_usdt: "USDT (🧪 BSC Testnet)",
-        testnet_bnb: "BNB (🧪 BSC Testnet Gas)",
-        vault_testnet_usdt: "USDT (🔒 Locked in Escrow Vault)",
         bsc_usdt: "USDT (BSC Mainnet)",
         usdt: "USDT (Base Mainnet)",
         bsc_usdc: "USDC (BSC Mainnet)",
         usdc: "USDC (Base Mainnet)",
-        bnb: "BNB (BSC Mainnet)",
-        eth: "ETH (Base Mainnet)",
+        bnb: "BNB (BSC Gas)",
+        eth: "ETH (Base Gas)",
         pol: "POL (Polygon Mainnet)",
-        vault_usdt: "USDT (Base Vault)",
-        vault_usdc: "USDC (Base Vault)",
-        vault_bsc_usdt: "USDT (BSC Vault)",
-        vault_bsc_usdc: "USDC (BSC Vault)",
+        vault_bsc_usdt: "USDT (🔒 BSC Escrow Vault)",
+        vault_bsc_usdc: "USDC (🔒 BSC Escrow Vault)",
+        vault_usdt: "USDT (🔒 Base Escrow Vault)",
+        vault_usdc: "USDC (🔒 Base Escrow Vault)",
     };
 
     const balanceLines = balances.length > 0
         ? balances.map((b) => `  • *${labelMap[b.token] || b.token.toUpperCase()}:* ${b.amount}`).join("\n")
-        : "  _No balance found. Free testnet USDT & BNB gas auto-credited on registration._";
+        : "  _No balance found. Deposit USDT or USDC to start trading._";
 
     return `💰 *YOUR P2PFATHER WALLET*
 
@@ -152,9 +149,9 @@ export function fmtMyAds(orders: Order[]): string {
         const shortId = o.id.slice(0, 8);
         const totalFiat = Math.round((o.amount || 0) * (o.rate || 0));
 
-        const chainLabel = o.chain === "bsc_testnet" ? "🧪 BSC Testnet" : (o.chain === "base_sepolia" ? "🧪 Base Sepolia" : (o.chain || "BSC").toUpperCase());
+        const chainLabel = (o.chain || "BSC").toUpperCase();
 
-        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / USDT | 🟢 ACTIVE
+        return `${i + 1}. *${o.type.toUpperCase()} ${o.token}* @ ₹${o.rate} / ${o.token || "USDT"} | 🟢 ACTIVE
    • Amount: ${o.amount} ${o.token} (Total: ₹${totalFiat.toLocaleString("en-IN")})
    • Chain: ${chainLabel} | Payment: ${(o.payment_methods ?? []).join(", ") || "UPI"}
    👉 Delete: \`/delete_${shortId}\``;

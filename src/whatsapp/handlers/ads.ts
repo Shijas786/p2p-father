@@ -99,8 +99,6 @@ Choose your trade direction below to view verified rates:
         orders.slice(0, 2).forEach((o: any, idx: number) => {
             const fname = o.users?.first_name && !/^WA_\d+$/.test(o.users.first_name) ? o.users.first_name : null;
             const trader = o.users?.username ? `@${o.users.username}` : (fname ?? "Verified Trader");
-            const isDemo = Boolean(o.source === "whatsapp" || o.chain?.includes("testnet") || o.users?.whatsapp_phone);
-            const demoTag = isDemo ? " (🧪 Demo)" : "";
             const trust  = o.users?.trust_score ?? 100;
             const pay    = (o.payment_methods ?? []).filter(Boolean).join("/") || "UPI/IMPS";
             const minL   = o.min_amount ? `₹${Number(o.min_amount).toLocaleString("en-IN")}` : "₹500";
@@ -108,8 +106,8 @@ Choose your trade direction below to view verified rates:
             const maxL   = `₹${Number(maxVal).toLocaleString("en-IN")}`;
 
             const numEmoji = idx === 0 ? "1️⃣" : "2️⃣";
-            adCardText += `${numEmoji} *₹${o.rate} / USDT* — ${trader}${demoTag}\n`;
-            adCardText += `   ⭐ Trust: *${trust}%* | Stock: *${o.amount} USDT*\n`;
+            adCardText += `${numEmoji} *₹${o.rate} / ${o.token || "USDT"}* — ${trader}\n`;
+            adCardText += `   ⭐ Trust: *${trust}%* | Stock: *${o.amount} ${o.token || "USDT"}*\n`;
             adCardText += `   💳 Limits: *${minL} – ${maxL}*\n`;
             adCardText += `   ⚡ Methods: *${pay}*\n\n`;
 
@@ -295,11 +293,12 @@ This ensures counterparties can send or receive fiat payments.`,
             }
             const type = text.includes("sell") ? "sell" : "buy";
 
-            // For SELL ads: show user their available vault balance on BSC Testnet as a heads-up.
+            // For SELL ads: show user their available vault balance on BSC as a heads-up.
             if (type === "sell" && user.wallet_address) {
                 try {
-                    const testnetUsdt = await escrow.getVaultBalance(user.wallet_address, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", "bsc_testnet").catch(() => "0");
-                    const vaultBal = parseFloat(testnetUsdt);
+                    const bscUsdtAddr = "0x55d398326f99059fF775485246999027B3197955";
+                    const bscVaultBalStr = await escrow.getVaultBalance(user.wallet_address, bscUsdtAddr, "bsc").catch(() => "0");
+                    const vaultBal = parseFloat(bscVaultBalStr);
 
                     if (vaultBal <= 0) {
                         await (db as any).clearWhatsappState(user.id);
@@ -308,11 +307,11 @@ This ensures counterparties can send or receive fiat payments.`,
                             jid,
                             `🔒 *SELL AD — VAULT BALANCE REQUIRED*
 
-To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault (BSC Testnet).
+To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault (BSC Mainnet).
 
-💰 *Your Vault Balance:* 0.00 USDT (BSC Testnet)
+💰 *Your Vault Balance:* 0.00 USDT (BSC Mainnet)
 
-Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
+Please deposit USDT to your wallet and lock it to the Vault first.`,
                             [
                                 { id: "/deposit",      label: "📥 Deposit USDT" },
                                 { id: "vault_deposit", label: "🔒 Lock to Vault" },
@@ -324,7 +323,7 @@ Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
                     await reply(
                         sock,
                         jid,
-                        `💰 *Your Vault Balance:* ${vaultBal.toFixed(2)} USDT (BSC Testnet)\n\n✅ *SELL Ad selected (🧪 BSC Testnet).*`,
+                        `💰 *Your Vault Balance:* ${vaultBal.toFixed(2)} USDT (BSC Mainnet)\n\n✅ *SELL Ad selected (BSC Mainnet).*`,
                         msg
                     );
                 } catch (_) {
@@ -334,14 +333,14 @@ Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
 
             draft.type  = type;
             draft.token = "USDT";
-            draft.chain = "bsc_testnet";
+            draft.chain = "bsc";
             draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             await reply(
                 sock,
                 jid,
-                `✅ *${type.toUpperCase()} USDT (🧪 BSC Testnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                `✅ *${type.toUpperCase()} USDT (BSC Mainnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
                 msg
             );
             return;
@@ -350,14 +349,14 @@ Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
         // ── Step 2: Token (fallback if reached) ───────────────────────────────
         case "TOKEN": {
             draft.token = "USDT";
-            draft.chain = "bsc_testnet";
+            draft.chain = "bsc";
             draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             await reply(
                 sock,
                 jid,
-                `✅ *USDT (🧪 BSC Testnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                `✅ *USDT (BSC Mainnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
                 msg
             );
             return;
@@ -394,12 +393,14 @@ Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
             // ── SELL AD: Hard vault balance gate (exact same logic as MiniApp) ──
             if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
                 try {
-                    const chain = draft.chain as any;
+                    const chain = (draft.chain || "bsc") as any;
                     let tokenAddress = env.USDT_ADDRESS;
-                    if (chain === "bsc" || chain === "bsc_testnet") {
-                        tokenAddress = chain === "bsc_testnet"
-                            ? "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd" // BSC Testnet USDT
-                            : "0x55d398326f99059fF775485246999027B3197955"; // BSC Mainnet USDT
+                    if (chain === "bsc") {
+                        tokenAddress = draft.token === "USDC"
+                            ? "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+                            : "0x55d398326f99059fF775485246999027B3197955";
+                    } else if (chain === "base") {
+                        tokenAddress = draft.token === "USDC" ? env.USDC_ADDRESS : env.USDT_ADDRESS;
                     }
 
                     const vaultStr  = await escrow.getVaultBalance(user.wallet_address, tokenAddress, chain);
@@ -414,15 +415,15 @@ Please deposit testnet USDT to your wallet and lock it to the Vault first.`,
                             jid,
                             `❌ *INSUFFICIENT VAULT BALANCE*
 
-You need *${amount} USDT* on ${draft.chain!.toUpperCase()} but only *${available.toFixed(2)} USDT* is available.
+You need *${amount} ${draft.token}* on ${draft.chain!.toUpperCase()} but only *${available.toFixed(2)} ${draft.token}* is available.
 
-💰 *Vault Balance:* ${vaultBal.toFixed(2)} USDT
-🔒 *Already Reserved by Other Ads:* ${reserved.toFixed(2)} USDT
-📊 *Available:* ${available.toFixed(2)} USDT
+💰 *Vault Balance:* ${vaultBal.toFixed(2)} ${draft.token}
+🔒 *Already Reserved by Other Ads:* ${reserved.toFixed(2)} ${draft.token}
+📊 *Available:* ${available.toFixed(2)} ${draft.token}
 
-Please deposit more USDT and lock it to your Vault before posting this ad.`,
+Please deposit more and lock it to your Vault before posting this ad.`,
                             [
-                                { id: "/deposit",      label: "📥 Deposit USDT" },
+                                { id: "/deposit",      label: `📥 Deposit ${draft.token}` },
                                 { id: "vault_deposit", label: "🔒 Lock to Vault" },
                                 { id: "/post",         label: "🔄 Try Again" },
                             ]
@@ -431,7 +432,6 @@ Please deposit more USDT and lock it to your Vault before posting this ad.`,
                     }
                 } catch (rpcErr: any) {
                     console.warn("[WA-AdPost] Vault balance check failed (RPC error), proceeding:", rpcErr?.message);
-                    // RPC temporarily down — allow through, the liquidity sync job will catch any discrepancy
                 }
             }
 
@@ -610,12 +610,14 @@ Where do you want to publish this ad? 👇`,
                 // Time may have passed since AMOUNT step — re-check in case user withdrew.
                 if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
                     try {
-                        const chain = draft.chain as any;
+                        const chain = (draft.chain || "bsc") as any;
                         let tokenAddress = env.USDT_ADDRESS;
-                        if (chain === "bsc" || chain === "bsc_testnet") {
-                            tokenAddress = chain === "bsc_testnet"
-                                ? "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd"
+                        if (chain === "bsc") {
+                            tokenAddress = draft.token === "USDC"
+                                ? "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
                                 : "0x55d398326f99059fF775485246999027B3197955";
+                        } else if (chain === "base") {
+                            tokenAddress = draft.token === "USDC" ? env.USDC_ADDRESS : env.USDT_ADDRESS;
                         }
                         const vaultStr  = await escrow.getVaultBalance(user.wallet_address, tokenAddress, chain);
                         const vaultBal  = parseFloat(vaultStr);

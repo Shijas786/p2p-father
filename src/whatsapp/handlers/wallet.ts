@@ -59,54 +59,14 @@ export async function handleWalletCommand(
         return;
     }
 
-    // ─── /faucet — Testnet USDT & BNB Faucet for Beta Testing ────────────────
+    // ─── /faucet ──────────────────────────────────────────────────────────────
     if (text === "/faucet" || text === "faucet" || text.includes("testnet faucet")) {
-        if (!user.wallet_address) {
-            await reply(sock, jid, "❌ No wallet address found. Please create a wallet first.", msg);
-            return;
-        }
-
-        await reply(sock, jid, "⏳ Minting 1,000.00 Testnet USDT + transferring 0.05 BNB Gas Fee to your wallet...", msg);
-
-        try {
-            const res = await wallet.dispenseAutoTestnetFaucet(user.wallet_address);
-
-            const supabase = db.getClient();
-            const cache = (user as any).predictions_cache || {};
-            const currentTestnetUsdt = (parseFloat(cache.testnet_usdt || "0") + 1000).toFixed(2);
-            const currentTestnetBnb = (parseFloat(cache.testnet_bnb || "0") + 0.05).toFixed(4);
-
-            const updatedCache = {
-                ...cache,
-                testnet_usdt: currentTestnetUsdt,
-                testnet_bnb: currentTestnetBnb
-            };
-
-            await supabase
-                .from("users")
-                .update({ predictions_cache: updatedCache } as any)
-                .eq("id", user.id);
-
-            await replyWithButtons(
-                sock,
-                jid,
-                `🎉 *TESTNET FAUCET DISPENSED!* 🧪
-
-💰 *Testnet USDT Balance:* ${res.usdt || currentTestnetUsdt} USDT
-⚡ *Testnet BNB Gas Balance:* ${res.bnb || currentTestnetBnb} BNB
-
-You can now post P2P Ads on *🧪 BSC Testnet* and test live trades with zero financial risk!
-
-Choose an option below to start testing 👇`,
-                [
-                    { id: "/post",  label: "➕ Post Testnet Ad" },
-                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
-                    { id: "/start", label: "🏠 Main Menu" },
-                ]
-            );
-        } catch (err: any) {
-            await reply(sock, jid, "❌ Failed to dispense testnet faucet. Please try again.", msg);
-        }
+        await reply(
+            sock,
+            jid,
+            `ℹ️ *P2PFather is connected to Mainnet (BSC & Base)*\n\nTo fund your non-custodial wallet, please use */deposit* to view your personal deposit address for USDT / USDC / BNB.`,
+            msg
+        );
         return;
     }
 
@@ -119,8 +79,6 @@ Choose an option below to start testing 👇`,
 
         try {
             const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${user.wallet_address}`;
-
-            // Send QR image first via Hypermeow
             await hypermeowClient.sendImage(
                 jid,
                 qrImageUrl,
@@ -133,7 +91,6 @@ Choose an option below to start testing 👇`,
                 { id: "vault_deposit", label: "🔒 Lock to Vault" },
                 { id: "/post",         label: "➕ Post New Ad" },
             ]);
-
             await new Promise((r) => setTimeout(r, 250));
 
             // Message 2: Universal Navigation Bar
@@ -152,28 +109,28 @@ Choose an option below to start testing 👇`,
     if (text.startsWith("/vault_deposit") || text === "vault_deposit") {
         const parts = text.split(/\s+/);
 
-        let testnetUsdt = "0.00", vaultUsdt = "0.00";
+        let walletUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
-                testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
+                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
         // If amount was provided in text command (e.g. /vault_deposit 100)
         if (parts.length >= 2 && !isNaN(parseFloat(parts[1]))) {
             const amount = parseFloat(parts[1]);
-            const chain = (parts[2] || "bsc_testnet").toLowerCase();
+            const chain = (parts[2] || "bsc").toLowerCase();
 
             await replyWithButtons(
                 sock,
                 jid,
                 `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
 • *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
-• *Top-Up Amount:* ${amount} USDT (BSC Testnet)
+• *Top-Up Amount:* ${amount} USDT (${chain.toUpperCase()})
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
@@ -193,7 +150,7 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             jid,
             `🔒 *VAULT TOP-UP*
 
-• *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
 • *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 
 Please reply to this message with the *USDT amount* you want to move into your Smart Contract Escrow Vault:
@@ -219,25 +176,25 @@ _(Example: 10 or 50 or 100)_`,
 
         await (db as any).clearWhatsappState(user.id);
 
-        let testnetUsdt = "0.00", vaultUsdt = "0.00";
+        let walletUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
-                testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
+                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
-        const chainKey = "bsc_testnet";
+        const chainKey = "bsc";
 
         await replyWithButtons(
             sock,
             jid,
             `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
 • *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
-• *Top-Up Amount:* ${amountStr} USDT (BSC Testnet)
+• *Top-Up Amount:* ${amountStr} USDT (BSC Mainnet)
 • *Target:* P2PFather Smart Contract Escrow Vault
 
 Tap below to confirm locking funds on-chain:`,
@@ -254,14 +211,14 @@ Tap below to confirm locking funds on-chain:`,
     if (text.startsWith("vdep_chain_")) {
         const parts = text.replace("vdep_chain_", "").split("_");
         const amountStr = parts[0] || "10";
-        const chainKey = (parts[1] || "bsc_testnet").toLowerCase();
+        const chainKey = (parts[1] || "bsc").toLowerCase();
 
-        let testnetUsdt = "0.00", vaultUsdt = "0.00";
+        let walletUsdt = "0.00", vaultUsdt = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
-                testnetUsdt = (parseFloat(bals.testnet_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_testnet_usdt || "0")).toFixed(2);
+                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
             }
         } catch (_) {}
 
@@ -270,7 +227,7 @@ Tap below to confirm locking funds on-chain:`,
             jid,
             `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${testnetUsdt} USDT (🧪 BSC Testnet)
+• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
 • *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
 • *Top-Up Amount:* ${amountStr} USDT (${chainKey.toUpperCase()})
 • *Target:* P2PFather Smart Contract Escrow Vault
@@ -289,8 +246,7 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
     if (text.startsWith("confirm_vault_dep_")) {
         const parts = text.replace("confirm_vault_dep_", "").split("_");
         const amountStr = parts[0] || "50";
-        let chainKey = (parts[1] || "bsc_testnet").toLowerCase();
-        if (chainKey === "bsc") chainKey = "bsc_testnet";
+        const chainKey = (parts[1] || "bsc").toLowerCase();
 
         try {
             await reply(sock, jid, "⏳ Locking funds into Smart Contract Vault... Please wait.", msg);
@@ -298,14 +254,11 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             const { wallet } = await import("../../services/wallet");
             const { env } = await import("../../config/env");
 
-            let tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-            if (chainKey === "bsc_testnet") {
-                const bal1 = await wallet.getTokenBalance(user.wallet_address!, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", "bsc_testnet" as any, 18).catch(() => "0");
-                if (parseFloat(bal1) >= parseFloat(amountStr)) {
-                    tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-                } else {
-                    tokenAddress = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
-                }
+            let tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            if (chainKey === "bsc") {
+                tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            } else if (chainKey === "base") {
+                tokenAddress = env.USDT_ADDRESS;
             } else if (chainKey === "polygon") {
                 tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
             }
@@ -316,11 +269,12 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             let newWalletBal = "0.00", newVaultBal = "0.00";
             try {
                 const freshBals = await wallet.getBalances(user.wallet_address!);
-                newWalletBal = (parseFloat(freshBals.testnet_usdt || "0")).toFixed(2);
-                newVaultBal = (parseFloat(freshBals.vault_testnet_usdt || "0")).toFixed(2);
+                newWalletBal = (parseFloat(freshBals.bsc_usdt || "0")).toFixed(2);
+                newVaultBal = (parseFloat(freshBals.vault_bsc_usdt || "0")).toFixed(2);
             } catch (_) {}
 
-            const explorerLink = `https://testnet.bscscan.com/tx/${txHash}`;
+            const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
+            const explorerLink = `${explorerBase}${txHash}`;
 
             await replyWithButtons(
                 sock,
@@ -359,12 +313,14 @@ Your Escrow Vault is ready for P2P trading! 🚀`,
                 `📤 *WITHDRAW / SEND CRYPTO*
 
 To withdraw, reply in this format:
-\`/withdraw <address> <amount> USDT <chain>\`
+\`/withdraw <address> <amount> <token> <chain>\`
 
 *Example:*
-\`/withdraw 0x742d35Cc6634... 50 USDT bsc_testnet\`
+\`/withdraw 0x742d35Cc6634... 50 USDT bsc\`
+\`/withdraw 0x742d35Cc6634... 25 USDC base\`
 
-Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
+Supported tokens: *USDT*, *USDC*
+Supported chains: *BSC* (\`bsc\`), *Base* (\`base\`)`,
                 [
                     { id: "/balance",      label: "💰 View Balance" },
                     { id: "/deposit",      label: "📥 Deposit USDT" },
@@ -386,7 +342,7 @@ Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
         const toAddress = parts[1];
         const amount    = parseFloat(parts[2]);
         const token     = (parts[3] || "USDT").toUpperCase();
-        const chain     = ((parts[4] || "bsc_testnet") as any).toLowerCase();
+        const chain     = ((parts[4] || "bsc") as any).toLowerCase();
 
         if (isNaN(amount) || amount <= 0) {
             await reply(sock, jid, "❌ Invalid amount. Please enter a positive number.", msg);
@@ -399,7 +355,8 @@ Supported chain for demo testing: BSC Testnet (\`bsc_testnet\`)`,
         let currentBalance = 0;
         try {
             const bals = await wallet.getBalances(user.wallet_address ?? "");
-            currentBalance = parseFloat((bals as any)[token] || "0");
+            const balKey = chain === "bsc" ? (token === "USDC" ? "bsc_usdc" : "bsc_usdt") : (token === "USDC" ? "usdc" : "usdt");
+            currentBalance = parseFloat((bals as any)[balKey] || "0");
         } catch (_) {}
 
         const available = Math.max(0, currentBalance - reserved);
@@ -423,7 +380,7 @@ To withdraw, please cancel or complete your active sell ads first.`,
             return;
         }
 
-        const gasCoin = (chain === "bsc" || chain === "bsc_testnet") ? "tBNB" : chain === "polygon" ? "POL" : "ETH";
+        const gasCoin = chain === "bsc" ? "BNB" : chain === "polygon" ? "POL" : "ETH";
 
         // Direct 1-tap confirmation step
         await replyWithButtons(
@@ -437,14 +394,14 @@ To withdraw, please cancel or complete your active sell ads first.`,
 
 Proceed to execute on-chain transfer?`,
             [
-                { id: `confirm_wd_${toAddress}_${amount}_${chain}`, label: "✅ Confirm Withdrawal" },
-                { id: "/balance",                                    label: "❌ Cancel" },
+                { id: `confirm_wd_${toAddress}_${amount}_${token}_${chain}`, label: "✅ Confirm Withdrawal" },
+                { id: "/balance",                                            label: "❌ Cancel" },
             ]
         );
         return;
     }
 
-    // ─── confirm_wd_<address>_<amount>_<chain> ────────────────────────────────
+    // ─── confirm_wd_<address>_<amount>_<token>_<chain> ────────────────────────
     if (text.startsWith("confirm_wd_")) {
         const raw = text.replace("confirm_wd_", "");
         const parts = raw.split("_");
@@ -452,19 +409,27 @@ Proceed to execute on-chain transfer?`,
         const toAddress = parts[0];
         const amountStr = parts[1] || "10";
         const withdrawAmount = parseFloat(amountStr);
-        let chainKey  = (parts[2] || "bsc_testnet").toLowerCase();
-        if (chainKey === "bsc") chainKey = "bsc_testnet";
+        let token = "USDT";
+        let chainKey = "bsc";
+
+        if (parts.length >= 4) {
+            token = (parts[2] || "USDT").toUpperCase();
+            chainKey = (parts[3] || "bsc").toLowerCase();
+        } else if (parts.length === 3) {
+            chainKey = (parts[2] || "bsc").toLowerCase();
+        }
 
         try {
             // Re-verify reserved funds lock
-            const reserved = await (db as any).getReservedAmount(user.id, "USDT", chainKey);
+            const reserved = await (db as any).getReservedAmount(user.id, token, chainKey);
             const { wallet } = await import("../../services/wallet");
             const bals = await wallet.getBalances(user.wallet_address ?? "");
-            const currentBal = parseFloat((bals as any)["USDT"] || "0");
+            const balKey = chainKey === "bsc" ? (token === "USDC" ? "bsc_usdc" : "bsc_usdt") : (token === "USDC" ? "usdc" : "usdt");
+            const currentBal = parseFloat((bals as any)[balKey] || "0");
             const available = Math.max(0, currentBal - reserved);
 
             if (withdrawAmount > available && reserved > 0) {
-                await reply(sock, jid, `❌ Withdrawal blocked: ${reserved} USDT is locked in active sell ads. Cancel your ads to release funds.`, msg);
+                await reply(sock, jid, `❌ Withdrawal blocked: ${reserved} ${token} is locked in active sell ads. Cancel your ads to release funds.`, msg);
                 return;
             }
 
@@ -472,10 +437,16 @@ Proceed to execute on-chain transfer?`,
 
             const { env } = await import("../../config/env");
 
-            let tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-            if (chainKey === "bsc_testnet") tokenAddress = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-            else if (chainKey === "bsc") tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
-            else if (chainKey === "polygon") tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+            let tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+            if (chainKey === "bsc") {
+                tokenAddress = token === "USDC"
+                    ? "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+                    : "0x55d398326f99059fF775485246999027B3197955";
+            } else if (chainKey === "base") {
+                tokenAddress = token === "USDC" ? env.USDC_ADDRESS : env.USDT_ADDRESS;
+            } else if (chainKey === "polygon") {
+                tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+            }
 
             const txHash = await wallet.sendToken(
                 user.wallet_index,
@@ -485,9 +456,9 @@ Proceed to execute on-chain transfer?`,
                 chainKey as any
             );
 
-            const explorerBase = chainKey === "bsc_testnet"
-                ? "https://testnet.bscscan.com/tx/"
-                : (chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/");
+            const explorerBase = chainKey === "bsc"
+                ? "https://bscscan.com/tx/"
+                : (chainKey === "polygon" ? "https://polygonscan.com/tx/" : "https://basescan.org/tx/");
 
             await replyWithButtons(
                 sock,
@@ -495,8 +466,8 @@ Proceed to execute on-chain transfer?`,
                 `🎉 *WITHDRAWAL SUCCESSFUL!*
 
 • *To:* \`${toAddress}\`
-• *Amount:* ${amountStr} USDT
-• *Chain:* BSC TESTNET
+• *Amount:* ${amountStr} ${token}
+• *Chain:* ${chainKey.toUpperCase()}
 • *Tx Hash:* \`${txHash}\`
 
 🔗 *Explorer Link:* ${explorerBase}${txHash}
@@ -510,7 +481,7 @@ Withdrawal confirmed on-chain! 🚀`,
             // Instantly cancel any sell ads that are now under-funded.
             const { escrow } = await import("../../services/escrow");
             const { cancelUnderfundedAds } = await import("../../services/jobs");
-            cancelUnderfundedAds(user.id, user.wallet_address!, "USDT", chainKey, escrow).catch(console.error);
+            cancelUnderfundedAds(user.id, user.wallet_address!, token, chainKey, escrow).catch(console.error);
         } catch (err: any) {
             await reply(sock, jid, `❌ Withdrawal failed: ${err?.message || err}`, msg);
         }
