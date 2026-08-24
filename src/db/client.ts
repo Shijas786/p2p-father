@@ -1172,15 +1172,19 @@ class Database {
                 updatesFromWa.completed_trades = waOnlyUser.completed_trades;
             }
 
+            // ── Delete / clear the orphaned WA-only user row FIRST to release unique constraints ──────
+            await db.from("whatsapp_states").delete().eq("user_id", waOnlyUser.id);
+            await db.from("users").update({
+                whatsapp_phone: null,
+                telegram_id: null,
+                wallet_index: null,
+                wallet_address: null,
+            }).eq("id", waOnlyUser.id);
+            await db.from("users").delete().eq("id", waOnlyUser.id);
+
             if (Object.keys(updatesFromWa).length > 0) {
                 await db.from("users").update(updatesFromWa).eq("id", targetUserId);
             }
-
-            // ── Delete the orphaned WA-only user row ──────────────────────────
-            await db.from("whatsapp_states").delete().eq("user_id", waOnlyUser.id);
-            // Clear any unique fields first to avoid constraint conflicts if delete fails
-            await db.from("users").update({ whatsapp_phone: null, telegram_id: null }).eq("id", waOnlyUser.id);
-            await db.from("users").delete().eq("id", waOnlyUser.id);
 
             console.log(`[LINK] Merged WA-only user ${waOnlyUser.id} into Telegram user ${targetUserId}`);
         }
@@ -1289,15 +1293,20 @@ class Database {
                 updatesFromTg.completed_trades = tgOnlyUser.completed_trades;
             }
 
+            // Clear old row first to avoid duplicate key constraint collisions on wallet_index/wallet_address/telegram_id
+            await db.from("whatsapp_states").delete().eq("user_id", tgOnlyUser.id);
+            await db.from("users").update({
+                telegram_id: null,
+                username: null,
+                wallet_index: null,
+                wallet_address: null,
+            }).eq("id", tgOnlyUser.id);
+            await db.from("users").delete().eq("id", tgOnlyUser.id);
+
+            // Now apply updates to targetUserId
             if (Object.keys(updatesFromTg).length > 0) {
                 await db.from("users").update(updatesFromTg).eq("id", targetUserId);
             }
-
-            // Unlink telegram_id from the old row first to avoid duplicate key constraint error!
-            await db.from("users").update({ telegram_id: null, username: null }).eq("id", tgOnlyUser.id);
-            // Delete orphaned TG-only user row
-            await db.from("whatsapp_states").delete().eq("user_id", tgOnlyUser.id);
-            await db.from("users").delete().eq("id", tgOnlyUser.id);
         }
 
         // Update target user with Telegram credentials
