@@ -26,6 +26,7 @@ import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
 import { Leaderboard } from './pages/Leaderboard';
 import { Rewards } from './pages/Rewards';
+import { WalletSwitcherModal } from './components/WalletSwitcherModal';
 import { ToastProvider } from './components/Toast';
 import { MaintenanceNotice } from './components/MaintenanceNotice';
 import { APP_VERSION } from './constants';
@@ -98,6 +99,7 @@ function AppInner() {
   const [walletMode, setWalletMode] = useState<'bot' | 'external' | null>(IS_DEV_MODE ? 'bot' : null);
   const [connecting, setConnecting] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [showWalletSwitcher, setShowWalletSwitcher] = useState(false);
 
   // Track if we've already tried to auto-login to external wallet
   // This prevents an infinite loop when the user explicitly clicks "Switch Wallet"
@@ -199,60 +201,7 @@ function AppInner() {
   }, [walletMode, isConnected, address, connector, savingAddress, walletChosen, user, refreshUser]);
 
   const handleSwitchWallet = async () => {
-    try {
-      console.log('[P2P] Toggling wallet. Current mode:', user?.wallet_type);
-
-      // 🧪 High-Priority Demo/Dev Override
-      if (IS_DEV_MODE) {
-        setConnecting(true);
-        setTimeout(() => {
-          const isCurrentlyExternal = user?.wallet_type === 'external';
-          const nextMode = isCurrentlyExternal ? 'bot' : 'external';
-          const nextAddr = isCurrentlyExternal
-            ? '0x1234567890abcdef1234567890abcdef12345678'  // Bot Demo
-            : '0xabcdef1234567890abcdef1234567890abcdef12'; // Ext Demo
-
-          setUser({ ...user, wallet_type: nextMode, wallet_address: nextAddr } as any);
-          setWalletMode(nextMode);
-          setConnecting(false);
-          console.log('[P2P] Demo Switch Completed:', nextMode);
-        }, 300);
-        return;
-      }
-
-      // ── Real API Logic (Production) ─────────────────────────────────────────
-      if (user?.wallet_type === 'external') {
-        setConnecting(true);
-        api.wallet.connectBot()
-          .then(() => refreshUser())
-          .then(() => {
-            setWalletMode('bot');
-            setConnecting(false);
-          })
-          .catch(err => {
-            console.error('[P2P] Switch failed:', err);
-            setConnecting(false);
-          });
-      } else {
-        setWalletMode('external');
-        if (isConnected && connector?.id === 'hotWallet') {
-          console.log('[P2P] Disconnecting hot wallet before opening external...');
-          disconnect();
-          await new Promise(resolve => setTimeout(resolve, 500)); // allow wagmi state to clear
-          await appKit.open();
-        } else if (isConnected && address && connector?.id !== 'hotWallet') {
-          setConnecting(true);
-          api.wallet.connectExternal(address)
-            .then(() => refreshUser())
-            .then(() => setConnecting(false))
-            .catch(() => setConnecting(false));
-        } else {
-          await appKit.open();
-        }
-      }
-    } catch (err) {
-      console.error('[P2P] Error toggling wallet:', err);
-    }
+    setShowWalletSwitcher(true);
   };
 
   const DeepLinkHandler = () => {
@@ -340,12 +289,8 @@ function AppInner() {
         onSelectExternal={async () => {
           setWalletMode('external');
           console.log('[P2P] Opening WalletConnect modal...');
-          // Open Reown/WalletConnect modal
-          // walletChosen will be set by the useEffect above after address is saved
           await appKit.open();
 
-          // Fallback: if wagmi already has a REAL external wallet connected
-          // (persisted session), trigger save. Guard against hotWallet address.
           setTimeout(() => {
             console.log('[P2P] After modal open, wagmi state:', { isConnected, address, connectorId: connector?.id });
             if (isConnected && address && connector?.id !== 'hotWallet') {
@@ -357,11 +302,17 @@ function AppInner() {
     );
   }
 
-
   return (
     <>
       <MaintenanceNotice user={user} />
       <DeepLinkHandler />
+      <WalletSwitcherModal
+        isOpen={showWalletSwitcher}
+        onClose={() => setShowWalletSwitcher(false)}
+        user={user}
+        onUserRefresh={refreshUser}
+        onSwitchMode={(mode) => setWalletMode(mode)}
+      />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home user={user} />} />

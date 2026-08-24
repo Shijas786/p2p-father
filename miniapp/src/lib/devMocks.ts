@@ -31,6 +31,19 @@ export const DEV_USER = {
     is_verified: true,
     is_admin: true,
     created_at: '2024-06-15T10:30:00Z',
+    predictions_cache: {
+        linked_wallets: {
+            telegram: {
+                wallet_index: 251,
+                wallet_address: '0xCc4DF4c4C31342086C53f2C82e46D42594D2CB24'
+            },
+            whatsapp: {
+                wallet_index: 1189,
+                wallet_address: '0x56FE7f6F3683CC02e9e744746012b35dc959bCB7'
+            }
+        }
+    },
+    whatsapp_phone: '919876543210'
 };
 
 // ─── Home page: ads (sell orders for "buy" tab, buy orders for "sell" tab) ───

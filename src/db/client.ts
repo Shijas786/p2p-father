@@ -1172,6 +1172,27 @@ class Database {
                 updatesFromWa.completed_trades = waOnlyUser.completed_trades;
             }
 
+            // 👝 Linked Wallets Registry: Store both TG and WA wallets so user can switch between them
+            const currentCache = (telegramUser as any)?.predictions_cache || {};
+            const linkedWallets = currentCache.linked_wallets || {};
+
+            if (telegramUser?.wallet_address && telegramUser?.wallet_index !== undefined) {
+                linkedWallets.telegram = {
+                    wallet_index: telegramUser.wallet_index,
+                    wallet_address: telegramUser.wallet_address,
+                };
+            }
+            if (waOnlyUser.wallet_address && waOnlyUser.wallet_index !== undefined) {
+                linkedWallets.whatsapp = {
+                    wallet_index: waOnlyUser.wallet_index,
+                    wallet_address: waOnlyUser.wallet_address,
+                };
+            }
+            updatesFromWa.predictions_cache = {
+                ...currentCache,
+                linked_wallets: linkedWallets
+            };
+
             // ── Delete / clear the orphaned WA-only user row FIRST to release unique constraints ──────
             await db.from("whatsapp_states").delete().eq("user_id", waOnlyUser.id);
             await db.from("users").update({
@@ -1270,6 +1291,27 @@ class Database {
                 updatesFromTg.wallet_index = tgOnlyUser.wallet_index;
                 updatesFromTg.wallet_type = tgOnlyUser.wallet_type || "bot";
             }
+
+            // 👝 Linked Wallets Registry: Store both TG and WA wallets so user can switch between them
+            const currentCache = (targetUser as any)?.predictions_cache || {};
+            const linkedWallets = currentCache.linked_wallets || {};
+
+            if (tgOnlyUser.wallet_address && tgOnlyUser.wallet_index !== undefined) {
+                linkedWallets.telegram = {
+                    wallet_index: tgOnlyUser.wallet_index,
+                    wallet_address: tgOnlyUser.wallet_address,
+                };
+            }
+            if (targetUser?.wallet_address && targetUser?.wallet_index !== undefined) {
+                linkedWallets.whatsapp = {
+                    wallet_index: targetUser.wallet_index,
+                    wallet_address: targetUser.wallet_address,
+                };
+            }
+            updatesFromTg.predictions_cache = {
+                ...currentCache,
+                linked_wallets: linkedWallets
+            };
 
             // 🛡️ KYC & Identity Inheritance: Carry over verified KYC status if Telegram user completed it
             if (tgOnlyUser.is_verified || tgOnlyUser.kyc_status === 'approved' || tgOnlyUser.kyc_status === 'verified') {

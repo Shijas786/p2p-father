@@ -886,6 +886,48 @@ router.post("/wallet/bot", async (req: Request, res: Response) => {
     }
 });
 
+router.post("/wallet/switch-bot", async (req: Request, res: Response) => {
+    try {
+        const tgUser = req.telegramUser;
+        if (!tgUser) return res.status(401).json({ error: "Unauthorized" });
+
+        const tgAny = tgUser as any;
+        let user: any = null;
+        if (tgAny.whatsapp_phone) user = await db.getUserByWhatsappPhone(tgAny.whatsapp_phone);
+        if (!user && tgUser.id) user = await db.getUserByTelegramId(tgUser.id);
+        if (!user && tgAny.id) user = await db.getUserById(tgAny.id);
+
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const { target } = req.body; // 'telegram' | 'whatsapp'
+        if (!target || !['telegram', 'whatsapp'].includes(target)) {
+            return res.status(400).json({ error: "Target must be 'telegram' or 'whatsapp'" });
+        }
+
+        const cache = user.predictions_cache || {};
+        const linkedWallets = cache.linked_wallets || {};
+        const targetWallet = linkedWallets[target];
+
+        if (!targetWallet || targetWallet.wallet_index === undefined) {
+            return res.status(400).json({ error: `No linked ${target} wallet found` });
+        }
+
+        const derived = wallet.deriveWallet(targetWallet.wallet_index);
+
+        await db.updateUser(user.id, {
+            wallet_index: targetWallet.wallet_index,
+            wallet_address: derived.address,
+            wallet_type: 'bot',
+        } as any);
+
+        console.log(`[MINIAPP-WALLET] 🔄 Switched active bot wallet to ${target} (${derived.address}, index=${targetWallet.wallet_index}) for user ${user.id}`);
+        res.json({ success: true, target, address: derived.address, wallet_index: targetWallet.wallet_index });
+    } catch (err: any) {
+        console.error("[MINIAPP-WALLET] Switch bot error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ═══ VAULT OPERATIONS (Custodial Wallets) ═══
 
 router.post("/wallet/vault/deposit", async (req: Request, res: Response) => {

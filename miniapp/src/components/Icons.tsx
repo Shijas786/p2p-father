@@ -590,3 +590,30 @@ export function IconChainRonin({ size = defaults.size, className }: IconProps) {
         </svg>
     );
 }
+
+export function IconTelegram({ size = 16, className }: { size?: number; className?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+            <circle cx="12" cy="12" r="12" fill="#2AABEE" />
+            <path d="M17.5 7.5L5.5 12.1L9.2 13.5L14.7 9.8L10.5 14.8L10.3 18L12.7 15.8L15.6 18L17.5 7.5Z" fill="white" />
+        </svg>
+    );
+}
+
+export function IconWhatsApp({ size = 16, className }: { size?: number; className?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+            <circle cx="12" cy="12" r="12" fill="#25D366" />
+            <path d="M12.04 4.5C7.9 4.5 4.53 7.87 4.53 12.01C4.53 13.34 4.88 14.62 5.53 15.76L4.5 19.5L8.38 18.49C9.48 19.08 10.72 19.4 12.04 19.4C16.18 19.4 19.55 16.03 19.55 11.89C19.55 7.75 16.18 4.5 12.04 4.5ZM15.48 13.9C15.29 13.8 14.37 13.35 14.2 13.29C14.03 13.23 13.91 13.19 13.79 13.38C13.66 13.57 13.3 13.99 13.19 14.12C13.08 14.24 12.97 14.26 12.78 14.17C12.59 14.07 11.99 13.87 11.28 13.24C10.73 12.75 10.36 12.14 10.25 11.95C10.14 11.76 10.24 11.66 10.33 11.56C10.41 11.48 10.52 11.34 10.61 11.23C10.7 11.12 10.73 11.04 10.79 10.92C10.86 10.79 10.83 10.68 10.78 10.58C10.73 10.49 10.36 9.57 10.2 9.2C10.05 8.83 9.9 8.88 9.79 8.88C9.68 8.87 9.55 8.87 9.43 8.87C9.3 8.87 9.09 8.92 8.92 9.11C8.75 9.3 8.26 9.76 8.26 10.68C8.26 11.6 8.94 12.49 9.03 12.62C9.13 12.74 10.36 14.64 12.24 15.45C12.69 15.65 13.04 15.76 13.31 15.85C13.76 15.99 14.17 15.98 14.49 15.93C14.85 15.87 15.6 15.47 15.76 15.03C15.91 14.58 15.91 14.21 15.86 14.13C15.81 14.04 15.68 13.99 15.48 13.9Z" fill="white" />
+        </svg>
+    );
+}
+
+export function IconExternalWeb3({ size = 16, className }: { size?: number; className?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+            <circle cx="12" cy="12" r="12" fill="#8B5CF6" />
+            <path d="M16.5 13.5V14.25C16.5 15.075 15.825 15.75 15 15.75H9C8.175 15.75 7.5 15.075 7.5 14.25V9.75C7.5 8.925 8.175 8.25 9 8.25H15C15.825 8.25 16.5 8.925 16.5 9.75V10.5H12C11.175 10.5 10.5 11.175 10.5 12C10.5 12.825 11.175 13.5 12 13.5H16.5ZM12 12.75H17.25V11.25H12C11.5875 11.25 11.25 11.5875 11.25 12C11.25 12.4125 11.5875 12.75 12 12.75ZM15 12C15 12.4125 14.6625 12.75 14.25 12.75C13.8375 12.75 13.5 12.4125 13.5 12C13.5 11.5875 13.8375 11.25 14.25 11.25C14.6625 11.25 15 11.5875 15 12Z" fill="white" />
+        </svg>
+    );
+}

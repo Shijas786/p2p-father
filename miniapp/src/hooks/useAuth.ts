@@ -11,6 +11,7 @@ export interface AppUser {
     photo_url?: string | null;
     wallet_address: string | null;
     wallet_type: 'bot' | 'external';
+    wallet_index?: number;
     upi_id: string | null;
     phone_number?: string | null;
     bank_account_number?: string | null;
@@ -28,8 +29,15 @@ export interface AppUser {
     trade_count: number;
     completed_trades: number;
     trust_score: number;
-    points?: number;
-    tier: string;
+    predictions_cache?: {
+        linked_wallets?: {
+            telegram?: { wallet_index: number; wallet_address: string };
+            whatsapp?: { wallet_index: number; wallet_address: string };
+        };
+        last_ip?: string;
+        last_seen_at?: string;
+    };
+    whatsapp_phone?: string | null;
     is_verified: boolean;
     is_admin: boolean;
     created_at?: string;

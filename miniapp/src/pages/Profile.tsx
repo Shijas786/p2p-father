@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic, isTelegramEnvironment } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
+import { IconTelegram, IconWhatsApp, IconExternalWeb3 } from '../components/Icons';
 import './Profile.css';
 
 interface Props {
@@ -704,26 +705,34 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
                 {/* 5. Connected Wallet Info */}
                 <div className="prof-wallet-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                        <img 
-                            src={`/icons for trade/profile icons/${user?.wallet_type === 'external' ? 'external-wallet.svg?v=1' : 'connected-wallet.svg?v=4'}`} 
-                            alt="" 
-                            style={{ width: '28px', height: '28px', marginRight: '16px' }} 
-                        />
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {user?.wallet_type === 'external' ? (
+                                <IconExternalWeb3 size={28} />
+                            ) : (user?.predictions_cache?.linked_wallets?.whatsapp &&
+                                 user.wallet_address?.toLowerCase() === user.predictions_cache.linked_wallets.whatsapp.wallet_address.toLowerCase()) ? (
+                                <IconWhatsApp size={28} />
+                            ) : (
+                                <IconTelegram size={28} />
+                            )}
+                        </div>
                         <div className="prof-bank-info">
-                            <span className="prof-payment-value" style={{ display: 'block', marginBottom: '4px', color: '#eaecef' }}>
-                                {user?.wallet_type === 'external' ? 'WalletConnect' : 'Bot Wallet'}
+                            <span className="prof-payment-value" style={{ display: 'block', marginBottom: '2px', color: '#eaecef' }}>
+                                {user?.wallet_type === 'external'
+                                    ? 'External Web3 Wallet'
+                                    : (user?.predictions_cache?.linked_wallets?.whatsapp &&
+                                       user.wallet_address?.toLowerCase() === user.predictions_cache.linked_wallets.whatsapp.wallet_address.toLowerCase())
+                                    ? 'WhatsApp Bot Wallet'
+                                    : 'Telegram Bot Wallet'}
                             </span>
                             <span className="prof-bank-sub" style={{ fontSize: '11px' }}>
-                                Connected Wallet • {user?.wallet_address ? `${user.wallet_address.slice(0, 8)}...${user.wallet_address.slice(-6)}` : 'Internal'}
+                                Active • {user?.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'Internal'}
                             </span>
                         </div>
                     </div>
                     <button className="prof-switch-btn" onClick={() => {
-                        if (window.confirm('Switch wallet?')) {
-                            haptic('medium');
-                            onSwitchWallet();
-                        }
+                        haptic('light');
+                        onSwitchWallet();
                     }}>
                         Switch
                     </button>

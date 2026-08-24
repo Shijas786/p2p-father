@@ -150,6 +150,61 @@
   color: var(--text-secondary);
 }
 
+.wallet-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px 4px 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.wallet-switch-pill.tg {
+  background: rgba(42, 171, 238, 0.12);
+  border: 1px solid rgba(42, 171, 238, 0.35);
+  color: #38bdf8;
+}
+
+.wallet-switch-pill.tg:hover {
+  background: rgba(42, 171, 238, 0.22);
+  border-color: rgba(42, 171, 238, 0.55);
+}
+
+.wallet-switch-pill.wa {
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  color: #4ade80;
+}
+
+.wallet-switch-pill.wa:hover {
+  background: rgba(37, 211, 102, 0.22);
+  border-color: rgba(37, 211, 102, 0.55);
+}
+
+.wallet-switch-pill.ext {
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.38);
+  color: #c084fc;
+}
+
+.wallet-switch-pill.ext:hover {
+  background: rgba(139, 92, 246, 0.24);
+  border-color: rgba(139, 92, 246, 0.58);
+}
+
+.wallet-switch-pill:hover {
+  transform: translateY(-1px);
+}
+
+.wallet-switch-pill:active {
+  transform: scale(0.96);
+}
+
 /* ════ Actions Grid ════ */
 .actions-row {
   display: grid;

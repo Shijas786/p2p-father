@@ -112,6 +112,11 @@ export const api = {
                 body: JSON.stringify({ address }),
             }),
         connectBot: () => request<{ success: boolean; address: string }>('/wallet/bot', { method: 'POST' }),
+        switchBot: (target: 'telegram' | 'whatsapp') =>
+            request<{ success: boolean; target: string; address: string; wallet_index: number }>('/wallet/switch-bot', {
+                method: 'POST',
+                body: JSON.stringify({ target }),
+            }),
         depositToVault: (amount: number, token: string, chain: string) =>
             request<{ txHash: string }>('/wallet/vault/deposit', {
                 method: 'POST',
