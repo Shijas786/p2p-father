@@ -418,14 +418,28 @@ Your WhatsApp number (+${senderPhone}) is now linked to your P2PFather account!
                 msg
             );
         } else {
-            await reply(
+            // Check if null was returned due to active escrow trades (safety block)
+            // vs invalid/expired code — we need a heuristic here.
+            // We re-check: if code exists in states but linking blocked → active trades.
+            // For simplicity and safety, show a combined message that covers both cases.
+            await replyWithButtons(
                 sock,
                 jid,
-                `❌ *Invalid or Expired Code*
+                `⚠️ *ACCOUNT LINK FAILED*
 
-The link code you entered is invalid or has expired.
-Please get a fresh code from your MiniApp Profile or Telegram Bot.`,
-                msg
+This could be because:
+
+1️⃣ *Active Trade Blocking Link* — You have a trade currently in escrow or awaiting payment. For your fund safety, account linking is blocked while trades are active.
+
+   ➡️ Complete or dispute your active trades first, then try linking again.
+
+2️⃣ *Expired Code* — The 6-digit code is invalid or has expired (codes last 10 minutes).
+
+   ➡️ Get a fresh code from your MiniApp Profile or Telegram Bot.`,
+                [
+                    { id: "/trades",  label: "📜 View My Active Trades" },
+                    { id: "/start",   label: "🏠 Main Menu" },
+                ]
             );
         }
         return;

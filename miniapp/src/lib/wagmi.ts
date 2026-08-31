@@ -14,12 +14,19 @@ const metadata = {
 import { hotWalletConnector } from '../utils/hotWalletConnector';
 
 import { http } from 'wagmi';
+import { Attribution } from 'ox/erc8021';
+
+export const BASE_BUILDER_CODE = 'bc_9vdy4xyw';
+export const BASE_BUILDER_DATA_SUFFIX = Attribution.toDataSuffix({
+    codes: [BASE_BUILDER_CODE],
+});
 
 // Create Wagmi adapter for Reown
 export const wagmiAdapter = new WagmiAdapter({
     projectId,
     networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     connectors: [hotWalletConnector()],
+    dataSuffix: BASE_BUILDER_DATA_SUFFIX,
     transports: {
         [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         [base.id]: http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),

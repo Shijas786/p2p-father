@@ -2942,6 +2942,30 @@ bot.on("callback_query:data", async (ctx) => {
                 return;
             }
 
+            const seller = await db.getUserById(order.user_id);
+            const isWaMerchant = Boolean(
+                order.source === "whatsapp" ||
+                seller?.preferred_channel === "whatsapp" ||
+                (seller?.whatsapp_phone && !seller?.telegram_id)
+            );
+
+            if (isWaMerchant) {
+                const waBotPhone = env.WA_BOT_NUMBER || "917012751478";
+                const keyboard = new InlineKeyboard()
+                    .url("💬 Trade via WhatsApp Bot", `https://wa.me/${waBotPhone}?text=trade_ad_${order.id}`)
+                    .row()
+                    .url("🌐 Open Web Dashboard", "https://p2pfather.com/webapp")
+                    .row()
+                    .text("🔙 Back to Market", "market");
+
+                await ctx.editMessageText(
+                    `💬 *WhatsApp Merchant Ad*\n\nThis ad was posted by a verified WhatsApp merchant (${escapeMarkdown(seller?.first_name || "Merchant")}).\n\nTo trade safely with this merchant, please open the trade in WhatsApp or on the Web Dashboard:`,
+                    { parse_mode: "Markdown", reply_markup: keyboard }
+                );
+                await ctx.answerCallbackQuery();
+                return;
+            }
+
             const totalAvailable = order.amount - (order.filled_amount || 0);
             const sellable = totalAvailable * 0.995;
             const buyerFee = totalAvailable * 0.005;

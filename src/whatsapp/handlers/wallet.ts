@@ -284,7 +284,7 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
 • *Amount Locked:* ${amountStr} USDT
 • *Wallet Balance Remaining:* ${newWalletBal} USDT
 • *Vault Balance Locked:* ${newVaultBal} USDT (🔒 Escrow Vault)
-• *Chain:* BSC TESTNET
+• *Chain:* ${chainKey.toUpperCase()}
 • *Tx Hash:* \`${txHash}\`
 
 🔗 *BscScan Explorer Link:*

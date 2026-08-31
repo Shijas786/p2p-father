@@ -227,7 +227,7 @@ class Database {
         const db = this.getClient();
         let query = db
             .from("orders")
-            .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, photo_url, hide_group_handle)")
+            .select("*, users!inner(username, first_name, trust_score, completed_trades, wallet_address, telegram_id, whatsapp_phone, photo_url, hide_group_handle)")
             .eq("status", "active")
             // ── Always exclude testnet chains from live orderbook ──────────────
             .not("chain", "in", '("bsc_testnet","base_sepolia")')
@@ -271,6 +271,7 @@ class Database {
                 trust_score: d.users?.trust_score,
                 wallet_address: d.users?.wallet_address,
                 telegram_id: d.users?.telegram_id,
+                whatsapp_phone: d.users?.whatsapp_phone,
                 photo_url: isHidden ? undefined : d.users?.photo_url,
             };
         }) as Order[];
@@ -280,7 +281,7 @@ class Database {
         const db = this.getClient();
         const { data, error } = await db
             .from("orders")
-            .select("*, users!inner(username, first_name, trust_score, upi_id, photo_url)")
+            .select("*, users!inner(username, first_name, trust_score, upi_id, photo_url, telegram_id, whatsapp_phone)")
             .eq("id", orderId)
             .single();
         if (error) {
@@ -294,6 +295,8 @@ class Database {
             trust_score: data.users?.trust_score,
             upi_id: data.users?.upi_id,
             photo_url: data.users?.photo_url,
+            telegram_id: data.users?.telegram_id,
+            whatsapp_phone: data.users?.whatsapp_phone,
         } as Order;
     }
 
@@ -1039,15 +1042,6 @@ class Database {
         if (error || !updated) throw new Error("Failed to assign wallet");
         console.log(`[DB] Assigned wallet ${walletAddress} (index=${nextIndex}) to WA user ${userId}`);
 
-        // 🚀 Automatic Faucet: Mint 1,000 Demo USDT + 0.05 tBNB Gas Fee on BSC Testnet
-        if (walletAddress) {
-            import("../services/wallet").then(({ wallet }) => {
-                wallet.dispenseAutoTestnetFaucet(walletAddress!).catch(err => {
-                    console.error("[DB AutoFaucet Error]:", err?.message || err);
-                });
-            }).catch(() => {});
-        }
-
         return updated as User;
     }
 
@@ -1127,6 +1121,23 @@ class Database {
             .maybeSingle();
 
         if (waOnlyUser && waOnlyUser.id !== targetUserId) {
+            // 🛡️ Safety Gate: Block merge if WA user has active escrow trades.
+            // The smart contract escrow is tied to waOnlyUser's wallet private key.
+            // Merging (and nulling) that wallet row while funds are locked would make
+            // the relayer unable to release → permanent fund lock.
+            const { data: activeWaTrades } = await db
+                .from("trades")
+                .select("id")
+                .or(`buyer_id.eq.${waOnlyUser.id},seller_id.eq.${waOnlyUser.id}`)
+                .in("status", ["matched", "in_escrow", "fiat_sent", "disputed"])
+                .limit(1);
+
+            if (activeWaTrades && activeWaTrades.length > 0) {
+                console.warn(`[LINK] Blocking WA→TG merge for ${waOnlyUser.id}: active escrow trades exist.`);
+                // Return null to signal the link failed — caller should show appropriate error
+                return null;
+            }
+
             // ── MERGE: Transfer all related records from WA account → Telegram account ──
             try { await db.from("orders").update({ user_id: targetUserId }).eq("user_id", waOnlyUser.id); } catch (_) {}
             try { await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", waOnlyUser.id); } catch (_) {}
@@ -1273,6 +1284,19 @@ class Database {
             .maybeSingle();
 
         if (tgOnlyUser && tgOnlyUser.id !== targetUserId) {
+            // 🛡️ Safety Gate: Block merge if TG user has active escrow trades.
+            const { data: activeTgTrades } = await db
+                .from("trades")
+                .select("id")
+                .or(`buyer_id.eq.${tgOnlyUser.id},seller_id.eq.${tgOnlyUser.id}`)
+                .in("status", ["matched", "in_escrow", "fiat_sent", "disputed"])
+                .limit(1);
+
+            if (activeTgTrades && activeTgTrades.length > 0) {
+                console.warn(`[LINK] Blocking TG→Target merge for ${tgOnlyUser.id}: active escrow trades exist.`);
+                return null;
+            }
+
             // MERGE: Transfer trades, orders, and payment proofs from TG account → Target account
             try { await db.from("orders").update({ user_id: targetUserId }).eq("user_id", tgOnlyUser.id); } catch (_) {}
             try { await db.from("trades").update({ buyer_id: targetUserId }).eq("buyer_id", tgOnlyUser.id); } catch (_) {}
@@ -1453,11 +1477,33 @@ class Database {
 
     async cancelTrade(tradeId: string, userId: string): Promise<void> {
         const db = this.getClient();
+        // 🛡️ Status gate: only allow cancellation before fiat has been sent.
+        // Once a buyer has marked payment, cancellation must go through admin dispute.
+        const { data: trade } = await db
+            .from("trades")
+            .select("id, status, buyer_id, seller_id")
+            .eq("id", tradeId)
+            .maybeSingle();
+
+        if (!trade) throw new Error("Trade not found.");
+
+        const isParty = trade.buyer_id === userId || trade.seller_id === userId;
+        if (!isParty) throw new Error("You are not a party to this trade.");
+
+        const cancellableStatuses = ["matched", "in_escrow"];
+        if (!cancellableStatuses.includes(trade.status)) {
+            throw new Error(
+                trade.status === "fiat_sent"
+                    ? "Cannot cancel after buyer has marked payment. Open a dispute instead."
+                    : `Cannot cancel a trade in '${trade.status}' status.`
+            );
+        }
+
         const { error } = await db
             .from("trades")
             .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
             .eq("id", tradeId)
-            .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
+            .in("status", cancellableStatuses);
         if (error) throw new Error(error.message);
     }
 

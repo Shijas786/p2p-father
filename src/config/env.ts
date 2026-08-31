@@ -57,6 +57,10 @@ const envSchema = z.object({
     REDIS_URL: z.string().default(""),
     BROADCAST_CHANNEL_ID: z.string().optional(),
 
+    // Base Developer & Builder Code
+    BASE_DEV_API_KEY: z.string().default(""),
+    BASE_BUILDER_CODE: z.string().default("bc_9vdy4xyw"),
+
 
     // App Config
     FEE_BPS: z.string().default("50"),

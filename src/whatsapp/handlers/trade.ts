@@ -47,6 +47,36 @@ export async function handleTradeCommand(
             return;
         }
 
+        // 🛡️ Isolation Gate: WhatsApp users cannot trade Telegram-only seller ads
+        const seller = await db.getUserById(order.user_id);
+        const isWaCompatible = Boolean(
+            order.source === "whatsapp" ||
+            seller?.whatsapp_phone ||
+            seller?.preferred_channel === "whatsapp"
+        );
+
+        if (!isWaCompatible) {
+            await replyWithButtons(
+                sock,
+                jid,
+                `✈️ *TELEGRAM TRADER AD*
+
+This ad was created by a Telegram merchant.
+
+Telegram merchants manage their trades directly inside the *Telegram MiniApp*.
+
+To trade this ad:
+• Open the P2PFather MiniApp on Telegram
+• Or browse WhatsApp-verified ads below!`,
+                [
+                    { id: "/ads buy", label: "📊 Browse WhatsApp Ads" },
+                    { id: "https://p2pfather.com/webapp", url: "https://p2pfather.com/webapp", label: "🌐 Web Dashboard" },
+                    { id: "/start", label: "🏠 Main Menu" },
+                ]
+            );
+            return;
+        }
+
         // Determine buyer/seller roles
         const isBuyer = order.type === "sell";
         const totalFiat = Math.round((order.amount || 0) * (order.rate || 0));
@@ -89,6 +119,19 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
 
         if (order.user_id === user.id) {
             await reply(sock, jid, "❌ You cannot trade with your own ad.", msg);
+            return;
+        }
+
+        // 🛡️ Isolation Gate: WhatsApp users cannot trade Telegram-only seller ads
+        const sellerUser = await db.getUserById(order.user_id);
+        const isWaCompatible = Boolean(
+            order.source === "whatsapp" ||
+            sellerUser?.whatsapp_phone ||
+            sellerUser?.preferred_channel === "whatsapp"
+        );
+
+        if (!isWaCompatible) {
+            await reply(sock, jid, "❌ This ad belongs to a Telegram merchant and must be traded via the Telegram MiniApp.", msg);
             return;
         }
 
@@ -162,8 +205,12 @@ _Tap Confirm to lock escrow on-chain and proceed:_`,
         }
 
         try {
-            // 1. Atomically Mark Order as Filled (Prevent Race Conditions)
-            await db.updateOrder(order.id, { status: "filled", filled_amount: order.amount });
+            // 1. Atomically Fill Order (OCC — prevents two buyers matching same ad simultaneously)
+            const filled = await db.fillOrder(order.id, order.amount);
+            if (!filled) {
+                await reply(sock, jid, "❌ This ad was just taken by another buyer. Try a different one.", msg);
+                return;
+            }
             
             await reply(sock, jid, "⏳ Locking crypto in smart contract escrow... Please wait.", msg);
 
@@ -313,6 +360,16 @@ ${sellerPayDetails}
             return;
         }
 
+        // 🛡️ Status guard: payment can only be marked when trade is in_escrow
+        if (trade.status !== "in_escrow") {
+            if (trade.status === "fiat_sent") {
+                await reply(sock, jid, "⚠️ You already marked this payment as sent. Wait for the seller to confirm release.", msg);
+            } else {
+                await reply(sock, jid, `⚠️ Cannot mark payment for a trade in *${trade.status.toUpperCase()}* status.`, msg);
+            }
+            return;
+        }
+
         try {
             await db.updateTrade(tradeId, {
                 status: "fiat_sent",
@@ -379,6 +436,13 @@ The seller has been notified to check their bank account/UPI.`,
             return;
         }
 
+        // 🛡️ Status guard: seller can only release when fiat has been marked sent (or still in escrow as an early release)
+        const releasableStatuses = ["in_escrow", "fiat_sent"];
+        if (!releasableStatuses.includes(trade.status)) {
+            await reply(sock, jid, `⚠️ Cannot release funds for a trade in *${trade.status.toUpperCase()}* status.`, msg);
+            return;
+        }
+
         try {
             await reply(sock, jid, "⏳ Releasing funds on-chain... Please wait.", msg);
 
@@ -393,7 +457,19 @@ The seller has been notified to check their bank account/UPI.`,
                 }
             }
 
-            await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: txHash });
+            // Atomic status transition — prevents double-release if seller taps twice
+            const released = await db.updateTradeStatusAtomic(
+                tradeId,
+                ["in_escrow", "fiat_sent"],
+                "completed",
+                { escrow_tx_hash: txHash }
+            );
+
+            if (!released) {
+                // Already completed by another request — safe no-op
+                await reply(sock, jid, "✅ Trade has already been completed.", msg);
+                return;
+            }
 
             const chain = (trade.chain || "base").toLowerCase();
             const explorerBase = chain === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
@@ -405,6 +481,12 @@ The seller has been notified to check their bank account/UPI.`,
             }
 
             await reply(sock, jid, completionText, msg);
+
+            // Update trust scores, trade counts, volume & leaderboard points (mirrors TG bot)
+            await Promise.all([
+                db.completeUserTrade(trade.seller_id, true, trade.amount, trade.buyer_id),
+                db.completeUserTrade(trade.buyer_id,  true, trade.amount, trade.seller_id),
+            ]);
 
             // Notify buyer with TX Link
             const buyer = await db.getUserById(trade.buyer_id);
@@ -504,14 +586,24 @@ The seller has been notified to check their bank account/UPI.`,
         return;
     }
 
-    // ─── /cancel_<tradeId> ────────────────────────────────────────────────────
+    // ─── /cancel_<tradeId> ────────────────────────────────────────────
     if (text.startsWith("/cancel_")) {
         const tradeId = text.replace("/cancel_", "").trim();
         try {
             await db.cancelTrade(tradeId, user.id);
-            await reply(sock, jid, "❌ Trade cancelled successfully.", msg);
-        } catch (err) {
-            await reply(sock, jid, "❌ Cannot cancel this trade. Contact support.", msg);
+            await reply(sock, jid, "✅ Trade cancelled successfully.", msg);
+        } catch (err: any) {
+            const errMsg = err?.message || "";
+            if (errMsg.includes("fiat_sent") || errMsg.includes("Cannot cancel")) {
+                await replyWithButtons(
+                    sock, jid,
+                    `⚠️ *CANNOT CANCEL*\n\n${errMsg}\n\nUse the Dispute option if payment was not received.`,
+                    [{ id: `/dispute_${tradeId}`, label: "⚠️ Open Dispute" }],
+                    msg as any
+                );
+            } else {
+                await reply(sock, jid, `❌ ${errMsg || "Cannot cancel this trade. Contact support."}`, msg);
+            }
         }
         return;
     }

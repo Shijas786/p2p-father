@@ -71,18 +71,30 @@ Choose your trade direction below to view verified rates:
         // When user wants to "BUY USDT", they look for sellers (order.type === 'sell' or all active ads)
         // When user wants to "SELL USDT", they look for buyers (order.type === 'buy' or all active ads)
         const orderType = isSpecificBuy ? "sell" : "buy";
-        let orders = await db.getActiveOrders(orderType, "USDT", 4);
+        let rawOrders = await db.getActiveOrders(orderType, "USDT", 20);
 
-        // Fallback: if no ads for that specific direction, show any active ads
+        // Filter: WhatsApp users should only browse WhatsApp-accessible ads
+        let orders = rawOrders.filter((o: any) =>
+            o.source === "whatsapp" ||
+            Boolean(o.whatsapp_phone || o.users?.whatsapp_phone) ||
+            o.preferred_channel === "whatsapp"
+        );
+
+        // Fallback: if no ads for that specific direction, show any active WA ads
         if (orders.length === 0) {
-            orders = await db.getActiveOrders(undefined, "USDT", 4);
+            const allRaw = await db.getActiveOrders(undefined, "USDT", 20);
+            orders = allRaw.filter((o: any) =>
+                o.source === "whatsapp" ||
+                Boolean(o.whatsapp_phone || o.users?.whatsapp_phone) ||
+                o.preferred_channel === "whatsapp"
+            );
         }
 
         if (orders.length === 0) {
             await replyWithButtons(
                 sock,
                 jid,
-                `📊 *No active ${isSpecificBuy ? "BUY" : "SELL"} ads right now.*\n\nBe the first to create an ad and start trading!`,
+                `📊 *No active WhatsApp ${isSpecificBuy ? "BUY" : "SELL"} ads right now.*\n\nBe the first WhatsApp merchant to create an ad and start trading!`,
                 [
                     { id: "/post", label: "➕ Post New Ad" },
                     { id: "/ads",  label: "📊 Other Ads" },
