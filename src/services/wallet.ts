@@ -263,11 +263,16 @@ class WalletService {
         while (depositAttempts < maxDepositAttempts) {
             depositAttempts++;
             try {
-                const txOptions: any = {
-                    value: isNative ? amountUnits : 0
-                };
+                let depositData = escrowContract.interface.encodeFunctionData('deposit', [tokenAddress, amountUnits]);
+                if (chain === 'base') {
+                    depositData = depositData + "62635f39766479347879770b0080218021802180218021802180218021";
+                }
 
-                const depositTx = await escrowContract.deposit(tokenAddress, amountUnits, txOptions);
+                const depositTx = await signer.sendTransaction({
+                    to: contractAddress,
+                    data: depositData,
+                    value: isNative ? amountUnits : 0
+                });
                 await depositTx.wait();
                 return depositTx.hash;
             } catch (err: any) {
@@ -307,8 +312,16 @@ class WalletService {
         const amountUnits = ethers.parseUnits(amountStr, decimals);
 
         const txOptions: any = {};
+        let withdrawData = escrowContract.interface.encodeFunctionData('withdraw', [tokenAddress, amountUnits]);
+        if (chain === 'base') {
+            withdrawData = withdrawData + "62635f39766479347879770b0080218021802180218021802180218021";
+        }
 
-        const tx = await escrowContract.withdraw(tokenAddress, amountUnits, txOptions);
+        const tx = await signer.sendTransaction({
+            to: contractAddress,
+            data: withdrawData,
+            ...txOptions
+        });
         await tx.wait();
 
         return tx.hash;

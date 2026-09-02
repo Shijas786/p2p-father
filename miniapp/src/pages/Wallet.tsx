@@ -32,7 +32,7 @@ import {
 } from '../components/Icons';
 import { useAccount, useWriteContract, useConfig, useReadContract, useSwitchChain, useChainId, useBalance } from 'wagmi';
 import { parseUnits, formatUnits, maxUint256 } from 'viem';
-import { appKit } from '../lib/wagmi';
+import { appKit, BASE_BUILDER_DATA_SUFFIX } from '../lib/wagmi';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '../lib/contracts';
 import { bsc, base } from 'wagmi/chains';
@@ -339,7 +339,8 @@ export function Wallet({ user }: Props) {
                 functionName: 'approve',
                 args: [vaultEscrowAddress as `0x${string}`, maxUint256],
                 gasPrice,
-                gas: isBsc ? 100000n : undefined
+                gas: isBsc ? 100000n : undefined,
+                dataSuffix: (vaultChain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
             });
             await waitForTransactionReceipt(config, { hash: approveHash });
 
@@ -415,7 +416,8 @@ export function Wallet({ user }: Props) {
                         args: [vaultTokenAddress as `0x${string}`, parsedAmount],
                         gasPrice,
                         gas: isBsc ? 500000n : undefined,
-                        value: isNativeVault ? parsedAmount : undefined
+                        value: isNativeVault ? parsedAmount : undefined,
+                        dataSuffix: (vaultChain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
                     });
                     await waitForTransactionReceipt(config, { hash: depositHash });
                 } else {
@@ -427,7 +429,8 @@ export function Wallet({ user }: Props) {
                         functionName: 'withdraw',
                         args: [vaultTokenAddress as `0x${string}`, parsedAmount],
                         gasPrice: undefined,
-                        gas: isBsc ? 500000n : undefined
+                        gas: isBsc ? 500000n : undefined,
+                        dataSuffix: (vaultChain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
                     });
                     await waitForTransactionReceipt(config, { hash: txHash });
                 }

@@ -6,7 +6,7 @@ import { parseUnits, formatUnits, maxUint256 } from 'viem';
 import { api } from '../lib/api';
 import { haptic } from '../lib/telegram';
 import { CONTRACTS, ESCROW_ABI, ERC20_ABI } from '../lib/contracts';
-import { wagmiConfig, appKit } from '../lib/wagmi';
+import { wagmiConfig, appKit, BASE_BUILDER_DATA_SUFFIX } from '../lib/wagmi';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
 import { useBalance } from 'wagmi';
@@ -306,7 +306,8 @@ export function CreateOrder() {
                 functionName: 'approve',
                 args: [currentEscrow as `0x${string}`, maxUint256],
                 gasPrice,
-                gas: isBsc ? 100000n : undefined
+                gas: isBsc ? 100000n : undefined,
+                dataSuffix: (chain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
             });
             console.log('Approval Sent:', hash);
             await waitForTransactionReceipt(wagmiConfig, { hash });
@@ -386,7 +387,8 @@ export function CreateOrder() {
                         args: [tokenAddress as `0x${string}`, amountUnits],
                         value: isNative ? amountUnits : undefined,
                         gasPrice,
-                        gas: isBsc ? 500000n : undefined
+                        gas: isBsc ? 500000n : undefined,
+                        dataSuffix: (chain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
                     });
                     console.log('Deposit Sent:', hash);
                     await waitForTransactionReceipt(wagmiConfig, { hash });

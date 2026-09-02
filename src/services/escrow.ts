@@ -70,7 +70,25 @@ const ESCROW_ABI = [
 
 type Chain = 'base' | 'bsc' | 'bsc_testnet' | 'base_sepolia';
 
-class EscrowService {
+// Base Builder Code ERC-8021 Suffix for on-chain attribution
+const BASE_BUILDER_SUFFIX = "62635f39766479347879770b0080218021802180218021802180218021";
+
+export class EscrowService {
+    /**
+     * Helper to encode contract calls and append the Base Builder Code suffix on Base network
+     */
+    private async sendContractTx(contract: ethers.Contract, fnName: string, args: any[], chain: Chain, txOptions: any = {}) {
+        let data = contract.interface.encodeFunctionData(fnName, args);
+        if (chain === 'base') {
+            data = data + BASE_BUILDER_SUFFIX;
+        }
+        const runner = contract.runner as ethers.Signer;
+        return await runner.sendTransaction({
+            to: contract.target,
+            data,
+            ...txOptions
+        });
+    }
     private providers: Record<string, ethers.Provider | null> = {};
     private relayers: Record<string, ethers.Wallet | null> = {};
 
@@ -214,12 +232,11 @@ class EscrowService {
                 }
 
                 console.log(`[ESCROW] Submitting createTradeByRelayer on ${chain} (Attempt ${attempt + 1}/${maxAttempts})...`);
-                const tx = await contract.createTradeByRelayer(
-                    seller,
-                    buyer,
-                    token,
-                    amountUnits,
-                    duration,
+                const tx = await this.sendContractTx(
+                    contract,
+                    "createTradeByRelayer",
+                    [seller, buyer, token, amountUnits, duration],
+                    chain,
                     txOptions
                 );
 
@@ -334,7 +351,7 @@ class EscrowService {
                     txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
-                const tx = await contract.release(tradeId, txOptions);
+                const tx = await this.sendContractTx(contract, "release", [tradeId], chain, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Released: ${tx.hash}`);
                 return tx.hash;
@@ -381,7 +398,7 @@ class EscrowService {
                     txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
-                const tx = await contract.markFiatSent(tradeId, txOptions);
+                const tx = await this.sendContractTx(contract, "markFiatSent", [tradeId], chain, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Marked paid on-chain: ${tx.hash}`);
                 return tx.hash;
@@ -428,7 +445,7 @@ class EscrowService {
                     txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
-                const tx = await contract.refund(tradeId, txOptions);
+                const tx = await this.sendContractTx(contract, "refund", [tradeId], chain, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Refunded: ${tx.hash}`);
                 return tx.hash;
@@ -475,7 +492,7 @@ class EscrowService {
                     txOptions.gasPrice = ethers.parseUnits("0.06", "gwei");
                 }
 
-                const tx = await contract.raiseDispute(tradeId, reason, txOptions);
+                const tx = await this.sendContractTx(contract, "raiseDispute", [tradeId, reason], chain, txOptions);
                 await tx.wait();
                 console.log(`[ESCROW] Dispute raised: ${tx.hash}`);
                 return tx.hash;

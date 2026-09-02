@@ -7,7 +7,7 @@ import { haptic } from '../lib/telegram';
 import { sounds } from '../lib/sounds';
 import { CONTRACTS, ERC20_ABI } from '../lib/contracts';
 import { copyToClipboard, formatError } from '../lib/utils';
-import { appKit } from '../lib/wagmi';
+import { appKit, BASE_BUILDER_DATA_SUFFIX } from '../lib/wagmi';
 import { useToast } from '../components/Toast';
 import { TraderProfile } from '../components/TraderProfile';
 import { CompactStats } from '../components/CompactStats';
@@ -414,7 +414,8 @@ export function TradeDetail({ user }: Props) {
                 functionName: 'approve',
                 args: [escrowAddress, maxUint256],
                 gasPrice,
-                gas: isBsc ? 100000n : undefined
+                gas: isBsc ? 100000n : undefined,
+                dataSuffix: (tradeChain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
             });
             setApproveTxHash(hash);
             console.log('Approve TX:', hash);
@@ -477,7 +478,8 @@ export function TradeDetail({ user }: Props) {
                 ],
                 gasPrice,
                 gas: isBsc ? 500000n : undefined,
-                value: isNative ? (tradeAmountBigInt as bigint) : 0n
+                value: isNative ? (tradeAmountBigInt as bigint) : 0n,
+                dataSuffix: (tradeChain === 'base' ? BASE_BUILDER_DATA_SUFFIX : undefined) as any
             });
             setLockTxHash(hash);
             console.log('Lock TX:', hash);
