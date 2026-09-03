@@ -56,17 +56,17 @@ export function hotWalletConnector() {
         
         // Forward all other requests to a public RPC
         const rpcUrls: Record<number, string> = {
-          1: 'https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          56: 'https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          137: 'https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          42161: 'https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          10: 'https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          43114: 'https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          59144: 'https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          534352: 'https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-          8453: 'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'
+          1: 'https://ethereum-rpc.publicnode.com',
+          56: 'https://bsc-dataseed.binance.org',
+          137: 'https://polygon.publicnode.com',
+          42161: 'https://arb1.arbitrum.io/rpc',
+          10: 'https://mainnet.optimism.io',
+          43114: 'https://api.avax.network/ext/bc/C/rpc',
+          59144: 'https://rpc.linea.build',
+          534352: 'https://rpc.scroll.io',
+          8453: 'https://mainnet.base.org'
         };
-        const rpcUrl = rpcUrls[currentChainId] || 'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER';
+        const rpcUrl = rpcUrls[currentChainId] || 'https://mainnet.base.org';
         
         try {
             const response = await fetch(rpcUrl, {

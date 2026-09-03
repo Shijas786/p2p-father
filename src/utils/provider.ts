@@ -6,20 +6,32 @@ const ALCHEMY_KEY_2 = "qMlL6xWpv9OsGOolPeTtR"; // Full multi-chain enabled
 const ALCHEMY_KEY_3 = "alch_REDACTED"; // BSC, Base, Eth enabled
 
 const BASE_RPCS = [
+    "https://mainnet.base.org",
+    "https://base-rpc.publicnode.com",
     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
     `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
-    "https://base-rpc.publicnode.com",
-    "https://mainnet.base.org",
 ].filter(Boolean);
 
 const BSC_RPCS = [
+    "https://bsc-dataseed.binance.org",
+    "https://bsc.publicnode.com",
+    "https://bsc-dataseed1.defibit.io",
     `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
     `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
-    "https://bsc-dataseed.binance.org",
-    "https://bsc-dataseed1.defibit.io",
-    "https://bsc.publicnode.com",
+].filter(Boolean);
+
+const POLYGON_RPCS = [
+    "https://polygon.publicnode.com",
+    "https://polygon-bor-rpc.publicnode.com",
+    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+].filter(Boolean);
+
+const MAINNET_RPCS = [
+    "https://ethereum-rpc.publicnode.com",
+    "https://eth.llamarpc.com",
+    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
 ].filter(Boolean);
 
 const BSC_TESTNET_RPCS = [
@@ -39,6 +51,8 @@ export function getRpcList(chain: string = 'base'): string[] {
     if (chain === 'bsc') return BSC_RPCS;
     if (chain === 'bsc_testnet') return BSC_TESTNET_RPCS;
     if (chain === 'base_sepolia') return BASE_SEPOLIA_RPCS;
+    if (chain === 'polygon') return POLYGON_RPCS;
+    if (chain === 'mainnet') return MAINNET_RPCS;
     return BASE_RPCS;
 }
 
@@ -46,6 +60,8 @@ export function getChainId(chain: string = 'base'): number {
     if (chain === 'bsc') return 56;
     if (chain === 'bsc_testnet') return 97;
     if (chain === 'base_sepolia') return 84532;
+    if (chain === 'polygon') return 137;
+    if (chain === 'mainnet') return 1;
     return 8453;
 }
 
