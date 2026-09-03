@@ -54,38 +54,96 @@ export function hotWalletConnector() {
           return res.txHash;
         }
         
-        // Forward all other requests to a public RPC
-        const rpcUrls: Record<number, string> = {
-          1: 'https://ethereum-rpc.publicnode.com',
-          56: 'https://bsc-dataseed.binance.org',
-          137: 'https://polygon.publicnode.com',
-          42161: 'https://arb1.arbitrum.io/rpc',
-          10: 'https://mainnet.optimism.io',
-          43114: 'https://api.avax.network/ext/bc/C/rpc',
-          59144: 'https://rpc.linea.build',
-          534352: 'https://rpc.scroll.io',
-          8453: 'https://mainnet.base.org'
+        // Forward all other requests to multi-tier RPC with fallback:
+        // Tier 1: New Alchemy -> Tier 2: Recent Alchemy -> Tier 3: Official public nodes
+        const rpcListByChain: Record<number, string[]> = {
+          1: [
+            'https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://ethereum-rpc.publicnode.com'
+          ],
+          56: [
+            'https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://bsc-dataseed.binance.org',
+            'https://bsc.publicnode.com'
+          ],
+          137: [
+            'https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://polygon.publicnode.com'
+          ],
+          42161: [
+            'https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://arb1.arbitrum.io/rpc'
+          ],
+          10: [
+            'https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://mainnet.optimism.io'
+          ],
+          43114: [
+            'https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://api.avax.network/ext/bc/C/rpc'
+          ],
+          59144: [
+            'https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://rpc.linea.build'
+          ],
+          534352: [
+            'https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://rpc.scroll.io'
+          ],
+          8453: [
+            'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            'https://mainnet.base.org',
+            'https://base-rpc.publicnode.com'
+          ]
         };
-        const rpcUrl = rpcUrls[currentChainId] || 'https://mainnet.base.org';
-        
-        try {
-            const response = await fetch(rpcUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    id: 1,
-                    method,
-                    params
-                })
+
+        const candidates = rpcListByChain[currentChainId] || [
+          'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+          'https://mainnet.base.org'
+        ];
+
+        let lastErr: any;
+        for (const url of candidates) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method,
+                params
+              })
             });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} from ${url}`);
+            }
+
             const data = await response.json();
             if (data.error) throw new Error(data.error.message);
             return data.result;
-        } catch (e: any) {
-            console.error("[HotWallet] RPC fallback error", e);
-            throw e;
+          } catch (err) {
+            lastErr = err;
+            // Failover to next candidate in array
+          }
         }
+        console.error("[HotWallet] All candidate RPCs failed:", lastErr);
+        throw lastErr;
       }
     };
 

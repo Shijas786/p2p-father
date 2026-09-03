@@ -1,37 +1,40 @@
 import { ethers, JsonRpcProvider, Network } from "ethers";
 import { env } from "../config/env";
 
-const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER"; // Full multi-chain enabled
-const ALCHEMY_KEY_2 = "qMlL6xWpv9OsGOolPeTtR"; // Full multi-chain enabled
-const ALCHEMY_KEY_3 = "alch_REDACTED"; // BSC, Base, Eth enabled
-
-const BASE_RPCS = [
-    "https://mainnet.base.org",
-    "https://base-rpc.publicnode.com",
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
-].filter(Boolean);
+const ALCHEMY_KEY_NEW = "ALCHEMY_API_KEY_PLACEHOLDER"; // Primary 1 (New Account)
+const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER"; // Fallback 1 (Recent Account)
+const ALCHEMY_KEY_2 = "qMlL6xWpv9OsGOolPeTtR"; // Fallback 2
+const ALCHEMY_KEY_3 = "alch_REDACTED"; // Fallback 3
 
 const BSC_RPCS = [
+    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
+    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
     "https://bsc-dataseed.binance.org",
     "https://bsc.publicnode.com",
     "https://bsc-dataseed1.defibit.io",
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_3}`,
+].filter(Boolean);
+
+const BASE_RPCS = [
+    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
+    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
+    "https://mainnet.base.org",
+    "https://base-rpc.publicnode.com",
 ].filter(Boolean);
 
 const POLYGON_RPCS = [
+    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
+    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     "https://polygon.publicnode.com",
     "https://polygon-bor-rpc.publicnode.com",
-    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
 ].filter(Boolean);
 
 const MAINNET_RPCS = [
+    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
+    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
     "https://ethereum-rpc.publicnode.com",
     "https://eth.llamarpc.com",
-    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
 ].filter(Boolean);
 
 const BSC_TESTNET_RPCS = [

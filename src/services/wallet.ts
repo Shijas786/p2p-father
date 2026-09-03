@@ -34,8 +34,8 @@ class WalletService {
     };
     private masterNode: ethers.HDNodeWallet | null = null;
 
-    private getProvider(chain: Chain = 'base'): ethers.Provider {
-        return getFastProvider(chain);
+    private getProvider(chain: Chain = 'base', rpcIndex: number = 0): ethers.Provider {
+        return getFastProvider(chain, rpcIndex);
     }
 
     private getMasterNode(): ethers.HDNodeWallet {
@@ -86,9 +86,6 @@ class WalletService {
 
         const baseProvider = this.getProvider('base');
         const bscProvider = this.getProvider('bsc');
-        const polProvider = this.getProvider('polygon');
-        const bscTestnetProvider = this.getProvider('bsc_testnet' as any);
-
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
         const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
         const testnetUsdtAddr1 = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
@@ -103,23 +100,23 @@ class WalletService {
             vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt,
             testnetBnbBal, testnetUsdtBal1, testnetUsdtBal2, vaultTestnetUsdt
         ] = await Promise.all([
-            withTimeout(baseProvider.getBalance(address), 3000, 0n),
-            withTimeout(this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6), 3000, "0.0"),
-            withTimeout(this.getTokenBalance(address, env.USDT_ADDRESS, 'base', 6), 3000, "0.0"),
-            withTimeout(bscProvider.getBalance(address), 3000, 0n),
-            withTimeout(this.getTokenBalance(address, bscUsdc, 'bsc', 18), 3000, "0.0"),
-            withTimeout(this.getTokenBalance(address, bscUsdt, 'bsc', 18), 3000, "0.0"),
-            withTimeout(polProvider.getBalance(address), 3000, 0n),
-            withTimeout(this.getTokenBalance(address, pusdAddress, 'polygon', 18), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, env.USDC_ADDRESS, 'base'), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, env.USDT_ADDRESS, 'base'), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc'), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, bscUsdc, 'bsc'), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, bscUsdt, 'bsc'), 3000, "0.0"),
-            withTimeout(bscTestnetProvider.getBalance(address), 3000, 0n),
-            withTimeout(this.getTokenBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any, 18), 3000, "0.0"),
-            withTimeout(this.getTokenBalance(address, testnetUsdtAddr2, 'bsc_testnet' as any, 18), 3000, "0.0"),
-            withTimeout(this.getVaultBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any), 3000, "0.0")
+            this.getNativeBalance(address, 'base'),
+            this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6),
+            this.getTokenBalance(address, env.USDT_ADDRESS, 'base', 6),
+            this.getNativeBalance(address, 'bsc'),
+            this.getTokenBalance(address, bscUsdc, 'bsc', 18),
+            this.getTokenBalance(address, bscUsdt, 'bsc', 18),
+            this.getNativeBalance(address, 'polygon'),
+            this.getTokenBalance(address, pusdAddress, 'polygon', 18),
+            this.getVaultBalance(address, env.USDC_ADDRESS, 'base'),
+            this.getVaultBalance(address, env.USDT_ADDRESS, 'base'),
+            this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc'),
+            this.getVaultBalance(address, bscUsdc, 'bsc'),
+            this.getVaultBalance(address, bscUsdt, 'bsc'),
+            this.getNativeBalance(address, 'bsc_testnet' as any),
+            this.getTokenBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any, 18),
+            this.getTokenBalance(address, testnetUsdtAddr2, 'bsc_testnet' as any, 18),
+            this.getVaultBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any)
         ]);
 
         const combinedTestnetUsdt = (parseFloat(testnetUsdtBal1 || "0") + parseFloat(testnetUsdtBal2 || "0")).toFixed(2);
@@ -127,15 +124,15 @@ class WalletService {
         return {
             address,
             testnet_usdt: combinedTestnetUsdt,
-            testnet_bnb: parseFloat(ethers.formatEther(testnetBnbBal)).toFixed(4),
+            testnet_bnb: testnetBnbBal || "0.0000",
             vault_testnet_usdt: vaultTestnetUsdt,
-            eth: ethers.formatEther(ethBal),
+            eth: ethBal,
             usdc: usdcBal,
             usdt: usdtBal,
-            bnb: ethers.formatEther(bnbBal),
+            bnb: bnbBal,
             bsc_usdc: bscUsdcBal,
             bsc_usdt: bscUsdtBal,
-            pol: ethers.formatEther(polBal),
+            pol: polBal,
             pusd: pusdBal,
             vault_usdc: vaultBaseUsdc,
             vault_usdt: vaultBaseUsdt,
@@ -145,47 +142,59 @@ class WalletService {
         };
     }
 
+    async getNativeBalance(address: string, chain: Chain = 'base'): Promise<string> {
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const provider = this.getProvider(chain, attempt);
+                const balance = await withTimeout(provider.getBalance(address), 2500, null);
+                if (balance !== null) {
+                    return ethers.formatEther(balance);
+                }
+            } catch (e) {
+                // try next RPC
+            }
+        }
+        return "0.0";
+    }
+
     async getTokenBalance(address: string, tokenAddress: string, chain: Chain = 'base', knownDecimals?: number): Promise<string> {
         if (tokenAddress === "0x0000000000000000000000000000000000000000") {
-            const provider = this.getProvider(chain);
-            const balance = await provider.getBalance(address);
-            return ethers.formatEther(balance);
+            return this.getNativeBalance(address, chain);
         }
-        const provider = this.getProvider(chain);
-        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-        try {
-            if (knownDecimals !== undefined) {
-                const balance = await contract.balanceOf(address);
-                return ethers.formatUnits(balance, knownDecimals);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const provider = this.getProvider(chain, attempt);
+                const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+                const dec = knownDecimals !== undefined ? knownDecimals : (chain === 'base' ? 6 : 18);
+                const balance = await withTimeout(contract.balanceOf(address) as Promise<bigint>, 2500, null);
+                if (balance !== null) {
+                    return ethers.formatUnits(balance, dec);
+                }
+            } catch (e) {
+                // try next RPC
             }
-            const [balance, decimals] = await Promise.all([
-                contract.balanceOf(address),
-                contract.decimals()
-            ]);
-            return ethers.formatUnits(balance, decimals);
-        } catch (e: any) {
-            console.warn(`[Wallet] Token balance fetch warning for ${tokenAddress} on ${chain}:`, e?.shortMessage || e?.message || e);
-            return "0.0";
         }
+        return "0.0";
     }
 
     async getVaultBalance(address: string, tokenAddress: string, chain: Chain = 'base'): Promise<string> {
-        const provider = this.getProvider(chain);
         const contractAddress = this.getContractAddress(chain);
         if (!contractAddress) return "0.0";
 
-        const contract = new ethers.Contract(contractAddress, ESCROW_ABI, provider);
-        try {
-            const balance = await contract.balances(address, tokenAddress);
-            let decimals = 18;
-            if (tokenAddress !== "0x0000000000000000000000000000000000000000") {
-                const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-                decimals = await tokenContract.decimals();
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const provider = this.getProvider(chain, attempt);
+                const contract = new ethers.Contract(contractAddress, ESCROW_ABI, provider);
+                const balance = await withTimeout(contract.balances(address, tokenAddress) as Promise<bigint>, 2500, null);
+                if (balance !== null) {
+                    let decimals = (chain === 'base' && tokenAddress !== "0x0000000000000000000000000000000000000000") ? 6 : 18;
+                    return ethers.formatUnits(balance, decimals);
+                }
+            } catch (e) {
+                // try next RPC
             }
-            return ethers.formatUnits(balance, decimals);
-        } catch (e) {
-            return "0.0";
         }
+        return "0.0";
     }
 
     // ═══════════════════════════════════════

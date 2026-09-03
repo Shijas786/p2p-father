@@ -29,48 +29,57 @@ export const wagmiAdapter = new WagmiAdapter({
     dataSuffix: BASE_BUILDER_DATA_SUFFIX,
     transports: {
         [mainnet.id]: fallback([
+            http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://ethereum-rpc.publicnode.com'),
             http('https://eth.llamarpc.com'),
-            http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [base.id]: fallback([
+            http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://mainnet.base.org'),
             http('https://base-rpc.publicnode.com'),
-            http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [bsc.id]: fallback([
+            http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://bsc-dataseed.binance.org'),
             http('https://bsc.publicnode.com'),
             http('https://bsc-dataseed1.defibit.io'),
-            http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [polygon.id]: fallback([
+            http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://polygon.publicnode.com'),
             http('https://polygon-bor-rpc.publicnode.com'),
-            http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [arbitrum.id]: fallback([
+            http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://arb1.arbitrum.io/rpc'),
             http('https://arbitrum.publicnode.com'),
-            http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [optimism.id]: fallback([
+            http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://mainnet.optimism.io'),
             http('https://optimism.publicnode.com'),
-            http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [avalanche.id]: fallback([
+            http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
             http('https://api.avax.network/ext/bc/C/rpc'),
             http('https://avalanche.publicnode.com'),
-            http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
         ]),
         [linea.id]: fallback([
-            http('https://rpc.linea.build'),
             http('https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://rpc.linea.build'),
         ]),
         [scroll.id]: fallback([
-            http('https://rpc.scroll.io'),
             http('https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
+            http('https://rpc.scroll.io'),
         ]),
     }
 });
