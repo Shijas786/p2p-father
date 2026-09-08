@@ -24,6 +24,7 @@ import { bot } from "../bot";
 import { redis } from "../services/redis";
 import { feeCashbackService } from "../services/feeCashbackService";
 import { IpTrackerService } from "../services/ip-tracker";
+import { checkRateLimit } from "../services/rateLimiter";
 
 // Multer for in-memory file uploads (max 5MB)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -45,6 +46,31 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 
 // ── Web Trade Room Token Helper (HMAC-SHA256) ──────────────────────────
 const TRADE_TOKEN_SECRET = process.env.JWT_SECRET || env.TELEGRAM_BOT_TOKEN || "p2pfather_trade_secret_key";
+
+// ── WhatsApp Web Auth Token Secret (HMAC-SHA256 signed, Bug #1 fix) ─────
+const WA_AUTH_SECRET = process.env.WA_AUTH_SECRET || env.TELEGRAM_BOT_TOKEN + "_wa_web_auth";
+
+/** Generate a signed WA web-auth token (replaces plain 'wa_auth' magic string) */
+export function generateWaAuthToken(tgUserObj: object, authDate: number): string {
+    const payload = JSON.stringify(tgUserObj) + ":" + authDate;
+    const sig = crypto.createHmac("sha256", WA_AUTH_SECRET).update(payload).digest("hex");
+    return `wa_signed_${sig}`;
+}
+
+/** Verify a signed WA web-auth token — returns true only if signature matches */
+export function verifyWaAuthToken(tgUserObj: object, authDate: number, token: string): boolean {
+    if (!token || !token.startsWith("wa_signed_")) return false;
+    const sig = token.slice("wa_signed_".length);
+    const payload = JSON.stringify(tgUserObj) + ":" + authDate;
+    const expectedSig = crypto.createHmac("sha256", WA_AUTH_SECRET).update(payload).digest("hex");
+    try {
+        return crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expectedSig, "hex"));
+    } catch { return false; }
+}
+
+// ── Distributed Redis-backed rate limiter (imported from rateLimiter.ts) ────
+// checkRateLimit is async and uses Redis INCR/EXPIRE for distributed correctness.
+// Falls back to in-process Map automatically if Redis is unavailable.
 
 export function generateTradeToken(tradeId: string, userId: string): string {
     const exp = Date.now() + 7 * 24 * 3600 * 1000; // 7 days valid duration
@@ -110,8 +136,22 @@ function escapeHTML(str: string): string {
 async function notifyTradeUpdate(userId: string, message: string) {
     try {
         const user = await db.getUserById(userId);
-        if (user && user.telegram_id) {
-            await bot.api.sendMessage(user.telegram_id, message, { parse_mode: "HTML" });
+        if (!user) return;
+        if (user.telegram_id) {
+            try {
+                await bot.api.sendMessage(user.telegram_id, message, { parse_mode: "HTML" });
+            } catch (tgErr) {
+                console.error("[NOTIFY] TG send failed:", tgErr);
+            }
+        }
+        if (user.whatsapp_phone) {
+            try {
+                const { hypermeowClient } = await import("../whatsapp/hypermeowClient");
+                const cleanText = message.replace(/<[^>]+>/g, "").trim();
+                await hypermeowClient.sendText(`${user.whatsapp_phone}@s.whatsapp.net`, cleanText);
+            } catch (waErr) {
+                console.error("[NOTIFY] WA send failed:", waErr);
+            }
         }
     } catch (err) {
         console.error("[NOTIFY] Failed to send notification:", err);
@@ -157,13 +197,34 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
         const hash = params.get("hash");
         params.delete("hash");
 
-        // Web Trade Room magic link & WhatsApp OTP auth support
-        if (hash === "magic_link_auth" || hash === "wa_auth") {
+        // WhatsApp Web Auth — HMAC-signed token (Bug #1 fix)
+        // Old magic_link_auth/wa_auth bypass removed — must be properly signed now
+        if (hash && hash.startsWith("wa_signed_")) {
             const userStr = params.get("user");
-            if (userStr) {
-                req.telegramUser = JSON.parse(userStr);
-                return next();
+            const authDate = parseInt(params.get("auth_date") || "0");
+            if (userStr && authDate) {
+                let parsedUser: any;
+                try { parsedUser = JSON.parse(userStr); } catch { /* fall through to 401 */ }
+                if (parsedUser && verifyWaAuthToken(parsedUser, authDate, hash)) {
+                    // Token age check: reject if older than 30 days
+                    const now = Math.floor(Date.now() / 1000);
+                    if (now - authDate > 30 * 86400) {
+                        console.warn(`[MINIAPP-AUTH] ❌ WA signed token expired for user ${parsedUser?.id}`);
+                        return res.status(401).json({ error: "Session expired. Please log in again." });
+                    }
+                    req.telegramUser = parsedUser;
+                    console.log(`[MINIAPP-AUTH] 🟢 WA signed token OK for user: ${parsedUser.id}`);
+                    return next();
+                }
             }
+            console.warn(`[MINIAPP-AUTH] ❌ Invalid WA signed token on ${req.method} ${req.url}`);
+            return res.status(401).json({ error: "Invalid or tampered session. Please log in again." });
+        }
+
+        // Reject old unsigned magic strings — no longer accepted
+        if (hash === "magic_link_auth" || hash === "wa_auth") {
+            console.warn(`[MINIAPP-AUTH] ❌ Rejected legacy unsigned WA auth token on ${req.method} ${req.url}`);
+            return res.status(401).json({ error: "Session expired. Please log in again." });
         }
 
         const dataCheckString = Array.from(params.entries())
@@ -220,8 +281,15 @@ function validateInitData(req: Request, res: Response, next: NextFunction) {
 // Public Routes
 
 // Check if a WhatsApp phone is already registered with an active wallet (no OTP sent — purely a lookup)
+// Bug #9 fix: Rate limited to prevent phone enumeration abuse (max 10 checks per IP per minute)
 router.post("/auth/wa-check-user", async (req: Request, res: Response) => {
     try {
+        // Rate limit: 10 requests per IP per minute (60 second window)
+        const clientIp = IpTrackerService.getClientIp(req);
+        if (!await checkRateLimit(`check:${clientIp}`, 10, 60)) {
+            return res.status(429).json({ error: "Too many requests. Please wait a moment." });
+        }
+
         const { phone } = req.body;
         if (!phone) {
             return res.status(400).json({ error: "Phone number is required" });
@@ -237,8 +305,8 @@ router.post("/auth/wa-check-user", async (req: Request, res: Response) => {
     }
 });
 
+// Bug #2 fix: Rate limited — max 3 OTP requests per phone per 10 minutes, max 5 per IP per 10 min
 router.post("/auth/wa-request-otp", async (req: Request, res: Response) => {
-
     try {
         const { phone } = req.body;
         if (!phone) {
@@ -246,6 +314,20 @@ router.post("/auth/wa-request-otp", async (req: Request, res: Response) => {
         }
 
         const { waOtpService } = await import("../services/wa-otp");
+        const cleanPhone = waOtpService.cleanPhone(phone);
+        const clientIp = IpTrackerService.getClientIp(req);
+
+        // Rate limit per phone: 3 OTPs per 10 minutes (600 second window)
+        if (!await checkRateLimit(`otp_phone:${cleanPhone}`, 3, 600)) {
+            console.warn(`[MINIAPP-AUTH] OTP rate limit hit for phone: ${cleanPhone}`);
+            return res.status(429).json({ error: "Too many OTP requests for this number. Please wait 10 minutes." });
+        }
+        // Rate limit per IP: 5 OTPs per 10 minutes (600 second window)
+        if (!await checkRateLimit(`otp_ip:${clientIp}`, 5, 600)) {
+            console.warn(`[MINIAPP-AUTH] OTP rate limit hit for IP: ${clientIp}`);
+            return res.status(429).json({ error: "Too many OTP requests. Please wait a moment." });
+        }
+
         const result = await waOtpService.sendOtp(phone);
         if (!result.success) {
             return res.status(400).json({ error: result.message });
@@ -320,10 +402,14 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
             is_wa_user: true,
             whatsapp_phone: cleanPhone
         };
+        // Bug #1 fix: Sign the token with HMAC instead of using plain 'wa_auth' magic string
+        const authDate = Math.floor(Date.now() / 1000);
+        const signedHash = generateWaAuthToken(tgUserObj, authDate);
+
         const params = new URLSearchParams();
         params.set("user", JSON.stringify(tgUserObj));
-        params.set("auth_date", Math.floor(Date.now() / 1000).toString());
-        params.set("hash", "wa_auth");
+        params.set("auth_date", authDate.toString());
+        params.set("hash", signedHash);
 
         const initData = params.toString();
 
@@ -2031,7 +2117,10 @@ router.post("/trades/:id/dispute", async (req: Request, res: Response) => {
             : '💸 Fiat Sent — Buyer claims payment sent';
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-        const botUsername = (await bot.api.getMe()).username;
+        let botUsername = "p2p_fatherbot";
+        try {
+            botUsername = bot.botInfo?.username || (await bot.api.getMe()).username;
+        } catch { /* fallback to default */ }
 
         // NOTIFY ADMINS with full context
         await notifyAdmins(

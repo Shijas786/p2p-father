@@ -250,16 +250,55 @@ P2PFather is India's premier *smart-contract P2P exchange* for safe, escrow-prot
 
 💱 *Buy & Sell USDT* peer-to-peer with UPI, IMPS, and Bank Transfers
 🔒 *Smart-Contract Escrow* — 100% on-chain protection
-⚡ *Instant Automated Settlement* on BSC, Base & Polygon
+⚡ *Instant Automated Settlement* on BSC & Base
 
 *How would you like to get started?* 👇
-• *Link Telegram:* Carry over your existing wallet & trade history!
-• *Create New Wallet:* Instant 1-tap wallet + *1,000 Demo USDT & 0.05 BNB Gas Fee* credited!`,
+• *Join Our Community:* Connect with traders on WhatsApp & Telegram!
+• *Create New Wallet:* Instant 1-tap secure multi-chain wallet on BSC & Base!`,
         [
-            { id: "wa_setup_link_telegram", label: "🔗 Link Telegram Wallet" },
+            { id: "wa_community",           label: "👥 Join Our Community" },
             { id: "wa_setup_newwallet",     label: "✨ Create New Wallet" },
             { id: "wa_guide",              label: "📖 Platform Guide" },
         ]
+    );
+}
+
+// ── Step 1b: Community Screen ─────────────────────────────────────────────────
+async function showCommunityScreen(
+    sock: WASocket,
+    jid: string,
+    msg: IWebMessageInfo,
+    user?: User
+): Promise<void> {
+    const waGroupUrl = "https://chat.whatsapp.com/JccGngl7bfa9tL4Bdwldv5?mode=gi_t";
+    const tgGroupUrl = "https://t.me/P2pFather0";
+
+    const buttons: { id: string; label: string; url?: string }[] = [
+        { id: waGroupUrl, url: waGroupUrl, label: "💬 Join WhatsApp" },
+        { id: tgGroupUrl, url: tgGroupUrl, label: "✈️ Join Telegram" },
+    ];
+
+    if (!user || !user.wallet_address) {
+        buttons.push({ id: "wa_setup_newwallet", label: "✨ Create Wallet" });
+    } else {
+        buttons.push({ id: "menu", label: "🏠 Main Menu" });
+    }
+
+    await replyWithButtons(
+        sock,
+        jid,
+        `👥 *JOIN OUR COMMUNITY!* 🎩
+
+Connect with fellow traders, stay updated with market rates, get trade assistance, and access 24/7 support!
+
+💬 *WhatsApp Community Group:*
+👉 ${waGroupUrl}
+
+✈️ *Telegram Official Group:*
+👉 ${tgGroupUrl}
+
+Tap below to join our groups 👇`,
+        buttons
     );
 }
 
@@ -275,7 +314,7 @@ async function showGuide(
         `📖 *HOW P2PFATHER WORKS*
 
 *1️⃣ Deposit USDT*
-Send USDT to your P2PFather wallet (BSC/Polygon/Base). Funds are secured in smart contract escrow.
+Send USDT to your P2PFather wallet (BSC & Base). Funds are secured in smart contract escrow.
 
 *2️⃣ Post or Browse Ads*
 Browse live buy/sell ads from verified traders. Choose your rate, limits, and payment method (UPI/IMPS/Bank).
@@ -341,6 +380,9 @@ export async function routeMessage(
 
     // ── Group: respond if @mentioned or keyword triggered ────────────────────
     if (isGroup) {
+        // 🛡️ Bug 13 Fix: Don't scan bot's own messages as spam
+        if (msg.key?.fromMe) return;
+
         // 🛡️ SPAM GUARD: always scan every group message first (no mention required)
         const wasSpam = await scanAndDeleteSpam(sock, msg, jid);
         if (wasSpam) return; // Stop processing — message was spam
@@ -383,10 +425,13 @@ export async function routeMessage(
         } catch (_) {}
     }
 
-    // ── Account Linking Command (/link 123456 or typing 6-digit code) ─────────
-    const codeMatch = text.match(/\b(\d{6})\b/);
-    if (text.startsWith("/link") || codeMatch) {
-        const inputCode = codeMatch ? codeMatch[1] : text.replace("/link", "").trim();
+    // ── Account Linking Command (/link 123456 or typing EXACTLY 6-digit code) ────
+    // 🛡️ Bug 3 Fix: Only match if the ENTIRE trimmed message is exactly 6 digits.
+    // Prevents any message containing a 6-digit number (e.g. amounts, trade IDs) from
+    // being intercepted as a link code attempt.
+    const is6DigitOnly = /^\d{6}$/.test(text.trim());
+    if (text.startsWith("/link") || is6DigitOnly) {
+        const inputCode = is6DigitOnly ? text.trim() : text.replace("/link", "").trim();
 
         if (!inputCode || inputCode.length !== 6) {
             await reply(
@@ -577,6 +622,19 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
         return;
     }
 
+    // ── Onboarding / Community button: Community ──────────────────────────────
+    if (
+        text === "wa_community" ||
+        text === "/community" ||
+        text.includes("join our community") ||
+        text.includes("community") ||
+        text.includes("whatsapp group") ||
+        text.includes("telegram group")
+    ) {
+        await showCommunityScreen(sock, jid, msg, user);
+        return;
+    }
+
     // ── Onboarding button: Guide ──────────────────────────────────────────────
     if (text === "wa_guide" || text.includes("how it works") || text.includes("guide")) {
         await showGuide(sock, jid, msg);
@@ -729,6 +787,8 @@ Select an option below to start trading 👇`,
         text.startsWith("/withdraw") ||
         text.startsWith("/vault_deposit") ||
         text.startsWith("vault_deposit") ||
+        text.startsWith("vdep_net_") ||
+        text.startsWith("vdep_select_") ||
         text.startsWith("vdep_chain_") ||
         text.startsWith("confirm_vault_dep_") ||
         text.startsWith("confirm_wd_") ||
@@ -760,7 +820,7 @@ To send funds, reply in this format:
 *Example:*
 \`/send 0x742d35Cc6634... 50 USDT bsc\`
 
-Supported chains: BSC, Polygon, Base
+Supported chains: BSC, Base
 
 Or check your balance first with /balance 💰`,
                 msg
@@ -820,10 +880,22 @@ Or check your balance first with /balance 💰`,
             await handleAdCommand(sock, msg, jid, user, text);
             return;
         }
+        // 🛡️ Bug 9 Fix: AWAITING_TRADE_AMOUNT is an orphaned state — the trade handler
+        // has no implementation for it. Clear it and guide user to their trades instead.
         if (state.key === "AWAITING_TRADE_AMOUNT") {
-            await handleTradeCommand(sock, msg, jid, user, text);
+            await (db as any).clearWhatsappState(user.id);
+            await replyWithButtons(
+                sock,
+                jid,
+                `⚠️ *Session Expired*\n\nYour previous action timed out. You can view your active trades below.`,
+                [
+                    { id: "/trades", label: "📜 My Active Trades" },
+                    { id: "/start",  label: "🏠 Main Menu" },
+                ]
+            );
             return;
         }
+
         if (state.key === "AWAITING_WITHDRAW_PIN" || state.key === "AWAITING_VAULT_DEP_AMOUNT") {
             await handleWalletCommand(sock, msg, jid, senderPhone, user, text);
             return;
@@ -843,6 +915,24 @@ Or check your balance first with /balance 💰`,
         try {
             const activeTrades = await db.getActiveTradesForUser(user.id);
             if (activeTrades.length > 0) {
+                // 🛡️ Bug 7 Fix: If user has multiple active trades, show a trade selector
+                // instead of blindly relaying to trade[0] which could be the wrong counterparty.
+                if (activeTrades.length > 1) {
+                    const tradeButtons = activeTrades.slice(0, 3).map((t: any) => {
+                        const role = t.buyer_id === user.id ? "BUYER" : "SELLER";
+                        const shortId = t.id.slice(0, 5).toUpperCase();
+                        return { id: `/chat_${t.id}`, label: `💬 #PF-${shortId} (${role})` };
+                    });
+                    await replyWithButtons(
+                        sock,
+                        jid,
+                        `💬 *MULTIPLE ACTIVE TRADES*\n\nYou have *${activeTrades.length} active trades*. Which trade do you want to send this message in?\n\n_Select below to enter that trade's live chat:_`,
+                        tradeButtons
+                    );
+                    return;
+                }
+
+                // Single active trade — relay directly
                 const currentTrade = activeTrades[0];
                 const isBuyer = currentTrade.buyer_id === user.id;
                 const counterpartyId = isBuyer ? currentTrade.seller_id : currentTrade.buyer_id;
@@ -868,6 +958,7 @@ Or check your balance first with /balance 💰`,
             console.error("[WA-TradeChat] Error in relaying trade message:", err);
         }
     }
+
 
     // ── AI-powered natural language guide (private DM only) ───────────────────
     if (env.OPENAI_API_KEY) {

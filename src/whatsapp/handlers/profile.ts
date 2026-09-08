@@ -9,13 +9,15 @@ import type { User } from "../../types";
 import { db } from "../../db/client";
 import { reply, replyWithButtons, replyWithList } from "../router";
 
-/** Helper: Check if user has at least one valid payment method configured */
+/** Helper: Check if user has at least one valid payment method configured.
+ * NOTE: phone_number alone is NOT a valid payment method for P2P trading.
+ * Users need UPI, bank account, or digital rupee to actually receive/send fiat payments.
+ */
 export function hasPaymentMethods(user: User): boolean {
     return Boolean(
         user.upi_id ||
         user.bank_account_number ||
-        user.digital_rupee_id ||
-        user.phone_number
+        user.digital_rupee_id
     );
 }
 

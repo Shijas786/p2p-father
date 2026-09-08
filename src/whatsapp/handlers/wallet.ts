@@ -109,51 +109,190 @@ export async function handleWalletCommand(
     if (text.startsWith("/vault_deposit") || text === "vault_deposit") {
         const parts = text.split(/\s+/);
 
-        let walletUsdt = "0.00", vaultUsdt = "0.00";
-        try {
-            if (user.wallet_address) {
-                const bals = await wallet.getBalances(user.wallet_address);
-                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
-            }
-        } catch (_) {}
+        // Helper to resolve asset balances
+        const resolveBalances = (bals: any, t: string, c: string) => {
+            const isBsc = c === "bsc";
+            const isUsdc = t.toUpperCase() === "USDC";
+            const wKey = isBsc ? (isUsdc ? "bsc_usdc" : "bsc_usdt") : (isUsdc ? "usdc" : "usdt");
+            const vKey = isBsc ? (isUsdc ? "vault_bsc_usdc" : "vault_bsc_usdt") : (isUsdc ? "vault_usdc" : "vault_usdt");
+            return {
+                wallet: (parseFloat(bals?.[wKey] || "0")).toFixed(2),
+                vault: (parseFloat(bals?.[vKey] || "0")).toFixed(2),
+            };
+        };
 
-        // If amount was provided in text command (e.g. /vault_deposit 100)
+        // Text command shortcut: e.g. /vault_deposit 100 or /vault_deposit 100 usdc base
         if (parts.length >= 2 && !isNaN(parseFloat(parts[1]))) {
             const amount = parseFloat(parts[1]);
-            const chain = (parts[2] || "bsc").toLowerCase();
+            let token = "USDT";
+            let chainKey = "bsc";
+
+            if (parts.length >= 4) {
+                token = parts[2].toUpperCase();
+                chainKey = parts[3].toLowerCase().includes("base") ? "base" : "bsc";
+            } else if (parts.length === 3) {
+                const p2 = parts[2].toLowerCase();
+                if (p2 === "usdc" || p2 === "usdt") {
+                    token = p2.toUpperCase();
+                    chainKey = token === "USDC" ? "base" : "bsc";
+                } else {
+                    chainKey = p2.includes("base") ? "base" : "bsc";
+                }
+            }
+
+            const chainLabel = chainKey === "base" ? "Base" : "BSC";
+            let walletBal = "0.00", vaultBal = "0.00";
+            try {
+                if (user.wallet_address) {
+                    const bals = await wallet.getBalances(user.wallet_address);
+                    const res = resolveBalances(bals, token, chainKey);
+                    walletBal = res.wallet;
+                    vaultBal = res.vault;
+                }
+            } catch (_) {}
 
             await replyWithButtons(
                 sock,
                 jid,
                 `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
-• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
-• *Top-Up Amount:* ${amount} USDT (${chain.toUpperCase()})
-• *Target:* P2PFather Smart Contract Escrow Vault
+• *Token:* ${token}
+• *Network:* ${chainLabel} Mainnet
+• *Wallet Balance:* ${walletBal} ${token}
+• *Vault Balance:* ${vaultBal} ${token} (🔒 ${chainLabel} Escrow)
+• *Top-Up Amount:* ${amount} ${token} (${chainLabel})
+• *Target:* P2PFather Smart Contract Escrow Vault (${chainLabel})
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
                 [
-                    { id: `confirm_vault_dep_${amount}_${chain}`, label: `🔒 Lock ${amount} USDT to Vault` },
-                    { id: "/deposit",                           label: "📥 Deposit First" },
-                    { id: "/balance",                           label: "❌ Cancel" },
+                    { id: `confirm_vault_dep_${amount}_${token}_${chainKey}`, label: `🔒 Lock ${amount} ${token} (${chainLabel})` },
+                    { id: "/deposit",                                       label: "📥 Deposit First" },
+                    { id: "/balance",                                       label: "❌ Cancel" },
                 ]
             );
             return;
         }
 
-        // Interactive wizard: Step 1 — Ask user for amount input
-        await (db as any).setWhatsappState(user.id, "AWAITING_VAULT_DEP_AMOUNT", {});
+        // Interactive wizard: Step 1 — Overview of both networks & assets
+        let bscUsdt = "0.00", bscVaultUsdt = "0.00";
+        let bscUsdc = "0.00", bscVaultUsdc = "0.00";
+        let baseUsdt = "0.00", baseVaultUsdt = "0.00";
+        let baseUsdc = "0.00", baseVaultUsdc = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                bscUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                bscVaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
+                bscUsdc = (parseFloat(bals.bsc_usdc || "0")).toFixed(2);
+                bscVaultUsdc = (parseFloat(bals.vault_bsc_usdc || "0")).toFixed(2);
+
+                baseUsdt = (parseFloat(bals.usdt || "0")).toFixed(2);
+                baseVaultUsdt = (parseFloat(bals.vault_usdt || "0")).toFixed(2);
+                baseUsdc = (parseFloat(bals.usdc || "0")).toFixed(2);
+                baseVaultUsdc = (parseFloat(bals.vault_usdc || "0")).toFixed(2);
+            }
+        } catch (_) {}
+
         await replyWithButtons(
             sock,
             jid,
-            `🔒 *VAULT TOP-UP*
+            `🔒 *VAULT TOP-UP — SELECT NETWORK*
 
-• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
-• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
+P2PFather supports Smart-Contract Escrow for *USDT & USDC* on BSC & Base:
 
-Please reply to this message with the *USDT amount* you want to move into your Smart Contract Escrow Vault:
+🟡 *BSC (BNB Smart Chain)*
+• USDT: ${bscUsdt} (Locked: ${bscVaultUsdt})
+• USDC: ${bscUsdc} (Locked: ${bscVaultUsdc})
+
+🔵 *Base Network*
+• USDC: ${baseUsdc} (Locked: ${baseVaultUsdc})
+• USDT: ${baseUsdt} (Locked: ${baseVaultUsdt})
+
+Select which network you want to deposit into: 👇`,
+            [
+                { id: "vdep_net_bsc",  label: "🟡 BSC (USDT / USDC)" },
+                { id: "vdep_net_base", label: "🔵 Base (USDC / USDT)" },
+                { id: "/balance",     label: "❌ Cancel" },
+            ]
+        );
+        return;
+    }
+
+    // ─── Step 2: Choose Token on Network (vdep_net_bsc / vdep_net_base) ───────
+    if (text === "vdep_net_bsc" || text === "vdep_net_base") {
+        const chainKey = text === "vdep_net_base" ? "base" : "bsc";
+        const chainLabel = chainKey === "base" ? "Base" : "BSC";
+
+        let usdtBal = "0.00", usdtVault = "0.00";
+        let usdcBal = "0.00", usdcVault = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                if (chainKey === "bsc") {
+                    usdtBal = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
+                    usdtVault = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
+                    usdcBal = (parseFloat(bals.bsc_usdc || "0")).toFixed(2);
+                    usdcVault = (parseFloat(bals.vault_bsc_usdc || "0")).toFixed(2);
+                } else {
+                    usdtBal = (parseFloat(bals.usdt || "0")).toFixed(2);
+                    usdtVault = (parseFloat(bals.vault_usdt || "0")).toFixed(2);
+                    usdcBal = (parseFloat(bals.usdc || "0")).toFixed(2);
+                    usdcVault = (parseFloat(bals.vault_usdc || "0")).toFixed(2);
+                }
+            }
+        } catch (_) {}
+
+        await replyWithButtons(
+            sock,
+            jid,
+            `🔒 *${chainLabel.toUpperCase()} VAULT — SELECT TOKEN*
+
+• *USDT Balance:* ${usdtBal} (Locked: ${usdtVault})
+• *USDC Balance:* ${usdcBal} (Locked: ${usdcVault})
+
+Select the token you want to lock into your ${chainLabel} Escrow Vault: 👇`,
+            [
+                { id: `vdep_select_${chainKey}_usdt`, label: `💵 ${chainLabel} USDT` },
+                { id: `vdep_select_${chainKey}_usdc`, label: `💵 ${chainLabel} USDC` },
+                { id: "/balance",                     label: "❌ Cancel" },
+            ]
+        );
+        return;
+    }
+
+    // ─── Step 3: Prompt for amount (vdep_select_<chain>_<token>) ──────────────
+    if (text.startsWith("vdep_select_")) {
+        const parts = text.replace("vdep_select_", "").toLowerCase().split("_");
+        const chainKey = parts[0]?.includes("base") ? "base" : "bsc";
+        const token = (parts[1] || "usdt").toUpperCase();
+        const chainLabel = chainKey === "base" ? "Base" : "BSC";
+
+        let walletBal = "0.00", vaultBal = "0.00";
+        try {
+            if (user.wallet_address) {
+                const bals = await wallet.getBalances(user.wallet_address);
+                const isBsc = chainKey === "bsc";
+                const isUsdc = token === "USDC";
+                const wKey = isBsc ? (isUsdc ? "bsc_usdc" : "bsc_usdt") : (isUsdc ? "usdc" : "usdt");
+                const vKey = isBsc ? (isUsdc ? "vault_bsc_usdc" : "vault_bsc_usdt") : (isUsdc ? "vault_usdc" : "vault_usdt");
+                walletBal = (parseFloat(bals?.[wKey] || "0")).toFixed(2);
+                vaultBal = (parseFloat(bals?.[vKey] || "0")).toFixed(2);
+            }
+        } catch (_) {}
+
+        await (db as any).setWhatsappState(user.id, "AWAITING_VAULT_DEP_AMOUNT", { chain: chainKey, token });
+
+        await replyWithButtons(
+            sock,
+            jid,
+            `🔒 *TOP UP ${chainLabel.toUpperCase()} VAULT (${token})*
+
+• *Token:* ${token}
+• *Network:* ${chainLabel} Mainnet
+• *Wallet Balance:* ${walletBal} ${token}
+• *Vault Locked:* ${vaultBal} ${token} (🔒 ${chainLabel} Escrow)
+
+Please reply to this message with the *${token} amount* to move into your ${chainLabel} Escrow Vault:
 _(Example: 10 or 50 or 100)_`,
             [
                 { id: "/deposit", label: "📥 Deposit First" },
@@ -174,51 +313,78 @@ _(Example: 10 or 50 or 100)_`,
             return;
         }
 
-        await (db as any).clearWhatsappState(user.id);
+        const chainKey = (walletState.data?.chain || "bsc").toLowerCase();
+        const token = (walletState.data?.token || "USDT").toUpperCase();
+        const chainLabel = chainKey === "base" ? "Base" : "BSC";
 
-        let walletUsdt = "0.00", vaultUsdt = "0.00";
+        let walletBal = "0.00", vaultBal = "0.00";
+        let walletBalNum = 0;
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
-                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
+                const isBsc = chainKey === "bsc";
+                const isUsdc = token === "USDC";
+                const wKey = isBsc ? (isUsdc ? "bsc_usdc" : "bsc_usdt") : (isUsdc ? "usdc" : "usdt");
+                const vKey = isBsc ? (isUsdc ? "vault_bsc_usdc" : "vault_bsc_usdt") : (isUsdc ? "vault_usdc" : "vault_usdt");
+                walletBalNum = parseFloat(bals?.[wKey] || "0");
+                walletBal = walletBalNum.toFixed(2);
+                vaultBal = (parseFloat(bals?.[vKey] || "0")).toFixed(2);
             }
         } catch (_) {}
 
-        const chainKey = "bsc";
+        // 🛡️ Bug 6 Fix: Block if amount > available wallet balance
+        if (amount > walletBalNum + 0.000001) {
+            await reply(
+                sock,
+                jid,
+                `❌ *INSUFFICIENT BALANCE*\n\nYou want to lock *${amountStr} ${token}* but your ${chainLabel} wallet only has *${walletBal} ${token}*.\n\nPlease /deposit first then try again.`,
+                msg
+            );
+            return;
+        }
 
+        // 🛡️ Bug 8 Fix: Clear state AFTER confirmation is sent
         await replyWithButtons(
             sock,
             jid,
             `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
-• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
-• *Top-Up Amount:* ${amountStr} USDT (BSC Mainnet)
-• *Target:* P2PFather Smart Contract Escrow Vault
+• *Token:* ${token}
+• *Network:* ${chainLabel} Mainnet
+• *Wallet Balance:* ${walletBal} ${token}
+• *Vault Balance:* ${vaultBal} ${token} (🔒 ${chainLabel} Escrow)
+• *Top-Up Amount:* ${amountStr} ${token} (${chainLabel})
+• *Target:* P2PFather Smart Contract Escrow Vault (${chainLabel})
 
 Tap below to confirm locking funds on-chain:`,
             [
-                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: `🔒 Lock ${amountStr} USDT to Vault` },
-                { id: "/deposit",                                  label: "📥 Deposit First" },
-                { id: "/balance",                                  label: "❌ Cancel" },
+                { id: `confirm_vault_dep_${amountStr}_${token}_${chainKey}`, label: `🔒 Lock ${amountStr} ${token} (${chainLabel})` },
+                { id: "/deposit",                                          label: "📥 Deposit First" },
+                { id: "/balance",                                          label: "❌ Cancel" },
             ]
         );
+        await (db as any).clearWhatsappState(user.id);
         return;
     }
 
-    // ─── vdep_chain_<amount>_<chain> ─────────────────────────────────────────
+    // ─── vdep_chain_<amount>_<chain> (legacy fallback) ───────────────────────
     if (text.startsWith("vdep_chain_")) {
         const parts = text.replace("vdep_chain_", "").split("_");
         const amountStr = parts[0] || "10";
         const chainKey = (parts[1] || "bsc").toLowerCase();
+        const token = (parts[2] || "USDT").toUpperCase();
+        const chainLabel = chainKey === "base" ? "Base" : "BSC";
 
-        let walletUsdt = "0.00", vaultUsdt = "0.00";
+        let walletBal = "0.00", vaultBal = "0.00";
         try {
             if (user.wallet_address) {
                 const bals = await wallet.getBalances(user.wallet_address);
-                walletUsdt = (parseFloat(bals.bsc_usdt || "0")).toFixed(2);
-                vaultUsdt = (parseFloat(bals.vault_bsc_usdt || "0")).toFixed(2);
+                const isBsc = chainKey === "bsc";
+                const isUsdc = token === "USDC";
+                const wKey = isBsc ? (isUsdc ? "bsc_usdc" : "bsc_usdt") : (isUsdc ? "usdc" : "usdt");
+                const vKey = isBsc ? (isUsdc ? "vault_bsc_usdc" : "vault_bsc_usdt") : (isUsdc ? "vault_usdc" : "vault_usdt");
+                walletBal = (parseFloat(bals?.[wKey] || "0")).toFixed(2);
+                vaultBal = (parseFloat(bals?.[vKey] || "0")).toFixed(2);
             }
         } catch (_) {}
 
@@ -227,40 +393,58 @@ Tap below to confirm locking funds on-chain:`,
             jid,
             `🔒 *CONFIRM VAULT TOP-UP*
 
-• *Wallet Balance:* ${walletUsdt} USDT (BSC Mainnet)
-• *Vault Balance:* ${vaultUsdt} USDT (🔒 Escrow Vault)
-• *Top-Up Amount:* ${amountStr} USDT (${chainKey.toUpperCase()})
-• *Target:* P2PFather Smart Contract Escrow Vault
+• *Token:* ${token}
+• *Network:* ${chainLabel} Mainnet
+• *Wallet Balance:* ${walletBal} ${token}
+• *Vault Balance:* ${vaultBal} ${token} (🔒 ${chainLabel} Escrow)
+• *Top-Up Amount:* ${amountStr} ${token} (${chainLabel})
+• *Target:* P2PFather Smart Contract Escrow Vault (${chainLabel})
 
 Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             [
-                { id: `confirm_vault_dep_${amountStr}_${chainKey}`, label: `🔒 Lock ${amountStr} USDT to Vault` },
-                { id: "/deposit",                                  label: "📥 Deposit First" },
-                { id: "/balance",                                  label: "❌ Cancel" },
+                { id: `confirm_vault_dep_${amountStr}_${token}_${chainKey}`, label: `🔒 Lock ${amountStr} ${token} (${chainLabel})` },
+                { id: "/deposit",                                          label: "📥 Deposit First" },
+                { id: "/balance",                                          label: "❌ Cancel" },
             ]
         );
         return;
     }
 
-    // ─── confirm_vault_dep_<amount>_<chain> ──────────────────────────────────
+    // ─── confirm_vault_dep_<amount>_<token>_<chain> ──────────────────────────
     if (text.startsWith("confirm_vault_dep_")) {
         const parts = text.replace("confirm_vault_dep_", "").split("_");
         const amountStr = parts[0] || "50";
-        const chainKey = (parts[1] || "bsc").toLowerCase();
+        let token = "USDT";
+        let chainKey = "bsc";
+
+        if (parts.length >= 3) {
+            token = parts[1].toUpperCase();
+            chainKey = parts[2].toLowerCase();
+        } else if (parts.length === 2) {
+            chainKey = parts[1].toLowerCase();
+        }
+
+        const chainLabel = chainKey === "base" ? "Base" : "BSC";
+
+        // 🛡️ Bug 1 Fix: Guard against null wallet_index before on-chain operation
+        if (user.wallet_index === null || user.wallet_index === undefined) {
+            await reply(sock, jid, "❌ Your wallet is not fully initialized. Please contact support.", msg);
+            return;
+        }
 
         try {
-            await reply(sock, jid, "⏳ Locking funds into Smart Contract Vault... Please wait.", msg);
+            await reply(sock, jid, `⏳ Locking ${amountStr} ${token} into ${chainLabel} Smart Contract Vault... Please wait.`, msg);
 
             const { wallet } = await import("../../services/wallet");
             const { env } = await import("../../config/env");
 
             let tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
             if (chainKey === "bsc") {
-                tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+                tokenAddress = token === "USDC"
+                    ? "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+                    : "0x55d398326f99059fF775485246999027B3197955";
             } else if (chainKey === "base") {
-                tokenAddress = env.USDT_ADDRESS;
-            } else if (chainKey === "polygon") {
-                tokenAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+                tokenAddress = token === "USDC" ? env.USDC_ADDRESS : env.USDT_ADDRESS;
             }
 
             const txHash = await wallet.depositToVault(user.wallet_index, amountStr, tokenAddress, chainKey as any);
@@ -269,25 +453,30 @@ Proceed to lock funds into Smart-Contract Escrow for P2P trading?`,
             let newWalletBal = "0.00", newVaultBal = "0.00";
             try {
                 const freshBals = await wallet.getBalances(user.wallet_address!);
-                newWalletBal = (parseFloat(freshBals.bsc_usdt || "0")).toFixed(2);
-                newVaultBal = (parseFloat(freshBals.vault_bsc_usdt || "0")).toFixed(2);
+                const isBsc = chainKey === "bsc";
+                const isUsdc = token === "USDC";
+                const wKey = isBsc ? (isUsdc ? "bsc_usdc" : "bsc_usdt") : (isUsdc ? "usdc" : "usdt");
+                const vKey = isBsc ? (isUsdc ? "vault_bsc_usdc" : "vault_bsc_usdt") : (isUsdc ? "vault_usdc" : "vault_usdt");
+                newWalletBal = (parseFloat(freshBals?.[wKey] || "0")).toFixed(2);
+                newVaultBal = (parseFloat(freshBals?.[vKey] || "0")).toFixed(2);
             } catch (_) {}
 
             const explorerBase = chainKey === "bsc" ? "https://bscscan.com/tx/" : "https://basescan.org/tx/";
             const explorerLink = `${explorerBase}${txHash}`;
+            const explorerName = chainKey === "bsc" ? "BscScan" : "BaseScan";
 
             await replyWithButtons(
                 sock,
                 jid,
                 `🎉 *VAULT TOP-UP SUCCESSFUL!*
 
-• *Amount Locked:* ${amountStr} USDT
-• *Wallet Balance Remaining:* ${newWalletBal} USDT
-• *Vault Balance Locked:* ${newVaultBal} USDT (🔒 Escrow Vault)
-• *Chain:* ${chainKey.toUpperCase()}
+• *Amount Locked:* ${amountStr} ${token}
+• *Wallet Balance Remaining:* ${newWalletBal} ${token}
+• *Vault Balance Locked:* ${newVaultBal} ${token} (🔒 Escrow Vault)
+• *Chain:* ${chainLabel}
 • *Tx Hash:* \`${txHash}\`
 
-🔗 *BscScan Explorer Link:*
+🔗 *${explorerName} Explorer Link:*
 ${explorerLink}
 
 Your Escrow Vault is ready for P2P trading! 🚀`,
@@ -417,6 +606,12 @@ Proceed to execute on-chain transfer?`,
             chainKey = (parts[3] || "bsc").toLowerCase();
         } else if (parts.length === 3) {
             chainKey = (parts[2] || "bsc").toLowerCase();
+        }
+
+        // 🛡️ Bug 2 Fix: Guard against null wallet_index before on-chain operation
+        if (user.wallet_index === null || user.wallet_index === undefined) {
+            await reply(sock, jid, "❌ Your wallet is not fully initialized. Please contact support.", msg);
+            return;
         }
 
         try {

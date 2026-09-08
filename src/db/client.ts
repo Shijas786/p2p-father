@@ -1306,14 +1306,20 @@ class Database {
             try { await db.from("disputes").update({ raised_by: targetUserId }).eq("raised_by", tgOnlyUser.id); } catch (_) {}
             try { await db.from("dispute_messages").update({ sender_id: targetUserId }).eq("sender_id", tgOnlyUser.id); } catch (_) {}
 
-            // 💼 Wallet Priority: Prioritize existing Telegram bot wallet so Telegram user keeps their original funds/address
+            // 💼 Wallet Priority: Only inherit TG wallet if the target (WA/web) user has NO wallet yet.
+            // NEVER overwrite an existing wallet — the user's primary wallet must always be preserved.
             const { data: targetUser } = await db.from("users").select("*").eq("id", targetUserId).single();
             const updatesFromTg: any = {};
 
-            if (tgOnlyUser.wallet_address) {
+            if (tgOnlyUser.wallet_address && !targetUser?.wallet_address) {
+                // Target has no wallet — safe to inherit from TG account
                 updatesFromTg.wallet_address = tgOnlyUser.wallet_address;
                 updatesFromTg.wallet_index = tgOnlyUser.wallet_index;
                 updatesFromTg.wallet_type = tgOnlyUser.wallet_type || "bot";
+                console.log(`[LINK] Inheriting TG wallet for ${targetUserId}: ${tgOnlyUser.wallet_address} (target had no wallet)`);
+            } else if (tgOnlyUser.wallet_address && targetUser?.wallet_address) {
+                // Target already has a wallet — do NOT overwrite it, just log
+                console.log(`[LINK] Preserving existing wallet for ${targetUserId}: ${targetUser.wallet_address} (TG wallet ${tgOnlyUser.wallet_address} NOT applied)`);
             }
 
             // 👝 Linked Wallets Registry: Store both TG and WA wallets so user can switch between them

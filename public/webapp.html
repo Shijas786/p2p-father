@@ -1197,7 +1197,22 @@
 </div>
 
 <script>
-  let initData = '';
+  // ────────────────────────────────────────────────────
+  // 🛡️ Security helpers — always escape before inserting into innerHTML
+  // Fix for Bug #3 (chat XSS), #4 (onclick injection), #7 (market XSS)
+  // ────────────────────────────────────────────────────
+  function safeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+  function safeAttr(s) { return safeHtml(s); }
+
+  let initData = '';  // current session auth token
   let currentUser = null;
   let fullPhone = '';
   let selectedAdForTrade = null;
@@ -1304,7 +1319,9 @@
   }
 
   function handleLogout() {
-    localStorage.removeItem('trade_init_data');
+    // Bug #5 fix: clear sessionStorage instead of localStorage
+    sessionStorage.removeItem('trade_init_data');
+    localStorage.removeItem('trade_init_data'); // also clear old localStorage tokens
     initData = '';
     currentUser = null;
     document.getElementById('dash-view').style.display = 'none';
@@ -1387,7 +1404,9 @@
 
       initData = d.initData;
       currentUser = d.user;
-      localStorage.setItem('trade_init_data', initData);
+      // Bug #5 fix: Use sessionStorage (dies when tab closes) instead of localStorage (permanent)
+      // This limits the window of token theft via XSS or browser history
+      sessionStorage.setItem('trade_init_data', initData);
       showDashboard();
     } catch(e) {
       err.textContent = '⚠️ ' + e.message; err.style.display = 'block';
@@ -1606,7 +1625,7 @@
     try {
       const d = await apiGet('/trades/mine');
       const trades = d.trades || [];
-      const activeTrades = trades.filter(t => ['in_escrow', 'fiat_sent', 'waiting_for_escrow', 'pending'].includes(t.status));
+      const activeTrades = trades.filter(t => ['in_escrow', 'fiat_sent', 'waiting_for_escrow', 'pending', 'disputed'].includes(t.status));
       
       if (!activeTrades.length) {
         if (badge) badge.textContent = '0 Trades';
@@ -1615,14 +1634,18 @@
       }
 
       if (badge) badge.textContent = `${activeTrades.length} Trades`;
-      const statusBadges = { pending: 'badge-pending', in_escrow: 'badge-active', fiat_sent: 'badge-active' };
+      const statusBadges = { pending: 'badge-pending', in_escrow: 'badge-active', fiat_sent: 'badge-active', disputed: 'badge-dispute' };
 
-      el.innerHTML = activeTrades.map((t, idx) => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;${idx < activeTrades.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:12px;cursor:pointer;" onclick="showPage('active-trades-page', document.querySelectorAll('.sb-item')[4]); selectTradeForChat('${t.id}')">
-          <span style="font-weight:700;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token} <span style="color:var(--muted);font-weight:500;">(#${t.id.slice(0,8)})</span></span>
-          <span class="trade-badge ${statusBadges[t.status] || 'badge-active'}">${t.status.replace('_', ' ')}</span>
+      el.innerHTML = activeTrades.map((t, idx) => {
+        const isBuyer = currentUser && (t.buyer_id === currentUser.id || t.buyer_id === currentUser.user_id);
+        const typeLabel = isBuyer ? '&#8601; Buy' : '&#8599; Sell';
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;${idx < activeTrades.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:12px;cursor:pointer;" onclick="showPage('active-trades-page', document.querySelectorAll('.sb-item')[4]); selectTradeForChat('${safeAttr(t.id)}')">
+          <span style="font-weight:700;color:#0f172a;">${typeLabel} ${safeHtml(String(t.amount))} ${safeHtml(t.token)} <span style="color:var(--muted);font-weight:500;">(#${safeHtml(t.id.slice(0,8))})</span></span>
+          <span class="trade-badge ${statusBadges[t.status] || 'badge-active'}">${safeHtml((t.status || '').replaceAll('_', ' '))}</span>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } catch(e) {
       if (badge) badge.textContent = '0 Trades';
       el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;">✨ No active trade locks in vault</div>';
@@ -1777,8 +1800,9 @@
     const to = document.getElementById('send-to-addr').value.trim();
     const amount = parseFloat(document.getElementById('send-amount').value);
 
-    if (!to || !to.startsWith('0x') || to.length < 10) {
-      err.textContent = 'Please enter a valid EVM recipient address.';
+    // Bug #6 fix: Full 42-character EVM address validation (0x + 40 hex chars)
+    if (!to || !/^0x[0-9a-fA-F]{40}$/.test(to)) {
+      err.textContent = 'Please enter a valid 42-character EVM wallet address (0x...)';
       err.style.display = 'block'; return;
     }
     if (!amount || amount <= 0) {
@@ -1819,13 +1843,16 @@
 
   function renderTradeRow(t) {
     const statusClass = { pending:'badge-pending',in_escrow:'badge-active',fiat_sent:'badge-active',fiat_confirmed:'badge-completed',completed:'badge-completed',disputed:'badge-dispute' };
+    const isBuyer = currentUser && (t.buyer_id === currentUser.id || t.buyer_id === currentUser.user_id);
+    const typeLabel = isBuyer ? '↙ Buy' : '↗ Sell';
+    const dateStr = t.created_at ? new Date(t.created_at).toLocaleDateString() : '—';
     return `
-      <div class="trade-row">
+      <div class="trade-row" style="cursor:pointer;" onclick="showPage('active-trades-page', document.querySelectorAll('.sb-item')[4]); selectTradeForChat('${safeAttr(t.id)}')">
         <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a;">${t.type === 'buy' ? '↙ Buy' : '↗ Sell'} ${t.amount} ${t.token}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px;">₹${t.fiat_amount || '—'} • ${new Date(t.created_at).toLocaleDateString()}</div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a;">${typeLabel} ${safeHtml(String(t.amount))} ${safeHtml(t.token)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">₹${safeHtml(String(t.fiat_amount || '—'))} • ${safeHtml(dateStr)}</div>
         </div>
-        <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${t.status}</span>
+        <span class="trade-badge ${statusClass[t.status]||'badge-pending'}">${safeHtml((t.status || '').replaceAll('_', ' '))}</span>
       </div>
     `;
   }
@@ -1998,13 +2025,13 @@
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="trade-badge ${o.type==='buy'?'badge-buy':'badge-sell'}">${o.type.toUpperCase()}</span>
               <span style="font-size:15px;font-weight:800;color:#0f172a;">${o.amount} ${o.token}</span>
-              <span style="font-size:12px;color:var(--muted);font-weight:600;">by ${trader}</span>
+              <span style="font-size:12px;color:var(--sub);font-weight:600;">by ${safeHtml(trader)}</span>
               ${reqKyc ? `<span style="font-size:11px;background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #bfdbfe;">🛡️ KYC REQUIRED</span>` : ''}
               ${hasWhitelist ? `<span style="font-size:11px;background:#f5f3ff;color:#6d28d9;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #ddd6fe;">👥 SPECIFIC DEALERS</span>` : ''}
               ${isDemo ? `<span style="font-size:11px;background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid #fde68a;">🧪 DEMO / TESTNET</span>` : ''}
             </div>
             <div style="font-size:12.5px;color:var(--sub);margin-top:4px;">
-              Rate: <strong>₹${o.rate}</strong>/USDT • Total: ₹${(o.amount * o.rate).toLocaleString('en-IN')} • ${ (o.payment_methods||['UPI']).join('/') }
+              Rate: <strong>&#8377;${safeHtml(o.rate)}</strong>/USDT &bull; Total: &#8377;${safeHtml((o.amount * o.rate).toLocaleString('en-IN'))} &bull; ${ (o.payment_methods||['UPI']).map(safeHtml).join('/') }
             </div>
           </div>
           <div>
@@ -2122,7 +2149,8 @@
 
       el.innerHTML = list.map(t => {
         const isSelected = activeChatTradeId === t.id;
-        const role = t.buyer_id === currentUser.id ? 'BUY' : 'SELL';
+        // Bug #8 fix: guard against null currentUser (race condition on page load)
+        const role = currentUser && t.buyer_id === currentUser.id ? 'BUY' : 'SELL';
         return `
           <div class="order-row" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;${isSelected?'border-color:var(--primary);background:#ecfdf5;':''}" onclick="selectTradeForChat('${t.id}')">
             <div style="display:flex;justify-content:space-between;width:100%;">
@@ -2158,7 +2186,8 @@
       const isBuyer = trade.buyer_id === currentUser.id;
       document.getElementById('chat-trade-title').textContent = `${isBuyer ? 'BUYING' : 'SELLING'} ${trade.amount} ${trade.token}`;
       document.getElementById('chat-trade-sub').textContent = `Total Fiat: ₹${trade.fiat_amount} • Trade #${trade.id.slice(0,8)}`;
-      document.getElementById('chat-trade-status').textContent = trade.status.toUpperCase();
+      // Bug #17 fix: null-safe status display
+      document.getElementById('chat-trade-status').textContent = (trade.status || 'unknown').toUpperCase();
       updateStepperUI(trade.status);
 
       const actionText = document.getElementById('trade-action-status-text');
@@ -2168,21 +2197,34 @@
       if (trade.status === 'in_escrow' || trade.status === 'pending') {
         if (isBuyer) {
           actionText.textContent = 'Crypto locked in Escrow. Send fiat transfer and click Confirm Payment.';
-          actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="confirmTradePayment('${trade.id}')">Confirm Payment Sent</button>`;
+          actionBtns.innerHTML = `
+            <button class="btn btn-green btn-sm" onclick="confirmTradePayment('${safeAttr(trade.id)}')">Confirm Payment Sent</button>
+            <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca;" onclick="raiseTradeDispute('${safeAttr(trade.id)}')">⚠️ Dispute</button>
+          `;
         } else {
           actionText.textContent = 'Waiting for Buyer to complete fiat transfer...';
+          actionBtns.innerHTML = `
+            <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca;" onclick="raiseTradeDispute('${safeAttr(trade.id)}')">⚠️ Dispute</button>
+          `;
         }
       } else if (trade.status === 'fiat_sent') {
         if (!isBuyer) {
           actionText.textContent = 'Buyer marked payment sent! Check your bank account then release crypto.';
-          actionBtns.innerHTML = `<button class="btn btn-green btn-sm" onclick="confirmTradeReceipt('${trade.id}')">Confirm Receipt &amp; Release</button>`;
+          actionBtns.innerHTML = `
+            <button class="btn btn-green btn-sm" onclick="confirmTradeReceipt('${safeAttr(trade.id)}')">Confirm Receipt &amp; Release</button>
+            <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca;" onclick="raiseTradeDispute('${safeAttr(trade.id)}')">⚠️ Dispute</button>
+          `;
         } else {
           actionText.textContent = 'Payment confirmed! Waiting for Seller to release crypto.';
+          actionBtns.innerHTML = `
+            <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca;" onclick="raiseTradeDispute('${safeAttr(trade.id)}')">⚠️ Dispute</button>
+          `;
         }
       } else if (trade.status === 'completed' || trade.status === 'fiat_confirmed') {
         actionText.textContent = '🎉 Trade completed successfully!';
       } else if (trade.status === 'disputed') {
         actionText.textContent = '⚠️ Trade in dispute. Admin is reviewing chat logs.';
+        actionBtns.innerHTML = `<span class="trade-badge badge-dispute" style="padding:6px 12px;font-size:12px;">⚠️ In Dispute Review</span>`;
       }
 
       const msgsRes = await apiGet(`/trades/${activeChatTradeId}/messages`);
@@ -2200,25 +2242,30 @@
         .reduce((latest, m) => (m.created_at > latest ? m.created_at : latest), '');
 
       msgBox.innerHTML = msgs.map(m => {
-        if (m.sender_type === 'system') return `<div class="msg-sys">${m.text || m.content || m.message}</div>`;
-        const isMine = (m.sender_id || m.user_id) === currentUser.id;
+        // Bug: system message — safe to show as-is (server-controlled)
+        if (m.sender_type === 'system') return `<div class="msg-sys">${safeHtml(m.text || m.content || m.message)}</div>`;
+        const isMine = (m.sender_id || m.user_id) === currentUser?.id;
         const time = new Date(m.created_at || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
         
         // Read Receipt Ticks logic matching Telegram Mini App
         const isSeen = counterpartLatestTs && (m.created_at <= counterpartLatestTs || trade.status === 'completed' || trade.status === 'fiat_sent');
         const tickHtml = isMine ? (isSeen ? '<span class="msg-status-tick seen" title="Seen">✓✓</span>' : '<span class="msg-status-tick delivered" title="Delivered">✓✓</span>') : '';
 
+        // Bug #3 fix: Escape message text before inserting into innerHTML
+        const msgText = safeHtml(m.text || m.content || m.message);
+
         // Image message vs text message
         const imgUrl = m.image_url || (m.type === 'image' ? m.message : null);
 
         if (imgUrl) {
+          // Bug #4 fix: Use data-* attribute + event delegation instead of inline onclick with raw URL
           return `
             <div style="align-self:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:6px;">
-              <div class="msg-img-bubble" onclick="openLightbox('${imgUrl}')">
-                <img src="${imgUrl}" alt="Payment proof" />
+              <div class="msg-img-bubble js-lightbox" data-img-url="${safeAttr(imgUrl)}">
+                <img src="${safeAttr(imgUrl)}" alt="Payment proof" />
                 <div class="msg-img-label">
                   <span>📸 Tap to expand</span>
-                  <span>${time} ${tickHtml}</span>
+                  <span>${safeHtml(time)} ${tickHtml}</span>
                 </div>
               </div>
             </div>
@@ -2227,9 +2274,9 @@
 
         return `
           <div class="msg-bubble ${isMine ? 'msg-mine' : 'msg-other'}">
-            <div>${m.text || m.content || m.message}</div>
+            <div>${msgText}</div>
             <div class="msg-time" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;">
-              <span>${time}</span>
+              <span>${safeHtml(time)}</span>
               ${tickHtml}
             </div>
           </div>
@@ -2372,6 +2419,23 @@
       if (r.error) alert(r.error);
       else fetchAndRenderChat();
     } catch(e) { alert(e.message); }
+  }
+
+  async function raiseTradeDispute(tradeId) {
+    const reason = prompt('Please enter the reason for dispute (e.g. payment not received, invalid reference):');
+    if (!reason || !reason.trim()) return;
+    try {
+      const r = await apiPost(`/trades/${tradeId}/dispute`, { reason: reason.trim() });
+      if (r.error) {
+        alert('⚠️ ' + r.error);
+      } else {
+        alert('🚨 Dispute raised successfully. An admin has been alerted and will join this trade chat shortly.');
+        fetchAndRenderChat();
+        loadActiveTrades();
+      }
+    } catch(e) {
+      alert('⚠️ ' + e.message);
+    }
   }
 
   // ─── TOP TOOLBAR POPOVERS ────────────────────
@@ -2713,15 +2777,32 @@
     }
   }
 
-  const storedToken = localStorage.getItem('trade_init_data');
+  // Bug #4 fix: Event delegation for lightbox image clicks (replaces inline onclick with raw URL)
+  document.addEventListener('click', function(e) {
+    const bubble = e.target.closest('.js-lightbox');
+    if (bubble) {
+      const url = bubble.dataset.imgUrl;
+      if (url) openLightbox(url);
+    }
+  });
+
+  // Bug #5 fix: Try sessionStorage first, fall back to localStorage for migration
+  const storedToken = sessionStorage.getItem('trade_init_data') || localStorage.getItem('trade_init_data');
   if (storedToken) {
     initData = storedToken;
     apiGet('/profile').then(res => {
       if (res.user) {
         currentUser = res.user;
         showDashboard();
+      } else {
+        // Token invalid/expired — clear both storages
+        sessionStorage.removeItem('trade_init_data');
+        localStorage.removeItem('trade_init_data');
       }
-    }).catch(() => {});
+    }).catch(() => {
+      sessionStorage.removeItem('trade_init_data');
+      localStorage.removeItem('trade_init_data');
+    });
   }
 </script>
 </body>

@@ -25,6 +25,12 @@ if (env.REDIS_URL) {
     console.log("[Redis] REDIS_URL not configured. Using in-memory fallback cache.");
 }
 
+/** Expose the raw ioredis client for commands not wrapped by the helper (e.g. INCR, EXPIRE for rate limiting) */
+export function getRawRedisClient() {
+    return redisClient;
+}
+
+
 export const redis = {
     async get(key: string): Promise<string | null> {
         if (redisClient) {

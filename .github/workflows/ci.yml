@@ -1,0 +1,147 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# P2P Father — CI/CD Pipeline
+#
+# Triggers on every push to main and on every pull request targeting main.
+# The pipeline NEVER touches the live database or any real funds.
+# All tests are non-destructive and run in an isolated GitHub sandbox.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: P2P Father CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1: Type-check + Unit Tests + Build
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-and-build:
+    name: "🔍 TypeCheck · 🧪 Unit Tests · 🏗️ Build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Node.js (matches version used in production Dockerfile)
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. TypeScript type-check (catches all type errors, including new code)
+      - name: TypeScript type check
+        run: npm run typecheck
+
+      # 5. Run the non-destructive unit test suite
+      #    Safe: uses fake env vars — no DB, no blockchain, no real funds
+      - name: Run unit tests
+        env:
+          # Provide just enough fake vars to satisfy the Zod env schema
+          TELEGRAM_BOT_TOKEN: "1234567890:fake_token_for_ci_only"
+          ADMIN_TELEGRAM_IDS: "123456789"
+          SUPABASE_URL: "https://fake.supabase.co"
+          SUPABASE_ANON_KEY: "fake_anon_key"
+          SUPABASE_SERVICE_KEY: "fake_service_key"
+          MASTER_WALLET_SEED: "test test test test test test test test test test test junk"
+          RELAYER_PRIVATE_KEY: "0x0000000000000000000000000000000000000000000000000000000000000001"
+          NODE_ENV: "ci"
+        run: npm test
+
+      # 6. Production build — verifies the TypeScript compiles cleanly to JS
+      - name: Build production bundle
+        env:
+          TELEGRAM_BOT_TOKEN: "1234567890:fake_token_for_ci_only"
+          ADMIN_TELEGRAM_IDS: "123456789"
+          SUPABASE_URL: "https://fake.supabase.co"
+          SUPABASE_ANON_KEY: "fake_anon_key"
+          SUPABASE_SERVICE_KEY: "fake_service_key"
+          MASTER_WALLET_SEED: "test test test test test test test test test test test junk"
+          RELAYER_PRIVATE_KEY: "0x0000000000000000000000000000000000000000000000000000000000000001"
+          NODE_ENV: "ci"
+        run: npm run build
+
+      # 7. Verify dist/index.js exists (confirms build output is real)
+      - name: Verify build output
+        run: |
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ Build output dist/index.js not found!"
+            exit 1
+          fi
+          echo "✅ Build output dist/index.js confirmed."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 2: Security Audit (runs in parallel)
+  # Checks for known vulnerabilities in npm dependencies
+  # ─────────────────────────────────────────────────────────────────────────────
+  security-audit:
+    name: "🛡️ Security Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # audit only production dependencies — skip dev tool CVEs
+      # --audit-level=high means the job only fails on HIGH or CRITICAL CVEs
+      - name: npm security audit (production deps, high+ severity)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true  # Warn but don't block deploys for indirect dep CVEs
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 3: Summary comment on PRs
+  # ─────────────────────────────────────────────────────────────────────────────
+  pr-summary:
+    name: "📝 CI Summary"
+    runs-on: ubuntu-latest
+    needs: [test-and-build, security-audit]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Post PR summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const buildStatus = '${{ needs.test-and-build.result }}';
+            const auditStatus = '${{ needs.security-audit.result }}';
+            const buildEmoji = buildStatus === 'success' ? '✅' : '❌';
+            const auditEmoji = auditStatus === 'success' ? '✅' : '⚠️';
+
+            const body = [
+              '## 🤖 P2P Father CI Report',
+              '',
+              `| Check | Status |`,
+              `|-------|--------|`,
+              `| TypeCheck + Unit Tests + Build | ${buildEmoji} ${buildStatus.toUpperCase()} |`,
+              `| Security Audit (npm) | ${auditEmoji} ${auditStatus.toUpperCase()} |`,
+              '',
+              buildStatus === 'success'
+                ? '> ✅ All financial math, security, and build checks passed. Safe to merge.'
+                : '> ❌ One or more checks failed. Review the logs before merging.',
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

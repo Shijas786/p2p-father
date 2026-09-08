@@ -107,12 +107,12 @@ export function fmtDepositAddress(user: User): string {
     const address = user.wallet_address ?? "Contact support";
     return `📥 *DEPOSIT CRYPTO*
 
-Send USDT/BNB/MATIC to your personal deposit address:
+Send USDT/USDC/BNB/ETH to your personal deposit address:
 
 \`\`\`${address}\`\`\`
 
 ⚠️ *Important:*
-  • Only send on supported chains (BSC, Polygon, Base)
+  • Only send on supported chains (BSC, Base)
   • Minimum deposit: 1 USDT
   • Funds arrive automatically within 1-2 minutes
 

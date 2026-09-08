@@ -305,25 +305,35 @@ This ensures counterparties can send or receive fiat payments.`,
             }
             const type = text.includes("sell") ? "sell" : "buy";
 
-            // For SELL ads: show user their available vault balance on BSC as a heads-up.
+            // For SELL ads: show the user their total vault balance across both chains.
             if (type === "sell" && user.wallet_address) {
                 try {
                     const bscUsdtAddr = "0x55d398326f99059fF775485246999027B3197955";
                     const bscVaultBalStr = await escrow.getVaultBalance(user.wallet_address, bscUsdtAddr, "bsc").catch(() => "0");
-                    const vaultBal = parseFloat(bscVaultBalStr);
+                    const bscVaultBal = parseFloat(bscVaultBalStr);
 
-                    if (vaultBal <= 0) {
+                    // Also check Base USDC vault
+                    const baseUsdcAddr = env.USDC_ADDRESS;
+                    const baseUsdcVaultStr = baseUsdcAddr
+                        ? await escrow.getVaultBalance(user.wallet_address, baseUsdcAddr, "base").catch(() => "0")
+                        : "0";
+                    const baseUsdcVault = parseFloat(baseUsdcVaultStr);
+
+                    const totalVault = bscVaultBal + baseUsdcVault;
+
+                    if (totalVault <= 0) {
                         await (db as any).clearWhatsappState(user.id);
                         await replyWithButtons(
                             sock,
                             jid,
                             `🔒 *SELL AD — VAULT BALANCE REQUIRED*
 
-To post a SELL ad, you must have USDT locked in your P2PFather Escrow Vault (BSC Mainnet).
+To post a SELL ad, you must have USDT/USDC locked in your P2PFather Escrow Vault.
 
-💰 *Your Vault Balance:* 0.00 USDT (BSC Mainnet)
+💰 *BSC Vault (USDT):* ${bscVaultBal.toFixed(2)} USDT
+💰 *Base Vault (USDC):* ${baseUsdcVault.toFixed(2)} USDC
 
-Please deposit USDT to your wallet and lock it to the Vault first.`,
+Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
                             [
                                 { id: "/deposit",      label: "📥 Deposit USDT" },
                                 { id: "vault_deposit", label: "🔒 Lock to Vault" },
@@ -335,7 +345,7 @@ Please deposit USDT to your wallet and lock it to the Vault first.`,
                     await reply(
                         sock,
                         jid,
-                        `💰 *Your Vault Balance:* ${vaultBal.toFixed(2)} USDT (BSC Mainnet)\n\n✅ *SELL Ad selected (BSC Mainnet).*`,
+                        `💰 *Your Vault Balance:* ${bscVaultBal.toFixed(2)} USDT (BSC) / ${baseUsdcVault.toFixed(2)} USDC (Base)\n\n✅ *SELL Ad selected.*`,
                         msg
                     );
                 } catch (_) {
