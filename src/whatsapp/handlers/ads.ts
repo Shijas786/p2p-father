@@ -232,16 +232,33 @@ This ensures counterparties can send or receive fiat payments.`,
             return;
         }
 
+        // Fetch user's current vault balances to display right in Step 1
+        let vaultSummary = "";
+        try {
+            if (user.wallet_address) {
+                const { wallet } = await import("../../services/wallet");
+                const bals = await wallet.getBalances(user.wallet_address);
+                const bUsdc = parseFloat(bals?.vault_usdc || "0").toFixed(2);
+                const bUsdt = parseFloat(bals?.vault_usdt || "0").toFixed(2);
+                const bscUsdt = parseFloat(bals?.vault_bsc_usdt || "0").toFixed(2);
+                const bscUsdc = parseFloat(bals?.vault_bsc_usdc || "0").toFixed(2);
+                vaultSummary = `\n🔒 *Your Escrow Vault Balances:*\n• 🔵 Base: *${bUsdc} USDC* | ${bUsdt} USDT\n• 🟡 BSC: *${bscUsdt} USDT* | ${bscUsdc} USDC\n`;
+            }
+        } catch (_) {}
+
         // Initialize draft state
         await (db as any).setWhatsappState(user.id, "POST_AD", { step: "TYPE" } as AdDraft);
 
         await replyWithButtons(
             sock,
             jid,
-            `➕ *POST A P2P AD*\n\nStep 1 of 4: What type of ad do you want to post?`,
+            `➕ *POST A P2P AD*
+${vaultSummary}
+Step 1 of 5: What type of ad do you want to post?`,
             [
-                { id: "ad_type_sell", label: "🟢 SELL (I have USDT)" },
-                { id: "ad_type_buy",  label: "🔴 BUY  (I want USDT)" },
+                { id: "ad_type_sell", label: "🟢 SELL (I have Crypto)" },
+                { id: "ad_type_buy",  label: "🔴 BUY  (I want Crypto)" },
+                { id: "vault_deposit", label: "🔒 Top Up Vault" },
             ]
         );
         return;
@@ -305,80 +322,122 @@ This ensures counterparties can send or receive fiat payments.`,
             }
             const type = text.includes("sell") ? "sell" : "buy";
 
-            // For SELL ads: show the user their total vault balance across both chains.
-            if (type === "sell" && user.wallet_address) {
+            let bUsdc = 0, bUsdt = 0, bscUsdt = 0, bscUsdc = 0;
+            if (user.wallet_address) {
                 try {
-                    const bscUsdtAddr = "0x55d398326f99059fF775485246999027B3197955";
-                    const bscVaultBalStr = await escrow.getVaultBalance(user.wallet_address, bscUsdtAddr, "bsc").catch(() => "0");
-                    const bscVaultBal = parseFloat(bscVaultBalStr);
-
-                    // Also check Base USDC vault
-                    const baseUsdcAddr = env.USDC_ADDRESS;
-                    const baseUsdcVaultStr = baseUsdcAddr
-                        ? await escrow.getVaultBalance(user.wallet_address, baseUsdcAddr, "base").catch(() => "0")
-                        : "0";
-                    const baseUsdcVault = parseFloat(baseUsdcVaultStr);
-
-                    const totalVault = bscVaultBal + baseUsdcVault;
-
-                    if (totalVault <= 0) {
-                        await (db as any).clearWhatsappState(user.id);
-                        await replyWithButtons(
-                            sock,
-                            jid,
-                            `🔒 *SELL AD — VAULT BALANCE REQUIRED*
-
-To post a SELL ad, you must have USDT/USDC locked in your P2PFather Escrow Vault.
-
-💰 *BSC Vault (USDT):* ${bscVaultBal.toFixed(2)} USDT
-💰 *Base Vault (USDC):* ${baseUsdcVault.toFixed(2)} USDC
-
-Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
-                            [
-                                { id: "/deposit",      label: "📥 Deposit USDT" },
-                                { id: "vault_deposit", label: "🔒 Lock to Vault" },
-                            ]
-                        );
-                        return;
-                    }
-
-                    await reply(
-                        sock,
-                        jid,
-                        `💰 *Your Vault Balance:* ${bscVaultBal.toFixed(2)} USDT (BSC) / ${baseUsdcVault.toFixed(2)} USDC (Base)\n\n✅ *SELL Ad selected.*`,
-                        msg
-                    );
-                } catch (_) {
-                    // RPC unavailable — let them proceed, hard check at AMOUNT step
-                }
+                    const { wallet } = await import("../../services/wallet");
+                    const bals = await wallet.getBalances(user.wallet_address);
+                    bUsdc = parseFloat(bals?.vault_usdc || "0");
+                    bUsdt = parseFloat(bals?.vault_usdt || "0");
+                    bscUsdt = parseFloat(bals?.vault_bsc_usdt || "0");
+                    bscUsdc = parseFloat(bals?.vault_bsc_usdc || "0");
+                } catch (_) {}
             }
 
-            draft.type  = type;
-            draft.token = "USDT";
-            draft.chain = "bsc";
-            draft.step  = "RATE";
+            const totalVault = bUsdc + bUsdt + bscUsdt + bscUsdc;
+            if (type === "sell" && totalVault <= 0) {
+                await (db as any).clearWhatsappState(user.id);
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `🔒 *SELL AD — VAULT BALANCE REQUIRED*
+
+To post a SELL ad, you must have USDC or USDT locked in your P2PFather Escrow Vault.
+
+💰 *Base Vault:* ${bUsdc.toFixed(2)} USDC | ${bUsdt.toFixed(2)} USDT
+💰 *BSC Vault:* ${bscUsdt.toFixed(2)} USDT | ${bscUsdc.toFixed(2)} USDC
+
+Please deposit crypto to your wallet and lock it to your Escrow Vault first.`,
+                    [
+                        { id: "/deposit",      label: "📥 Deposit" },
+                        { id: "vault_deposit", label: "🔒 Lock to Vault" },
+                        { id: "/balance",      label: "💰 View Wallet" },
+                    ]
+                );
+                return;
+            }
+
+            draft.type = type;
+            draft.step = "TOKEN";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
-            await reply(
+            // Show network and token options, highlighting user's locked vault assets
+            const assetButtons: { id: string; label: string }[] = [];
+            if (type === "sell" && bUsdc > 0) {
+                assetButtons.push({ id: "ad_asset_base_usdc", label: `🔵 Base USDC (${bUsdc.toFixed(2)})` });
+                assetButtons.push({ id: "ad_asset_bsc_usdt",  label: `🟡 BSC USDT (${bscUsdt.toFixed(2)})` });
+                assetButtons.push({ id: "ad_asset_more",      label: "▶️ More Assets" });
+            } else if (type === "sell" && bscUsdt > 0) {
+                assetButtons.push({ id: "ad_asset_bsc_usdt",  label: `🟡 BSC USDT (${bscUsdt.toFixed(2)})` });
+                assetButtons.push({ id: "ad_asset_base_usdc", label: `🔵 Base USDC (${bUsdc.toFixed(2)})` });
+                assetButtons.push({ id: "ad_asset_more",      label: "▶️ More Assets" });
+            } else {
+                assetButtons.push({ id: "ad_asset_base_usdc", label: "🔵 Base USDC" });
+                assetButtons.push({ id: "ad_asset_bsc_usdt",  label: "🟡 BSC USDT" });
+                assetButtons.push({ id: "ad_asset_more",      label: "▶️ More Assets" });
+            }
+
+            await replyWithButtons(
                 sock,
                 jid,
-                `✅ *${type.toUpperCase()} USDT (BSC Mainnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
-                msg
+                `✅ *${type.toUpperCase()} Ad Selected*
+
+Step 2 of 5: Select *Network & Asset* for this ad:
+
+• 🔵 Base: *${bUsdc.toFixed(2)} USDC* | *${bUsdt.toFixed(2)} USDT* (in Vault)
+• 🟡 BSC: *${bscUsdt.toFixed(2)} USDT* | *${bscUsdc.toFixed(2)} USDC* (in Vault)`,
+                assetButtons.slice(0, 3)
             );
             return;
         }
 
-        // ── Step 2: Token (fallback if reached) ───────────────────────────────
+        // ── Step 2: Token & Network Selection ─────────────────────────────────
         case "TOKEN": {
-            draft.token = "USDT";
-            draft.chain = "bsc";
+            const raw = text.toLowerCase().trim();
+            if (raw.includes("more") || raw === "ad_asset_more") {
+                await replyWithButtons(
+                    sock,
+                    jid,
+                    `🌐 *SELECT NETWORK & ASSET*\n\nChoose from the available options below:`,
+                    [
+                        { id: "ad_asset_base_usdt", label: "🔵 Base USDT" },
+                        { id: "ad_asset_bsc_usdc",  label: "🟡 BSC USDC" },
+                        { id: "ad_asset_base_usdc", label: "🔵 Base USDC" },
+                    ]
+                );
+                return;
+            }
+
+            let chain = "base";
+            let token = "USDC";
+
+            if (raw.includes("bsc_usdc") || (raw.includes("bsc") && raw.includes("usdc"))) {
+                chain = "bsc";
+                token = "USDC";
+            } else if (raw.includes("bsc") || raw.includes("bsc_usdt")) {
+                chain = "bsc";
+                token = "USDT";
+            } else if (raw.includes("base_usdt") || (raw.includes("base") && raw.includes("usdt"))) {
+                chain = "base";
+                token = "USDT";
+            } else if (raw.includes("base") || raw.includes("base_usdc") || raw.includes("usdc")) {
+                chain = "base";
+                token = "USDC";
+            } else if (raw.includes("usdt")) {
+                chain = "bsc";
+                token = "USDT";
+            }
+
+            draft.chain = chain;
+            draft.token = token;
             draft.step  = "RATE";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
+            const chainLabel = chain === "base" ? "Base" : "BSC";
             await reply(
                 sock,
                 jid,
-                `✅ *USDT (BSC Mainnet) selected.*\n\nStep 2 of 4: Enter your *exchange rate* (₹ per USDT)\n\n*Example:* \`89.50\``,
+                `✅ *${draft.type!.toUpperCase()} ${token} (${chainLabel} Mainnet) selected.*\n\nStep 3 of 5: Enter your *exchange rate* (₹ per ${token})\n\n*Example:* \`89.50\``,
                 msg
             );
             return;
@@ -387,6 +446,9 @@ Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
         // ── Step 3: Rate ──────────────────────────────────────────────────────
         case "RATE": {
             const rate = parseFloat(text);
+            const token = draft.token || "USDC";
+            const chainLabel = (draft.chain || "base") === "base" ? "Base" : "BSC";
+
             if (isNaN(rate) || rate < 1) {
                 await reply(sock, jid, "❌ Invalid rate. Enter a valid ₹ rate, e.g. `89.50`", msg);
                 return;
@@ -398,7 +460,7 @@ Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
             await reply(
                 sock,
                 jid,
-                `✅ *Rate: ₹${rate} / USDT*\n\nStep 4 of 5: Enter the *total USDT amount* for this ad:\n\n*Example:* \`100\` (for 100 USDT → ₹${(100 * rate).toLocaleString("en-IN")})`,
+                `✅ *Rate: ₹${rate} / ${token} (${chainLabel})*\n\nStep 4 of 5: Enter the *total ${token} amount* for this ad:\n\n*Example:* \`10\` (for 10 ${token} → ₹${(10 * rate).toLocaleString("en-IN")})`,
                 msg
             );
             return;
@@ -407,15 +469,18 @@ Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
         // ── Step 4: Amount ────────────────────────────────────────────────────
         case "AMOUNT": {
             const amount = parseFloat(text);
+            const token = draft.token || "USDC";
+            const chainLabel = (draft.chain || "base") === "base" ? "Base" : "BSC";
+
             if (isNaN(amount) || amount <= 0) {
-                await reply(sock, jid, "❌ Enter a valid USDT amount.\n*Example:* `100`", msg);
+                await reply(sock, jid, `❌ Enter a valid ${token} amount.\n*Example:* \`10\``, msg);
                 return;
             }
 
             // ── SELL AD: Hard vault balance gate (exact same logic as MiniApp) ──
             if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
                 try {
-                    const chain = (draft.chain || "bsc") as any;
+                    const chain = (draft.chain || "base") as any;
                     let tokenAddress = env.USDT_ADDRESS;
                     if (chain === "bsc") {
                         tokenAddress = draft.token === "USDC"
@@ -437,11 +502,11 @@ Please deposit USDT/USDC to your wallet and lock it to the Vault first.`,
                             jid,
                             `❌ *INSUFFICIENT VAULT BALANCE*
 
-You need *${amount} ${draft.token}* on ${draft.chain!.toUpperCase()} but only *${available.toFixed(2)} ${draft.token}* is available.
+You want to sell *${amount} ${draft.token}* on ${chainLabel}, but only *${available.toFixed(2)} ${draft.token}* is available in your Escrow Vault.
 
 💰 *Vault Balance:* ${vaultBal.toFixed(2)} ${draft.token}
 🔒 *Already Reserved by Other Ads:* ${reserved.toFixed(2)} ${draft.token}
-📊 *Available:* ${available.toFixed(2)} ${draft.token}
+📊 *Available to Sell:* ${available.toFixed(2)} ${draft.token}
 
 Please deposit more and lock it to your Vault before posting this ad.`,
                             [
@@ -467,7 +532,7 @@ Please deposit more and lock it to your Vault before posting this ad.`,
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *Amount: ${amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})*\n\nStep 5: Select *Payment Method*:`,
+                `✅ *Amount: ${amount} ${token} on ${chainLabel} (Total: ₹${totalFiat.toLocaleString("en-IN")})*\n\nStep 5 of 5: Select *Payment Method*:`,
                 [
                     { id: "ad_pay_upi",    label: "📱 UPI (GPay/PhonePe)" },
                     { id: "ad_pay_imps",   label: "🏦 Bank Transfer / IMPS" },
@@ -589,16 +654,18 @@ Please deposit more and lock it to your Vault before posting this ad.`,
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
             const totalFiat = Math.round((draft.amount || 0) * (draft.rate || 0));
+            const token = draft.token || "USDC";
+            const chainLabel = (draft.chain || "base") === "base" ? "Base" : "BSC";
 
             await replyWithButtons(
                 sock,
                 jid,
                 `📋 *CONFIRM YOUR AD (ADVANCED SETTINGS)*
 
-• *Type:* ${draft.type!.toUpperCase()} USDT
-• *Token:* USDT (${draft.chain!.toUpperCase()})
-• *Amount:* ${draft.amount} USDT
-• *Rate:* ₹${draft.rate} / USDT
+• *Type:* ${draft.type!.toUpperCase()} ${token}
+• *Token & Network:* ${token} (${chainLabel} Mainnet)
+• *Amount:* ${draft.amount} ${token}
+• *Rate:* ₹${draft.rate} / ${token}
 • *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
 • *Payment:* ${draft.payment_methods!.join(", ")}
 • *Expiry:* ${draft.expiry_minutes ? `${draft.expiry_minutes / 60}h` : "1h"}
@@ -627,12 +694,14 @@ Where do you want to publish this ad? 👇`,
             try {
                 const orderAmount = draft.amount || draft.max_amount || 100;
                 const totalFiat = Math.round(orderAmount * (draft.rate || 0));
+                const orderToken = draft.token || "USDC";
+                const orderChainLabel = (draft.chain || "base") === "base" ? "Base" : "BSC";
 
                 // ── FINAL VAULT RE-VALIDATION before writing to DB (TOCTOU guard) ──
                 // Time may have passed since AMOUNT step — re-check in case user withdrew.
                 if (draft.type === "sell" && user.wallet_address && draft.chain && draft.token) {
                     try {
-                        const chain = (draft.chain || "bsc") as any;
+                        const chain = (draft.chain || "base") as any;
                         let tokenAddress = env.USDT_ADDRESS;
                         if (chain === "bsc") {
                             tokenAddress = draft.token === "USDC"
@@ -653,11 +722,11 @@ Where do you want to publish this ad? 👇`,
                                 jid,
                                 `❌ *VAULT BALANCE CHANGED*
 
-Your available vault balance has changed since you started. You now only have *${available.toFixed(2)} USDT* available but this ad requires *${orderAmount} USDT*.
+Your available vault balance has changed since you started. You now only have *${available.toFixed(2)} ${orderToken}* available on ${orderChainLabel} but this ad requires *${orderAmount} ${orderToken}*.
 
 Please top up your Vault and try again.`,
                                 [
-                                    { id: "/deposit",      label: "📥 Deposit USDT" },
+                                    { id: "/deposit",      label: `📥 Deposit ${orderToken}` },
                                     { id: "vault_deposit", label: "🔒 Lock to Vault" },
                                     { id: "/post",         label: "🔄 Try Again" },
                                 ]
@@ -679,8 +748,8 @@ Please top up your Vault and try again.`,
                 const order = await db.createOrder({
                     user_id:         user.id,
                     type:            draft.type as any,
-                    token:           draft.token!,
-                    chain:           draft.chain!,
+                    token:           draft.token || "USDC",
+                    chain:           draft.chain || "base",
                     amount:          orderAmount,
                     min_amount:      100,
                     max_amount:      totalFiat,
@@ -714,8 +783,9 @@ Please top up your Vault and try again.`,
                     `🎉 *AD PUBLISHED SUCCESSFULLY!*
 
 Your ${draft.type!.toUpperCase()} ad is now LIVE!
-• *Amount:* ${orderAmount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
-• *Rate:* ₹${draft.rate} / USDT
+• *Asset:* ${orderToken} (${orderChainLabel} Mainnet)
+• *Amount:* ${orderAmount} ${orderToken} (Total: ₹${totalFiat.toLocaleString("en-IN")})
+• *Rate:* ₹${draft.rate} / ${orderToken}
 • *KYC Filter:* ${draft.require_kyc ? "🛡️ Verified Only" : "🌐 All Traders"}
 • *Published To:* ${channelText}
 
@@ -770,15 +840,17 @@ export async function showMyAdCard(
     const ad = myOrders[safeIndex];
     const shortId = ad.id.slice(0, 8);
     const totalFiat = Math.round((ad.amount || 0) * (ad.rate || 0));
+    const adToken = ad.token || "USDT";
+    const adChainLabel = (ad.chain || "bsc").toUpperCase();
 
     const cardText =
 `📋 *YOUR P2P AD (${safeIndex + 1} of ${myOrders.length})*
 
-• *Type:* ${ad.type.toUpperCase()} USDT
-• *Rate:* ₹${ad.rate} / USDT
-• *Amount:* ${ad.amount} USDT (Total: ₹${totalFiat.toLocaleString("en-IN")})
+• *Type:* ${ad.type.toUpperCase()} ${adToken}
+• *Rate:* ₹${ad.rate} / ${adToken}
+• *Amount:* ${ad.amount} ${adToken} (Total: ₹${totalFiat.toLocaleString("en-IN")})
 • *Status:* 🟢 ACTIVE
-• *Chain:* ${(ad.chain || "BSC").toUpperCase()}
+• *Chain:* ${adChainLabel}
 • *Payment:* ${(ad.payment_methods ?? []).join(", ") || "UPI"}
 • *Ad ID:* \`${shortId}\`
 

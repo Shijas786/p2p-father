@@ -1,9 +1,0 @@
-import { ethers } from "ethers";
-
-const ECDSA_OWNERSHIP_MODULE = "0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e";
-const sig = "0x123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456781b";
-const encodedSig = ethers.AbiCoder.defaultAbiCoder().encode(
-    ["bytes", "address"],
-    [sig, ECDSA_OWNERSHIP_MODULE]
-);
-console.log(encodedSig);

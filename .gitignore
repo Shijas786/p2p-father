@@ -1,6 +1,17 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 *.log
 .DS_Store
 whatsapp_auth_keys/
+scratch/
+artifacts/
+cache/
+typechain-types/
+*.zip
+*.patch
+*.db
+*.orig
+*.bak

@@ -164,6 +164,21 @@ async function main() {
         }
     });
 
+    app.post("/api/wa-restart", async (req, res) => {
+        try {
+            const secret = (req.query.secret as string) || (req.body?.secret as string);
+            if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+                return res.status(403).json({ error: "Unauthorized access" });
+            }
+            const axios = (await import("axios")).default;
+            const hypermeowUrl = process.env.HYPERMEOW_URL || "http://localhost:8085";
+            await axios.post(`${hypermeowUrl}/restart-qr`, {}, { timeout: 6000 });
+            res.json({ ok: true, message: "Restarting WhatsApp QR code generator..." });
+        } catch (e: any) {
+            res.status(500).json({ error: e?.message || "Failed to restart QR" });
+        }
+    });
+
     app.get("/wa-qr", (req, res) => {
         const secret = (req.query.secret as string) || "";
         if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
@@ -190,7 +205,7 @@ async function main() {
         .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px); border-radius: 24px; padding: 36px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #25D366, #128C7E); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { font-size: 14px; color: #8a99ad; margin-bottom: 24px; }
-        .qr-box { background: #fff; padding: 12px; border-radius: 16px; display: flex; align-items: center; justify-content: center; min-height: 250px; min-width: 250px; margin: 0 auto 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .qr-box { background: #fff; padding: 12px; border-radius: 16px; display: flex; align-items: center; justify-content: center; min-height: 250px; min-width: 250px; margin: 0 auto 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         img { display: block; width: 230px; height: 230px; border-radius: 8px; }
         .status { font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 50px; background: rgba(255,255,255,0.08); color: #fff; }
         .dot { width: 10px; height: 10px; border-radius: 50%; background: #eab308; animation: pulse 1.5s infinite; }
@@ -207,6 +222,11 @@ async function main() {
         <div class="qr-box">
             <img id="qr-img" style="display:none;" alt="WhatsApp QR Code" />
             <div id="loader" style="color: #666; font-size: 14px;">Loading QR code...</div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <button id="refresh-btn" onclick="forceRefreshQr()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px 18px; border-radius: 50px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                🔄 Refresh QR Code
+            </button>
         </div>
         <div class="status" id="status">
             <span class="dot" id="dot"></span>
@@ -263,6 +283,29 @@ async function main() {
                 console.error(e);
             }
         }
+
+        async function forceRefreshQr() {
+            const btn = document.getElementById('refresh-btn');
+            const loader = document.getElementById('loader');
+            const qrImg = document.getElementById('qr-img');
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            loader.innerText = "Requesting new QR from WhatsApp...";
+            loader.style.display = "block";
+            qrImg.style.display = "none";
+            try {
+                await fetch('/api/wa-restart?secret=' + encodeURIComponent(secret), { method: 'POST' });
+                setTimeout(updateQr, 800);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }, 2500);
+            }
+        }
+
         updateQr();
         setInterval(updateQr, 2500);
     </script>

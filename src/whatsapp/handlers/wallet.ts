@@ -282,6 +282,19 @@ Select the token you want to lock into your ${chainLabel} Escrow Vault: 👇`,
 
         await (db as any).setWhatsappState(user.id, "AWAITING_VAULT_DEP_AMOUNT", { chain: chainKey, token });
 
+        const numBal = parseFloat(walletBal);
+        const depButtons: { id: string; label: string }[] = [];
+        if (numBal >= 10) {
+            depButtons.push({ id: `vdep_amt_10_${token}_${chainKey}`, label: `⚡ 10 ${token}` });
+            depButtons.push({ id: `vdep_amt_all_${token}_${chainKey}`, label: `🔒 All (${Math.floor(numBal)} ${token})` });
+        } else if (numBal > 0) {
+            depButtons.push({ id: `vdep_amt_1_${token}_${chainKey}`, label: `⚡ 1 ${token}` });
+            depButtons.push({ id: `vdep_amt_all_${token}_${chainKey}`, label: `🔒 All (${walletBal} ${token})` });
+        } else {
+            depButtons.push({ id: "/deposit", label: "📥 Deposit First" });
+        }
+        depButtons.push({ id: "/balance", label: "❌ Cancel" });
+
         await replyWithButtons(
             sock,
             jid,
@@ -292,29 +305,27 @@ Select the token you want to lock into your ${chainLabel} Escrow Vault: 👇`,
 • *Wallet Balance:* ${walletBal} ${token}
 • *Vault Locked:* ${vaultBal} ${token} (🔒 ${chainLabel} Escrow)
 
-Please reply to this message with the *${token} amount* to move into your ${chainLabel} Escrow Vault:
-_(Example: 10 or 50 or 100)_`,
-            [
-                { id: "/deposit", label: "📥 Deposit First" },
-                { id: "/balance", label: "❌ Cancel" },
-            ]
+Select a quick amount below or *reply with any amount* to move into your ${chainLabel} Escrow Vault:
+_(Example: 1, 10, or 50)_`,
+            depButtons.slice(0, 3)
         );
         return;
     }
 
-    // ─── State: AWAITING_VAULT_DEP_AMOUNT ─────────────────────────────────────
+    // ─── State: AWAITING_VAULT_DEP_AMOUNT or vdep_amt_ button ────────────────
     const walletState = await (db as any).getWhatsappState(user.id);
-    if (walletState?.key === "AWAITING_VAULT_DEP_AMOUNT") {
-        const amountStr = text.trim();
-        const amount = parseFloat(amountStr);
+    if (walletState?.key === "AWAITING_VAULT_DEP_AMOUNT" || text.startsWith("vdep_amt_")) {
+        let amountStr = text.trim();
+        let chainKey = (walletState?.data?.chain || "bsc").toLowerCase();
+        let token = (walletState?.data?.token || "USDT").toUpperCase();
 
-        if (isNaN(amount) || amount <= 0) {
-            await reply(sock, jid, "❌ Invalid amount. Please enter a valid number (e.g. 10 or 50):", msg);
-            return;
+        if (text.startsWith("vdep_amt_")) {
+            const parts = text.replace("vdep_amt_", "").split("_");
+            amountStr = parts[0];
+            if (parts.length >= 2) token = parts[1].toUpperCase();
+            if (parts.length >= 3) chainKey = parts[2].toLowerCase();
         }
 
-        const chainKey = (walletState.data?.chain || "bsc").toLowerCase();
-        const token = (walletState.data?.token || "USDT").toUpperCase();
         const chainLabel = chainKey === "base" ? "Base" : "BSC";
 
         let walletBal = "0.00", vaultBal = "0.00";
@@ -331,6 +342,17 @@ _(Example: 10 or 50 or 100)_`,
                 vaultBal = (parseFloat(bals?.[vKey] || "0")).toFixed(2);
             }
         } catch (_) {}
+
+        if (amountStr.toLowerCase() === "all") {
+            amountStr = walletBalNum.toString();
+        }
+
+        const amount = parseFloat(amountStr);
+
+        if (isNaN(amount) || amount <= 0) {
+            await reply(sock, jid, "❌ Invalid amount. Please enter a valid number (e.g. 1, 10 or 50):", msg);
+            return;
+        }
 
         // 🛡️ Bug 6 Fix: Block if amount > available wallet balance
         if (amount > walletBalNum + 0.000001) {

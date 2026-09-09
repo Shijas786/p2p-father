@@ -570,30 +570,34 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     }
 
     // ── Number Shortcuts (1, 2, 3, 4, 5) ──────────────────────────────────────
-    if (text === "1" || text === "1️⃣") {
-        await (db as any).clearWhatsappState(user.id);
-        await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
-        return;
-    }
-    if (text === "2" || text === "2️⃣") {
-        await (db as any).clearWhatsappState(user.id);
-        await handleAdCommand(sock, msg, jid, user, "/ads");
-        return;
-    }
-    if (text === "3" || text === "3️⃣") {
-        await (db as any).clearWhatsappState(user.id);
-        await handleAdCommand(sock, msg, jid, user, "/post");
-        return;
-    }
-    if (text === "4" || text === "4️⃣") {
-        await (db as any).clearWhatsappState(user.id);
-        await handleTradeCommand(sock, msg, jid, user, "/trades");
-        return;
-    }
-    if (text === "5" || text === "5️⃣") {
-        await (db as any).clearWhatsappState(user.id);
-        await handleAdCommand(sock, msg, jid, user, "/my_ads");
-        return;
+    // Only process number shortcuts if the user is NOT in an active conversation state (like entering amount or PIN)
+    const currentWaState = await (db as any).getWhatsappState(user.id);
+    if (!currentWaState) {
+        if (text === "1" || text === "1️⃣") {
+            await (db as any).clearWhatsappState(user.id);
+            await handleWalletCommand(sock, msg, jid, senderPhone, user, "/balance");
+            return;
+        }
+        if (text === "2" || text === "2️⃣") {
+            await (db as any).clearWhatsappState(user.id);
+            await handleAdCommand(sock, msg, jid, user, "/ads");
+            return;
+        }
+        if (text === "3" || text === "3️⃣") {
+            await (db as any).clearWhatsappState(user.id);
+            await handleAdCommand(sock, msg, jid, user, "/post");
+            return;
+        }
+        if (text === "4" || text === "4️⃣") {
+            await (db as any).clearWhatsappState(user.id);
+            await handleTradeCommand(sock, msg, jid, user, "/trades");
+            return;
+        }
+        if (text === "5" || text === "5️⃣") {
+            await (db as any).clearWhatsappState(user.id);
+            await handleAdCommand(sock, msg, jid, user, "/my_ads");
+            return;
+        }
     }
 
     // ── Faucet Command for Testnet Testing ────────────────────────────
@@ -790,6 +794,7 @@ Select an option below to start trading 👇`,
         text.startsWith("vdep_net_") ||
         text.startsWith("vdep_select_") ||
         text.startsWith("vdep_chain_") ||
+        text.startsWith("vdep_amt_") ||
         text.startsWith("confirm_vault_dep_") ||
         text.startsWith("confirm_wd_") ||
         /\b(balance|wallet|funds|my usdt|check balance|how much usdt|kithaanu|enthaanu balance|balance aano|bakki undu)\b/.test(lowerText)
@@ -839,6 +844,7 @@ Or check your balance first with /balance 💰`,
         text.startsWith("/pause") ||
         text.startsWith("ad_type_") ||
         text.startsWith("ad_token_") ||
+        text.startsWith("ad_asset_") ||
         text.startsWith("ad_pay_") ||
         text.startsWith("ad_confirm_")
     ) {

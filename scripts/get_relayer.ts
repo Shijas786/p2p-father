@@ -1,1 +1,0 @@
-import { ethers } from 'ethers'; import { env } from './src/config/env'; async function main() { const w = new ethers.Wallet(env.RELAYER_PRIVATE_KEY); console.log('Relayer Address:', w.address); } main();

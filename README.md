@@ -19,7 +19,7 @@
 * **Database**: Supabase (PostgreSQL)
 * **Blockchain/Web3**: Hardhat, Ethers.js, OpenZeppelin
 * **Caching/Queues**: Redis (`ioredis`)
-* **Deployment**: Configured for Railway and Vercel
+* **Deployment**: Configured for Railway (Docker)
 
 ## 🚀 Deployment
 

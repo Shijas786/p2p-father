@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
@@ -117,6 +118,12 @@ func startQRFlow() {
 	qrActive = true
 	qrMutex.Unlock()
 
+	// whatsmeow requires GetQRChannel to be called before Connect().
+	// If the socket is already open, disconnect it first so a new channel can be created.
+	if client != nil && client.IsConnected() {
+		client.Disconnect()
+	}
+
 	ctx := context.Background()
 	qrChan, err := client.GetQRChannel(ctx)
 	if err != nil {
@@ -127,8 +134,12 @@ func startQRFlow() {
 		return
 	}
 
-	if !client.IsConnected() {
-		_ = client.Connect()
+	if err := client.Connect(); err != nil {
+		fmt.Printf("[Hypermeow QR Error] Failed to connect: %v\n", err)
+		qrMutex.Lock()
+		qrActive = false
+		qrMutex.Unlock()
+		return
 	}
 
 	go func() {
@@ -148,9 +159,14 @@ func startQRFlow() {
 				fmt.Printf("[Hypermeow QR Event] %s\n", evt.Event)
 			}
 		}
+		// Channel closed or timed out: reset state and disconnect idle socket
 		qrMutex.Lock()
+		latestQR = ""
 		qrActive = false
 		qrMutex.Unlock()
+		if client != nil && (client.Store.ID == nil || client.Store.ID.User == "") && client.IsConnected() {
+			client.Disconnect()
+		}
 	}()
 }
 
@@ -200,6 +216,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/qr", handleGetQR)
+	mux.HandleFunc("/restart-qr", handleRestartQR)
 	mux.HandleFunc("/logout", handleLogout)
 	mux.HandleFunc("/send-text", handleSendText)
 	mux.HandleFunc("/send-image", handleSendImage)
@@ -255,6 +272,16 @@ func handleGetQR(w http.ResponseWriter, r *http.Request) {
 	qrMutex.Unlock()
 	if !hasQR {
 		startQRFlow()
+		// Wait briefly (up to 1.5s) for the first QR event from WhatsApp
+		for i := 0; i < 15; i++ {
+			time.Sleep(100 * time.Millisecond)
+			qrMutex.Lock()
+			hasQR = latestQR != ""
+			qrMutex.Unlock()
+			if hasQR {
+				break
+			}
+		}
 	}
 
 	qrMutex.Lock()
@@ -262,6 +289,23 @@ func handleGetQR(w http.ResponseWriter, r *http.Request) {
 	qrMutex.Unlock()
 	json.NewEncoder(w).Encode(map[string]string{
 		"qr": code,
+	})
+}
+
+func handleRestartQR(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if client != nil {
+		if client.IsConnected() {
+			client.Disconnect()
+		}
+		qrMutex.Lock()
+		latestQR = ""
+		qrActive = false
+		qrMutex.Unlock()
+		go startQRFlow()
+	}
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "restarting_qr",
 	})
 }
 
