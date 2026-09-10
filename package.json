@@ -28,8 +28,6 @@
     "@grammyjs/conversations": "^2.0.3",
     "@openzeppelin/contracts": "^5.4.0",
     "@openzeppelin/contracts-upgradeable": "^5.6.1",
-    "@polymarket/builder-relayer-client": "^0.0.10",
-    "@polymarket/clob-client-v2": "latest",
     "@safe-global/api-kit": "^4.2.0",
     "@safe-global/protocol-kit": "^7.2.0",
     "@safe-global/safe-core-sdk-types": "^5.1.0",

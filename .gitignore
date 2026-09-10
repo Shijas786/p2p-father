@@ -1,15 +1,54 @@
+# Dependencies
 node_modules/
+miniapp/node_modules/
+
+# Build & Dist
 dist/
+miniapp/dist/
+build/
+*.tsbuildinfo
+
+# Environment & Secrets (Never commit credentials)
 .env
 .env.*
+.env.backup*
 !.env.example
-*.log
+*.pem
+*.key
+*.cert
+
+# AI Assistant & IDE Configs (Keep local only)
+.agents/
+.cursor/
+.gemini/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Metadata
 .DS_Store
-whatsapp_auth_keys/
-scratch/
+Thumbs.db
+
+# Hardhat & Smart Contract Artifacts
 artifacts/
 cache/
 typechain-types/
+
+# Logs & Temporary Files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+coverage/
+.nyc_output/
+
+# WhatsApp Session Keys & Project Scratch
+whatsapp_auth_keys/
+scratch/
 *.zip
 *.patch
 *.db

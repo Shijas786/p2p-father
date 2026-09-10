@@ -15,10 +15,6 @@ import { Orders } from './pages/Orders';
 import { CreateOrder } from './pages/CreateOrder';
 import { TradeDetail } from './pages/TradeDetail';
 import { Wallet } from './pages/Wallet';
-import { Predict } from './pages/Predict';
-import { PredictProfile } from './pages/PredictProfile';
-import { PredictLeaderboard } from './pages/PredictLeaderboard';
-import { PredictCopyTrading } from './pages/PredictCopyTrading';
 
 import { WhatsAppLogin } from './pages/WhatsAppLogin';
 import { Profile } from './pages/Profile';
@@ -321,12 +317,6 @@ function AppInner() {
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
           <Route path="trade/new/:orderId" element={<TradeDetail user={user} />} />
           <Route path="wallet" element={<Wallet user={user} />} />
-          <Route path="predict" element={<Predict user={user} />} />
-          <Route path="predict/:slug" element={<Predict user={user} />} />
-          <Route path="predict-profile" element={<PredictProfile user={user} />} />
-          <Route path="predict-profile/:telegramId" element={<PredictProfile user={user} />} />
-          <Route path="predict-leaderboard" element={<PredictLeaderboard />} />
-          <Route path="predict-copy-trading" element={<PredictCopyTrading />} />
 
           <Route path="ads" element={<MyAds />} />
           <Route path="admin" element={<Admin user={user} />} />

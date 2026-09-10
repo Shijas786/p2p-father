@@ -130,6 +130,19 @@ export class HypermeowClient {
             return null;
         }
     }
+
+    public async getGroupMetadata(jid: string): Promise<any> {
+        try {
+            const res = await axios.get(`${this.baseUrl}/group-info`, {
+                params: { jid },
+                timeout: 5000
+            });
+            return res.data || null;
+        } catch (err: any) {
+            console.warn(`[HypermeowClient] getGroupMetadata error for ${jid}:`, err?.message || err);
+            return null;
+        }
+    }
 }
 
 export const hypermeowClient = new HypermeowClient();

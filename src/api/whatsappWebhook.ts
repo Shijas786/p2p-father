@@ -46,7 +46,24 @@ const stubSock: WASocket = {
             console.error(`[WA-StubSocket] Error sending message to ${jid}:`, err?.message || err);
         }
     },
-    groupMetadata: async () => ({ subject: "P2PFather Group" }),
+    groupMetadata: async (jid?: string) => {
+        if (jid && hypermeowClient.isConfigured()) {
+            const meta = await hypermeowClient.getGroupMetadata(jid);
+            if (meta && meta.participants) {
+                return {
+                    subject: meta.topic || "P2PFather Group",
+                    participants: meta.participants.map((p: any) => ({
+                        id: p.jid,
+                        jid: p.jid,
+                        lid: p.lid,
+                        admin: (p.isAdmin || p.isSuperAdmin) ? "admin" : null,
+                        isAdmin: Boolean(p.isAdmin || p.isSuperAdmin),
+                    })),
+                };
+            }
+        }
+        return { subject: "P2PFather Group", participants: [] };
+    },
 };
 
 // Register stub socket for group live ad broadcasting
@@ -92,6 +109,10 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
                 pushName: body.pushName || "",
                 ...(body.imageBase64 ? { imageBase64: body.imageBase64 } : {}),
             } as any;
+
+            if (body.isAdmin !== undefined) {
+                (normalizedMsg.key as any).isAdmin = Boolean(body.isAdmin);
+            }
 
             routeMessage(stubSock, normalizedMsg).catch((err) => {
                 console.error("[Hypermeow-Webhook] Error routing message:", err);

@@ -9,7 +9,7 @@ import { handleWalletCommand } from "./handlers/wallet";
 import { handleAdCommand } from "./handlers/ads";
 import { handleTradeCommand } from "./handlers/trade";
 import { handleProfileCommand } from "./handlers/profile";
-import { handleGroupMention, scanAndDeleteSpam } from "./handlers/group";
+import { handleGroupMention, scanAndDeleteSpam, registerGroupIfNew } from "./handlers/group";
 import { MAIN_MENU, formatTraderContact } from "./formatters";
 import { waAi as ai } from "../services/wa-ai";
 import { env } from "../config/env";
@@ -378,34 +378,18 @@ export async function routeMessage(
     const senderJid = (isGroup ? msg.key.participant : jid) ?? "";
     const senderPhone = senderJid.split("@")[0];
 
-    // ── Group: respond if @mentioned or keyword triggered ────────────────────
+    // ── Group: Do not chat in open groups; only guard against spam ────────────
     if (isGroup) {
         // 🛡️ Bug 13 Fix: Don't scan bot's own messages as spam
         if (msg.key?.fromMe) return;
 
-        // 🛡️ SPAM GUARD: always scan every group message first (no mention required)
-        const wasSpam = await scanAndDeleteSpam(sock, msg, jid);
-        if (wasSpam) return; // Stop processing — message was spam
+        // Auto-register group in DB so it can receive ad broadcasts if configured
+        await registerGroupIfNew(jid, sock).catch(() => {});
 
-        const botJid = getCleanBotJid(sock);
-        const mentionedJids: string[] =
-            (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid as string[]) ?? [];
-        const lowerText = text.toLowerCase();
-        const isMentioned =
-            mentionedJids.length > 0 ||
-            lowerText.includes("@bot") ||
-            lowerText.includes("p2p") ||
-            lowerText.includes("father") ||
-            lowerText.includes("ads") ||
-            lowerText.includes("rate") ||
-            lowerText.includes("buy") ||
-            lowerText.includes("sell") ||
-            lowerText.startsWith("!p2p") ||
-            lowerText.startsWith("!ads");
+        // 🛡️ SPAM GUARD: scan for unauthorized links / phishing (exempts group admins)
+        await scanAndDeleteSpam(sock, msg, jid);
 
-        if (!isMentioned) return;
-
-        await handleGroupMention(sock, msg, jid, text);
+        // WhatsApp bot does NOT chat or reply to keywords (buy/sell/rates) in open groups
         return;
     }
 

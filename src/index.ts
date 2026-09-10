@@ -9,7 +9,6 @@ import axios from "axios";
 import { miniappRouter } from "./api/miniapp";
 import { webhookRouter } from "./api/webhook";
 import { whatsappWebhookRouter } from "./api/whatsappWebhook";
-import { customHttpsAgent } from "./services/polymarket";
 
 async function main() {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -27,49 +26,20 @@ async function main() {
     console.log(`  Escrow:      ${env.ESCROW_CONTRACT_ADDRESS ? "✅ " + env.ESCROW_CONTRACT_ADDRESS : "❌ Not deployed"}`);
     console.log("");
 
-    console.log("=== POLYMARKET RELAYER NETWORK TEST ===");
-    try {
-        const baseUrl = process.env.RELAYER_URL || "https://relayer-v2.polymarket.com";
-        console.log(`Target URL: ${baseUrl}`);
-        // Just do a simple GET request to check network reachability instead of an unauthenticated POST to /submit
-        const res = await axios.get(baseUrl, { timeout: 10000 });
-        console.log("✅ Polymarket Relayer Connection SUCCESS!");
-    } catch (e: any) {
-        // We only care if it's a hard network error (DNS/Timeout). 
-        // 404 or 401 from the root path still means we can reach the server.
-        if (e.response && (e.response.status === 404 || e.response.status === 401 || e.response.status === 403)) {
-            console.log("✅ Polymarket Relayer Connection SUCCESS! (Reached Server)");
-        } else {
-            console.error("❌ Polymarket Relayer Connection FAILED!");
-            if (e.response) {
-                console.error("Status:", e.response.status);
-                console.error("Data:", JSON.stringify(e.response.data));
-            } else {
-                console.error("Network Error (Timeout, DNS, or IP Blocked):", e.message);
-            }
-        }
-    }
-    console.log("=======================================");
-
 
     // Start the bot
     console.log("  Starting Telegram bot (long polling)...");
 
     // Background Jobs
     if (env.NODE_ENV !== 'test') {
-        const { startExpiryJob, startLiquiditySyncJob, startTradeReconciliationJob, startPredictionSyncJob, startPredictionResolutionJob } = await import("./services/jobs");
+        const { startExpiryJob, startLiquiditySyncJob, startTradeReconciliationJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
-        const { bridgeMonitor } = await import("./services/bridge-monitor");
         const { startMetaWhatsAppMonitor } = await import("./services/wa-meta-monitor");
-        // 🚀 Deposit Monitor disabled globally - now runs on-demand via API
         
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
         startTradeReconciliationJob();
-        // startPredictionSyncJob(); // Disabled — prediction feature sunset
-        // startPredictionResolutionJob(); // Disabled — prediction feature sunset
-        bridgeMonitor.start(); // 🌉 Track pending cross-chain bridge deposits
         startMetaWhatsAppMonitor(); // 🔍 Track Meta WhatsApp Web client updates & alert Shijas on TG
     }
 
@@ -540,95 +510,6 @@ async function main() {
         if (lastPrice) client.send(JSON.stringify({ p: lastPrice }));
         client.on("close", () => clients.delete(client));
         client.on("error", () => clients.delete(client));
-    });
-
-    // ── Polymarket User WebSocket Proxy ─────────────────────────────
-    // Indian ISPs block ws-subscriptions-clob.polymarket.com.
-    // We proxy/tunnel user WebSocket subscriptions through our Railway server.
-    const userWss = new WebSocketServer({ server, path: "/ws/polymarket-user" });
-
-    userWss.on("connection", (clientWs) => {
-        console.log("[User WS Proxy] Client connected");
-
-        let polyWs: any = null;
-        let isClosed = false;
-
-        const closeConnections = () => {
-            if (isClosed) return;
-            isClosed = true;
-            console.log("[User WS Proxy] Closing connections");
-            try {
-                clientWs.close();
-            } catch {}
-            if (polyWs) {
-                try {
-                    polyWs.close();
-                } catch {}
-            }
-        };
-
-        try {
-            polyWs = new WebSocket("wss://ws-subscriptions-clob.polymarket.com/ws/user", {
-                agent: customHttpsAgent
-            });
-        } catch (err: any) {
-            console.error("[User WS Proxy] Error creating Polymarket WS connection:", err.message);
-            closeConnections();
-            return;
-        }
-
-        polyWs.on("open", () => {
-            console.log("[User WS Proxy] Connected to Polymarket");
-        });
-
-        polyWs.on("message", (data: any) => {
-            if (isClosed) return;
-            try {
-                if (clientWs.readyState === WebSocket.OPEN) {
-                    clientWs.send(data.toString());
-                }
-            } catch (err: any) {
-                console.error("[User WS Proxy] Error sending data to client:", err.message);
-            }
-        });
-
-        polyWs.on("close", () => {
-            console.log("[User WS Proxy] Polymarket connection closed");
-            closeConnections();
-        });
-
-        polyWs.on("error", (err: any) => {
-            console.error("[User WS Proxy] Polymarket connection error:", err.message);
-            closeConnections();
-        });
-
-        clientWs.on("message", (data: any) => {
-            if (isClosed) return;
-            const messageStr = data.toString();
-
-            const sendToPoly = () => {
-                if (polyWs && polyWs.readyState === WebSocket.OPEN) {
-                    polyWs.send(messageStr);
-                } else if (polyWs && polyWs.readyState === WebSocket.CONNECTING) {
-                    polyWs.once("open", () => {
-                        if (!isClosed && polyWs.readyState === WebSocket.OPEN) {
-                            polyWs.send(messageStr);
-                        }
-                    });
-                }
-            };
-            sendToPoly();
-        });
-
-        clientWs.on("close", () => {
-            console.log("[User WS Proxy] Client connection closed");
-            closeConnections();
-        });
-
-        clientWs.on("error", (err: any) => {
-            console.error("[User WS Proxy] Client connection error:", err.message);
-            closeConnections();
-        });
     });
 
     server.listen(Number(port), '0.0.0.0', () => {

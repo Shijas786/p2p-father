@@ -55,61 +55,55 @@ export function hotWalletConnector() {
         }
         
         // Forward all other requests to multi-tier RPC with fallback:
-        // Tier 1: New Alchemy -> Tier 2: Recent Alchemy -> Tier 3: Official public nodes
+        // Tier 1: Alchemy (if VITE_ALCHEMY_KEY is set) -> Tier 2: Official public nodes
+        const ALCHEMY_KEY = import.meta.env.VITE_ALCHEMY_KEY || '';
+        const ar = (network: string) => ALCHEMY_KEY ? `https://${network}.g.alchemy.com/v2/${ALCHEMY_KEY}` : '';
+
         const rpcListByChain: Record<number, string[]> = {
           1: [
-            'https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('eth-mainnet'),
             'https://ethereum-rpc.publicnode.com'
-          ],
+          ].filter(Boolean),
           56: [
-            'https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('bnb-mainnet'),
             'https://bsc-dataseed.binance.org',
             'https://bsc.publicnode.com'
-          ],
+          ].filter(Boolean),
           137: [
-            'https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('polygon-mainnet'),
             'https://polygon.publicnode.com'
-          ],
+          ].filter(Boolean),
           42161: [
-            'https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('arb-mainnet'),
             'https://arb1.arbitrum.io/rpc'
-          ],
+          ].filter(Boolean),
           10: [
-            'https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('opt-mainnet'),
             'https://mainnet.optimism.io'
-          ],
+          ].filter(Boolean),
           43114: [
-            'https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('avax-mainnet'),
             'https://api.avax.network/ext/bc/C/rpc'
-          ],
+          ].filter(Boolean),
           59144: [
-            'https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('linea-mainnet'),
             'https://rpc.linea.build'
-          ],
+          ].filter(Boolean),
           534352: [
-            'https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('scroll-mainnet'),
             'https://rpc.scroll.io'
-          ],
+          ].filter(Boolean),
           8453: [
-            'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
-            'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+            ar('base-mainnet'),
             'https://mainnet.base.org',
             'https://base-rpc.publicnode.com'
-          ]
+          ].filter(Boolean)
         };
 
         const candidates = rpcListByChain[currentChainId] || [
-          'https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER',
+          ar('base-mainnet'),
           'https://mainnet.base.org'
-        ];
+        ].filter(Boolean);
 
         let lastErr: any;
         for (const url of candidates) {

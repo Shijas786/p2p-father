@@ -1,41 +1,35 @@
 import { ethers, JsonRpcProvider, Network } from "ethers";
 import { env } from "../config/env";
 
-const ALCHEMY_KEY_NEW = "ALCHEMY_API_KEY_PLACEHOLDER"; // Primary 1 (New Account)
-const ALCHEMY_KEY_1 = "ALCHEMY_API_KEY_PLACEHOLDER"; // Fallback 1 (Recent Account)
-const ALCHEMY_KEY_2 = "qMlL6xWpv9OsGOolPeTtR"; // Fallback 2
-const ALCHEMY_KEY_3 = "alch_REDACTED"; // Fallback 3
+// Alchemy key optionally loaded from env — never hardcoded in source
+const ALCHEMY_KEY = process.env.ALCHEMY_KEY || "";
+const alchemyRpc = (network: string) =>
+    ALCHEMY_KEY ? `https://${network}.g.alchemy.com/v2/${ALCHEMY_KEY}` : null;
 
 const BSC_RPCS = [
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
-    `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
+    alchemyRpc("bnb-mainnet"),
     "https://bsc-dataseed.binance.org",
     "https://bsc.publicnode.com",
     "https://bsc-dataseed1.defibit.io",
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const BASE_RPCS = [
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
-    `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_2}`,
+    alchemyRpc("base-mainnet"),
     "https://mainnet.base.org",
     "https://base-rpc.publicnode.com",
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const POLYGON_RPCS = [
-    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
-    `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    alchemyRpc("polygon-mainnet"),
     "https://polygon.publicnode.com",
     "https://polygon-bor-rpc.publicnode.com",
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const MAINNET_RPCS = [
-    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_NEW}`,
-    `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_1}`,
+    alchemyRpc("eth-mainnet"),
     "https://ethereum-rpc.publicnode.com",
     "https://eth.llamarpc.com",
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const BSC_TESTNET_RPCS = [
     "https://data-seed-prebsc-1-s1.binance.org:8545/",

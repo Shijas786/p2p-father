@@ -86,16 +86,56 @@ type WebhookPayload struct {
 	AudioBase64 string `json:"audioBase64,omitempty"`
 	ImageBase64 string `json:"imageBase64,omitempty"`
 	MsgID       string `json:"msgId,omitempty"`
+	IsAdmin     bool   `json:"isAdmin,omitempty"`
 }
 
 var (
-	client     *whatsmeow.Client
-	container  *sqlstore.Container
-	webhookURL string
-	latestQR   string
-	qrMutex    sync.Mutex
-	qrActive   bool
+	client          *whatsmeow.Client
+	container       *sqlstore.Container
+	webhookURL      string
+	latestQR        string
+	qrMutex         sync.Mutex
+	qrActive        bool
+	groupCache      = make(map[string]cachedGroup)
+	groupCacheMutex sync.RWMutex
 )
+
+type cachedGroup struct {
+	info      *waTypes.GroupInfo
+	fetchedAt time.Time
+}
+
+func getCachedGroupInfo(chatJID waTypes.JID) (*waTypes.GroupInfo, error) {
+	key := chatJID.String()
+	groupCacheMutex.RLock()
+	cached, ok := groupCache[key]
+	groupCacheMutex.RUnlock()
+
+	if ok && time.Since(cached.fetchedAt) < 2*time.Minute {
+		return cached.info, nil
+	}
+
+	if client == nil {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	info, err := client.GetGroupInfo(context.Background(), chatJID)
+	if err != nil {
+		if ok && cached.info != nil {
+			return cached.info, nil
+		}
+		return nil, err
+	}
+
+	groupCacheMutex.Lock()
+	groupCache[key] = cachedGroup{
+		info:      info,
+		fetchedAt: time.Now(),
+	}
+	groupCacheMutex.Unlock()
+
+	return info, nil
+}
 
 // resolveJID parses the raw JID string into waTypes.JID preserving original server (@lid or @s.whatsapp.net)
 func resolveJID(rawJID string) (waTypes.JID, error) {
@@ -224,6 +264,7 @@ func main() {
 	mux.HandleFunc("/send-list", handleSendList)
 	mux.HandleFunc("/delete-message", handleDeleteMessage)
 	mux.HandleFunc("/contact-info", handleGetContactInfo)
+	mux.HandleFunc("/group-info", handleGetGroupInfo)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -669,6 +710,56 @@ func handleGetContactInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleGetGroupInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	jidStr := r.URL.Query().Get("jid")
+	if jidStr == "" || client == nil {
+		http.Error(w, `{"error":"missing jid or client not connected"}`, http.StatusBadRequest)
+		return
+	}
+
+	chatJID, err := resolveJID(jidStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid jid"}`, http.StatusBadRequest)
+		return
+	}
+
+	gInfo, err := getCachedGroupInfo(chatJID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	type ParticipantDTO struct {
+		JID          string `json:"jid"`
+		LID          string `json:"lid"`
+		IsAdmin      bool   `json:"isAdmin"`
+		IsSuperAdmin bool   `json:"isSuperAdmin"`
+	}
+
+	participants := make([]ParticipantDTO, 0, len(gInfo.Participants))
+	for _, p := range gInfo.Participants {
+		participants = append(participants, ParticipantDTO{
+			JID:          p.JID.String(),
+			LID:          p.LID.String(),
+			IsAdmin:      p.IsAdmin,
+			IsSuperAdmin: p.IsSuperAdmin,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"jid":          gInfo.JID.String(),
+		"ownerJid":     gInfo.OwnerJID.String(),
+		"topic":        gInfo.Topic,
+		"participants": participants,
+	})
+}
+
 
 func handleSendList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -973,6 +1064,23 @@ func eventHandler(evt interface{}) {
 			}
 		}
 
+		isAdmin := false
+		if chatJID.Server == "g.us" && client != nil {
+			gInfo, err := getCachedGroupInfo(chatJID)
+			if err == nil && gInfo != nil {
+				senderUser := senderJID.User
+				origSenderUser := v.Info.Sender.User
+				for _, member := range gInfo.Participants {
+					if (member.JID.User == senderUser || member.LID.User == senderUser ||
+						member.JID.User == origSenderUser || member.LID.User == origSenderUser) &&
+						(member.IsAdmin || member.IsSuperAdmin) {
+						isAdmin = true
+						break
+					}
+				}
+			}
+		}
+
 		payload := WebhookPayload{
 			JID:         chatJID.String(),
 			Text:        text,
@@ -981,6 +1089,7 @@ func eventHandler(evt interface{}) {
 			AudioBase64: audioBase64,
 			ImageBase64: imageBase64,
 			MsgID:       v.Info.ID,
+			IsAdmin:     isAdmin,
 		}
 		body, _ := json.Marshal(payload)
 		fmt.Printf("[Hypermeow Webhook] POST %s payload=%s\n", webhookURL, string(body))

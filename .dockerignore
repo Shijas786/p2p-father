@@ -2,9 +2,16 @@ node_modules
 miniapp/node_modules
 dist
 miniapp/dist
-.env
+.env*
 .git
 .github
+.agents
+.cursor
+.gemini
+.vscode
+.idea
+whatsapp_auth_keys
+artifacts
 *.log
 *.zip
 scratch

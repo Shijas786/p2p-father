@@ -70,8 +70,8 @@ const ESCROW_ABI = [
 
 type Chain = 'base' | 'bsc' | 'bsc_testnet' | 'base_sepolia';
 
-// Base Builder Code ERC-8021 Suffix for on-chain attribution
-const BASE_BUILDER_SUFFIX = "62635f39766479347879770b0080218021802180218021802180218021";
+// Base Builder Code ERC-8021 Suffix for on-chain attribution (bc_yuknhe8k)
+const BASE_BUILDER_SUFFIX = "62635f79756b6e6865386b0b0080218021802180218021802180218021";
 
 export class EscrowService {
     /**
@@ -130,24 +130,7 @@ export class EscrowService {
         chain: Chain = 'base'
     ): Promise<string> {
         if (chain === ('bsc_testnet' as any)) {
-            const t1 = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-            const t2 = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
-            try {
-                const contract = this.getEscrowContract('bsc_testnet' as any);
-                const reqWei = ethers.parseUnits(amount.toString(), 18);
-
-                const [b1, b2] = await Promise.all([
-                    (contract.balances(sellerAddress, t1) as Promise<bigint>).catch(() => 0n),
-                    (contract.balances(sellerAddress, t2) as Promise<bigint>).catch(() => 0n)
-                ]);
-
-                if (b1 >= reqWei) return t1;
-                if (b2 >= reqWei) return t2;
-                if (b1 > 0n || b2 > 0n) return b1 >= b2 ? t1 : t2;
-            } catch (err) {
-                console.error("[ESCROW] Error resolving testnet token address:", err);
-            }
-            return t1;
+            return "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
         }
 
         if (chain === 'bsc') {
@@ -167,12 +150,8 @@ export class EscrowService {
                 const contract = this.getEscrowContract(chain, attempt);
 
                 if (chain === ('bsc_testnet' as any) && (!tokenAddress || tokenAddress === "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd")) {
-                    const [b1, b2] = await Promise.all([
-                        (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n),
-                        (contract.balances(userAddress, "0x21d4945A5499107F19F819dA1ab9133902A58EAB") as Promise<bigint>).catch(() => 0n)
-                    ]);
-                    const maxB = b1 > b2 ? b1 : b2;
-                    return ethers.formatUnits(maxB, 18);
+                    const b = await (contract.balances(userAddress, "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd") as Promise<bigint>).catch(() => 0n);
+                    return ethers.formatUnits(b, 18);
                 }
 
                 // 3.5s timeout wrapper per RPC read

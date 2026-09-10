@@ -88,17 +88,14 @@ class WalletService {
         const bscProvider = this.getProvider('bsc');
         const bscUsdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
         const bscUsdt = "0x55d398326f99059fF775485246999027B3197955";
-        const testnetUsdtAddr1 = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
-        const testnetUsdtAddr2 = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
-        const pusdAddress = (env as any).PUSD_ADDRESS || "0x0000000000000000000000000000000000000000";
+        const testnetUsdtAddr = "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd";
 
         // 🚀 Parallel RPC execution using Promise.all for instant response
         const [
             ethBal, usdcBal, usdtBal,
             bnbBal, bscUsdcBal, bscUsdtBal,
-            polBal, pusdBal,
             vaultBaseUsdc, vaultBaseUsdt, vaultBscBnb, vaultBscUsdc, vaultBscUsdt,
-            testnetBnbBal, testnetUsdtBal1, testnetUsdtBal2, vaultTestnetUsdt
+            testnetBnbBal, testnetUsdtBal, vaultTestnetUsdt
         ] = await Promise.all([
             this.getNativeBalance(address, 'base'),
             this.getTokenBalance(address, env.USDC_ADDRESS, 'base', 6),
@@ -106,24 +103,19 @@ class WalletService {
             this.getNativeBalance(address, 'bsc'),
             this.getTokenBalance(address, bscUsdc, 'bsc', 18),
             this.getTokenBalance(address, bscUsdt, 'bsc', 18),
-            this.getNativeBalance(address, 'polygon'),
-            this.getTokenBalance(address, pusdAddress, 'polygon', 18),
             this.getVaultBalance(address, env.USDC_ADDRESS, 'base'),
             this.getVaultBalance(address, env.USDT_ADDRESS, 'base'),
             this.getVaultBalance(address, "0x0000000000000000000000000000000000000000", 'bsc'),
             this.getVaultBalance(address, bscUsdc, 'bsc'),
             this.getVaultBalance(address, bscUsdt, 'bsc'),
             this.getNativeBalance(address, 'bsc_testnet' as any),
-            this.getTokenBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any, 18),
-            this.getTokenBalance(address, testnetUsdtAddr2, 'bsc_testnet' as any, 18),
-            this.getVaultBalance(address, testnetUsdtAddr1, 'bsc_testnet' as any)
+            this.getTokenBalance(address, testnetUsdtAddr, 'bsc_testnet' as any, 18),
+            this.getVaultBalance(address, testnetUsdtAddr, 'bsc_testnet' as any)
         ]);
-
-        const combinedTestnetUsdt = (parseFloat(testnetUsdtBal1 || "0") + parseFloat(testnetUsdtBal2 || "0")).toFixed(2);
 
         return {
             address,
-            testnet_usdt: combinedTestnetUsdt,
+            testnet_usdt: testnetUsdtBal,
             testnet_bnb: testnetBnbBal || "0.0000",
             vault_testnet_usdt: vaultTestnetUsdt,
             eth: ethBal,
@@ -132,8 +124,8 @@ class WalletService {
             bnb: bnbBal,
             bsc_usdc: bscUsdcBal,
             bsc_usdt: bscUsdtBal,
-            pol: polBal,
-            pusd: pusdBal,
+            pol: "0.0",
+            pusd: "0.0",
             vault_usdc: vaultBaseUsdc,
             vault_usdt: vaultBaseUsdt,
             vault_bnb: vaultBscBnb,
@@ -274,7 +266,7 @@ class WalletService {
             try {
                 let depositData = escrowContract.interface.encodeFunctionData('deposit', [tokenAddress, amountUnits]);
                 if (chain === 'base') {
-                    depositData = depositData + "62635f39766479347879770b0080218021802180218021802180218021";
+                    depositData = depositData + "62635f79756b6e6865386b0b0080218021802180218021802180218021";
                 }
 
                 const depositTx = await signer.sendTransaction({
@@ -323,7 +315,7 @@ class WalletService {
         const txOptions: any = {};
         let withdrawData = escrowContract.interface.encodeFunctionData('withdraw', [tokenAddress, amountUnits]);
         if (chain === 'base') {
-            withdrawData = withdrawData + "62635f39766479347879770b0080218021802180218021802180218021";
+            withdrawData = withdrawData + "62635f79756b6e6865386b0b0080218021802180218021802180218021";
         }
 
         const tx = await signer.sendTransaction({
@@ -356,53 +348,6 @@ class WalletService {
         const tx = await contract.transfer(to, ethers.parseUnits(amountStr, decimals));
         await tx.wait();
         return tx.hash;
-    }
-
-    async dispenseAutoTestnetFaucet(recipientAddress: string): Promise<{ usdt: string; bnb: string; mintTx?: string; bnbTx?: string }> {
-        if (!recipientAddress) return { usdt: "0.0", bnb: "0.0" };
-        try {
-            const bscTestnetRpc = "https://data-seed-prebsc-1-s1.binance.org:8545/";
-            const demoUsdtTestnet = "0x21d4945A5499107F19F819dA1ab9133902A58EAB";
-            const relayerPk = env.RELAYER_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
-            if (!relayerPk) throw new Error("No RELAYER_PRIVATE_KEY set");
-
-            const provider = new ethers.JsonRpcProvider(bscTestnetRpc);
-            const signer = new ethers.Wallet(relayerPk, provider);
-            const usdtContract = new ethers.Contract(demoUsdtTestnet, [
-                "function mint(address to, uint256 amount) external",
-                "function balanceOf(address account) external view returns (uint256)"
-            ], signer);
-
-            // 1. Mint 1,000 USDT (Tether USD) on BSC Testnet
-            const mintAmount = ethers.parseEther("1000");
-            const mintTx = await usdtContract.mint(recipientAddress, mintAmount);
-            await mintTx.wait();
-
-            // 2. Transfer 0.05 tBNB Gas Fee on-chain if balance < 0.05 tBNB
-            let bnbTxHash: string | undefined = undefined;
-            const currentBnbWei = await provider.getBalance(recipientAddress);
-            if (currentBnbWei < ethers.parseEther("0.05")) {
-                const gasTx = await signer.sendTransaction({
-                    to: recipientAddress,
-                    value: ethers.parseEther("0.05")
-                });
-                await gasTx.wait();
-                bnbTxHash = gasTx.hash;
-            }
-
-            const updatedUsdt = await usdtContract.balanceOf(recipientAddress);
-            const updatedBnb = await provider.getBalance(recipientAddress);
-
-            return {
-                usdt: ethers.formatEther(updatedUsdt),
-                bnb: ethers.formatEther(updatedBnb),
-                mintTx: mintTx.hash,
-                bnbTx: bnbTxHash
-            };
-        } catch (err: any) {
-            console.error("❌ dispenseAutoTestnetFaucet error:", err?.message || err);
-            return { usdt: "1000.00", bnb: "0.05" };
-        }
     }
 }
 

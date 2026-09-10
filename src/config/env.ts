@@ -59,7 +59,7 @@ const envSchema = z.object({
 
     // Base Developer & Builder Code
     BASE_DEV_API_KEY: z.string().default(""),
-    BASE_BUILDER_CODE: z.string().default("bc_9vdy4xyw"),
+    BASE_BUILDER_CODE: z.string().default("bc_yuknhe8k"),
 
 
     // App Config

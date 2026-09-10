@@ -8,7 +8,6 @@ import { escrow } from "../services/escrow";
 import { bridge } from "../services/bridge";
 import { wallet } from "../services/wallet";
 import { market } from "../services/market";
-import { polymarketRelayerService } from "../services/relayer";
 import { feeCashbackService } from "../services/feeCashbackService";
 import { groupManager } from "../utils/groupManager";
 import { IpTrackerService } from "../services/ip-tracker";

@@ -9,6 +9,7 @@ import type { WASocket, IWebMessageInfo } from "../types";
 import { db } from "../../db/client";
 import { reply } from "../router";
 import { fmtGroupLiveAds, fmtGroupAdBroadcast } from "../formatters";
+import { env } from "../../config/env";
 import jsQR from "jsqr";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
@@ -83,19 +84,46 @@ export async function scanAndDeleteSpam(
     groupJid: string
 ): Promise<boolean> {
     const senderParticipant = msg.key?.participant ?? "unknown";
-    const senderPhone = senderParticipant.split("@")[0];
+    const senderRaw = senderParticipant.split("@")[0] || "";
+    const senderPhone = senderRaw.split(":")[0];
 
-    // Check if sender is a group admin (admins are exempt from image/link deletion)
-    let isAdmin = false;
-    try {
-        const meta = await sock.groupMetadata(groupJid);
-        const p = meta?.participants?.find(
-            (item: any) => item.id === senderParticipant || item.id === `${senderPhone}@s.whatsapp.net`
-        );
-        isAdmin = Boolean(p?.admin);
-    } catch (_) {}
+    // 1. Direct admin flag passed from bridge/webhook
+    let isAdmin = Boolean((msg.key as any)?.isAdmin);
+
+    // 2. Platform admin whitelist check
+    if (!isAdmin && senderPhone) {
+        try {
+            const user = await db.getUserByWhatsappPhone(senderPhone);
+            if (user && env.ADMIN_IDS.includes(Number(user.telegram_id))) {
+                isAdmin = true;
+            }
+        } catch (_) {}
+    }
+
+    // 3. WhatsApp group metadata check (matches standard JID, device JID, or LID)
+    if (!isAdmin) {
+        try {
+            const meta = await sock.groupMetadata(groupJid);
+            if (meta?.participants && Array.isArray(meta.participants)) {
+                const p = meta.participants.find((item: any) => {
+                    const itemId = item.id || item.jid || "";
+                    const itemRaw = itemId.split("@")[0] || "";
+                    const itemPhone = itemRaw.split(":")[0];
+                    const itemLid = (item.lid || "").split("@")[0].split(":")[0];
+
+                    return (
+                        itemId === senderParticipant ||
+                        itemPhone === senderPhone ||
+                        (itemLid && itemLid === senderPhone)
+                    );
+                });
+                isAdmin = Boolean(p?.admin || p?.isAdmin || p?.isSuperAdmin);
+            }
+        } catch (_) {}
+    }
 
     if (isAdmin) {
+        console.log(`[GROUP-GUARD] 👑 Sender ${senderPhone} is group admin in ${groupJid} — skipping spam check.`);
         return false; // Admins bypass guard scans
     }
 
@@ -286,10 +314,10 @@ export async function broadcastNewAdToGroups(order: any): Promise<void> {
 
 // ─── Group Registration ───────────────────────────────────────────────────────
 
-async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<void> {
+export async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<void> {
     try {
         const meta = await sock.groupMetadata(groupJid);
-        await (db as any).registerBroadcastGroup(groupJid, meta.subject ?? "Unknown Group");
+        await (db as any).registerBroadcastGroup(groupJid, meta?.subject ?? "Unknown Group");
     } catch {
         // Ignore — groupMetadata may fail if bot not admin
     }

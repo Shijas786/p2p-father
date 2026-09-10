@@ -17,7 +17,7 @@ const rateLimitStore = new Map<string, number[]>();
 export class WhatsAppOtpService {
     /**
      * Standardizes phone number into international format without + or spaces
-     * e.g. "+91 81379 56320" -> "919876543210"
+     * e.g. "+91 98765 43210" -> "919876543210"
      */
     cleanPhone(rawPhone: string): string {
         let cleaned = rawPhone.replace(/[^0-9]/g, "");

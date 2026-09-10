@@ -63,7 +63,7 @@ export async function handleProfileCommand(
         await replyWithButtons(
             sock,
             jid,
-            `📱 *SET YOUR UPI ID*\n\nPlease reply to this message with your *UPI ID*.\n\n*Example:* \`shijas@upi\` or \`9876543210@mbkns\``,
+            `📱 *SET YOUR UPI ID*\n\nPlease reply to this message with your *UPI ID*.\n\n*Example:* \`yourname@upi\` or \`9876543210@mbkns\``,
             [
                 { id: "/profile", label: "🔙 Back to Profile" },
             ]

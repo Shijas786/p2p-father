@@ -16,7 +16,7 @@ import { hotWalletConnector } from '../utils/hotWalletConnector';
 import { http, fallback } from 'wagmi';
 import { Attribution } from 'ox/erc8021';
 
-export const BASE_BUILDER_CODE = 'bc_9vdy4xyw';
+export const BASE_BUILDER_CODE = 'bc_yuknhe8k';
 export const BASE_BUILDER_DATA_SUFFIX = Attribution.toDataSuffix({
     codes: [BASE_BUILDER_CODE],
 });
@@ -27,61 +27,56 @@ export const wagmiAdapter = new WagmiAdapter({
     networks: [mainnet, base, bsc, polygon, arbitrum, optimism, avalanche, linea, scroll],
     connectors: [hotWalletConnector()],
     dataSuffix: BASE_BUILDER_DATA_SUFFIX,
-    transports: {
-        [mainnet.id]: fallback([
-            http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://eth-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://ethereum-rpc.publicnode.com'),
-            http('https://eth.llamarpc.com'),
-        ]),
-        [base.id]: fallback([
-            http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://base-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://mainnet.base.org'),
-            http('https://base-rpc.publicnode.com'),
-        ]),
-        [bsc.id]: fallback([
-            http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://bnb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://bsc-dataseed.binance.org'),
-            http('https://bsc.publicnode.com'),
-            http('https://bsc-dataseed1.defibit.io'),
-        ]),
-        [polygon.id]: fallback([
-            http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://polygon-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://polygon.publicnode.com'),
-            http('https://polygon-bor-rpc.publicnode.com'),
-        ]),
-        [arbitrum.id]: fallback([
-            http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://arb1.arbitrum.io/rpc'),
-            http('https://arbitrum.publicnode.com'),
-        ]),
-        [optimism.id]: fallback([
-            http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://opt-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://mainnet.optimism.io'),
-            http('https://optimism.publicnode.com'),
-        ]),
-        [avalanche.id]: fallback([
-            http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://avax-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://api.avax.network/ext/bc/C/rpc'),
-            http('https://avalanche.publicnode.com'),
-        ]),
-        [linea.id]: fallback([
-            http('https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://linea-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://rpc.linea.build'),
-        ]),
-        [scroll.id]: fallback([
-            http('https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://scroll-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_PLACEHOLDER'),
-            http('https://rpc.scroll.io'),
-        ]),
-    }
+    transports: (() => {
+        const alchKey = import.meta.env.VITE_ALCHEMY_KEY || '';
+        const alch = (net: string) => alchKey ? [http(`https://${net}.g.alchemy.com/v2/${alchKey}`)] : [];
+        return {
+            [mainnet.id]: fallback([
+                ...alch('eth-mainnet'),
+                http('https://ethereum-rpc.publicnode.com'),
+                http('https://eth.llamarpc.com'),
+            ]),
+            [base.id]: fallback([
+                ...alch('base-mainnet'),
+                http('https://mainnet.base.org'),
+                http('https://base-rpc.publicnode.com'),
+            ]),
+            [bsc.id]: fallback([
+                ...alch('bnb-mainnet'),
+                http('https://bsc-dataseed.binance.org'),
+                http('https://bsc.publicnode.com'),
+                http('https://bsc-dataseed1.defibit.io'),
+            ]),
+            [polygon.id]: fallback([
+                ...alch('polygon-mainnet'),
+                http('https://polygon.publicnode.com'),
+                http('https://polygon-bor-rpc.publicnode.com'),
+            ]),
+            [arbitrum.id]: fallback([
+                ...alch('arb-mainnet'),
+                http('https://arb1.arbitrum.io/rpc'),
+                http('https://arbitrum.publicnode.com'),
+            ]),
+            [optimism.id]: fallback([
+                ...alch('opt-mainnet'),
+                http('https://mainnet.optimism.io'),
+                http('https://optimism.publicnode.com'),
+            ]),
+            [avalanche.id]: fallback([
+                ...alch('avax-mainnet'),
+                http('https://api.avax.network/ext/bc/C/rpc'),
+                http('https://avalanche.publicnode.com'),
+            ]),
+            [linea.id]: fallback([
+                ...alch('linea-mainnet'),
+                http('https://rpc.linea.build'),
+            ]),
+            [scroll.id]: fallback([
+                ...alch('scroll-mainnet'),
+                http('https://rpc.scroll.io'),
+            ]),
+        };
+    })(),
 });
 
 // Featured Wallet IDs (WalletConnect explorer)
