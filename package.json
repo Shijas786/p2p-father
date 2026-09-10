@@ -1,6 +1,6 @@
 {
   "name": "p2pkerala",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "commonjs",
   "description": "P2PFather — Telegram P2P Crypto Exchange Bot",
   "main": "dist/index.js",
