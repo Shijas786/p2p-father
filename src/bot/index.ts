@@ -579,13 +579,13 @@ bot.use(async (ctx, next) => {
             if (dbUser && dbUser.is_banned) {
                 if (ctx.callbackQuery) {
                     await ctx.answerCallbackQuery({
-                        text: "⛔ Your account has been restricted from trading. Contact @shijas",
+                        text: "⛔ Your account has been restricted from trading. Contact support",
                         show_alert: true
                     });
                     return;
                 }
                 if (ctx.message?.text?.startsWith("/")) {
-                    await ctx.reply("⛔ Your account has been restricted from trading. Please contact @shijas for assistance.");
+                    await ctx.reply("⛔ Your account has been restricted from trading. Please contact support for assistance.");
                     return;
                 }
             }
@@ -3533,7 +3533,7 @@ bot.on("callback_query:data", async (ctx) => {
 
                 await db.updateTrade(tradeId, { status: "completed", escrow_tx_hash: finalTxHash });
 
-                // Process VIP Fee Cashback (e.g. 0.25% rebate for @vip_trader on new ads)
+                // Process VIP Fee Cashback (e.g. rebate for qualifying VIP traders on new ads)
                 feeCashbackService.processTradeFeeCashback(tradeId).catch(console.error);
 
                 const txLinkText = finalTxHash && finalTxHash.startsWith("0x") ? `🔗 [View Transaction](${getExplorerUrl(finalTxHash, trade.chain as any)})` : "";

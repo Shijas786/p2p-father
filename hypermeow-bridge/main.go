@@ -383,7 +383,7 @@ func handleSendText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Auto-extract @phone mentions (e.g. @918921919540) to construct WhatsApp ContextInfo.MentionedJID
+	// Auto-extract @phone mentions (e.g. @919876543210) to construct WhatsApp ContextInfo.MentionedJID
 	re := regexp.MustCompile(`@(\d{10,15})`)
 	matches := re.FindAllStringSubmatch(req.Text, -1)
 	mentionedMap := make(map[string]bool)
@@ -1093,7 +1093,7 @@ func eventHandler(evt interface{}) {
 		}
 		body, _ := json.Marshal(payload)
 		fmt.Printf("[Hypermeow Webhook] POST %s payload=%s\n", webhookURL, string(body))
-		resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(body))
+		resp, err := postWebhook(webhookURL, body)
 		if err != nil {
 			fmt.Printf("[Hypermeow Webhook Error] %v\n", err)
 			return
@@ -1140,7 +1140,7 @@ func eventHandler(evt interface{}) {
 			}
 			body, _ := json.Marshal(payload)
 			fmt.Printf("[Hypermeow GroupJoin Webhook] POST %s payload=%s\n", webhookURL, string(body))
-			resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(body))
+			resp, err := postWebhook(webhookURL, body)
 			if err == nil {
 				resp.Body.Close()
 			} else {
@@ -1148,5 +1148,22 @@ func eventHandler(evt interface{}) {
 			}
 		}
 	}
+}
+
+func postWebhook(targetURL string, body []byte) (*http.Response, error) {
+	req, err := http.NewRequest("POST", targetURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	secret := os.Getenv("INTERNAL_WEBHOOK_SECRET")
+	if secret == "" {
+		secret = os.Getenv("WA_ADMIN_SECRET")
+	}
+	if secret != "" {
+		req.Header.Set("X-Webhook-Secret", secret)
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	return client.Do(req)
 }
 

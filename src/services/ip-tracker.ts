@@ -138,7 +138,9 @@ export class IpTrackerService {
         }
 
         // Build list of clusters (show all logged IPs, prioritizing target watchlist and multi-account clusters)
-        const targetKeywords = ["target_user", "big nage", "big_nage", "nage", "carnage", "999999999"];
+        const targetKeywords = process.env.IP_WATCHLIST_KEYWORDS
+            ? process.env.IP_WATCHLIST_KEYWORDS.split(",").map(k => k.trim().toLowerCase()).filter(Boolean)
+            : [];
 
         const clusters: any[] = [];
         ipMap.forEach((userList, ip) => {

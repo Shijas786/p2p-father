@@ -64,7 +64,7 @@ export class FeeCashbackService {
     private processedTrades = new Set<string>();
 
     /**
-     * Checks if a trade qualifies for VIP fee cashback (e.g. 0.25% for @vip_trader on new ads)
+     * Checks if a trade qualifies for VIP fee cashback (e.g. rebate for qualifying VIP users)
      * and credits the fee rebate to the VIP user automatically on-chain.
      */
     async processTradeFeeCashback(tradeId: string): Promise<void> {

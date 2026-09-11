@@ -862,7 +862,7 @@ export function Admin({ user }: Props) {
                                         </span>
                                         {cluster.has_target && (
                                             <span style={{ fontSize: 9, backgroundColor: '#f59e0b', color: '#000', padding: '1px 6px', borderRadius: 4, fontWeight: 'bold' }}>
-                                                🎯 TARGET WATCHLIST (target_user)
+                                                🎯 TARGET WATCHLIST
                                             </span>
                                         )}
                                         {cluster.is_multi ? (

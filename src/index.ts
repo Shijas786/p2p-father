@@ -40,7 +40,7 @@ async function main() {
         startExpiryJob();
         startLiquiditySyncJob(escrow);
         startTradeReconciliationJob();
-        startMetaWhatsAppMonitor(); // 🔍 Track Meta WhatsApp Web client updates & alert Shijas on TG
+        startMetaWhatsAppMonitor(); // 🔍 Track Meta WhatsApp Web client updates & alert Admin on TG
     }
 
     // Hypermeow Go bridge is the active WhatsApp engine — Baileys removed
@@ -103,7 +103,7 @@ async function main() {
     app.get("/api/wa-qr", async (req, res) => {
         try {
             const secret = req.query.secret as string;
-            if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+            if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
                 return res.status(403).json({ error: "Unauthorized access" });
             }
 
@@ -137,7 +137,7 @@ async function main() {
     app.post("/api/wa-restart", async (req, res) => {
         try {
             const secret = (req.query.secret as string) || (req.body?.secret as string);
-            if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+            if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
                 return res.status(403).json({ error: "Unauthorized access" });
             }
             const axios = (await import("axios")).default;
@@ -151,7 +151,7 @@ async function main() {
 
     app.get("/wa-qr", (req, res) => {
         const secret = (req.query.secret as string) || "";
-        if (env.WA_ADMIN_SECRET && secret !== env.WA_ADMIN_SECRET) {
+        if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
             return res.status(403).send(`
                 <body style="background:#0b0e14;color:#ff4d4d;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
                     <div style="text-align:center;background:rgba(255,255,255,0.05);padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);">
@@ -405,7 +405,7 @@ async function main() {
                     { seller_name: "AlexKumar", buyer_name: "PavloD", amount: 500, token: "USDT", chain: "bsc", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yurii", tx_hash: "0x12dc55a73e3b8a3d" },
                     { seller_name: "SvitlanaM", buyer_name: "BIBI", amount: 200, token: "USDT", chain: "bsc", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pavlo", tx_hash: "0x89fd5a2c4e1b7c3d" },
                     { seller_name: "AminuA", buyer_name: "VictorI", amount: 300, token: "USDT", chain: "bsc", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Svitlana", tx_hash: "0x78cf5a1a1b3c9d2b" },
-                    { seller_name: "Shijas", buyer_name: "AlexK", amount: 500, token: "USDT", chain: "bsc", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=BIBI", tx_hash: "0x34ba12cb02aa11cd" },
+                    { seller_name: "Alice", buyer_name: "AlexK", amount: 500, token: "USDT", chain: "bsc", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=BIBI", tx_hash: "0x34ba12cb02aa11cd" },
                 ];
             }
 

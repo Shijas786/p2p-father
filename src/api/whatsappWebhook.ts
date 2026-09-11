@@ -71,6 +71,20 @@ setBroadcastSock(stubSock);
 
 whatsappWebhookRouter.post("/webhook", async (req, res) => {
     try {
+        // 🛡️ Security Guard: Only allow local calls from Hypermeow or requests with valid webhook secret
+        const incomingSecret = (req.headers["x-webhook-secret"] as string) || (req.query.secret as string);
+        const configuredSecret = process.env.INTERNAL_WEBHOOK_SECRET || process.env.WA_ADMIN_SECRET;
+
+        const forwardedFor = req.headers["x-forwarded-for"];
+        const remoteIp = req.socket.remoteAddress || "";
+        const isLocalhost = (remoteIp === "127.0.0.1" || remoteIp === "::1" || remoteIp === "::ffff:127.0.0.1") && !forwardedFor;
+
+        const isAuthorized = (configuredSecret && incomingSecret === configuredSecret) || isLocalhost;
+        if (!isAuthorized) {
+            console.warn(`[WA-Webhook] ⛔ Blocked unauthorized webhook call from IP=${remoteIp}, forwardedFor=${forwardedFor}`);
+            return res.status(403).json({ error: "Forbidden: Unauthorized webhook source" });
+        }
+
         const body = req.body;
         const event = body.event || body.type;
 

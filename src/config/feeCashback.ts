@@ -7,16 +7,16 @@ export interface VIPUserConfig {
     applyAfterTimestamp: number; // Order creation timestamp cutoff (ms)
 }
 
-// Configured VIP Traders for Fee Cashback / Rebate
-// 0.25% rebate applies to new ads created after this cutoff
-export const VIP_FEE_CONFIGS: VIPUserConfig[] = [
-    {
-        telegramId: "987654321",
-        username: "vip_trader",
-        rebateBps: 25, // 0.25% rebate
-        applyAfterTimestamp: 1754067180000 // 2026-08-01 22:33:00 UTC timestamp cutoff
-    }
-];
+// Configured VIP Traders for Fee Cashback / Rebate (Configurable via VIP_FEE_CONFIGS_JSON)
+export const VIP_FEE_CONFIGS: VIPUserConfig[] = process.env.VIP_FEE_CONFIGS_JSON
+    ? (() => {
+          try {
+              return JSON.parse(process.env.VIP_FEE_CONFIGS_JSON);
+          } catch {
+              return [];
+          }
+      })()
+    : [];
 
 /**
  * Helper to check if an order/trade qualifies for VIP fee cashback

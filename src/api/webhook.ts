@@ -106,6 +106,16 @@ Funds are now in your wallet and ready to trade! Type /balance to view your bala
  */
 webhookRouter.post("/deposit", async (req: Request, res: Response) => {
     try {
+        // 🛡️ Security Guard: If DEPOSIT_WEBHOOK_SECRET is set, reject unauthorized calls
+        const depositSecret = process.env.DEPOSIT_WEBHOOK_SECRET;
+        if (depositSecret) {
+            const incomingSecret = (req.headers["x-webhook-secret"] as string) || (req.query.secret as string);
+            if (incomingSecret !== depositSecret) {
+                console.warn(`[DepositWebhook] ⛔ Unauthorized call rejected from IP=${req.ip}`);
+                return res.status(403).json({ error: "Forbidden: Unauthorized deposit webhook" });
+            }
+        }
+
         const body = req.body;
 
         // 1. Alchemy Address Activity Webhook payload

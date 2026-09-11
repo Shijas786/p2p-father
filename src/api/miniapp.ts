@@ -1090,7 +1090,7 @@ router.post("/orders", async (req: Request, res: Response) => {
 
         if (user.is_banned) {
             return res.status(403).json({
-                error: "⛔ Your account has been restricted from trading. Please contact @shijas for assistance."
+                error: "⛔ Your account has been restricted from trading. Please contact support for assistance."
             });
         }
 
@@ -1386,7 +1386,7 @@ router.post("/trades", async (req: Request, res: Response) => {
 
         if (user.is_banned) {
             return res.status(403).json({
-                error: "⛔ Your account has been restricted from trading. Please contact @shijas for assistance."
+                error: "⛔ Your account has been restricted from trading. Please contact support for assistance."
             });
         }
 
@@ -1830,7 +1830,7 @@ router.post("/trades/:id/confirm-receipt", async (req: Request, res: Response) =
         await db.completeUserTrade(trade.buyer_id, true, trade.amount, trade.seller_id);
         await db.completeUserTrade(trade.seller_id, true, trade.amount, trade.buyer_id);
 
-        // Process VIP Fee Cashback (e.g. 0.25% rebate for @vip_trader on new ads)
+        // Process VIP Fee Cashback (e.g. rebate for qualifying VIP traders on new ads)
         feeCashbackService.processTradeFeeCashback(trade.id).catch(console.error);
 
         res.json({ success: true, release_tx_hash: releaseTxHash });
