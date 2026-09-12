@@ -78,10 +78,11 @@ async function main() {
         res.setHeader("Expires", "0");
         res.setHeader("Surrogate-Control", "no-store");
     };
-    const staticOpts = { setHeaders: noCacheHeaders, etag: false, lastModified: false };
-    // Redirect /app to /miniapp/ for clean, fresh asset loading
-    app.get(/^\/app(?:\/.*)?$/, (req, res) => {
-        res.redirect(302, "/miniapp/");
+    const staticOpts = { setHeaders: noCacheHeaders, etag: false, lastModified: false, redirect: false };
+    // Serve index.html directly on /miniapp and /miniapp/ without any 301 redirect
+    app.get(["/miniapp", "/miniapp/"], (req, res) => {
+        noCacheHeaders(res);
+        res.sendFile(path.join(miniAppDist, "index.html"));
     });
     app.use("/miniapp", express.static(miniAppDist, staticOpts));
     app.get(/^\/miniapp(?:\/.*)?$/, (req, res) => {

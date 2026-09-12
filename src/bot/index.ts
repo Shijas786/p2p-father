@@ -1225,6 +1225,7 @@ bot.command(["start", "open"], async (ctx) => {
 
     const startKeyboard = new InlineKeyboard()
         .webApp("🚀 Launch P2PFather App", miniAppUrl).row()
+        .url("📢 Join Community Group", env.COMMUNITY_INVITE_LINK).row()
         .text("📊 Browse Live Ads", "ads:all")
         .text("👤 My Profile", "view_profile").row()
         .text("💼 My Wallet & Vault", "view_wallet")

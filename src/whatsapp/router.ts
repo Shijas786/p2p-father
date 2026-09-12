@@ -270,8 +270,11 @@ async function showCommunityScreen(
     msg: IWebMessageInfo,
     user?: User
 ): Promise<void> {
-    const waGroupUrl = "https://chat.whatsapp.com/JccGngl7bfa9tL4Bdwldv5?mode=gi_t";
-    const tgGroupUrl = "https://t.me/P2pFather0";
+    const waGroupUrl = "https://chat.whatsapp.com/JccGngl7bfa9tL4Bdwldv5";
+    const tgGroupUrl =
+        env.COMMUNITY_INVITE_LINK && !env.COMMUNITY_INVITE_LINK.includes("P2pFatherGroup")
+            ? env.COMMUNITY_INVITE_LINK
+            : "https://t.me/P2pFather0";
 
     const buttons: { id: string; label: string; url?: string }[] = [
         { id: waGroupUrl, url: waGroupUrl, label: "💬 Join WhatsApp" },
