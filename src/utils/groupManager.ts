@@ -9,6 +9,12 @@ let cachedGroups: number[] | null = null;
 export const groupManager = {
     // Add group ID
     addGroup: async (chatId: number) => {
+        // Telegram groups, supergroups and channels strictly have negative chat IDs
+        if (typeof chatId !== "number" || isNaN(chatId) || chatId >= 0) {
+            console.warn(`[groupManager] Ignored non-group chat ID: ${chatId}`);
+            return;
+        }
+
         // Upsert into Supabase
         await supabase
             .from("bot_groups")
@@ -42,7 +48,9 @@ export const groupManager = {
             .from("bot_groups")
             .select("chat_id");
 
-        cachedGroups = (data || []).map((r: any) => r.chat_id);
+        cachedGroups = (data || [])
+            .map((r: any) => r.chat_id)
+            .filter((id: number) => typeof id === "number" && id < 0);
         return cachedGroups!;
     }
 };

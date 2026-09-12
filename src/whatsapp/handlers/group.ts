@@ -56,20 +56,6 @@ export function detectQrCodeInImageBuffer(buffer: Buffer): boolean {
 // Allows wa.me/ phone number & P2PFather trade links.
 const FORBIDDEN_LINK_RE = /(chat\.whatsapp\.com\/[^\s]+|t\.me\/[^\s]+|https?:\/\/(?!wa\.me\/)[^\s]+|www\.[^\s]+)/i;
 
-// Phishing / scam keywords (extend as needed)
-const PHISHING_PATTERNS: RegExp[] = [
-    /free.*usdt/i,
-    /earn.*usdt/i,
-    /double.*your.*usdt/i,
-    /investment.*profit/i,
-    /guaranteed.*return/i,
-    /send.*usdt.*get.*back/i,
-    /click.*here.*to.*claim/i,
-    /urgent.*transfer/i,
-    /airdrop.*usdt/i,
-    /scam\w*/i,
-    /phish\w*/i,
-];
 
 /**
  * Scans every incoming group message for spam / phishing.
@@ -167,7 +153,7 @@ export async function scanAndDeleteSpam(
         return true;
     }
 
-    // ── 2. Text messages: scan for links or phishing patterns ──────────────────────
+    // ── 2. Text messages: scan ONLY for forbidden links ─────────────────────────
     const rawText = (
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -177,15 +163,12 @@ export async function scanAndDeleteSpam(
     if (!rawText) return false;
 
     const hasLink = FORBIDDEN_LINK_RE.test(rawText);
-    const isPhishing = PHISHING_PATTERNS.some((re) => re.test(rawText));
+    if (!hasLink) return false;
 
-    if (!hasLink && !isPhishing) return false;
-
-    const reason = hasLink ? "External link" : "Phishing/spam content";
-    console.log(`[GROUP-GUARD] Detected ${reason} in ${groupJid} from ${senderParticipant} (msgId=${msg.key?.id}). Attempting delete.`);
+    console.log(`[GROUP-GUARD] Detected external link in ${groupJid} from ${senderParticipant} (msgId=${msg.key?.id}). Attempting delete.`);
     await deleteOrWarn(
         sock, msg, groupJid, senderParticipant, senderPhone,
-        hasLink ? "Links and URLs" : "Promotional / phishing text"
+        "Links and URLs"
     );
     return true;
 }

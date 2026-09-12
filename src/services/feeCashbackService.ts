@@ -85,11 +85,21 @@ export class FeeCashbackService {
             const orderCreator = (order.user_id === trade.seller_id) ? sellerUser : buyerUser;
             if (!orderCreator) return;
 
-            const vipConfig = getQualifyingVIPConfig(
+            let vipConfig = getQualifyingVIPConfig(
                 orderCreator.telegram_id,
                 orderCreator.username,
                 order.created_at
             );
+
+            // If user has tier === 'vip' in DB, qualify automatically for 0.25% rebate (25 bps)
+            if (!vipConfig && (orderCreator as any).tier === "vip") {
+                vipConfig = {
+                    telegramId: orderCreator.telegram_id ? orderCreator.telegram_id.toString() : "",
+                    username: orderCreator.username || "",
+                    rebateBps: 25,
+                    applyAfterTimestamp: 0
+                };
+            }
 
             if (!vipConfig) {
                 console.log(`[FEE CASHBACK] Trade ${tradeId} (Order ${order.id}) does not qualify for VIP fee cashback.`);

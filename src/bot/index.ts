@@ -93,11 +93,13 @@ async function getBotInfo() {
 }
 
 async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
-    const groups = await groupManager.getGroups();
-    // Include ENV broadcast channel if set
+    const rawGroups = await groupManager.getGroups();
+    const groups = rawGroups.filter(id => typeof id === "number" && id < 0);
+
+    // Include ENV broadcast channel if set and strictly negative
     if (env.BROADCAST_CHANNEL_ID) {
         const adminChannel = Number(env.BROADCAST_CHANNEL_ID);
-        if (!isNaN(adminChannel) && !groups.includes(adminChannel)) {
+        if (!isNaN(adminChannel) && adminChannel < 0 && !groups.includes(adminChannel)) {
             groups.push(adminChannel);
         }
     }
@@ -106,14 +108,17 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
 
     console.log(`📡 Broadcasting to ${groups.length} groups...`);
 
-    const results = await Promise.allSettled(groups.map(async (chatId) => {
+    const results: { chatId: number; messageId: number }[] = [];
+
+    for (const chatId of groups) {
         let attempts = 0;
         const maxAttempts = 3;
 
         while (attempts < maxAttempts) {
             try {
                 const msg = await bot.api.sendMessage(chatId, message, { parse_mode: parseMode, reply_markup: keyboard });
-                return { chatId, messageId: msg.message_id }; // Success
+                results.push({ chatId, messageId: msg.message_id });
+                break; // Success, proceed to next group
             } catch (error: any) {
                 attempts++;
                 const isPermanent = error.description?.includes("kicked") ||
@@ -124,34 +129,42 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
                 if (isPermanent) {
                     console.log(`❌ Removing invalid group ${chatId}`);
                     groupManager.removeGroup(chatId).catch(console.error);
-                    return null;
+                    break;
                 }
 
                 if (attempts >= maxAttempts) {
                     console.error(`⚠️ Broadcast FAILED to ${chatId} after ${maxAttempts} attempts:`, error.message);
-                    return null;
+                    break;
                 }
 
-                const delay = 1000 * attempts;
-                console.log(`🔄 Retrying broadcast to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
-                await new Promise(r => setTimeout(r, delay));
+                const retryAfterSec = error.parameters?.retry_after;
+                if (retryAfterSec && retryAfterSec > 0) {
+                    if (retryAfterSec > 15) {
+                        console.error(`⚠️ Telegram rate-limited ${chatId} (retry_after=${retryAfterSec}s). Aborting attempt.`);
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, (retryAfterSec + 1) * 1000));
+                } else {
+                    const delay = 1000 * attempts;
+                    console.log(`🔄 Retrying broadcast to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
+                    await new Promise(r => setTimeout(r, delay));
+                }
             }
         }
-        return null;
-    }));
+        // Small delay between groups to avoid burst limits
+        await new Promise(r => setTimeout(r, 300));
+    }
 
-    return results
-        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> =>
-            r.status === 'fulfilled' && r.value !== null
-        )
-        .map(r => r.value);
+    return results;
 }
 
-async function broadcastAnimation(animation: string | InputFile, caption: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
-    const groups = await groupManager.getGroups();
+async function broadcastAnimation(animationSource: string | InputFile | (() => InputFile), caption: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
+    const rawGroups = await groupManager.getGroups();
+    const groups = rawGroups.filter(id => typeof id === "number" && id < 0);
+
     if (env.BROADCAST_CHANNEL_ID) {
         const adminChannel = Number(env.BROADCAST_CHANNEL_ID);
-        if (!isNaN(adminChannel) && !groups.includes(adminChannel)) {
+        if (!isNaN(adminChannel) && adminChannel < 0 && !groups.includes(adminChannel)) {
             groups.push(adminChannel);
         }
     }
@@ -160,14 +173,19 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
 
     console.log(`📡 Broadcasting animation to ${groups.length} groups...`);
 
-    const results = await Promise.allSettled(groups.map(async (chatId) => {
+    const results: { chatId: number; messageId: number }[] = [];
+
+    for (const chatId of groups) {
         let attempts = 0;
         const maxAttempts = 3;
 
         while (attempts < maxAttempts) {
             try {
-                const msg = await bot.api.sendAnimation(chatId, animation, { caption, parse_mode: parseMode, reply_markup: keyboard });
-                return { chatId, messageId: msg.message_id }; // Success
+                // If animationSource is a factory function, create a fresh InputFile per group to avoid exhausted streams
+                const anim = typeof animationSource === "function" ? animationSource() : animationSource;
+                const msg = await bot.api.sendAnimation(chatId, anim, { caption, parse_mode: parseMode, reply_markup: keyboard });
+                results.push({ chatId, messageId: msg.message_id });
+                break; // Success
             } catch (error: any) {
                 attempts++;
                 const isPermanent = error.description?.includes("kicked") ||
@@ -178,27 +196,33 @@ async function broadcastAnimation(animation: string | InputFile, caption: string
                 if (isPermanent) {
                     console.log(`❌ Removing invalid group ${chatId}`);
                     groupManager.removeGroup(chatId).catch(console.error);
-                    return null;
+                    break;
                 }
 
                 if (attempts >= maxAttempts) {
                     console.error(`⚠️ Broadcast animation FAILED to ${chatId} after ${maxAttempts} attempts:`, error.message);
-                    return null;
+                    break;
                 }
 
-                const delay = 1000 * attempts;
-                console.log(`🔄 Retrying broadcast animation to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
-                await new Promise(r => setTimeout(r, delay));
+                const retryAfterSec = error.parameters?.retry_after;
+                if (retryAfterSec && retryAfterSec > 0) {
+                    if (retryAfterSec > 15) {
+                        console.error(`⚠️ Telegram rate-limited animation to ${chatId} (retry_after=${retryAfterSec}s). Aborting attempt.`);
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, (retryAfterSec + 1) * 1000));
+                } else {
+                    const delay = 1000 * attempts;
+                    console.log(`🔄 Retrying broadcast animation to ${chatId} (Attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`);
+                    await new Promise(r => setTimeout(r, delay));
+                }
             }
         }
-        return null;
-    }));
+        // Pace media uploads between groups
+        await new Promise(r => setTimeout(r, 500));
+    }
 
-    return results
-        .filter((r): r is PromiseFulfilledResult<{ chatId: number; messageId: number }> =>
-            r.status === 'fulfilled' && r.value !== null
-        )
-        .map(r => r.value);
+    return results;
 }
 
 let availableGifs: string[] = [];
@@ -288,7 +312,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         }
 
         if (randomGifPath) {
-            await broadcastAnimation(new InputFile(randomGifPath), msg, undefined, "HTML");
+            await broadcastAnimation(() => new InputFile(randomGifPath), msg, undefined, "HTML");
         } else {
             await broadcast(msg, undefined, "HTML");
         }
@@ -751,9 +775,14 @@ bot.use(async (ctx, next) => {
 
 // 🤖 Handle Groups: Automatically track where bot is added
 bot.on("my_chat_member", async (ctx) => {
+    const chat = ctx.chat;
+    // Strictly ignore private chats (DMs) — only track groups, supergroups and channels
+    if (chat.type !== "group" && chat.type !== "supergroup" && chat.type !== "channel") {
+        return;
+    }
+
     const status = ctx.myChatMember.new_chat_member.status;
     const oldStatus = ctx.myChatMember.old_chat_member.status;
-    const chat = ctx.chat;
 
     if (status === "member" || status === "administrator") {
         if (oldStatus === "left" || oldStatus === "kicked" || oldStatus === "restricted") {
