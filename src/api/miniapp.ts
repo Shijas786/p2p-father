@@ -2225,10 +2225,10 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
 
             res.json({ success: true, txHash });
 
-            // Update broadcast message to COMPLETED on Telegram and delete database records
+            // Update broadcast message to CANCELLED on Telegram and delete database records
             if (trade.order_id) {
                 import("../bot").then(({ deleteAdBroadcasts }) => {
-                    deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
+                    deleteAdBroadcasts(trade.order_id, "cancelled").catch(console.error);
                 }).catch(console.error);
             }
         } else {

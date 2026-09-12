@@ -3831,7 +3831,7 @@ bot.on("callback_query:data", async (ctx) => {
                         db.updateOrder(trade.order_id, { status: "cancelled" }).catch(console.error);
                     }
                     if (releaseToBuyer) {
-                        deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
+                        deleteAdBroadcasts(trade.order_id, "cancelled").catch(console.error);
                     } else {
                         await db.revertFillOrder(trade.order_id, trade.amount);
                         deleteAdBroadcasts(trade.order_id, "cancelled").catch(console.error);
