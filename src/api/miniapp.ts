@@ -2210,21 +2210,27 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 console.error("[ADMIN] Failed to log dispute resolution for buyer:", logErr);
             }
 
-            await notifyTradeUpdate(trade.buyer_id,
+            // Fire notifications in parallel (non-blocking for fast admin response)
+            notifyTradeUpdate(trade.buyer_id,
                 `✅ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to you.`
-            );
-            await notifyTradeUpdate(trade.seller_id,
+            ).catch(console.error);
+            notifyTradeUpdate(trade.seller_id,
                 `⚠️ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to the buyer.`
-            );
+            ).catch(console.error);
+
+            // Immediately cancel parent order in DB so it cannot be matched or shown on marketplace
+            if (trade.order_id) {
+                db.updateOrder(trade.order_id, { status: "cancelled" }).catch(console.error);
+            }
+
             res.json({ success: true, txHash });
 
             // Update broadcast message to COMPLETED on Telegram and delete database records
-            db.getOrderById(trade.order_id).then(async (o) => {
-                if (o) {
-                    const { deleteAdBroadcasts } = await import("../bot");
-                    await deleteAdBroadcasts(o.id, "completed").catch(console.error);
-                }
-            }).catch(console.error);
+            if (trade.order_id) {
+                import("../bot").then(({ deleteAdBroadcasts }) => {
+                    deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
+                }).catch(console.error);
+            }
         } else {
             // Refund to seller
             let txHash: string | null = null;
@@ -2263,31 +2269,35 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 console.error("[ADMIN] Failed to log dispute resolution for seller:", logErr);
             }
 
-            await notifyTradeUpdate(trade.seller_id,
+            // Fire notifications in parallel (non-blocking for fast admin response)
+            notifyTradeUpdate(trade.seller_id,
                 `🔙 <b>Dispute Resolved!</b>\n\nAdmin has refunded <b>${trade.amount} ${trade.token}</b> to your vault.`
-            );
-            await notifyTradeUpdate(trade.buyer_id,
+            ).catch(console.error);
+            notifyTradeUpdate(trade.buyer_id,
                 `❌ <b>Dispute Resolved!</b>\n\nAdmin has refunded the trade to the seller.`
-            );
+            ).catch(console.error);
 
             // Add system message to trade chat
-            await db.createTradeMessage({
+            db.createTradeMessage({
                 trade_id: trade.id,
                 user_id: user.id,
                 message: `✅ Dispute resolved: Refunded to Seller.`,
                 type: "system"
-            });
-
-            // Update broadcast message back to active
-            db.getOrderById(trade.order_id).then(async (o) => {
-                if (o) {
-                    const orderUser = await db.getUserById(o.user_id);
-                    const { updateAdBroadcasts } = await import("../bot");
-                    await updateAdBroadcasts(o, orderUser, "active").catch(console.error);
-                }
             }).catch(console.error);
 
+            // Immediately cancel parent order in DB so it cannot be matched or shown on marketplace
+            if (trade.order_id) {
+                db.updateOrder(trade.order_id, { status: "cancelled" }).catch(console.error);
+            }
+
             res.json({ success: true, txHash });
+
+            // Update broadcast message to CANCELLED on Telegram and delete database records
+            if (trade.order_id) {
+                import("../bot").then(({ deleteAdBroadcasts }) => {
+                    deleteAdBroadcasts(trade.order_id, "cancelled").catch(console.error);
+                }).catch(console.error);
+            }
         }
     } catch (err: any) {
         console.error("[ADMIN] Resolve dispute error:", err);

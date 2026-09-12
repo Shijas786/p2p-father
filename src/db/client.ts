@@ -391,7 +391,7 @@ class Database {
             attempts++;
             const { data: order } = await db
                 .from("orders")
-                .select("filled_amount, amount, status")
+                .select("filled_amount, amount, status, expires_at")
                 .eq("id", orderId)
                 .single();
 
@@ -400,10 +400,11 @@ class Database {
             const oldFilled = parseFloat(order.filled_amount.toString());
             const newFilled = Math.max(0, oldFilled - amount);
 
-            // If the order was already manually cancelled or expired, preserve that status.
+            // If the order was already manually cancelled or expired, or if its expires_at has passed, preserve/set expired status.
             // Otherwise, since it is no longer fully matched, set it back to active.
-            const newStatus = (order.status === "cancelled" || order.status === "expired")
-                ? order.status
+            const isExpired = order.expires_at && new Date(order.expires_at).getTime() <= Date.now();
+            const newStatus = (order.status === "cancelled" || order.status === "expired" || isExpired)
+                ? (isExpired ? "expired" : order.status)
                 : "active";
 
             const { data } = await db

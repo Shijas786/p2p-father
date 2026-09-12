@@ -3827,15 +3827,14 @@ bot.on("callback_query:data", async (ctx) => {
                 });
 
                 if (trade) {
+                    if (trade.order_id) {
+                        db.updateOrder(trade.order_id, { status: "cancelled" }).catch(console.error);
+                    }
                     if (releaseToBuyer) {
-                        await deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
+                        deleteAdBroadcasts(trade.order_id, "completed").catch(console.error);
                     } else {
                         await db.revertFillOrder(trade.order_id, trade.amount);
-                        const o = await db.getOrderById(trade.order_id);
-                        if (o) {
-                            const orderUser = await db.getUserById(o.user_id);
-                            await updateAdBroadcasts(o, orderUser, "active").catch(console.error);
-                        }
+                        deleteAdBroadcasts(trade.order_id, "cancelled").catch(console.error);
                     }
                 }
 
