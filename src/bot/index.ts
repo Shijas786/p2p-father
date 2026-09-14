@@ -11,6 +11,7 @@ import { market } from "../services/market";
 import { feeCashbackService } from "../services/feeCashbackService";
 import { groupManager } from "../utils/groupManager";
 import { IpTrackerService } from "../services/ip-tracker";
+import { getQualifyingVIPConfig } from "../config/feeCashback";
 import {
     formatOrder,
     formatINR,
@@ -120,6 +121,17 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
                 results.push({ chatId, messageId: msg.message_id });
                 break; // Success, proceed to next group
             } catch (error: any) {
+                // If group or Telegram rejects custom emojis, strip tags and send with standard unicode emojis
+                if (error.description?.includes("custom emoji") || error.description?.includes("CUSTOM_EMOJI")) {
+                    try {
+                        const strippedMsg = stripTgCustomEmojis(message);
+                        const fallbackMsg = await bot.api.sendMessage(chatId, strippedMsg, { parse_mode: parseMode, reply_markup: keyboard });
+                        results.push({ chatId, messageId: fallbackMsg.message_id });
+                        break;
+                    } catch (fbErr) {
+                        // ignore and fall through to standard error handling
+                    }
+                }
                 attempts++;
                 const isPermanent = error.description?.includes("kicked") ||
                     error.description?.includes("blocked") ||
@@ -187,6 +199,17 @@ async function broadcastAnimation(animationSource: string | InputFile | (() => I
                 results.push({ chatId, messageId: msg.message_id });
                 break; // Success
             } catch (error: any) {
+                // If custom emoji is rejected, strip to plain emojis and send fallback
+                if (error.description?.includes("custom emoji") || error.description?.includes("CUSTOM_EMOJI")) {
+                    try {
+                        const fallbackAnim = typeof animationSource === "function" ? animationSource() : animationSource;
+                        const msg = await bot.api.sendAnimation(chatId, fallbackAnim, { caption: stripTgCustomEmojis(caption), parse_mode: parseMode, reply_markup: keyboard });
+                        results.push({ chatId, messageId: msg.message_id });
+                        break;
+                    } catch (fbErr) {
+                        // ignore and fall through to standard error handling
+                    }
+                }
                 attempts++;
                 const isPermanent = error.description?.includes("kicked") ||
                     error.description?.includes("blocked") ||
@@ -227,6 +250,90 @@ async function broadcastAnimation(animationSource: string | InputFile | (() => I
 
 let availableGifs: string[] = [];
 
+// ─── Custom Telegram Emojis for Broadcasts ────────────────────────────────────
+export const TG_CUSTOM_EMOJIS = {
+    KYC: [
+        "5424875446711887339",
+        "5424605254614262924",
+        "5427295974315793487",
+    ],
+    VIP: "5449849414522774647",
+    BNB_CHAIN: "5280763862113592324",
+    BASE_CHAIN: "5289856483972912387",
+    USDT: "5345889288741461772",
+    USDC: "5343662197874630855",
+    SCAN: "5287641590813200932",
+    LOCKED: "5449621648112100255",
+    CELEBRATION: [
+        "5237899560218534031",
+        "5237968923940364244",
+        "5195357093107868151",
+        "5235714190664016775",
+    ],
+} as const;
+
+export function stripTgCustomEmojis(text: string): string {
+    return text.replace(/<tg-emoji[^>]*>(.*?)<\/tg-emoji>/gi, "$1");
+}
+
+export function tgCustomEmoji(emojiId: string, fallback: string): string {
+    return `<tg-emoji emoji-id="${emojiId}">${fallback}</tg-emoji>`;
+}
+
+export function getRandomCelebrationEmoji(): string {
+    const list = TG_CUSTOM_EMOJIS.CELEBRATION;
+    const id = list[Math.floor(Math.random() * list.length)];
+    return tgCustomEmoji(id, "🎉");
+}
+
+export function getRandomKycEmoji(): string {
+    const list = TG_CUSTOM_EMOJIS.KYC;
+    const id = list[Math.floor(Math.random() * list.length)];
+    return tgCustomEmoji(id, "🛡️");
+}
+
+export function getTokenCustomEmoji(token: string): string {
+    const t = (token || "").toUpperCase();
+    if (t === "USDT") return tgCustomEmoji(TG_CUSTOM_EMOJIS.USDT, "💵");
+    if (t === "USDC") return tgCustomEmoji(TG_CUSTOM_EMOJIS.USDC, "💲");
+    return "";
+}
+
+export function getChainCustomEmoji(chain: string): string {
+    const c = (chain || "").toLowerCase();
+    if (c.includes("bsc") || c.includes("bnb")) return tgCustomEmoji(TG_CUSTOM_EMOJIS.BNB_CHAIN, "🟡");
+    if (c.includes("base")) return tgCustomEmoji(TG_CUSTOM_EMOJIS.BASE_CHAIN, "🔵");
+    return "🔗";
+}
+
+export function getTraderBadges(user: any, order?: any): string {
+    const isVerified = Boolean(
+        user?.is_verified ||
+        user?.kyc_status === "approved" ||
+        order?.is_verified ||
+        order?.users?.is_verified ||
+        order?.users?.kyc_status === "approved"
+    );
+
+    const isVip = Boolean(
+        user?.tier === "vip" ||
+        user?.is_vip ||
+        order?.users?.tier === "vip" ||
+        order?.tier === "vip" ||
+        (user?.username && getQualifyingVIPConfig(user.telegram_id, user.username, Date.now())) ||
+        (order?.username && getQualifyingVIPConfig(order.telegram_id || order.user_id, order.username, Date.now()))
+    );
+
+    let badges = "";
+    if (isVerified) {
+        badges += getRandomKycEmoji();
+    }
+    if (isVip) {
+        badges += (badges ? " " : "") + tgCustomEmoji(TG_CUSTOM_EMOJIS.VIP, "👑");
+    }
+    return badges ? ` ${badges}` : "";
+}
+
 function formatTraderDisplay(username?: string | null, firstName?: string | null, hideHandle: any = false): string {
     if (Boolean(hideHandle)) {
         if (username && username.length > 2) {
@@ -250,34 +357,51 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
         // Always fetch fresh real-time privacy settings from DB
         let sellerHide = Boolean(trade.seller_hide_handle);
         let buyerHide = Boolean(trade.buyer_hide_handle);
+        let sellerBadges = "";
+        let buyerBadges = "";
 
         if (trade.seller_id) {
             const s = await db.getUserById(trade.seller_id);
-            if (s) sellerHide = Boolean(s.hide_group_handle);
+            if (s) {
+                sellerHide = Boolean(s.hide_group_handle);
+                sellerBadges = getTraderBadges(s);
+            }
         }
         if (trade.buyer_id) {
             const b = await db.getUserById(trade.buyer_id);
-            if (b) buyerHide = Boolean(b.hide_group_handle);
+            if (b) {
+                buyerHide = Boolean(b.hide_group_handle);
+                buyerBadges = getTraderBadges(b);
+            }
         }
 
-        const buyer = formatTraderDisplay(trade.buyer_username, trade.buyer_first_name || "Buyer", buyerHide);
-        const seller = formatTraderDisplay(trade.seller_username, trade.seller_first_name || "Seller", sellerHide);
+        const buyer = formatTraderDisplay(trade.buyer_username, trade.buyer_first_name || "Buyer", buyerHide) + buyerBadges;
+        const seller = formatTraderDisplay(trade.seller_username, trade.seller_first_name || "Seller", sellerHide) + sellerBadges;
         const totalFiat = (trade.amount * trade.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
-        const chain = trade.chain || order?.chain || 'bsc';
+        const chain = (trade.chain || order?.chain || 'bsc').toLowerCase();
+        const token = (trade.token || order?.token || "USDC").toUpperCase();
 
-        // Build tx link
+        const tokenEmoji = getTokenCustomEmoji(token);
+        const tokenDisplay = tokenEmoji ? `${tokenEmoji} ${escapeHTML(token)}` : escapeHTML(token);
+        const formattedAmt = formatTokenAmount(trade.amount, trade.token);
+        const amtStr = formattedAmt.replace(token, tokenDisplay);
+
+        // Build tx link with Etherscan logo
         let txLine = "✅ Escrowed & settled on-chain";
         if (trade.release_tx_hash && !trade.release_tx_hash.startsWith('relayed')) {
             const explorer = chain === 'bsc' ? 'https://bscscan.com/tx/' : 'https://basescan.org/tx/';
-            txLine = `✅ <a href="${escapeHTML(explorer)}${escapeHTML(trade.release_tx_hash)}">View Transaction</a>`;
+            const explorerName = chain === 'bsc' ? 'BscScan' : 'BaseScan';
+            const scanEmoji = tgCustomEmoji(TG_CUSTOM_EMOJIS.SCAN, "🔗");
+            txLine = `${scanEmoji} <a href="${escapeHTML(explorer)}${escapeHTML(trade.release_tx_hash)}">View Transaction on ${explorerName}</a>`;
         }
 
+        const celebrationEmoji = getRandomCelebrationEmoji();
         const msg = [
-            "🎉 <b>Trade Completed!</b>",
+            `${celebrationEmoji} <b>Trade Completed!</b>`,
             "",
-            `${seller} sold <b>${escapeHTML(formatTokenAmount(trade.amount, trade.token))}</b> to ${buyer}`,
+            `${seller} sold <b>${amtStr}</b> to ${buyer}`,
             `💰 Deal: ₹${escapeHTML(totalFiat)}`,
-            `🔗 Chain: ${escapeHTML(chain.toUpperCase())}`,
+            `🔗 Chain: ${getChainCustomEmoji(chain)} <b>${escapeHTML(chain.toUpperCase())}</b>`,
             "",
             txLine,
             "⚡ Trade safe with P2PFather → /start",
@@ -323,7 +447,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
 
 export function buildAdMessageText(order: any, user: any, statusOverride?: string): string {
     const available = order.amount - (order.filled_amount || 0);
-    const token = order.token || "USDC";
+    const token = (order.token || "USDC").toUpperCase();
 
     // When the status is locked, completed, cancelled, expired, or filled (i.e. not active/open),
     // always show the original amount (order.amount) instead of the remaining available amount (which might be 0).
@@ -333,12 +457,15 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
 
     const header = order.type === "sell" ? "📢 <b>New SELL Ad!</b>" : "📢 <b>New BUY Ad!</b>";
     const emoji = order.type === "sell" ? "🔴" : "🟢";
-    const isVerified = Boolean(user?.is_verified || user?.kyc_status === 'approved' || order?.is_verified);
-    const verifiedBadge = isVerified ? " [✅ Verified]" : "";
+    const badges = getTraderBadges(user, order);
     const hideHandle = Boolean(user?.hide_group_handle || order?.hide_group_handle);
-    const username = formatTraderDisplay(user?.username || order?.username, user?.first_name || order?.first_name, hideHandle) + verifiedBadge;
+    const username = formatTraderDisplay(user?.username || order?.username, user?.first_name || order?.first_name, hideHandle) + badges;
     const actionVerb = order.type === "sell" ? "wants to sell" : "wants to buy";
-    const amountStr = `<b>${escapeHTML(formatTokenAmount(displayAmount, token))}</b>`;
+
+    const tokenEmoji = getTokenCustomEmoji(token);
+    const tokenDisplay = tokenEmoji ? `${tokenEmoji} ${escapeHTML(token)}` : escapeHTML(token);
+    const formattedAmt = formatTokenAmount(displayAmount, token);
+    const amountStr = `<b>${formattedAmt.replace(token, tokenDisplay)}</b>`;
 
     const avgMinutes = (order as any).avg_completion_minutes;
     const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
@@ -348,9 +475,10 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     const isTestnet = chainRaw.includes("testnet") || chainRaw.includes("sepolia") || chainRaw.includes("devnet");
     const chainLabel = isTestnet
         ? `🧪 DEMO / TESTNET (${escapeHTML(chainRaw.toUpperCase())}) — ⚠️ NO REAL MONEY`
-        : escapeHTML(chainRaw.toUpperCase());
+        : `${getChainCustomEmoji(chainRaw)} <b>${escapeHTML(chainRaw.toUpperCase())}</b>`;
 
-    const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${escapeHTML(token)}`;
+    const rateTokenDisplay = tokenEmoji ? `${tokenEmoji}${escapeHTML(token)}` : escapeHTML(token);
+    const rateLine = `💰 Rate: ₹${escapeHTML(order.rate.toLocaleString())}/${rateTokenDisplay}`;
     const totalLine = `🧾 Total: ₹${escapeHTML((displayAmount * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 }))}`;
     const chainLine = `🔗 Chain: ${chainLabel}`;
     const paymentLine = `💳 Payment: ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`;
@@ -383,7 +511,7 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
     }
 
     if (status === "locked" || status === "filled") {
-        lines.push(`🔒 Status: <b>Locked / Trade in Progress</b>`);
+        lines.push(`🔒 Status: <b>Locked / Trade in Progress</b> ${tgCustomEmoji(TG_CUSTOM_EMOJIS.LOCKED, "⏳")}`);
     } else if (status === "completed") {
         lines.push(`✅ Status: <b>Completed</b>`);
     } else if (status === "cancelled") {
@@ -516,6 +644,18 @@ export async function updateAdBroadcasts(order: any, user: any, statusOverride?:
                 success = true;
             } catch (err: any) {
                 const msg = err.description || err.message || "";
+                if (msg.includes("custom emoji") || msg.includes("CUSTOM_EMOJI")) {
+                    try {
+                        await bot.api.editMessageText(b.chat_id, b.message_id, stripTgCustomEmojis(msgText), {
+                            parse_mode: "HTML",
+                            reply_markup: keyboard,
+                            link_preview_options: { is_disabled: true }
+                        });
+                        success = true;
+                    } catch (fbErr) {
+                        // continue with standard error handling
+                    }
+                }
                 if (msg.includes("message is not modified") ||
                     msg.includes("message to edit not found") ||
                     msg.includes("deactivated") ||
