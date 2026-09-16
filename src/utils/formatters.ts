@@ -1,4 +1,5 @@
 import type { Order } from "../types";
+import { getTokenCustomEmoji, getChainCustomEmoji, getTraderBadges } from "./telegramEmojis";
 
 /**
  * Format a number as currency
@@ -16,24 +17,39 @@ export function escapeHTML(text: string): string {
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function formatOrder(order: Order, index?: number): string {
+export function formatOrder(order: any, index?: number): string {
     const emoji = order.type === "sell" ? "🔴 SELL " : "🟢 BUY  ";
     const available = order.amount - (order.filled_amount || 0);
-    const token = order.token || "USDC";
+    const token = (order.token || "USDC").toUpperCase();
+    const tokenEmoji = getTokenCustomEmoji(token);
+    const tokenDisplay = tokenEmoji ? `${tokenEmoji} ${escapeHTML(token)}` : escapeHTML(token);
+    const formattedAmt = formatTokenAmount(available, token);
+    const amountStr = `<b>${emoji} ${formattedAmt.replace(token, tokenDisplay)}</b>`;
     const totalFiat = (available * order.rate).toLocaleString("en-IN", { maximumFractionDigits: 0 });
     
+    // Chain display with custom emoji
+    const chainRaw = (order.chain || "bsc").toLowerCase();
+    const chainEmoji = getChainCustomEmoji(chainRaw);
+    const chainDisplay = `${chainEmoji} <b>${escapeHTML(chainRaw.toUpperCase())}</b>`;
+
     // Rating star & speed logic
     const trustScore = order.trust_score ?? 100;
     const starEmoji = trustScore >= 90 ? "⭐" : "✨";
     const avgMinutes = (order as any).avg_completion_minutes;
     const avgSpeedText = avgMinutes ? ` (⚡ ~${avgMinutes}m avg)` : "";
 
+    // Badges (KYC, VIP)
+    const badges = getTraderBadges(order, order);
+
+    const rateTokenDisplay = tokenEmoji ? `${tokenEmoji}${escapeHTML(token)}` : escapeHTML(token);
+
     return [
-        `<b>${emoji} ${escapeHTML(formatTokenAmount(available, token))}</b>`,
-        `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${escapeHTML(token)}`,
+        amountStr,
+        `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${rateTokenDisplay}`,
         `├ 💵 <b>Total</b>   ₹${escapeHTML(totalFiat)}`,
+        `├ 🔗 <b>Chain</b>   ${chainDisplay}`,
         `├ 📲 <b>Pay</b>     ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`,
-        `├ 👤 <b>Trader</b>  @${escapeHTML((order.username || "anon").replace(/^@/, ""))} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
+        `├ 👤 <b>Trader</b>  @${escapeHTML((order.username || "anon").replace(/^@/, ""))}${badges} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
     ].join("\n");
 }
 

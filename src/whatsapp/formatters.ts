@@ -381,7 +381,12 @@ export function fmtGroupLiveAds(orders: any[], type: "buy" | "sell" | "all"): st
         const trader = formatTraderContact(o.users);
         const limits = formatOrderLimits(o);
         const link = waLink(`trade_ad_${o.id}`);
-        return `${i + 1}. *₹${o.rate}* | ${limits} | ${(o.payment_methods ?? []).join("/")} — ${trader}\n   👉 ${link}`;
+        const token = (o.token || "USDT").toUpperCase();
+        const chain = (o.chain || "bsc").toUpperCase();
+        const chainEmoji = chain.includes("BSC") || chain.includes("BNB") ? "🟡" : chain.includes("BASE") ? "🔵" : "🔗";
+        const isSell = o.type === "sell";
+        const typeEmoji = isSell ? "🔴" : "🟢";
+        return `${i + 1}. ${typeEmoji} *₹${o.rate}* / 💵${token} | ${chainEmoji} *${chain}* | ${limits} | ${(o.payment_methods ?? []).join("/")} — ${trader}\n   👉 ${link}`;
     });
 
     return `${header}\n\n${lines.join("\n\n")}\n\n_Tap a link → private chat → instant escrow trade 🔒_`;
