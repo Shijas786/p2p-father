@@ -276,7 +276,7 @@ export const api = {
 
     // ---- Users ----
     users: {
-        list: () => request<{ users: any[] }>('/users'),
+        list: (search?: string) => request<{ users: any[] }>(search ? `/users?search=${encodeURIComponent(search)}` : '/users'),
         uploadAvatar: async (file: File) => {
             const initData = getInitData();
             const formData = new FormData();

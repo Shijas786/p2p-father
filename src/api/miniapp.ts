@@ -2063,7 +2063,7 @@ router.get("/admin/disputes", async (req: Request, res: Response) => {
         const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
         const { data: disputes } = await supabase
             .from("trades")
-            .select("*, seller:users!trades_seller_id_fkey(username, first_name, upi_id, phone_number, trust_score), buyer:users!trades_buyer_id_fkey(username, first_name, trust_score), payment_proofs(utr)")
+            .select("*, seller:users!trades_seller_id_fkey(id, username, first_name, upi_id, phone_number, trust_score, wallet_type, wallet_address, receive_address), buyer:users!trades_buyer_id_fkey(id, username, first_name, trust_score, wallet_type, wallet_address, receive_address), payment_proofs(utr)")
             .in("status", ["in_escrow", "fiat_sent", "fiat_confirmed", "waiting_for_escrow", "disputed", "DISPUTED"])
             .order("created_at", { ascending: false });
 
@@ -2468,7 +2468,7 @@ router.post("/trades/:id/messages/upload", upload.single("image"), async (req: R
         const newMessage = await db.createTradeMessage({
             trade_id: trade.id,
             user_id: user.id,
-            message: req.body?.caption || "📸 Payment proof",
+            message: req.body?.caption || "",
             type: "image",
             image_url: imageUrl,
         });
@@ -3175,11 +3175,22 @@ router.post("/kyc/webhook", async (req: Request, res: Response) => {
 
 router.get("/users", async (req: Request, res: Response) => {
     try {
-        const { data, error } = await (db as any).getClient()
+        const query = (req.query.search as string || "").trim();
+        const client = (db as any).getClient();
+        let dbQuery = client
             .from("users")
-            .select("id, username, first_name, photo_url, completed_trades, is_banned")
-            .not("username", "is", null)
-            .order("completed_trades", { ascending: false });
+            .select("id, username, first_name, photo_url, completed_trades, is_banned");
+
+        if (query) {
+            const cleanQuery = query.replace(/[%_,]/g, "");
+            if (cleanQuery) {
+                dbQuery = dbQuery.or(`username.ilike.%${cleanQuery}%,first_name.ilike.%${cleanQuery}%,wallet_address.ilike.%${cleanQuery}%,receive_address.ilike.%${cleanQuery}%`);
+            }
+        }
+
+        const { data, error } = await dbQuery
+            .order("completed_trades", { ascending: false })
+            .limit(query ? 50 : 200);
 
         if (error) throw error;
         res.json({ users: data || [] });
@@ -3203,7 +3214,8 @@ router.post("/admin/users/:userId/toggle-ban", async (req: Request, res: Respons
         const newBannedStatus = !targetUser.is_banned;
         await db.updateUser(targetUserId, { is_banned: newBannedStatus } as any);
 
-        console.log(`[ADMIN] ${adminUser.username} ${newBannedStatus ? 'BANNED' : 'UNBANNED'} trader @${targetUser.username} (${targetUser.id})`);
+        const targetLabel = targetUser.username ? `@${targetUser.username}` : (targetUser.first_name || targetUser.id);
+        console.log(`[ADMIN] ${adminUser.username} ${newBannedStatus ? 'BANNED' : 'UNBANNED'} trader ${targetLabel}`);
 
         res.json({
             success: true,
@@ -3317,7 +3329,7 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
         // Fetch user basic info
         const { data: user, error: userErr } = await client
             .from("users")
-            .select("id, username, first_name, photo_url, completed_trades, total_volume, trade_count, created_at")
+            .select("id, username, first_name, photo_url, completed_trades, total_volume, trade_count, created_at, is_banned")
             .eq("id", userId)
             .single();
 
@@ -3357,6 +3369,7 @@ router.get("/users/:userId/profile", async (req: Request, res: Response) => {
             username: user.username,
             first_name: user.first_name,
             photo_url: user.photo_url,
+            is_banned: user.is_banned || false,
             completed_trades: totalAttempted, // Using total attempts to match leaderboard 'Trades'
             buy_count: buyCount,
             sell_count: sellCount,

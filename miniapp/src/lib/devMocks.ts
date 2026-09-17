@@ -412,8 +412,8 @@ export const DEMO_ADMIN_DISPUTES = [
         rate: 87.5,
         dispute_reason: 'Buyer claims they sent ₹21,875 via UPI but seller says payment was not received. Buyer has shared UTR screenshot.',
         created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-        buyer:  { username: 'RohanFi',      first_name: 'Rohan',  trust_score: 91 },
-        seller: { username: 'CryptoKing_KL', first_name: 'Arjun',  trust_score: 99, upi_id: 'arjun@okicici', phone_number: '9876543210' },
+        buyer:  { id: 'buyer-1', username: 'RohanFi',      first_name: 'Rohan',  trust_score: 91, wallet_type: 'bot' as const, wallet_address: '0x1111222233334444555566667777888899990000' },
+        seller: { id: 'trader-1', username: 'CryptoKing_KL', first_name: 'Arjun',  trust_score: 99, upi_id: 'arjun@okicici', phone_number: '9876543210', wallet_type: 'bot' as const, wallet_address: '0x2222333344445555666677778888999900001111' },
         payment_proofs: [{ utr: 'ICIC24071800123456' }],
         chatMessages: [
             { id: 1, user_id: 'buyer-1',  username: 'RohanFi',       first_name: 'Rohan',  sender_role: 'buyer',  message: 'I have sent the payment. UTR: ICIC24071800123456',        created_at: new Date(Date.now() - 2.5 * 3600000).toISOString() },
@@ -431,8 +431,8 @@ export const DEMO_ADMIN_DISPUTES = [
         rate: 87.5,
         dispute_reason: 'Seller released funds but buyer says crypto not received in wallet. Possible wrong wallet address.',
         created_at: new Date(Date.now() - 5.5 * 60 * 60 * 1000).toISOString(),
-        buyer:  { username: 'AmalDEFI',   first_name: 'Amal',   trust_score: 73 },
-        seller: { username: 'P2PVipin',   first_name: 'Vipin',  trust_score: 88, upi_id: 'vipin@paytm', phone_number: '9845001234' },
+        buyer:  { id: 'buyer-2', username: 'AmalDEFI',   first_name: 'Amal',   trust_score: 73, wallet_type: 'external' as const, receive_address: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b' },
+        seller: { id: 'trader-2', username: 'P2PVipin',   first_name: 'Vipin',  trust_score: 88, upi_id: 'vipin@paytm', phone_number: '9845001234', wallet_type: 'bot' as const, wallet_address: '0x3333444455556666777788889999000011112222' },
         payment_proofs: [{ utr: 'PYTM24071900654321' }],
         chatMessages: [
             { id: 5, user_id: 'buyer-2',  username: 'AmalDEFI', first_name: 'Amal',  sender_role: 'buyer',  message: 'Crypto not showing in my wallet even after 30 mins.', created_at: new Date(Date.now() - 5 * 3600000).toISOString() },

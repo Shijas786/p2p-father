@@ -386,3 +386,70 @@
 
 .admin-empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.25); font-size: 13px; }
 .admin-empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+/* ── Fullscreen Image Viewer / Lightbox ── */
+.chat-fullscreen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: pointer;
+}
+
+.chat-fullscreen img {
+    max-width: 90vw;
+    max-height: 75vh;
+    border-radius: 8px;
+    object-fit: contain;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+
+.chat-fullscreen-close {
+    margin-top: 20px;
+    padding: 10px 24px;
+    background: #2b2f36;
+    color: #eaecef;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.lightbox-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lightbox-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #eaecef;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.lightbox-btn:active {
+    background: rgba(255, 255, 255, 0.22);
+    transform: scale(0.96);
+}
+

@@ -1164,7 +1164,17 @@ export function TradeDetail({ user }: Props) {
                                             <>
                                                 {/* Them/Admin Avatar (left side) */}
                                                 {!isMine && (
-                                                    <div className="chat-avatar">
+                                                    <div 
+                                                        className="chat-avatar"
+                                                        style={{ cursor: (!isAdminMsg && m.user_id) ? 'pointer' : undefined }}
+                                                        onClick={() => {
+                                                            if (!isAdminMsg && m.user_id) {
+                                                                haptic('light');
+                                                                setShowProfileId(m.user_id);
+                                                            }
+                                                        }}
+                                                        title={(!isAdminMsg && m.user_id) ? "View Profile" : undefined}
+                                                    >
                                                         {m.photo_url ? (
                                                             <img src={m.photo_url} alt="" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                         ) : (
@@ -1176,7 +1186,16 @@ export function TradeDetail({ user }: Props) {
                                                 )}
 
                                                 <div className="msg-bubble">
-                                                    <div className="msg-sender">
+                                                    <div 
+                                                        className="msg-sender"
+                                                        style={{ cursor: (!isAdminMsg && m.user_id) ? 'pointer' : undefined }}
+                                                        onClick={() => {
+                                                            if (!isAdminMsg && m.user_id) {
+                                                                haptic('light');
+                                                                setShowProfileId(m.user_id);
+                                                            }
+                                                        }}
+                                                    >
                                                         {isAdminMsg ? `🛡️ ${m.username || 'Admin'}` : (m.username || m.first_name || 'User')}
                                                     </div>
                                                     {/* Image message */}
@@ -1187,7 +1206,9 @@ export function TradeDetail({ user }: Props) {
                                                         </div>
                                                     )}
                                                     {/* Text message */}
-                                                    {m.message && <div className="msg-text">{m.message}</div>}
+                                                    {m.message && (!m.image_url || !m.message.toLowerCase().includes('payment proof')) && (
+                                                        <div className="msg-text">{m.message}</div>
+                                                    )}
                                                     <div className="msg-time">
                                                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         {/* Feature 3: Read Receipts */}

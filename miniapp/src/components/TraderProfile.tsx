@@ -8,12 +8,14 @@ import './TraderProfile.css';
 interface Props {
     userId: string;
     onClose: () => void;
+    isAdmin?: boolean;
 }
 
-export function TraderProfile({ userId, onClose }: Props) {
+export function TraderProfile({ userId, onClose, isAdmin = false }: Props) {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [togglingBan, setTogglingBan] = useState(false);
 
     useEffect(() => {
         if (userId) {
@@ -77,7 +79,14 @@ export function TraderProfile({ userId, onClose }: Props) {
                                     <span className="tp-avatar-letter">{profile.first_name?.[0]?.toUpperCase()}</span>
                                 )}
                             </div>
-                            <h2 className="tp-name">{profile.first_name}</h2>
+                            <h2 className="tp-name" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                <span>{profile.first_name}</span>
+                                {profile.is_banned && (
+                                    <span style={{ fontSize: 9, backgroundColor: '#f6465d', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 'bold' }}>
+                                        ⛔ BANNED
+                                    </span>
+                                )}
+                            </h2>
                             {profile.username && <p className="tp-handle">@{profile.username}</p>}
                             
                             {/* 📝 Trader Bio */}
@@ -146,6 +155,43 @@ export function TraderProfile({ userId, onClose }: Props) {
                         <div className="tp-footer-info">
                             Member since {new Date(profile.member_since).toLocaleDateString()}
                         </div>
+
+                        {isAdmin && (
+                            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                                <button
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        fontSize: '12px',
+                                        backgroundColor: profile.is_banned ? 'rgba(16, 185, 129, 0.15)' : 'rgba(246, 70, 93, 0.15)',
+                                        color: profile.is_banned ? '#10b981' : '#f6465d',
+                                        border: profile.is_banned ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(246, 70, 93, 0.4)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 6
+                                    }}
+                                    disabled={togglingBan}
+                                    onClick={async () => {
+                                        setTogglingBan(true);
+                                        try {
+                                            haptic('warning');
+                                            const res = await api.admin.toggleBanUser(userId);
+                                            setProfile((prev: any) => ({ ...prev, is_banned: res.is_banned }));
+                                        } catch (err: any) {
+                                            alert('Failed to update ban: ' + (err.message || err));
+                                        } finally {
+                                            setTogglingBan(false);
+                                        }
+                                    }}
+                                >
+                                    {togglingBan ? 'Updating...' : profile.is_banned ? '✅ UNBLOCK TRADER' : '⛔ BLOCK TRADER'}
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

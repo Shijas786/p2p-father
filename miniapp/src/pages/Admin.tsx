@@ -8,18 +8,40 @@ import {
     DEMO_ADMIN_TRADES,
 } from '../lib/devMocks';
 import './Admin.css';
+import { TraderProfile } from '../components/TraderProfile';
 
 type AdminTab = 'disputes' | 'stats' | 'users' | 'trades' | 'ip';
 
 interface Dispute {
     id: string;
+    buyer_id?: string;
+    seller_id?: string;
     amount: string;
     token: string;
     fiat_amount: number;
     status: string;
     dispute_reason?: string;
-    buyer: { username: string; first_name: string; trust_score?: number };
-    seller: { username: string; first_name: string; upi_id?: string; phone_number?: string; trust_score?: number };
+    buyer: { 
+        id?: string;
+        username: string; 
+        first_name: string; 
+        trust_score?: number;
+        wallet_type?: 'bot' | 'external';
+        wallet_address?: string;
+        receive_address?: string;
+    };
+    seller: { 
+        id?: string;
+        username: string; 
+        first_name: string; 
+        upi_id?: string; 
+        phone_number?: string; 
+        trust_score?: number;
+        wallet_type?: 'bot' | 'external';
+        wallet_address?: string;
+        receive_address?: string;
+    };
+    buyer_custom_address?: string;
     payment_proofs?: { utr: string }[];
     created_at: string;
     chatMessages?: any[];
@@ -65,6 +87,10 @@ export function Admin({ user }: Props) {
     const [newMessages, setNewMessages]     = useState<Record<string, string>>({});
     const [sendingMsg, setSendingMsg]       = useState<Record<string, boolean>>({});
     const chatEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const [selectedTraderId, setSelectedTraderId] = useState<string | null>(null);
+    const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+    const [lightboxZoom, setLightboxZoom] = useState(1);
+    const [lightboxRotation, setLightboxRotation] = useState(0);
 
     // ── Stats ──
     const [stats, setStats]               = useState<any>(null);
@@ -217,7 +243,7 @@ export function Admin({ user }: Props) {
         }
     }
 
-    async function loadUsers() {
+    async function loadUsers(search = '') {
         setUsersLoading(true);
         try {
             if (!isTelegramEnvironment()) {
@@ -227,7 +253,7 @@ export function Admin({ user }: Props) {
                 setUsersLoading(false);
                 return;
             }
-            const { users: list } = await api.users.list();
+            const { users: list } = await api.users.list(search);
             setUsers(list || []);
             setUsersLoaded(true);
         } catch (err: any) {
@@ -236,6 +262,15 @@ export function Admin({ user }: Props) {
             setUsersLoading(false);
         }
     }
+
+    // Debounced server-side user search
+    useEffect(() => {
+        if (activeTab !== 'users') return;
+        const timer = setTimeout(() => {
+            loadUsers(userSearch);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [userSearch, activeTab]);
 
     async function loadTrades(status: string, page: number, silent = false) {
         if (!silent) setTradesLoading(true);
@@ -395,17 +430,92 @@ export function Admin({ user }: Props) {
                             </div>
                             <div className="text-right flex-col items-end">
                                 <div className="font-bold" style={{ fontSize: 12, color: 'var(--orange)' }}>₹{d.fiat_amount?.toLocaleString()}</div>
-                                <div className="flex-col items-end" style={{ gap: 2, marginTop: 4 }}>
-                                    <div className="flex items-center" style={{ gap: 4, fontSize: 10 }}>
-                                        <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>BUYER:</span>
-                                        <span style={{ color: '#fff' }}>@{d.buyer?.username || 'user'}</span>
-                                        {d.buyer?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: 8 }}>({d.buyer.trust_score}⭐)</span>}
-                                    </div>
-                                    <div className="flex items-center" style={{ gap: 4, fontSize: 10 }}>
-                                        <span style={{ color: 'var(--orange)', fontWeight: 'bold' }}>SELLER:</span>
-                                        <span style={{ color: '#fff' }}>@{d.seller?.username || 'user'}</span>
-                                        {d.seller?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: 8 }}>({d.seller.trust_score}⭐)</span>}
-                                    </div>
+                                <div className="flex-col items-end" style={{ gap: 4, marginTop: 4 }}>
+                                    {(() => {
+                                        const buyerAddr = d.buyer_custom_address || d.buyer?.receive_address || d.buyer?.wallet_address;
+                                        const isBuyerExternal = Boolean(d.buyer_custom_address || d.buyer?.receive_address || d.buyer?.wallet_type === 'external');
+                                        const shortBuyerAddr = buyerAddr ? `${buyerAddr.slice(0, 6)}...${buyerAddr.slice(-4)}` : '';
+
+                                        const isSellerExternal = d.seller?.wallet_type === 'external';
+                                        const sellerAddr = d.seller?.wallet_address || d.seller?.receive_address;
+                                        const shortSellerAddr = sellerAddr ? `${sellerAddr.slice(0, 6)}...${sellerAddr.slice(-4)}` : '';
+
+                                        const buyerId = d.buyer?.id || d.buyer_id;
+                                        const sellerId = d.seller?.id || d.seller_id;
+
+                                        const buyerDisplayName = d.buyer?.username 
+                                            ? (d.buyer.first_name && d.buyer.first_name !== d.buyer.username ? `@${d.buyer.username} (${d.buyer.first_name})` : `@${d.buyer.username}`)
+                                            : (d.buyer?.first_name || 'Buyer');
+
+                                        const sellerDisplayName = d.seller?.username 
+                                            ? (d.seller.first_name && d.seller.first_name !== d.seller.username ? `@${d.seller.username} (${d.seller.first_name})` : `@${d.seller.username}`)
+                                            : (d.seller?.first_name || 'Seller');
+
+                                        return (
+                                            <>
+                                                <div className="flex items-center flex-wrap justify-end" style={{ gap: 4, fontSize: 10 }}>
+                                                    <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>BUYER:</span>
+                                                    <span 
+                                                        onClick={() => {
+                                                            if (buyerId) {
+                                                                haptic('light');
+                                                                setSelectedTraderId(buyerId);
+                                                            }
+                                                        }}
+                                                        title={buyerId ? "Click to view Trader Profile" : undefined}
+                                                        style={{ 
+                                                            color: '#fff', 
+                                                            cursor: buyerId ? 'pointer' : 'default',
+                                                            textDecoration: buyerId ? 'underline dotted' : 'none',
+                                                            textUnderlineOffset: 3
+                                                        }}
+                                                    >
+                                                        {buyerDisplayName}
+                                                    </span>
+                                                    {d.buyer?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: 8 }}>({d.buyer.trust_score}⭐)</span>}
+                                                    {isBuyerExternal ? (
+                                                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: 600 }}>
+                                                            🌐 External{shortBuyerAddr ? `: ${shortBuyerAddr}` : ''}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', fontWeight: 600 }}>
+                                                            🤖 Bot Wallet
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center flex-wrap justify-end" style={{ gap: 4, fontSize: 10 }}>
+                                                    <span style={{ color: 'var(--orange)', fontWeight: 'bold' }}>SELLER:</span>
+                                                    <span 
+                                                        onClick={() => {
+                                                            if (sellerId) {
+                                                                haptic('light');
+                                                                setSelectedTraderId(sellerId);
+                                                            }
+                                                        }}
+                                                        title={sellerId ? "Click to view Trader Profile" : undefined}
+                                                        style={{ 
+                                                            color: '#fff', 
+                                                            cursor: sellerId ? 'pointer' : 'default',
+                                                            textDecoration: sellerId ? 'underline dotted' : 'none',
+                                                            textUnderlineOffset: 3
+                                                        }}
+                                                    >
+                                                        {sellerDisplayName}
+                                                    </span>
+                                                    {d.seller?.trust_score !== undefined && <span style={{ opacity: 0.5, fontSize: 8 }}>({d.seller.trust_score}⭐)</span>}
+                                                    {isSellerExternal ? (
+                                                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: 600 }}>
+                                                            🌐 External{shortSellerAddr ? `: ${shortSellerAddr}` : ''}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 600 }}>
+                                                            🤖 Bot Vault
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -428,27 +538,23 @@ export function Admin({ user }: Props) {
                             </div>
                         )}
 
-                        {/* Payment Details / UTR Proof */}
-                        <div className="flex flex-wrap" style={{ gap: 12, padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                            {d.payment_proofs?.[0]?.utr && (
-                                <div className="flex-col">
-                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>UTR / REF NO</span>
-                                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--blue)' }}>{d.payment_proofs[0].utr}</span>
-                                </div>
-                            )}
-                            {d.seller?.upi_id && (
-                                <div className="flex-col">
-                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER UPI</span>
-                                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--green)' }}>{d.seller.upi_id}</span>
-                                </div>
-                            )}
-                            {d.seller?.phone_number && (
-                                <div className="flex-col">
-                                    <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER CONTACT</span>
-                                    <span style={{ fontSize: 10, color: 'var(--text-primary)' }}>{d.seller.phone_number}</span>
-                                </div>
-                            )}
-                        </div>
+                        {/* Payment Details */}
+                        {(d.seller?.upi_id || d.seller?.phone_number) && (
+                            <div className="flex flex-wrap" style={{ gap: 12, padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                                {d.seller?.upi_id && (
+                                    <div className="flex-col">
+                                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER UPI</span>
+                                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--green)' }}>{d.seller.upi_id}</span>
+                                    </div>
+                                )}
+                                {d.seller?.phone_number && (
+                                    <div className="flex-col">
+                                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 'bold' }}>SELLER CONTACT</span>
+                                        <span style={{ fontSize: 10, color: 'var(--text-primary)' }}>{d.seller.phone_number}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Chat */}
                         <div className="flex-col" style={{ gap: 8 }}>
@@ -474,14 +580,55 @@ export function Admin({ user }: Props) {
 
                                     return (
                                         <div key={idx} className="flex-col" style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
-                                            <div style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 2, padding: '0 2px', color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)') }}>
-                                                {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (msg.first_name || msg.username || (isBuyer ? 'Buyer' : 'Seller'))}
+                                            <div 
+                                                onClick={() => {
+                                                    if (!isAdmin && msg.user_id) {
+                                                        haptic('light');
+                                                        setSelectedTraderId(msg.user_id);
+                                                    }
+                                                }}
+                                                title={(!isAdmin && msg.user_id) ? "Click to view Trader Profile" : undefined}
+                                                style={{ 
+                                                    fontSize: 8, 
+                                                    fontWeight: 'bold', 
+                                                    marginBottom: 2, 
+                                                    padding: '0 2px', 
+                                                    color: isAdmin ? (isMe ? 'var(--blue)' : '#a78bfa') : (isBuyer ? 'var(--green)' : 'var(--orange)'),
+                                                    cursor: (!isAdmin && msg.user_id) ? 'pointer' : 'default',
+                                                    textDecoration: (!isAdmin && msg.user_id) ? 'underline dotted' : 'none'
+                                                }}
+                                            >
+                                                {isAdmin ? (isMe ? '🛡️ Admin' : `🛡️ Admin (${msg.first_name || 'Staff'})`) : (
+                                                    msg.username 
+                                                        ? (msg.first_name && msg.first_name !== msg.username ? `@${msg.username} (${msg.first_name})` : `@${msg.username}`)
+                                                        : (msg.first_name || (isBuyer ? 'Buyer' : 'Seller'))
+                                                )}
                                             </div>
                                             <div style={{ padding: 8, borderRadius: 'var(--radius-md)', fontSize: 12, lineHeight: 1.3, backgroundColor: isMe ? 'var(--blue)' : (isAdmin ? 'rgba(88,28,135,0.4)' : 'rgba(255,255,255,0.05)'), color: isMe ? '#fff' : 'var(--text-primary)', border: isMe ? 'none' : '1px solid var(--border)', borderTopRightRadius: isMe ? 0 : 'var(--radius-md)', borderTopLeftRadius: !isMe ? 0 : 'var(--radius-md)' }}>
                                                 {msg.image_url ? (
                                                     <div className="flex-col" style={{ gap: 4 }}>
-                                                        <img src={msg.image_url} alt="Proof" style={{ maxWidth: 140, borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                        {msg.message && <p>{msg.message}</p>}
+                                                        <div 
+                                                            style={{ position: 'relative', display: 'inline-block', cursor: 'pointer' }}
+                                                            onClick={() => {
+                                                                haptic('light');
+                                                                setFullscreenImage(msg.image_url);
+                                                                setLightboxZoom(1);
+                                                                setLightboxRotation(0);
+                                                            }}
+                                                            title="Click to view full size"
+                                                        >
+                                                            <img 
+                                                                src={msg.image_url} 
+                                                                alt="Proof" 
+                                                                style={{ maxWidth: 160, maxHeight: 160, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', display: 'block', objectFit: 'cover' }} 
+                                                            />
+                                                            <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 8, padding: '2px 6px', borderRadius: 4, backdropFilter: 'blur(4px)', fontWeight: 600 }}>
+                                                                🔍 View
+                                                            </div>
+                                                        </div>
+                                                        {msg.message && !msg.message.toLowerCase().includes('payment proof') && (
+                                                            <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
@@ -616,7 +763,12 @@ export function Admin({ user }: Props) {
                                 </div>
                                 <div className="admin-user-info">
                                     <div className="admin-user-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <span>@{u.username || u.first_name || 'Unknown'}</span>
+                                        <span>
+                                            {u.username 
+                                                ? (u.first_name && u.first_name !== u.username ? `@${u.username} (${u.first_name})` : `@${u.username}`)
+                                                : (u.first_name || 'Anonymous')
+                                            }
+                                        </span>
                                         {u.is_banned && (
                                             <span style={{ fontSize: 9, backgroundColor: '#f6465d', color: '#fff', padding: '1px 5px', borderRadius: 4, fontWeight: 'bold' }}>
                                                 ⛔ BANNED
@@ -968,6 +1120,33 @@ export function Admin({ user }: Props) {
             {activeTab === 'users'    && renderUsers()}
             {activeTab === 'trades'   && renderTrades()}
             {activeTab === 'ip'       && renderIpClusters()}
+
+            {selectedTraderId && (
+                <TraderProfile
+                    userId={selectedTraderId}
+                    onClose={() => setSelectedTraderId(null)}
+                    isAdmin={true}
+                />
+            )}
+
+            {/* Fullscreen Image Viewer / Lightbox */}
+            {fullscreenImage && (
+                <div className="chat-fullscreen" onClick={() => setFullscreenImage(null)}>
+                    <div className="lightbox-toolbar" onClick={e => e.stopPropagation()}>
+                        <button className="lightbox-btn" onClick={() => setLightboxZoom(z => Math.min(z + 0.5, 4))}>🔍+</button>
+                        <button className="lightbox-btn" onClick={() => setLightboxZoom(z => Math.max(z - 0.5, 0.5))}>🔍−</button>
+                        <button className="lightbox-btn" onClick={() => setLightboxRotation(r => (r + 90) % 360)}>↻</button>
+                        <a className="lightbox-btn" href={fullscreenImage} target="_blank" rel="noopener noreferrer" download="trade-evidence.jpg" onClick={e => e.stopPropagation()}>💾</a>
+                    </div>
+                    <img
+                        src={fullscreenImage}
+                        alt="Full size proof"
+                        style={{ transform: `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`, transition: 'transform 0.2s ease' }}
+                        onClick={e => e.stopPropagation()}
+                    />
+                    <button className="chat-fullscreen-close" onClick={() => setFullscreenImage(null)}>✕ Close</button>
+                </div>
+            )}
         </div>
     );
 }
