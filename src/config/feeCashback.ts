@@ -5,7 +5,11 @@ export interface VIPUserConfig {
     username: string;
     rebateBps: number; // e.g. 25 = 0.25%
     applyAfterTimestamp: number; // Order creation timestamp cutoff (ms)
+    minTradeUsd?: number; // Minimum trade value in USD to qualify for cashback (default $100)
 }
+
+// Default minimum trade size in USD required to trigger VIP fee cashback
+export const MIN_VIP_CASHBACK_TRADE_USD = 100;
 
 // Default VIP traders list
 const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
@@ -13,7 +17,8 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         telegramId: "6155236178",
         username: "CmdrAj",
         rebateBps: 25, // 0.25% rebate
-        applyAfterTimestamp: 1754067180000 // 2026-08-01 cutoff
+        applyAfterTimestamp: 1754067180000, // 2026-08-01 cutoff
+        minTradeUsd: 100
     }
 ];
 

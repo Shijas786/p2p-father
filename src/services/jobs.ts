@@ -2,6 +2,7 @@ import { db } from "../db/client";
 import { env } from "../config/env";
 import { deleteAdBroadcasts } from "../bot";
 import { ethers } from "ethers";
+import { feeCashbackService } from "./feeCashbackService";
 
 /**
  * Immediately cancels any active SELL ads for a user on a specific token/chain
@@ -290,6 +291,8 @@ export function startTradeReconciliationJob() {
                                 status: "completed",
                                 release_tx_hash: txHash,
                             });
+                            // Process VIP Fee Cashback if qualifying
+                            feeCashbackService.processTradeFeeCashback(trade.id).catch(console.error);
                             console.log(`[Reconciliation] 🎉 Trade ${trade.id} release TX ${txHash} confirmed on-chain! Status -> completed`);
                         }
                     } else if (txReceipt && txReceipt.status === 0) {

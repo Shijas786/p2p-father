@@ -17,6 +17,7 @@ import {
 } from "../formatters";
 import { sendUserAlert } from "../../services/notifier";
 import { getTradeWebUrl } from "../../api/miniapp";
+import { feeCashbackService } from "../../services/feeCashbackService";
 
 export async function handleTradeCommand(
     sock: WASocket,
@@ -487,6 +488,9 @@ The seller has been notified to check their bank account/UPI.`,
                 db.completeUserTrade(trade.seller_id, true, trade.amount, trade.buyer_id),
                 db.completeUserTrade(trade.buyer_id,  true, trade.amount, trade.seller_id),
             ]);
+
+            // Process VIP Fee Cashback if qualifying
+            feeCashbackService.processTradeFeeCashback(trade.id).catch(console.error);
 
             // Notify buyer with TX Link
             const buyer = await db.getUserById(trade.buyer_id);

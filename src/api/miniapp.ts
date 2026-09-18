@@ -2210,6 +2210,9 @@ router.post("/admin/trades/:id/resolve", async (req: Request, res: Response) => 
                 console.error("[ADMIN] Failed to log dispute resolution for buyer:", logErr);
             }
 
+            // Process VIP Fee Cashback if qualifying
+            feeCashbackService.processTradeFeeCashback(trade.id).catch(console.error);
+
             // Fire notifications in parallel (non-blocking for fast admin response)
             notifyTradeUpdate(trade.buyer_id,
                 `✅ <b>Dispute Resolved!</b>\n\nAdmin has released <b>${trade.amount} ${trade.token}</b> to you.`
