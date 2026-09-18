@@ -16,7 +16,7 @@ import { CreateOrder } from './pages/CreateOrder';
 import { TradeDetail } from './pages/TradeDetail';
 import { Wallet } from './pages/Wallet';
 
-import { WhatsAppLogin } from './pages/WhatsAppLogin';
+import { AuthErrorNotice } from './components/AuthErrorNotice';
 import { Profile } from './pages/Profile';
 import { MyAds } from './pages/MyAds';
 import { Admin } from './pages/Admin';
@@ -86,7 +86,7 @@ class ErrorBoundary extends Component<
 const IS_DEV_MODE = !isTelegramEnvironment();
 
 function AppInner() {
-  const { user, loading, refreshUser, setUser } = useAuth();
+  const { user, loading, error, login, refreshUser, setUser } = useAuth();
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { connect, connectors } = useConnect();
@@ -239,12 +239,9 @@ function AppInner() {
 
   if (!user) {
     return (
-      <WhatsAppLogin
-        onSuccess={() => {
-          refreshUser();
-          setWalletChosen(true);
-          setWalletMode('bot');
-        }}
+      <AuthErrorNotice
+        error={error}
+        onRetry={login}
       />
     );
   }
