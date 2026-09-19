@@ -1101,7 +1101,7 @@ router.post("/orders", async (req: Request, res: Response) => {
             });
         }
 
-        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers, allowed_dealers, new_traders_only, require_kyc } = req.body;
+        const { type, token, amount, rate, payment_methods, expires_in, chain, group_id, note, excluded_dealers, allowed_dealers, new_traders_only, avoid_new_traders, require_kyc } = req.body;
         if (!type || !token || !amount || !rate) {
             return res.status(400).json({ error: "Missing required fields" });
         }
@@ -1264,7 +1264,8 @@ router.post("/orders", async (req: Request, res: Response) => {
                 excluded_usernames: excludedUsernames,
                 allowed_dealers: resolvedAllowedDealerIds,
                 allowed_usernames: allowedUsernames,
-                new_traders_only: !!new_traders_only,
+                avoid_new_traders: !!avoid_new_traders || !!new_traders_only,
+                new_traders_only: !!avoid_new_traders || !!new_traders_only,
                 require_kyc: !!require_kyc || !!req.body.require_kyc
             },
         });
@@ -1435,11 +1436,11 @@ router.post("/trades", async (req: Request, res: Response) => {
             }
         }
 
-        // Check if the order is restricted to new traders only
-        if (order.payment_details?.new_traders_only) {
-            if ((user.completed_trades || 0) > 0) {
+        // Check if the order is restricted to avoid new traders (requires at least 1 completed trade)
+        if (order.payment_details?.avoid_new_traders || order.payment_details?.new_traders_only) {
+            if ((user.completed_trades || 0) < 1) {
                 return res.status(400).json({
-                    error: "This order is restricted to new traders only (0 completed trades)."
+                    error: "This order is restricted to experienced traders. Accounts with 0 completed trades cannot take this ad."
                 });
             }
         }

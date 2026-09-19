@@ -266,9 +266,9 @@ export function Home({ user }: Props) {
                                                          🛡️ KYC REQ
                                                      </span>
                                                  )}
-                                                 {order.payment_details?.new_traders_only && (
+                                                 {Boolean(order.payment_details?.avoid_new_traders || order.payment_details?.new_traders_only) && (
                                                      <span className="p2p-method-tag" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                                                         🌱 NEW TRADERS
+                                                         🛡️ NO NEW TRADERS
                                                      </span>
                                                  )}
                                                 {(order.payment_methods || []).map((m: string) => (
@@ -364,10 +364,10 @@ export function Home({ user }: Props) {
                                     <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>This merchant requires KYC verification to trade.</div>
                                 </div>
                             )}
-                            {confirmOrder.payment_details?.new_traders_only && (
+                            {Boolean(confirmOrder.payment_details?.avoid_new_traders || confirmOrder.payment_details?.new_traders_only) && (
                                 <div style={{ margin: '10px 0 4px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', padding: '10px 12px' }}>
-                                    <div style={{ fontSize: '9px', color: '#3b82f6', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>🌱 New Traders Only</div>
-                                    <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>This ad is restricted to users with 0 completed trades.</div>
+                                    <div style={{ fontSize: '9px', color: '#3b82f6', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>🛡️ Avoid New Traders</div>
+                                    <div style={{ fontSize: '12px', color: '#fff', lineHeight: '1.5' }}>This merchant requires at least 1 completed trade. Accounts with 0 completed trades cannot take this ad.</div>
                                 </div>
                             )}
                             <div className="p2p-modal-actions">
@@ -375,6 +375,10 @@ export function Home({ user }: Props) {
                                 {confirmOrder.payment_details?.require_kyc && !user?.is_verified ? (
                                     <button className="p2p-modal-confirm" style={{ background: '#f0b90b', color: '#000', fontWeight: 700 }} onClick={() => { setConfirmOrder(null); navigate('/profile'); }}>
                                         🛡️ Verify ID in Profile
+                                    </button>
+                                ) : Boolean(confirmOrder.payment_details?.avoid_new_traders || confirmOrder.payment_details?.new_traders_only) && (user?.completed_trades || 0) < 1 ? (
+                                    <button className="p2p-modal-confirm" style={{ background: '#64748b', color: '#cbd5e1', cursor: 'not-allowed', opacity: 0.8 }} disabled>
+                                        🚫 1+ Trades Required
                                     </button>
                                 ) : (
                                     <button className={`p2p-modal-confirm ${tab}`} onClick={confirmTrade}>✅ Confirm</button>

@@ -37,7 +37,7 @@ export function CreateOrder() {
     const [dealerSelectionMode, setDealerSelectionMode] = useState<'exclude' | 'allow' | null>(null);
     const [isAdvancedSettingsExpanded, setIsAdvancedSettingsExpanded] = useState(false);
     const [excludeSearchQuery, setExcludeSearchQuery] = useState('');
-    const [newTradersOnly, setNewTradersOnly] = useState(false);
+    const [avoidNewTraders, setAvoidNewTraders] = useState(false);
     const [requireKyc, setRequireKyc] = useState(false);
 
     useEffect(() => {
@@ -413,7 +413,8 @@ export function CreateOrder() {
                 excluded_dealers: excludedDealerUsernames.join(',') || undefined,
                 allowed_dealers: allowedDealerUsernames.join(',') || undefined,
                 expires_in: expiryMinutes,
-                new_traders_only: newTradersOnly,
+                avoid_new_traders: avoidNewTraders,
+                new_traders_only: avoidNewTraders,
                 require_kyc: requireKyc,
             });
 
@@ -674,18 +675,18 @@ export function CreateOrder() {
                                         </button>
                                     </div>
 
-                                    {/* New Traders Only Toggle */}
+                                    {/* Avoid New Traders Toggle */}
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px' }}>
                                         <div>
-                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>New Traders Only</div>
-                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Only 0 trade users</div>
+                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Avoid New Traders</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Block 0-trade users (requires 1+ completed trades)</div>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => { haptic('selection'); setNewTradersOnly(!newTradersOnly); }}
+                                            onClick={() => { haptic('selection'); setAvoidNewTraders(!avoidNewTraders); }}
                                             style={{
-                                                background: newTradersOnly ? 'var(--green)' : 'rgba(255,255,255,0.1)',
-                                                color: newTradersOnly ? '#000' : '#fff',
+                                                background: avoidNewTraders ? 'var(--green)' : 'rgba(255,255,255,0.1)',
+                                                color: avoidNewTraders ? '#000' : '#fff',
                                                 border: 'none',
                                                 padding: '4px 10px',
                                                 borderRadius: '12px',
@@ -695,7 +696,7 @@ export function CreateOrder() {
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            {newTradersOnly ? 'ON' : 'OFF'}
+                                            {avoidNewTraders ? 'ON' : 'OFF'}
                                         </button>
                                     </div>
 

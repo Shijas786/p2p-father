@@ -353,6 +353,10 @@ export function fmtGroupAdBroadcast(order: any): string {
         lines.push("🛡️ Requirement: *KYC Verified Only*");
     }
 
+    if (order.payment_details?.avoid_new_traders || order.payment_details?.new_traders_only) {
+        lines.push("🛡️ Requirement: *1+ Completed Trades (No New Traders)*");
+    }
+
     if (order.payment_details?.allowed_dealers && order.payment_details.allowed_dealers.length > 0) {
         lines.push("👥 Target: *Specific Whitelisted Dealers Only*");
     }

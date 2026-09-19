@@ -440,6 +440,10 @@ export function buildAdMessageText(order: any, user: any, statusOverride?: strin
         lines.push(`🛡️ Requirement: <b>KYC Verified Only</b>`);
     }
 
+    if (order.payment_details?.avoid_new_traders || order.payment_details?.new_traders_only) {
+        lines.push(`🛡️ Requirement: <b>1+ Completed Trades (No New Traders)</b>`);
+    }
+
     if (order.payment_details?.allowed_dealers && order.payment_details.allowed_dealers.length > 0) {
         lines.push(`👥 Target: <b>Specific Whitelisted Dealers Only</b>`);
     }
