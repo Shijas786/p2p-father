@@ -76,7 +76,7 @@ export function getTraderBadges(user: any, order?: any): string {
 
     let badges = "";
     if (isVerified) {
-        badges += getRandomKycEmoji();
+        badges += `KYC ${getRandomKycEmoji()}`;
     }
     if (isVip) {
         badges += (badges ? " " : "") + tgCustomEmoji(TG_CUSTOM_EMOJIS.VIP, "👑");

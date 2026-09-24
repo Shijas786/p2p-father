@@ -214,7 +214,7 @@ export function Home({ user }: Props) {
                                                     color: '#0ecb81',
                                                     fontWeight: 600,
                                                     marginLeft: '4px'
-                                                }}>Verified</span>
+                                                }}>KYC Verified</span>
                                             )}
                                             {order.trust_score >= 90 && <span className="p2p-verified-badge">💎</span>}
                                         </div>

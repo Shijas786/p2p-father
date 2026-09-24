@@ -320,7 +320,7 @@ export function fmtGroupAdBroadcast(order: any): string {
 
     const trader = formatTraderContact(order.users);
     const isVerified = order.users?.is_verified || order.users?.kyc_status === 'approved';
-    const verifiedBadge = isVerified ? " [✅ Verified]" : "";
+    const verifiedBadge = isVerified ? " [🛡️ KYC Verified]" : "";
     const actionVerb = isSell ? "wants to sell" : "wants to buy";
 
     const amount = order.amount || 0;
