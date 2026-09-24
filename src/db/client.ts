@@ -254,13 +254,7 @@ class Database {
             const isHidden = Boolean(d.users?.hide_group_handle);
             let displayName = d.users?.username ? `@${d.users.username}` : (d.users?.first_name || "Trader");
             if (isHidden) {
-                if (d.users?.username && d.users.username.length > 2) {
-                    displayName = `@${d.users.username.slice(0, 2)}***`;
-                } else if (d.users?.first_name && d.users.first_name.length > 2) {
-                    displayName = `${d.users.first_name.slice(0, 2)}***`;
-                } else {
-                    displayName = "Anonymous Trader";
-                }
+                displayName = "****";
             }
 
             return {

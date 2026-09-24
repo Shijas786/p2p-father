@@ -275,13 +275,7 @@ export {
 
 function formatTraderDisplay(username?: string | null, firstName?: string | null, hideHandle: any = false): string {
     if (Boolean(hideHandle)) {
-        if (username && username.length > 2) {
-            return `@${escapeHTML(username.slice(0, 2))}***`;
-        }
-        if (firstName && firstName.length > 2) {
-            return `${escapeHTML(firstName.slice(0, 2))}***`;
-        }
-        return "Anonymous Trader";
+        return "****";
     }
     if (username) return `@${escapeHTML(username)}`;
     if (firstName) return escapeHTML(firstName);
@@ -2122,7 +2116,7 @@ bot.command("privacy", async (ctx) => {
 
         if (newPrivacy) {
             await ctx.reply(
-                "🔒 *Privacy Mode: ACTIVATED*\n\nYour username will now be masked (e.g. `@us***`) in public group trade announcements. Transaction links will remain attached for protocol transparency.\n\nUse /privacy anytime to toggle.",
+                "🔒 *Privacy Mode: ACTIVATED*\n\nYour username will now be masked (e.g. `****`) in public group trade announcements. Transaction links will remain attached for protocol transparency.\n\nUse /privacy anytime to toggle.",
                 { parse_mode: "Markdown" }
             );
         } else {

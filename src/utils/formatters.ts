@@ -43,13 +43,18 @@ export function formatOrder(order: any, index?: number): string {
 
     const rateTokenDisplay = tokenEmoji ? `${tokenEmoji}${escapeHTML(token)}` : escapeHTML(token);
 
+    const isHidden = Boolean(order.hide_group_handle || order.username === "****");
+    const traderDisplay = isHidden
+        ? "****"
+        : `@${escapeHTML((order.username || "anon").replace(/^@/, ""))}`;
+
     return [
         amountStr,
         `├ 💰 <b>Rate</b>    ₹${escapeHTML(order.rate.toLocaleString())} / ${rateTokenDisplay}`,
         `├ 💵 <b>Total</b>   ₹${escapeHTML(totalFiat)}`,
         `├ 🔗 <b>Chain</b>   ${chainDisplay}`,
         `├ 📲 <b>Pay</b>     ${escapeHTML(order.payment_methods?.join(", ") || "UPI")}`,
-        `├ 👤 <b>Trader</b>  @${escapeHTML((order.username || "anon").replace(/^@/, ""))}${badges} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
+        `├ 👤 <b>Trader</b>  ${traderDisplay}${badges} ${starEmoji} ${escapeHTML(trustScore.toFixed(0))}%${avgSpeedText}`,
     ].join("\n");
 }
 

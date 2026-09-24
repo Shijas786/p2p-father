@@ -81,6 +81,10 @@ export function formatTraderContact(user: any): string {
     const isKyc = Boolean(user.is_verified || user.kyc_status === 'approved');
     const badge = isKyc ? " [🛡️ KYC Verified]" : "";
 
+    if (user.hide_group_handle) {
+        return `****${badge}`;
+    }
+
     // 1. Prefer Username
     if (user.username) {
         return `@${user.username}${badge}`;

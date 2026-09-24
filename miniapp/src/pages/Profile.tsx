@@ -623,7 +623,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 <span className="prof-payment-name">Broadcast Privacy</span>
                                 <span className="prof-payment-value" style={{ fontSize: '11px', color: '#848e9c' }}>
                                     {privacyMode 
-                                        ? `Stealth Active (@${user?.username ? user.username.slice(0, 2) : 'us'}***)` 
+                                        ? 'Stealth Active (****)' 
                                         : `Public Handle (@${user?.username || 'username'})`}
                                 </span>
                             </div>
