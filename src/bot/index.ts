@@ -1178,8 +1178,9 @@ bot.command(["start", "open"], async (ctx) => {
     }
 
     // 3. Referral deep link
-    if (payload && payload.startsWith("ref_") && ctx.from) {
-        const referrerTelegramId = parseInt(payload.replace("ref_", ""));
+    const cleanPayload = payload ? payload.replace(/\\/g, "") : "";
+    if (cleanPayload && cleanPayload.startsWith("ref_") && ctx.from) {
+        const referrerTelegramId = parseInt(cleanPayload.replace("ref_", ""));
         if (!isNaN(referrerTelegramId) && referrerTelegramId !== ctx.from.id) {
             // Check if this referred user is new to our bot database
             const existingUser = await db.getUserByTelegramId(ctx.from.id);
@@ -2192,7 +2193,7 @@ bot.command("invite", async (ctx) => {
         "• The referral counts only when your friend joins our community group\\.",
         "",
         "🔗 *Your Personal Invitation Link:*",
-        `\`${escapeMarkdown(inviteLink)}\``,
+        `\`${inviteLink}\``,
         "",
         "📊 *Your Referral Stats:*",
         `• 👥 *Total Invited:* \`${stats.total}\``,
@@ -2520,7 +2521,7 @@ bot.on("callback_query:data", async (ctx) => {
                 "• The referral counts only when your friend joins our community group\\.",
                 "",
                 "🔗 *Your Personal Invitation Link:*",
-                `\`${escapeMarkdown(inviteLink)}\``,
+                `\`${inviteLink}\``,
                 "",
                 "📊 *Your Referral Stats:*",
                 `• 👥 *Total Invited:* \`${stats.total}\``,

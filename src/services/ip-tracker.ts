@@ -5,7 +5,7 @@ import { db } from "../db/client";
 const userIpCache = new Map<string, { ip: string; lastSeen: string }>();
 
 // Blocked scammer IP list (initialized with known scammer IPs)
-const blockedIps = new Set<string>(["106.76.190.72"]);
+const blockedIps = new Set<string>(["106.76.190.72", "103.44.118.236"]);
 
 export class IpTrackerService {
     /**
