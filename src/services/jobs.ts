@@ -92,8 +92,22 @@ export function startExpiryJob() {
 
             if (fetchError) throw fetchError;
 
-            if (toExpire && toExpire.length > 0) {
-                const ids = toExpire.map((o: any) => o.id);
+            // Safety cleanup: legacy active ads where expires_at IS NULL and created_at > 7 days old
+            const maxAge = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: nullExpiryExpired } = await client
+                .from("orders")
+                .select("id")
+                .eq("status", "active")
+                .is("expires_at", null)
+                .lt("created_at", maxAge);
+
+            const allToExpire = [
+                ...(toExpire || []),
+                ...(nullExpiryExpired || [])
+            ];
+
+            if (allToExpire.length > 0) {
+                const ids = Array.from(new Set(allToExpire.map((o: any) => o.id)));
                 
                 // Update status in bulk
                 const { error: updateError } = await client

@@ -1197,15 +1197,11 @@ router.post("/orders", async (req: Request, res: Response) => {
         if (isNaN(parsedRate) || parsedRate <= 0 || parsedRate > maxRate) {
             return res.status(400).json({ error: `Rate must be between 0.01 and ${maxRate.toLocaleString()} INR per token` });
         }
-        let expiresAt: string | undefined;
-        if (expires_in) {
-            const minutes = parseInt(expires_in);
-            if (minutes > 0) {
-                const now = new Date();
-                now.setMinutes(now.getMinutes() + minutes);
-                expiresAt = now.toISOString();
-            }
-        }
+        const minutes = expires_in ? parseInt(expires_in) : 60;
+        const validMinutes = (!isNaN(minutes) && minutes > 0) ? minutes : 60;
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + validMinutes);
+        const expiresAt: string = now.toISOString();
 
         // ═══ VALIDATION: Sell Orders ═══
         if (type === 'sell') {

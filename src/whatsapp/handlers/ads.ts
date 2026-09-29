@@ -574,9 +574,11 @@ Please deposit more and lock it to your Vault before posting this ad.`,
                 jid,
                 `✅ *Payment Method: ${methods.join(", ")}*\n\n⚙️ *ADVANCED SETTING — Ad Expiry Time*:\nHow long should this ad remain active?`,
                 [
-                    { id: "ad_exp_60",   label: "⏱️ 1 Hour" },
-                    { id: "ad_exp_120",  label: "⏱️ 2 Hours" },
-                    { id: "ad_exp_1440", label: "⏱️ 24 Hours" },
+                    { id: "ad_exp_30",    label: "⏱️ 30 Mins" },
+                    { id: "ad_exp_60",    label: "⏱️ 1 Hour" },
+                    { id: "ad_exp_360",   label: "⏱️ 6 Hours" },
+                    { id: "ad_exp_720",   label: "⏱️ 12 Hours" },
+                    { id: "ad_exp_10080", label: "⏱️ 7 Days" },
                 ]
             );
             return;
@@ -585,17 +587,23 @@ Please deposit more and lock it to your Vault before posting this ad.`,
         // ── Step 6: Expiry ────────────────────────────────────────────────────
         case "EXPIRY": {
             let mins = 60;
-            if (text.includes("120") || text.includes("2 h")) mins = 120;
-            if (text.includes("1440") || text.includes("24 h")) mins = 1440;
+            if (text.includes("30") || text.includes("1️⃣") || text === "1") mins = 30;
+            else if (text.includes("60") || text.includes("1 h") || text.includes("2️⃣") || text === "2") mins = 60;
+            else if (text.includes("360") || text.includes("6 h") || text.includes("3️⃣") || text === "3") mins = 360;
+            else if (text.includes("720") || text.includes("12 h") || text.includes("4️⃣") || text === "4") mins = 720;
+            else if (text.includes("10080") || text.includes("7 d") || text.includes("7 day") || text.includes("5️⃣") || text === "5") mins = 10080;
+            else if (text.includes("1440") || text.includes("24 h") || text.includes("2 h") || text.includes("120")) mins = 720;
 
             draft.expiry_minutes = mins;
             draft.step = "KYC_REQ";
             await (db as any).setWhatsappState(user.id, "POST_AD", draft);
 
+            const displayExpiry = mins >= 1440 ? `${mins / 1440} Day(s)` : mins >= 60 ? `${mins / 60} Hour(s)` : `${mins} Mins`;
+
             await replyWithButtons(
                 sock,
                 jid,
-                `✅ *Expiry: ${mins >= 60 ? `${mins / 60} Hour(s)` : `${mins} Mins`}*\n\n⚙️ *ADVANCED SETTING — KYC Requirement Filter*:\nWho is allowed to trade on this ad?`,
+                `✅ *Expiry: ${displayExpiry}*\n\n⚙️ *ADVANCED SETTING — KYC Requirement Filter*:\nWho is allowed to trade on this ad?`,
                 [
                     { id: "ad_kyc_yes", label: "🛡️ KYC Verified Traders Only" },
                     { id: "ad_kyc_no",  label: "🌐 All Traders Allowed" },
@@ -668,7 +676,7 @@ Please deposit more and lock it to your Vault before posting this ad.`,
 • *Rate:* ₹${draft.rate} / ${token}
 • *Total Fiat:* ₹${totalFiat.toLocaleString("en-IN")}
 • *Payment:* ${draft.payment_methods!.join(", ")}
-• *Expiry:* ${draft.expiry_minutes ? `${draft.expiry_minutes / 60}h` : "1h"}
+• *Expiry:* ${draft.expiry_minutes ? (draft.expiry_minutes >= 1440 ? `${draft.expiry_minutes / 1440}d` : draft.expiry_minutes >= 60 ? `${draft.expiry_minutes / 60}h` : `${draft.expiry_minutes}m`) : "1h"}
 • *KYC Filter:* ${draft.require_kyc ? "🛡️ Verified Only" : "🌐 All Traders"}
 • *Specific Dealers:* ${draft.allowed_usernames && draft.allowed_usernames.length > 0 ? `👥 ${draft.allowed_usernames.join(", ")}` : "🌐 Anyone"}
 ${draft.note ? `• *Note:* _${draft.note}_` : ""}
@@ -738,12 +746,10 @@ Please top up your Vault and try again.`,
                     }
                 }
 
-                let expiresAt: string | undefined;
-                if (draft.expiry_minutes && draft.expiry_minutes > 0) {
-                    const now = new Date();
-                    now.setMinutes(now.getMinutes() + draft.expiry_minutes);
-                    expiresAt = now.toISOString();
-                }
+                const expiryMins = (draft.expiry_minutes && draft.expiry_minutes > 0) ? draft.expiry_minutes : 60;
+                const now = new Date();
+                now.setMinutes(now.getMinutes() + expiryMins);
+                const expiresAt = now.toISOString();
 
                 const order = await db.createOrder({
                     user_id:         user.id,
