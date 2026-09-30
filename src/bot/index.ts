@@ -337,7 +337,7 @@ export async function broadcastTradeSuccess(trade: any, order: any) {
             `🔗 Chain: ${getChainCustomEmoji(chain)} <b>${escapeHTML(chain.toUpperCase())}</b>`,
             "",
             txLine,
-            "⚡ Trade safe with P2PFather → /start",
+            "⚡ Trade safe with P2PFather",
         ].join("\n");
 
         // Try to send with a random GIF without repeating until all are shown
@@ -2232,7 +2232,7 @@ bot.command("leaderboard", async (ctx) => {
             .select("referrer_telegram_id, status")
             .eq("status", "completed");
 
-        let leaderboardText = "🏆 *P2PFather Invite Champions*\n\n";
+        let leaderboardText = "🏆 <b>P2PFather Invite Champions</b>\n\n";
 
         if (!error && referrals && referrals.length > 0) {
             const counts: Record<number, number> = {};
@@ -2255,18 +2255,18 @@ bot.command("leaderboard", async (ctx) => {
             if (list.length > 0) {
                 let rank = 1;
                 for (const item of list) {
-                    const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
-                    leaderboardText += `${rankEmoji} *${escapeMarkdown(item.name)}* — \`${item.count}\` qualified invites\n`;
+                    const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
+                    leaderboardText += `${rankEmoji} <b>${escapeHTML(item.name)}</b> — <code>${item.count}</code> qualified invites\n`;
                     rank++;
                 }
             } else {
-                leaderboardText += "No qualified referrals yet\\. Share your link with /invite to top the board\\!";
+                leaderboardText += "No qualified referrals yet. Share your link with /invite to top the board!";
             }
         } else {
-            leaderboardText += "No qualified referrals yet\\. Share your link with /invite to top the board\\!";
+            leaderboardText += "No qualified referrals yet. Share your link with /invite to top the board!";
         }
 
-        await ctx.reply(leaderboardText, { parse_mode: "Markdown" });
+        await ctx.reply(leaderboardText, { parse_mode: "HTML" });
         return;
     }
 
@@ -2277,26 +2277,26 @@ bot.command("leaderboard", async (ctx) => {
         p_offset: 0
     });
 
-    let tradingText = "🛡️ *P2PFather Top Traders (All Time)*\n\n";
+    let tradingText = "🛡️ <b>P2PFather Top Traders (All Time)</b>\n\n";
 
     if (!error && users && users.length > 0) {
         let rank = 1;
         for (const u of users) {
-            const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
+            const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
             const name = u.name || "Anonymous";
-            tradingText += `${rankEmoji} *${escapeMarkdown(name)}* — \`$${parseFloat(u.volume || 0).toLocaleString()}\` volume \\(${u.trades || 0} trades\\)\n`;
+            tradingText += `${rankEmoji} <b>${escapeHTML(name)}</b> — <code>$${parseFloat(u.volume || 0).toLocaleString()}</code> volume (${u.trades || 0} trades)\n`;
             rank++;
         }
     } else {
-        tradingText += "No trades recorded yet\\.";
+        tradingText += "No trades recorded yet.";
     }
 
-    tradingText += "\n💡 Type \`/leaderboard invites\` to see the Invite Leaderboard\\!";
+    tradingText += "\n💡 Type <code>/leaderboard invites</code> to see the Invite Leaderboard!";
 
     const keyboard = new InlineKeyboard()
         .text("👥 Show Invite Leaderboard", "show_referral_leaderboard_from_cmd");
 
-    await ctx.reply(tradingText, { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.reply(tradingText, { parse_mode: "HTML", reply_markup: keyboard });
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -2556,7 +2556,7 @@ bot.on("callback_query:data", async (ctx) => {
                 .select("referrer_telegram_id, status")
                 .eq("status", "completed");
 
-            let leaderboardText = "🏆 *P2PFather Invite Champions*\n\n";
+            let leaderboardText = "🏆 <b>P2PFather Invite Champions</b>\n\n";
 
             if (!error && referrals && referrals.length > 0) {
                 const counts: Record<number, number> = {};
@@ -2579,21 +2579,21 @@ bot.on("callback_query:data", async (ctx) => {
                 if (list.length > 0) {
                     let rank = 1;
                     for (const item of list) {
-                        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
-                        leaderboardText += `${rankEmoji} *${escapeMarkdown(item.name)}* — \`${item.count}\` qualified invites\n`;
+                        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
+                        leaderboardText += `${rankEmoji} <b>${escapeHTML(item.name)}</b> — <code>${item.count}</code> qualified invites\n`;
                         rank++;
                     }
                 } else {
-                    leaderboardText += "No qualified referrals yet\\. Share your link to top the board\\!";
+                    leaderboardText += "No qualified referrals yet. Share your link to top the board!";
                 }
             } else {
-                leaderboardText += "No qualified referrals yet\\. Share your link to top the board\\!";
+                leaderboardText += "No qualified referrals yet. Share your link to top the board!";
             }
 
             const backKeyboard = new InlineKeyboard()
                 .text("🔙 Back to Stats", "refresh_referrals");
 
-            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => { });
+            await ctx.editMessageText(leaderboardText, { parse_mode: "HTML", reply_markup: backKeyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
@@ -2606,7 +2606,7 @@ bot.on("callback_query:data", async (ctx) => {
                 .select("referrer_telegram_id, status")
                 .eq("status", "completed");
 
-            let leaderboardText = "🏆 *P2PFather Invite Champions*\n\n";
+            let leaderboardText = "🏆 <b>P2PFather Invite Champions</b>\n\n";
 
             if (!error && referrals && referrals.length > 0) {
                 const counts: Record<number, number> = {};
@@ -2629,21 +2629,21 @@ bot.on("callback_query:data", async (ctx) => {
                 if (list.length > 0) {
                     let rank = 1;
                     for (const item of list) {
-                        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
-                        leaderboardText += `${rankEmoji} *${escapeMarkdown(item.name)}* — \`${item.count}\` qualified invites\n`;
+                        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
+                        leaderboardText += `${rankEmoji} <b>${escapeHTML(item.name)}</b> — <code>${item.count}</code> qualified invites\n`;
                         rank++;
                     }
                 } else {
-                    leaderboardText += "No qualified referrals yet\\. Share your link with /invite to top the board\\!";
+                    leaderboardText += "No qualified referrals yet. Share your link with /invite to top the board!";
                 }
             } else {
-                leaderboardText += "No qualified referrals yet\\. Share your link with /invite to top the board\\!";
+                leaderboardText += "No qualified referrals yet. Share your link with /invite to top the board!";
             }
 
             const backKeyboard = new InlineKeyboard()
                 .text("🔙 Back to Traders", "show_traders_leaderboard_from_cmd");
 
-            await ctx.editMessageText(leaderboardText, { parse_mode: "Markdown", reply_markup: backKeyboard }).catch(() => { });
+            await ctx.editMessageText(leaderboardText, { parse_mode: "HTML", reply_markup: backKeyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
@@ -2657,26 +2657,26 @@ bot.on("callback_query:data", async (ctx) => {
                 p_offset: 0
             });
 
-            let tradingText = "🛡️ *P2PFather Top Traders (All Time)*\n\n";
+            let tradingText = "🛡️ <b>P2PFather Top Traders (All Time)</b>\n\n";
 
             if (!error && users && users.length > 0) {
                 let rank = 1;
                 for (const u of users) {
-                    const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}\\.`;
+                    const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
                     const name = u.name || "Anonymous";
-                    tradingText += `${rankEmoji} *${escapeMarkdown(name)}* — \`$${parseFloat(u.volume || 0).toLocaleString()}\` volume \\(${u.trades || 0} trades\\)\n`;
+                    tradingText += `${rankEmoji} <b>${escapeHTML(name)}</b> — <code>$${parseFloat(u.volume || 0).toLocaleString()}</code> volume (${u.trades || 0} trades)\n`;
                     rank++;
                 }
             } else {
-                tradingText += "No trades recorded yet\\.";
+                tradingText += "No trades recorded yet.";
             }
 
-            tradingText += "\n💡 Type \`/leaderboard invites\` to see the Invite Leaderboard\\!";
+            tradingText += "\n💡 Type <code>/leaderboard invites</code> to see the Invite Leaderboard!";
 
             const keyboard = new InlineKeyboard()
                 .text("👥 Show Invite Leaderboard", "show_referral_leaderboard_from_cmd");
 
-            await ctx.editMessageText(tradingText, { parse_mode: "Markdown", reply_markup: keyboard }).catch(() => { });
+            await ctx.editMessageText(tradingText, { parse_mode: "HTML", reply_markup: keyboard }).catch(() => { });
             await ctx.answerCallbackQuery();
             return;
         }
