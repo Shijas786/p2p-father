@@ -770,24 +770,70 @@ class Database {
     //              STATS
     // ═══════════════════════════════════════
 
-    async getStats() {
+    private statsCache: { data: any; ts: number } | null = null;
+    private readonly STATS_CACHE_TTL = 15_000; // 15 seconds cache to protect DB under high traffic
+
+    async getTotalVolume(): Promise<number> {
         const db = this.getClient();
-        const [trades, completedTradesQuery, orders, users, fees, disputes] = await Promise.all([
-            db.from("trades").select("id", { count: "exact" }),
-            db.from("trades").select("amount", { count: "exact" }).in("status", ["completed", "COMPLETED"]),
-            db.from("orders").select("id", { count: "exact" }).eq("status", "active"),
-            db.from("users").select("id", { count: "exact" }),
+        try {
+            const { data, error } = await db.rpc("get_platform_volume");
+            if (!error && data !== null && !isNaN(Number(data))) {
+                return parseFloat(data);
+            }
+        } catch {
+            // RPC not deployed or unavailable, fall back to paginated query
+        }
+
+        // Robust paginated fallback: guarantees all trades are counted beyond Supabase 1,000-row cap
+        let total = 0;
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data, error } = await db
+                .from("trades")
+                .select("amount")
+                .in("status", ["completed", "COMPLETED"])
+                .range(from, from + pageSize - 1);
+
+            if (error || !data || data.length === 0) {
+                break;
+            }
+
+            for (const t of data) {
+                total += parseFloat(t.amount) || 0;
+            }
+
+            if (data.length < pageSize) {
+                hasMore = false;
+            } else {
+                from += pageSize;
+            }
+        }
+
+        return total;
+    }
+
+    async getStats(forceRefresh = false) {
+        if (!forceRefresh && this.statsCache && Date.now() - this.statsCache.ts < this.STATS_CACHE_TTL) {
+            return this.statsCache.data;
+        }
+
+        const db = this.getClient();
+        const [trades, completedTradesCountQuery, orders, users, fees, disputes, totalVolume] = await Promise.all([
+            db.from("trades").select("id", { count: "exact", head: true }),
+            db.from("trades").select("id", { count: "exact", head: true }).in("status", ["completed", "COMPLETED"]),
+            db.from("orders").select("id", { count: "exact", head: true }).eq("status", "active"),
+            db.from("users").select("id", { count: "exact", head: true }),
             this.getTotalFees(),
-            db.from("trades").select("id", { count: "exact" }).in("status", ["disputed", "DISPUTED"]),
+            db.from("trades").select("id", { count: "exact", head: true }).in("status", ["disputed", "DISPUTED"]),
+            this.getTotalVolume(),
         ]);
 
-        const completedCount = completedTradesQuery.count || (completedTradesQuery.data || []).length;
-        const totalVolume = (completedTradesQuery.data || []).reduce(
-            (sum: number, t: any) => sum + (parseFloat(t.amount) || 0),
-            0
-        );
+        const completedCount = completedTradesCountQuery.count || 0;
 
-        return {
+        const result = {
             total_trades: trades.count || 0,
             completed_trades: completedCount,
             active_orders: orders.count || 0,
@@ -796,6 +842,9 @@ class Database {
             total_fees_amount: fees,
             active_disputes: disputes.count || 0,
         };
+
+        this.statsCache = { data: result, ts: Date.now() };
+        return result;
     }
 
     private avgSpeedCache = new Map<string, { val: number | null; ts: number }>();
