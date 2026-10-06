@@ -1124,7 +1124,7 @@
         </div>
         <div>
           <label for="send-chain">Chain / Network</label>
-          <select id="send-chain">
+          <select id="send-chain" onchange="updateSendMaxLabel()">
             <option value="base">Base</option>
             <option value="bsc">BSC (BEP20)</option>
           </select>
@@ -1576,8 +1576,11 @@
       const d = await apiGet('/wallet/balances');
       cachedWalletBalances = d;
 
-      const usdtWallet = parseFloat(d.usdt || '0');
-      const usdcWallet = parseFloat(d.usdc || '0');
+      const usdtBase = parseFloat(d.usdt || '0');
+      const usdtBsc = parseFloat(d.bsc_usdt || '0');
+      const usdcBase = parseFloat(d.usdc || '0');
+      const usdcBsc = parseFloat(d.bsc_usdc || '0');
+
       const vaultBaseUsdt = parseFloat(d.vault_base_usdt || '0');
       const vaultBscUsdt = parseFloat(d.vault_bsc_usdt || '0');
       const vaultBaseUsdc = parseFloat(d.vault_base_usdc || '0');
@@ -1586,8 +1589,8 @@
       const vaultUsdt = vaultBaseUsdt + vaultBscUsdt;
       const vaultUsdc = vaultBaseUsdc + vaultBscUsdc;
 
-      const usdt = usdtWallet + vaultUsdt;
-      const usdc = usdcWallet + vaultUsdc;
+      const usdt = usdtBase + usdtBsc + vaultUsdt;
+      const usdc = usdcBase + usdcBsc + vaultUsdc;
       const bnb = parseFloat(d.bnb || d.vault_bsc_bnb || '0');
       const eth = parseFloat(d.eth || '0');
       const vaultReserved = vaultUsdt + vaultUsdc;
@@ -1711,10 +1714,10 @@
     const el = document.getElementById('assets-grid');
     if (!el) return;
 
-    const usdtBase = parseFloat(d.usdt || '0.00').toFixed(2);
-    const usdtBsc = parseFloat(d.vault_bsc_usdt || '0.00').toFixed(2);
-    const usdcBase = (parseFloat(d.usdc || '0.00') + parseFloat(d.vault_base_usdc || '0')).toFixed(2);
-    const usdcBsc = parseFloat(d.vault_bsc_usdc || '0.00').toFixed(2);
+    const usdtBase = (parseFloat(d.usdt || '0.00') + parseFloat(d.vault_base_usdt || '0.00')).toFixed(2);
+    const usdtBsc = (parseFloat(d.bsc_usdt || '0.00') + parseFloat(d.vault_bsc_usdt || '0.00')).toFixed(2);
+    const usdcBase = (parseFloat(d.usdc || '0.00') + parseFloat(d.vault_base_usdc || '0.00')).toFixed(2);
+    const usdcBsc = (parseFloat(d.bsc_usdc || '0.00') + parseFloat(d.vault_bsc_usdc || '0.00')).toFixed(2);
     const bnbBsc = parseFloat(d.bnb || d.vault_bsc_bnb || '0.0000').toFixed(4);
     const ethBase = parseFloat(d.eth || '0.0000').toFixed(4);
 
@@ -1788,34 +1791,31 @@
   }
 
   function updateSendMaxLabel() {
-    if (!cachedWalletBalances) {
-      document.getElementById('send-avail-label').textContent = 'Avail: 1250.00';
-      return;
-    }
     const token = document.getElementById('send-token').value;
+    const chain = document.getElementById('send-chain').value;
     let avail = '0.00';
-    if (token === 'USDT') avail = cachedWalletBalances.usdt || '1250.00';
-    else if (token === 'USDC') avail = cachedWalletBalances.usdc || '500.00';
-    else if (token === 'BNB') avail = cachedWalletBalances.bnb || '0.0500';
-    else if (token === 'ETH') avail = cachedWalletBalances.eth || '0.0200';
-    document.getElementById('send-avail-label').textContent = `Avail: ${avail} ${token}`;
+    if (cachedWalletBalances) {
+      if (token === 'USDT') avail = (chain === 'bsc' ? cachedWalletBalances.bsc_usdt : cachedWalletBalances.usdt) || '0.00';
+      else if (token === 'USDC') avail = (chain === 'bsc' ? cachedWalletBalances.bsc_usdc : cachedWalletBalances.usdc) || '0.00';
+      else if (token === 'BNB') avail = cachedWalletBalances.bnb || '0.0000';
+      else if (token === 'ETH') avail = cachedWalletBalances.eth || '0.0000';
+    }
+    const decs = (token === 'BNB' || token === 'ETH') ? 4 : 2;
+    document.getElementById('send-avail-label').textContent = `Avail: ${parseFloat(avail).toFixed(decs)} ${token}`;
   }
 
   function setMaxSendAmount() {
     const token = document.getElementById('send-token').value;
-    if (!cachedWalletBalances) {
-      if (token === 'USDT') document.getElementById('send-amount').value = '1250.00';
-      if (token === 'USDC') document.getElementById('send-amount').value = '500.00';
-      if (token === 'BNB') document.getElementById('send-amount').value = '0.0500';
-      if (token === 'ETH') document.getElementById('send-amount').value = '0.0200';
-      return;
+    const chain = document.getElementById('send-chain').value;
+    let avail = '0.00';
+    if (cachedWalletBalances) {
+      if (token === 'USDT') avail = (chain === 'bsc' ? cachedWalletBalances.bsc_usdt : cachedWalletBalances.usdt) || '0.00';
+      else if (token === 'USDC') avail = (chain === 'bsc' ? cachedWalletBalances.bsc_usdc : cachedWalletBalances.usdc) || '0.00';
+      else if (token === 'BNB') avail = cachedWalletBalances.bnb || '0.0000';
+      else if (token === 'ETH') avail = cachedWalletBalances.eth || '0.0000';
     }
-    let avail = '0';
-    if (token === 'USDT') avail = cachedWalletBalances.usdt || '1250';
-    else if (token === 'USDC') avail = cachedWalletBalances.usdc || '500';
-    else if (token === 'BNB') avail = cachedWalletBalances.bnb || '0.05';
-    else if (token === 'ETH') avail = cachedWalletBalances.eth || '0.02';
-    document.getElementById('send-amount').value = avail;
+    const num = parseFloat(avail);
+    document.getElementById('send-amount').value = num > 0 ? num.toString() : '0';
   }
 
   async function executeSendCrypto(e) {

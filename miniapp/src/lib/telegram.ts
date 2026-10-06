@@ -81,7 +81,13 @@ export function getTelegramWebApp(): TelegramWebApp | null {
 }
 
 export function getInitData(): string {
-    return getTelegramWebApp()?.initData ?? '';
+    const tgInit = getTelegramWebApp()?.initData;
+    if (tgInit) return tgInit;
+    try {
+        return localStorage.getItem('trade_init_data') || sessionStorage.getItem('trade_init_data') || '';
+    } catch {
+        return '';
+    }
 }
 
 export function getTelegramUser() {
