@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { WagmiProvider, useAccount, useConnect, useDisconnect } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig, appKit } from './lib/wagmi';
-import { getTelegramWebApp, setupTelegramApp, isTelegramEnvironment } from './lib/telegram';
+import { getTelegramWebApp, setupTelegramApp, persistInitData, isTelegramEnvironment } from './lib/telegram';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
 import { hotWalletConnector } from './utils/hotWalletConnector';
@@ -102,6 +102,9 @@ function AppInner() {
   const autoSelectAttempted = useRef(false);
 
   useEffect(() => {
+    // Persist Telegram initData to sessionStorage ASAP so Android UPI-app-switch
+    // page reloads don't lose the session
+    persistInitData();
     setupTelegramApp();
 
     // Patch window.open so WalletConnect deep links work inside Telegram's iframe.

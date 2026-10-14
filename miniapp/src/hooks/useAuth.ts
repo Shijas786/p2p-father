@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
-import { getTelegramUser, isTelegramEnvironment } from '../lib/telegram';
-import { DEV_USER } from '../lib/devMocks';
+import { isTelegramEnvironment } from '../lib/telegram';
 
 export interface AppUser {
     id: string;
@@ -80,14 +79,20 @@ export function useAuth() {
                 // WhatsApp WebApp Route (/webapp): Require WhatsApp OTP login
                 setUser(null);
             } else {
-                // Telegram MiniApp Route (/miniapp): Standalone browser preview mode with DEV_USER
-                const tgUser = getTelegramUser();
-                setUser({
-                    ...DEV_USER,
-                    telegram_id: tgUser?.id ?? DEV_USER.telegram_id,
-                    username: tgUser?.username ?? DEV_USER.username,
-                    first_name: tgUser?.first_name ?? DEV_USER.first_name,
-                });
+                // MiniApp route but NO initData — could be a slow device where
+                // the Telegram bridge hasn't injected data yet. Wait 300ms and retry once.
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                if (isTelegramEnvironment()) {
+                    // Bridge was just slow — now we have initData, proceed normally
+                    const { user: authUser } = await api.auth.login();
+                    setUser(authUser);
+                } else {
+                    // Genuinely no Telegram session (page reload, copied URL, etc.)
+                    // Show the AuthErrorNotice — do NOT silently load fake DEV_USER
+                    console.warn('[P2PFather] No Telegram initData after retry — showing auth error screen');
+                    setUser(null);
+                }
             }
         } catch (err: any) {
             // Add debug info for troubleshooting

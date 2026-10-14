@@ -80,11 +80,32 @@ export function getTelegramWebApp(): TelegramWebApp | null {
     return window.Telegram?.WebApp ?? null;
 }
 
+/**
+ * Persist initData to sessionStorage the first time Telegram provides it.
+ * This protects against Android memory-killing the WebView when the user switches
+ * to a UPI payment app and returns — the page reloads but Telegram no longer
+ * re-injects initData, so we serve it from sessionStorage instead.
+ */
+export function persistInitData(): void {
+    const tgInit = getTelegramWebApp()?.initData;
+    if (!tgInit) return;
+    try {
+        // Only persist if not already saved (avoids redundant writes)
+        if (!sessionStorage.getItem('wa_tg_init_data')) {
+            sessionStorage.setItem('wa_tg_init_data', tgInit);
+        }
+    } catch {
+        // sessionStorage unavailable — silently ignore
+    }
+}
+
 export function getInitData(): string {
     const tgInit = getTelegramWebApp()?.initData;
     if (tgInit) return tgInit;
     try {
-        return localStorage.getItem('trade_init_data') || sessionStorage.getItem('trade_init_data') || '';
+        // sessionStorage: survives Android app-switch reloads within same tab
+        // localStorage: survives trade room magic-link auth (WhatsApp/web users)
+        return sessionStorage.getItem('wa_tg_init_data') || localStorage.getItem('trade_init_data') || sessionStorage.getItem('trade_init_data') || '';
     } catch {
         return '';
     }
@@ -95,7 +116,13 @@ export function getTelegramUser() {
 }
 
 export function isTelegramEnvironment(): boolean {
-    return !!getTelegramWebApp()?.initData;
+    if (getTelegramWebApp()?.initData) return true;
+    // Also true if we have a persisted session from a previous launch in this tab
+    try {
+        return !!(sessionStorage.getItem('wa_tg_init_data') || sessionStorage.getItem('trade_init_data'));
+    } catch {
+        return false;
+    }
 }
 
 export function setupTelegramApp() {
