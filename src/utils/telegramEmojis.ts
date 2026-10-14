@@ -65,20 +65,33 @@ export function getTraderBadges(user: any, order?: any): string {
         order?.users?.kyc_status === "approved"
     );
 
+    const vipConfig =
+        (user?.username && getQualifyingVIPConfig(user.telegram_id, user.username, Date.now())) ||
+        (order?.username && getQualifyingVIPConfig(order.telegram_id || order.user_id, order.username, Date.now()));
+
     const isVip = Boolean(
         user?.tier === "vip" ||
         user?.is_vip ||
         order?.users?.tier === "vip" ||
         order?.tier === "vip" ||
-        (user?.username && getQualifyingVIPConfig(user.telegram_id, user.username, Date.now())) ||
-        (order?.username && getQualifyingVIPConfig(order.telegram_id || order.user_id, order.username, Date.now()))
+        vipConfig
+    );
+
+    const shouldHideVipEmoji = Boolean(
+        vipConfig?.hideVipBadge ||
+        user?.hide_vip_badge ||
+        order?.hide_vip_badge ||
+        (user?.username && ["grim0011", "xaudaddys"].includes(user.username.replace(/^@/, "").toLowerCase())) ||
+        (order?.username && ["grim0011", "xaudaddys"].includes(order.username.replace(/^@/, "").toLowerCase())) ||
+        (user?.telegram_id && ["8124398855", "1487512481"].includes(String(user.telegram_id))) ||
+        (order?.telegram_id && ["8124398855", "1487512481"].includes(String(order.telegram_id)))
     );
 
     let badges = "";
     if (isVerified) {
         badges += `KYC ${getRandomKycEmoji()}`;
     }
-    if (isVip) {
+    if (isVip && !shouldHideVipEmoji) {
         badges += (badges ? " " : "") + tgCustomEmoji(TG_CUSTOM_EMOJIS.VIP, "👑");
     }
     return badges ? ` ${badges}` : "";

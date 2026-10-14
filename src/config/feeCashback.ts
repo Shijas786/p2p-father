@@ -6,6 +6,7 @@ export interface VIPUserConfig {
     rebateBps: number; // e.g. 25 = 0.25%
     applyAfterTimestamp: number; // Order creation timestamp cutoff (ms)
     minTradeUsd?: number; // Minimum trade value in USD to qualify for cashback (default $100)
+    hideVipBadge?: boolean; // Whether to suppress VIP emoji in trader badges
 }
 
 // Default minimum trade size in USD required to trigger VIP fee cashback
@@ -19,6 +20,22 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         rebateBps: 25, // 0.25% rebate
         applyAfterTimestamp: 1754067180000, // 2026-08-01 cutoff
         minTradeUsd: 100
+    },
+    {
+        telegramId: "8124398855",
+        username: "Grim0011",
+        rebateBps: 25, // 0.25% rebate
+        applyAfterTimestamp: 0,
+        minTradeUsd: 100,
+        hideVipBadge: true
+    },
+    {
+        telegramId: "1487512481",
+        username: "Xaudaddys",
+        rebateBps: 25, // 0.25% rebate
+        applyAfterTimestamp: 0,
+        minTradeUsd: 100,
+        hideVipBadge: true
     }
 ];
 
