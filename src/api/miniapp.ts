@@ -173,6 +173,11 @@ declare global {
 }
 
 function validateInitData(req: Request, res: Response, next: NextFunction) {
+    // Public webhook exemption: Didit KYC webhook does not carry Telegram initData
+    if (req.path === "/kyc/webhook" || req.originalUrl?.includes("/kyc/webhook")) {
+        return next();
+    }
+
     const initData = req.headers["x-telegram-init-data"] as string;
 
     if (!initData) {
@@ -416,6 +421,149 @@ router.post("/auth/wa-verify-otp", async (req: Request, res: Response) => {
     } catch (err: any) {
         console.error("[MINIAPP-AUTH] wa-verify-otp error:", err);
         return res.status(500).json({ error: err?.message || "OTP verification failed" });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DIDIT KYC WEBHOOK (PUBLIC ROUTE — Must be above validateInitData)
+// ═══════════════════════════════════════════════════════════════
+
+router.post("/kyc/webhook", async (req: Request, res: Response) => {
+    try {
+        const webhookSecret = env.DIDIT_WEBHOOK_SECRET;
+        const body = req.body;
+        const timestamp = req.headers["x-timestamp"] as string;
+
+        // ── Didit HMAC-SHA256 Signature Verification ──────────────────
+        if (webhookSecret) {
+            if (!timestamp) {
+                console.warn("[DIDIT WEBHOOK] ❌ Missing X-Timestamp header");
+                return res.status(401).json({ error: "Missing X-Timestamp" });
+            }
+
+            // Replay attack protection: reject requests older than 5 minutes
+            const now = Math.floor(Date.now() / 1000);
+            if (Math.abs(now - parseInt(timestamp, 10)) > 300) {
+                console.warn("[DIDIT WEBHOOK] ❌ Stale timestamp — possible replay attack");
+                return res.status(401).json({ error: "Stale timestamp" });
+            }
+
+            const sigV2 = req.headers["x-signature-v2"] as string;
+            const sigSimple = req.headers["x-signature-simple"] as string;
+
+            // Helper: sort object keys recursively + normalise whole floats to int
+            function shortenFloats(data: any): any {
+                if (Array.isArray(data)) return data.map(shortenFloats);
+                if (data !== null && typeof data === "object") {
+                    return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, shortenFloats(v)]));
+                }
+                if (typeof data === "number" && !Number.isInteger(data) && data % 1 === 0) return Math.trunc(data);
+                return data;
+            }
+            function sortKeys(obj: any): any {
+                if (Array.isArray(obj)) return obj.map(sortKeys);
+                if (obj !== null && typeof obj === "object") {
+                    return Object.keys(obj).sort().reduce((acc: any, k) => { acc[k] = sortKeys(obj[k]); return acc; }, {});
+                }
+                return obj;
+            }
+
+            let verified = false;
+
+            if (sigV2) {
+                // V2: HMAC-SHA256 of canonical sorted-key JSON
+                const canonical = JSON.stringify(sortKeys(shortenFloats(body)));
+                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical, "utf8").digest("hex");
+                const a = Buffer.from(expected, "utf8");
+                const b = Buffer.from(sigV2, "utf8");
+                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
+            }
+
+            if (!verified && sigSimple) {
+                // Simple: HMAC of "timestamp:session_id:status:webhook_type"
+                const canonical = [
+                    body.timestamp ?? "",
+                    body.session_id ?? "",
+                    body.status ?? "",
+                    body.webhook_type ?? "",
+                ].join(":");
+                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical).digest("hex");
+                const a = Buffer.from(expected, "utf8");
+                const b = Buffer.from(sigSimple, "utf8");
+                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
+            }
+
+            if (!verified) {
+                console.warn("[DIDIT WEBHOOK] ❌ Invalid HMAC signature — request rejected");
+                return res.status(401).json({ error: "Unauthorized webhook" });
+            }
+        } else {
+            console.warn("[DIDIT WEBHOOK] ⚠️  DIDIT_WEBHOOK_SECRET not set — skipping signature check (insecure!)");
+        }
+        // ─────────────────────────────────────────────────────────────
+
+        console.log("[DIDIT WEBHOOK] ✅ Verified event:", body.webhook_type || body.event, "Session:", body.session_id, "VendorData:", body.vendor_data);
+
+        const supabase = (db as any).getClient();
+
+        // Support both status.updated and user.data.updated payloads
+        const statusStr = (body.status || body.decision?.status || "").toLowerCase();
+        const features = body.features || {};
+        const featuresList = Array.isArray(body.features_list) ? body.features_list : [];
+        const idVerifiedFeature = features.ID_VERIFICATION || featuresList.find((f: any) => f.feature === "ID_VERIFICATION")?.status;
+        const isApproved = statusStr === "approved" || 
+                           (statusStr === "active" && String(idVerifiedFeature).toLowerCase() === "approved");
+
+        // Resolve user ID
+        let targetUserId = body.vendor_data;
+        if (!targetUserId && body.session_id) {
+            const { data: userBySession } = await supabase
+                .from("users")
+                .select("id")
+                .eq("kyc_session_id", body.session_id)
+                .maybeSingle();
+            if (userBySession) targetUserId = userBySession.id;
+        }
+
+        if (targetUserId && isApproved) {
+            const doc = body.id_verification?.[0] || {};
+            const country = doc.issuing_country || (Array.isArray(body.issuing_states) && body.issuing_states[0]) || null;
+            const docType = doc.document_type || "National ID";
+
+            await supabase
+                .from("users")
+                .update({
+                    kyc_status: "approved",
+                    is_verified: true,
+                    kyc_verified_at: new Date().toISOString(),
+                    kyc_country: country,
+                    kyc_document_type: docType
+                })
+                .eq("id", targetUserId);
+            console.log(`[DIDIT WEBHOOK] ✅ User ${targetUserId} successfully KYC verified!`);
+
+            // Broadcast Godfather Made Man card to all Telegram groups
+            try {
+                const targetUser = await db.getUserById(targetUserId);
+                if (targetUser) {
+                    const { broadcastKycApprovalTelegram } = await import("../bot");
+                    await broadcastKycApprovalTelegram(targetUser).catch(() => {});
+                }
+            } catch (e) {
+                console.error("[KYC] Failed to broadcast Telegram approval:", e);
+            }
+        } else if (targetUserId && (statusStr === "declined" || statusStr === "rejected" || statusStr === "blocked" || statusStr === "flagged")) {
+            await supabase
+                .from("users")
+                .update({ kyc_status: "rejected" })
+                .eq("id", targetUserId);
+            console.log(`[DIDIT WEBHOOK] ❌ User ${targetUserId} KYC rejected.`);
+        }
+
+        res.json({ received: true });
+    } catch (err: any) {
+        console.error("[DIDIT WEBHOOK] Error:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -3051,124 +3199,7 @@ router.get("/kyc/status", validateInitData, async (req: Request, res: Response) 
     }
 });
 
-router.post("/kyc/webhook", async (req: Request, res: Response) => {
-    try {
-        const webhookSecret = env.DIDIT_WEBHOOK_SECRET;
-        const body = req.body;
-        const timestamp = req.headers["x-timestamp"] as string;
 
-        // ── Didit HMAC-SHA256 Signature Verification ──────────────────
-        if (webhookSecret) {
-            if (!timestamp) {
-                console.warn("[DIDIT WEBHOOK] ❌ Missing X-Timestamp header");
-                return res.status(401).json({ error: "Missing X-Timestamp" });
-            }
-
-            // Replay attack protection: reject requests older than 5 minutes
-            const now = Math.floor(Date.now() / 1000);
-            if (Math.abs(now - parseInt(timestamp, 10)) > 300) {
-                console.warn("[DIDIT WEBHOOK] ❌ Stale timestamp — possible replay attack");
-                return res.status(401).json({ error: "Stale timestamp" });
-            }
-
-            const sigV2 = req.headers["x-signature-v2"] as string;
-            const sigSimple = req.headers["x-signature-simple"] as string;
-
-            // Helper: sort object keys recursively + normalise whole floats to int
-            function shortenFloats(data: any): any {
-                if (Array.isArray(data)) return data.map(shortenFloats);
-                if (data !== null && typeof data === "object") {
-                    return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, shortenFloats(v)]));
-                }
-                if (typeof data === "number" && !Number.isInteger(data) && data % 1 === 0) return Math.trunc(data);
-                return data;
-            }
-            function sortKeys(obj: any): any {
-                if (Array.isArray(obj)) return obj.map(sortKeys);
-                if (obj !== null && typeof obj === "object") {
-                    return Object.keys(obj).sort().reduce((acc: any, k) => { acc[k] = sortKeys(obj[k]); return acc; }, {});
-                }
-                return obj;
-            }
-
-            let verified = false;
-
-            if (sigV2) {
-                // V2: HMAC-SHA256 of canonical sorted-key JSON
-                const canonical = JSON.stringify(sortKeys(shortenFloats(body)));
-                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical, "utf8").digest("hex");
-                const a = Buffer.from(expected, "utf8");
-                const b = Buffer.from(sigV2, "utf8");
-                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
-            }
-
-            if (!verified && sigSimple) {
-                // Simple: HMAC of "timestamp:session_id:status:webhook_type"
-                const canonical = [
-                    body.timestamp ?? "",
-                    body.session_id ?? "",
-                    body.status ?? "",
-                    body.webhook_type ?? "",
-                ].join(":");
-                const expected = crypto.createHmac("sha256", webhookSecret).update(canonical).digest("hex");
-                const a = Buffer.from(expected, "utf8");
-                const b = Buffer.from(sigSimple, "utf8");
-                if (a.length === b.length && crypto.timingSafeEqual(a, b)) verified = true;
-            }
-
-            if (!verified) {
-                console.warn("[DIDIT WEBHOOK] ❌ Invalid HMAC signature — request rejected");
-                return res.status(401).json({ error: "Unauthorized webhook" });
-            }
-        } else {
-            console.warn("[DIDIT WEBHOOK] ⚠️  DIDIT_WEBHOOK_SECRET not set — skipping signature check (insecure!)");
-        }
-        // ─────────────────────────────────────────────────────────────
-
-        console.log("[DIDIT WEBHOOK] ✅ Verified event:", body.webhook_type || body.event, "Session:", body.session_id);
-
-        const userId = body.vendor_data;
-        const statusStr = (body.status || body.decision?.status || "").toLowerCase();
-        const supabase = (db as any).getClient();
-
-        if (userId && statusStr === "approved") {
-            const doc = body.id_verification?.[0] || {};
-            await supabase
-                .from("users")
-                .update({
-                    kyc_status: "approved",
-                    is_verified: true,
-                    kyc_verified_at: new Date().toISOString(),
-                    kyc_country: doc.issuing_country || null,
-                    kyc_document_type: doc.document_type || null
-                })
-                .eq("id", userId);
-            console.log(`[DIDIT WEBHOOK] ✅ User ${userId} successfully KYC verified!`);
-
-            // Broadcast Godfather Made Man card to all Telegram groups
-            try {
-                const targetUser = await db.getUserById(userId);
-                if (targetUser) {
-                    const { broadcastKycApprovalTelegram } = await import("../bot");
-                    await broadcastKycApprovalTelegram(targetUser).catch(() => {});
-                }
-            } catch (e) {
-                console.error("[KYC] Failed to broadcast Telegram approval:", e);
-            }
-        } else if (userId && (statusStr === "declined" || statusStr === "rejected")) {
-            await supabase
-                .from("users")
-                .update({ kyc_status: "rejected" })
-                .eq("id", userId);
-            console.log(`[DIDIT WEBHOOK] ❌ User ${userId} KYC rejected.`);
-        }
-
-        res.json({ received: true });
-    } catch (err: any) {
-        console.error("[DIDIT WEBHOOK] Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 
 

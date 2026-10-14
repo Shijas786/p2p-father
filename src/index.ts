@@ -70,6 +70,12 @@ async function main() {
     app.use("/api/webhook", webhookRouter);
     app.use("/api/whatsapp", whatsappWebhookRouter);
 
+    // KYC Webhook Aliases (ensures Didit webhooks resolve regardless of URL prefix)
+    app.post(["/kyc/webhook", "/api/kyc/webhook"], (req, res, next) => {
+        req.url = "/kyc/webhook";
+        miniappRouter(req, res, next);
+    });
+
     // Serve Mini App frontend — NUCLEAR NO CACHING
     const miniAppDist = path.join(process.cwd(), "miniapp", "dist");
     const noCacheHeaders = (res: any) => {
