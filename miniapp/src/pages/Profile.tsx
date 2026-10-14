@@ -93,6 +93,9 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
             }
             const data = await api.kyc.getStatus();
             setKycData(data);
+            if (data?.is_verified && !user?.is_verified) {
+                onUpdate?.();
+            }
         } catch (err) {
             console.warn('KYC status check failed:', err);
         }

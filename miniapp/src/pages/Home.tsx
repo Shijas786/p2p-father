@@ -10,11 +10,12 @@ import './Home.css';
 
 interface Props {
     user: any;
+    onUserRefresh?: () => void;
 }
 
 const PAYMENT_FILTERS = ['All', 'UPI', 'IMPS', 'Bank', 'e₹'];
 
-export function Home({ user }: Props) {
+export function Home({ user, onUserRefresh }: Props) {
     const navigate = useNavigate();
     const [tab, setTab] = useState<'buy' | 'sell'>('buy');
     const [orders, setOrders] = useState<any[]>([]);
@@ -62,6 +63,9 @@ export function Home({ user }: Props) {
     function handleTap(order: any) {
         haptic('light');
         if (user && order.user_id === user.id) return;
+        if (order.payment_details?.require_kyc && !user?.is_verified) {
+            onUserRefresh?.();
+        }
         setConfirmOrder(order);
     }
 

@@ -308,7 +308,7 @@ function AppInner() {
       />
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Home user={user} />} />
+          <Route index element={<Home user={user} onUserRefresh={refreshUser} />} />
           <Route path="orders" element={<Orders user={user} />} />
           <Route path="create" element={<CreateOrder />} />
           <Route path="trade/:id" element={<TradeDetail user={user} />} />
