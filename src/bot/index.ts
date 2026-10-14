@@ -93,7 +93,7 @@ async function getBotInfo() {
     return cachedBotInfo;
 }
 
-async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number }[]> {
+async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: "Markdown" | "HTML" | "MarkdownV2" = "Markdown"): Promise<{ chatId: number; messageId: number; threadId?: number; chatUsername?: string }[]> {
     const rawGroups = await groupManager.getGroups();
     const groups = rawGroups.filter(id => typeof id === "number" && id < 0);
 
@@ -109,7 +109,7 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
 
     console.log(`📡 Broadcasting to ${groups.length} groups...`);
 
-    const results: { chatId: number; messageId: number }[] = [];
+    const results: { chatId: number; messageId: number; threadId?: number; chatUsername?: string }[] = [];
 
     for (const chatId of groups) {
         let attempts = 0;
@@ -118,7 +118,12 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
         while (attempts < maxAttempts) {
             try {
                 const msg = await bot.api.sendMessage(chatId, message, { parse_mode: parseMode, reply_markup: keyboard });
-                results.push({ chatId, messageId: msg.message_id });
+                results.push({
+                    chatId,
+                    messageId: msg.message_id,
+                    threadId: msg.message_thread_id,
+                    chatUsername: msg.chat?.username
+                });
                 break; // Success, proceed to next group
             } catch (error: any) {
                 // If group or Telegram rejects custom emojis, strip tags and send with standard unicode emojis
@@ -126,7 +131,12 @@ async function broadcast(message: string, keyboard?: InlineKeyboard, parseMode: 
                     try {
                         const strippedMsg = stripTgCustomEmojis(message);
                         const fallbackMsg = await bot.api.sendMessage(chatId, strippedMsg, { parse_mode: parseMode, reply_markup: keyboard });
-                        results.push({ chatId, messageId: fallbackMsg.message_id });
+                        results.push({
+                            chatId,
+                            messageId: fallbackMsg.message_id,
+                            threadId: fallbackMsg.message_thread_id,
+                            chatUsername: fallbackMsg.chat?.username
+                        });
                         break;
                     } catch (fbErr) {
                         // ignore and fall through to standard error handling
@@ -501,6 +511,28 @@ export async function broadcastAd(order: any, user: any) {
             }));
             await db.saveAdBroadcasts(records);
             console.log(`[Bot] Saved ${records.length} broadcast records for order ${order.id}`);
+
+            // If it's a sell ad posted by a Telegram user, forward the Telegram message link to WhatsApp groups
+            if (order.type === 'sell' && order.source !== 'whatsapp') {
+                try {
+                    const target = results.find(r =>
+                        (env.COMMUNITY_CHAT_ID && String(r.chatId) === String(env.COMMUNITY_CHAT_ID)) ||
+                        r.chatUsername === "P2pFather0"
+                    ) || results[0];
+
+                    if (target) {
+                        const threadPart = target.threadId ? `${target.threadId}/` : "1/";
+                        const telegramUrl = `https://t.me/P2pFather0/${threadPart}${target.messageId}`;
+
+                        const { broadcastTelegramSellAdLinkToWhatsAppGroups } = await import("../whatsapp/handlers/group");
+                        broadcastTelegramSellAdLinkToWhatsAppGroups(telegramUrl).catch(err => {
+                            console.error("[WA] Failed broadcasting TG sell ad link to WA groups:", err);
+                        });
+                    }
+                } catch (forwardErr) {
+                    console.error("[Bot] Error forwarding sell ad link to WA groups:", forwardErr);
+                }
+            }
         }
     } catch (e) {
         console.error("BroadcastAd error:", e);

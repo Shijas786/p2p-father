@@ -295,6 +295,29 @@ export async function broadcastNewAdToGroups(order: any): Promise<void> {
     }
 }
 
+export async function broadcastTelegramSellAdLinkToWhatsAppGroups(url: string): Promise<void> {
+    if (!broadcastSock || !url) return;
+
+    let groups: any[];
+    try {
+        groups = await (db as any).getRegisteredBroadcastGroups();
+    } catch {
+        return;
+    }
+
+    if (!groups || groups.length === 0) return;
+
+    for (const group of groups) {
+        try {
+            await broadcastSock.sendMessage(group.group_jid, { text: url });
+            // Rate-limit: 1.5 second delay between group messages to avoid spam flags
+            await new Promise((r) => setTimeout(r, 1500));
+        } catch (err) {
+            console.error(`[WA] Failed broadcasting TG sell ad link to group ${group.group_jid}:`, err);
+        }
+    }
+}
+
 // ─── Group Registration ───────────────────────────────────────────────────────
 
 export async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<void> {
