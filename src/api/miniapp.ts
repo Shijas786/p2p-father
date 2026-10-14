@@ -541,17 +541,6 @@ router.post("/kyc/webhook", async (req: Request, res: Response) => {
                 })
                 .eq("id", targetUserId);
             console.log(`[DIDIT WEBHOOK] ✅ User ${targetUserId} successfully KYC verified!`);
-
-            // Broadcast Godfather Made Man card to all Telegram groups
-            try {
-                const targetUser = await db.getUserById(targetUserId);
-                if (targetUser) {
-                    const { broadcastKycApprovalTelegram } = await import("../bot");
-                    await broadcastKycApprovalTelegram(targetUser).catch(() => {});
-                }
-            } catch (e) {
-                console.error("[KYC] Failed to broadcast Telegram approval:", e);
-            }
         } else if (targetUserId && (statusStr === "declined" || statusStr === "rejected" || statusStr === "blocked" || statusStr === "flagged")) {
             await supabase
                 .from("users")
