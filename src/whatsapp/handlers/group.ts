@@ -270,6 +270,60 @@ export function setBroadcastSock(sock: WASocket): void {
     broadcastSock = sock;
 }
 
+/**
+ * Verifies if the bot number is an admin (or superadmin) in the specified group.
+ * Ensures WA ad posts ONLY go to groups where the bot is an admin.
+ */
+export async function isBotAdminInGroup(groupJid: string, sock: WASocket): Promise<boolean> {
+    try {
+        const meta = await sock.groupMetadata(groupJid);
+        if (!meta?.participants || !Array.isArray(meta.participants)) {
+            console.warn(`[WA-AdminCheck] Could not fetch participants for group ${groupJid}`);
+            return false;
+        }
+
+        const botPhone = (
+            env.WA_BOT_NUMBER ||
+            process.env.WA_BOT_NUMBER ||
+            sock.user?.id?.split("@")[0]?.split(":")[0] ||
+            "917012751478"
+        ).replace(/[^0-9]/g, "");
+
+        const sockUserPhone = sock.user?.id?.split("@")[0]?.split(":")[0]?.replace(/[^0-9]/g, "");
+
+        const botParticipant = meta.participants.find((p: any) => {
+            const pId = p.id || p.jid || "";
+            const pPhone = pId.split("@")[0]?.split(":")[0]?.replace(/[^0-9]/g, "");
+            const pLid = (p.lid || "").split("@")[0]?.split(":")[0]?.replace(/[^0-9]/g, "");
+
+            return (
+                pId === sock.user?.id ||
+                (botPhone && pPhone === botPhone) ||
+                (sockUserPhone && pPhone === sockUserPhone) ||
+                (botPhone && pLid === botPhone)
+            );
+        });
+
+        if (!botParticipant) {
+            console.log(`[WA-AdminCheck] Bot (${botPhone}) is not in participant list for group ${groupJid}`);
+            return false;
+        }
+
+        const isAdmin = Boolean(
+            botParticipant.admin === "admin" ||
+            botParticipant.admin === "superadmin" ||
+            botParticipant.isAdmin ||
+            botParticipant.isSuperAdmin
+        );
+
+        console.log(`[WA-AdminCheck] Group ${groupJid} -> Bot (${botPhone}) isAdmin=${isAdmin}`);
+        return isAdmin;
+    } catch (err: any) {
+        console.warn(`[WA-AdminCheck] Failed to verify admin status for ${groupJid}:`, err?.message || err);
+        return false;
+    }
+}
+
 export async function broadcastNewAdToGroups(order: any): Promise<void> {
     if (!broadcastSock) return;
 
@@ -286,6 +340,14 @@ export async function broadcastNewAdToGroups(order: any): Promise<void> {
 
     for (const group of groups) {
         try {
+            // 🛡️ CRITICAL REQUIREMENT: Make sure WA ad post ONLY to group where bot number is admin
+            const isAdmin = await isBotAdminInGroup(group.group_jid, broadcastSock);
+            if (!isAdmin) {
+                console.log(`[WA-Broadcast] ⏭️ Skipping group ${group.group_jid} (${group.group_name}) — bot is NOT an admin.`);
+                await (db as any).setBroadcastGroupActive(group.group_jid, false).catch(() => {});
+                continue;
+            }
+
             await broadcastSock.sendMessage(group.group_jid, { text: message });
             // Rate-limit: 1.5 second delay between group messages to avoid spam flags
             await new Promise((r) => setTimeout(r, 1500));
@@ -309,6 +371,14 @@ export async function broadcastTelegramSellAdLinkToWhatsAppGroups(url: string): 
 
     for (const group of groups) {
         try {
+            // 🛡️ CRITICAL REQUIREMENT: Make sure WA ad post ONLY to group where bot number is admin
+            const isAdmin = await isBotAdminInGroup(group.group_jid, broadcastSock);
+            if (!isAdmin) {
+                console.log(`[WA-Broadcast] ⏭️ Skipping group ${group.group_jid} (${group.group_name}) — bot is NOT an admin.`);
+                await (db as any).setBroadcastGroupActive(group.group_jid, false).catch(() => {});
+                continue;
+            }
+
             await broadcastSock.sendMessage(group.group_jid, { text: url });
             // Rate-limit: 1.5 second delay between group messages to avoid spam flags
             await new Promise((r) => setTimeout(r, 1500));
@@ -322,10 +392,19 @@ export async function broadcastTelegramSellAdLinkToWhatsAppGroups(url: string): 
 
 export async function registerGroupIfNew(groupJid: string, sock: WASocket): Promise<void> {
     try {
+        // 🛡️ Only register groups where the bot number is an admin
+        const isAdmin = await isBotAdminInGroup(groupJid, sock);
+        if (!isAdmin) {
+            console.log(`[WA-Group] ℹ️ Bot is NOT admin in group ${groupJid} — skipping broadcast registration.`);
+            return;
+        }
+
         const meta = await sock.groupMetadata(groupJid);
         await (db as any).registerBroadcastGroup(groupJid, meta?.subject ?? "Unknown Group");
-    } catch {
-        // Ignore — groupMetadata may fail if bot not admin
+        console.log(`[WA-Group] ✅ Registered broadcast group ${groupJid} (${meta?.subject ?? "Unknown Group"}) where bot is admin.`);
+    } catch (err: any) {
+        // Ignore — groupMetadata may fail if bot not admin or left
+        console.warn(`[WA-Group] Error in registerGroupIfNew for ${groupJid}:`, err?.message || err);
     }
 }
 

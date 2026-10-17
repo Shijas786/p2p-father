@@ -760,7 +760,6 @@ func handleGetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func handleSendList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -812,7 +811,7 @@ func handleSendList(w http.ResponseWriter, r *http.Request) {
 		Tag: "biz",
 		Content: []waBinary.Node{
 			{
-				Tag: "interactive",
+				Tag:   "interactive",
 				Attrs: waBinary.Attrs{"type": "native_flow", "v": "1"},
 				Content: []waBinary.Node{
 					{Tag: "native_flow", Attrs: waBinary.Attrs{"v": "9", "name": "single_select"}},
@@ -1166,4 +1165,3 @@ func postWebhook(targetURL string, body []byte) (*http.Response, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	return client.Do(req)
 }
-

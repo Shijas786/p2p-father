@@ -1489,6 +1489,15 @@ class Database {
         return data ?? [];
     }
 
+    /** Set broadcast group active state (e.g. false if bot loses admin status) */
+    async setBroadcastGroupActive(groupJid: string, active: boolean): Promise<void> {
+        const db = this.getClient();
+        await db
+            .from("whatsapp_groups")
+            .update({ active, updated_at: new Date().toISOString() })
+            .eq("group_jid", groupJid);
+    }
+
     // ── Additional helpers needed by WA handlers (new — not duplicates) ────────
 
     async getOrdersByUserId(userId: string): Promise<any[]> {
