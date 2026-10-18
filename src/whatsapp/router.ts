@@ -15,6 +15,10 @@ import { waAi as ai } from "../services/wa-ai";
 import { env } from "../config/env";
 import { hypermeowClient } from "./hypermeowClient";
 import { wallet } from "../services/wallet";
+import { chartService } from "../services/chartService";
+
+const groupChartCooldowns = new Map<string, number>();
+
 
 function extractText(msg: IWebMessageInfo): string {
     // interactiveResponseMessage: fired when user taps a native nativeFlow button
@@ -61,6 +65,27 @@ export async function reply(
     const opts = quoted ? { quoted: quoted as WAMessage } : undefined;
     await sock.sendMessage(jid, { text }, opts);
 }
+
+export async function replyWithImage(
+    sock: WASocket,
+    jid: string,
+    imageUrl: string,
+    caption = "",
+    quoted?: IWebMessageInfo
+): Promise<boolean> {
+    if (hypermeowClient.isConfigured()) {
+        return await hypermeowClient.sendImage(jid, imageUrl, caption);
+    }
+    try {
+        const opts = quoted ? { quoted: quoted as WAMessage } : undefined;
+        await sock.sendMessage(jid, { image: { url: imageUrl }, caption }, opts);
+        return true;
+    } catch (err: any) {
+        console.error(`[WA] replyWithImage error for ${jid}:`, err?.message || err);
+        return false;
+    }
+}
+
 
 export async function replyWithButtons(
     sock: WASocket,
@@ -381,7 +406,7 @@ export async function routeMessage(
     const senderJid = (isGroup ? msg.key.participant : jid) ?? "";
     const senderPhone = senderJid.split("@")[0];
 
-    // ── Group: Do not chat in open groups; only guard against spam ────────────
+    // ── Group: Guard against spam & respond to bot mentions for BTC chart ─────
     if (isGroup) {
         // 🛡️ Bug 13 Fix: Don't scan bot's own messages as spam
         if (msg.key?.fromMe) return;
@@ -390,7 +415,54 @@ export async function routeMessage(
         await registerGroupIfNew(jid, sock).catch(() => {});
 
         // 🛡️ SPAM GUARD: scan for unauthorized links / phishing (exempts group admins)
-        await scanAndDeleteSpam(sock, msg, jid);
+        const isSpam = await scanAndDeleteSpam(sock, msg, jid);
+        if (isSpam) return;
+
+        // Check if message is a bot mention requesting BTC chart
+        const botPhone = (
+            env.WA_BOT_NUMBER ||
+            process.env.WA_BOT_NUMBER ||
+            sock.user?.id?.split("@")[0]?.split(":")[0] ||
+            "917012751478"
+        ).replace(/[^0-9]/g, "");
+
+        const contextMentioned = (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [])
+            .some((j: string) => j.includes(botPhone));
+
+        const textMentionsBot =
+            text.includes(`@${botPhone}`) ||
+            text.includes("@bot") ||
+            text.includes("@p2p") ||
+            text.includes("@p2pfather");
+
+        const isMentioned = contextMentioned || textMentionsBot;
+        const isChartRequest =
+            /\bchart\b/i.test(text) ||
+            /^\/chart\b/i.test(text.trim());
+
+        if (isMentioned && isChartRequest) {
+            // Anti-spam group cooldown (15s)
+            const now = Date.now();
+            const lastSent = groupChartCooldowns.get(jid) || 0;
+            if (now - lastSent < 15000) {
+                console.log(`[WA-Group] ⏳ Cooldown active for chart in ${jid}`);
+                return;
+            }
+            groupChartCooldowns.set(jid, now);
+
+            const coin = chartService.extractCoinFromText(text);
+            const timeframe = chartService.extractTimeframeFromText(text);
+            console.log(`[WA-Group] 📊 ${coin} (${timeframe}) candlestick chart requested in ${jid} by ${senderPhone}`);
+            const chartData = await chartService.getCandlestickChart(coin, timeframe);
+            if (chartData.result) {
+                await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+            } else if (chartData.notFound) {
+                await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
+            } else {
+                await reply(sock, jid, `⚠️ Could not fetch ${coin.toUpperCase()} chart right now. Please try again in a moment.`, msg);
+            }
+            return;
+        }
 
         // WhatsApp bot does NOT chat or reply to keywords (buy/sell/rates) in open groups
         return;
@@ -506,6 +578,25 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     if (text === "/cancel" || text === "cancel" || text === "cancel_trade") {
         await (db as any).clearWhatsappState(user.id);
         await reply(sock, jid, "❌ Action cancelled.\n\nType /start to view main menu.", msg);
+        return;
+    }
+
+    // ── Multi-Coin Candlestick Chart Command (DM) ─────────────────────────────
+    const isChartCmd =
+        /^(?:\/chart|\/btcchart|\/btc_chart|\/price_chart)/i.test(text.trim()) ||
+        /\bchart\b/i.test(text.trim());
+    if (isChartCmd) {
+        const coin = chartService.extractCoinFromText(text);
+        const timeframe = chartService.extractTimeframeFromText(text);
+        console.log(`[WA-DM] 📊 ${coin} (${timeframe}) candlestick chart requested by ${senderPhone}`);
+        const chartData = await chartService.getCandlestickChart(coin, timeframe);
+        if (chartData.result) {
+            await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+        } else if (chartData.notFound) {
+            await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
+        } else {
+            await reply(sock, jid, `⚠️ Could not fetch ${coin.toUpperCase()} chart right now. Please try again in a moment.`, msg);
+        }
         return;
     }
 
