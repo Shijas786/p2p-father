@@ -300,7 +300,10 @@ export async function isBotAdminInGroup(groupJid: string, sock: WASocket): Promi
                 pId === sock.user?.id ||
                 (botPhone && pPhone === botPhone) ||
                 (sockUserPhone && pPhone === sockUserPhone) ||
-                (botPhone && pLid === botPhone)
+                (botPhone && pLid === botPhone) ||
+                pId.includes("107533851197688") ||
+                pLid === "107533851197688" ||
+                pPhone === "107533851197688"
             );
         });
 

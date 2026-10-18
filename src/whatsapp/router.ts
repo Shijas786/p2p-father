@@ -427,18 +427,21 @@ export async function routeMessage(
         ).replace(/[^0-9]/g, "");
 
         const contextMentioned = (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [])
-            .some((j: string) => j.includes(botPhone));
+            .some((j: string) => j.includes(botPhone) || j.includes("107533851197688") || j.includes("107"));
 
         const textMentionsBot =
             text.includes(`@${botPhone}`) ||
+            text.includes("@107533851197688") ||
+            /@107\d{10,}/.test(text) ||
             text.includes("@bot") ||
             text.includes("@p2p") ||
             text.includes("@p2pfather");
 
         const isMentioned = contextMentioned || textMentionsBot;
         const isChartRequest =
-            /\bchart\b/i.test(text) ||
-            /^\/chart\b/i.test(text.trim());
+            /\b(chart|price|rate|rates)\b/i.test(text) ||
+            /^\/chart\b/i.test(text.trim()) ||
+            /^\/price\b/i.test(text.trim());
 
         if (isMentioned && isChartRequest) {
             // Anti-spam group cooldown (15s)
@@ -583,8 +586,10 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
 
     // ── Multi-Coin Candlestick Chart Command (DM) ─────────────────────────────
     const isChartCmd =
-        /^(?:\/chart|\/btcchart|\/btc_chart|\/price_chart)/i.test(text.trim()) ||
-        /\bchart\b/i.test(text.trim());
+        /^(?:\/chart|\/price|\/btcchart|\/btc_chart|\/price_chart)/i.test(text.trim()) ||
+        /\bchart\b/i.test(text.trim()) ||
+        /(?:btc|eth|sol|bnb|doge|pepe|xrp|crypto)\s*(?:price|rate)/i.test(text.trim()) ||
+        /(?:price|rate)\s*(?:of\s*)?(?:btc|eth|sol|bnb|doge|pepe|xrp)/i.test(text.trim());
     if (isChartCmd) {
         const coin = chartService.extractCoinFromText(text);
         const timeframe = chartService.extractTimeframeFromText(text);
