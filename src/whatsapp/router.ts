@@ -74,11 +74,14 @@ export async function replyWithImage(
     quoted?: IWebMessageInfo
 ): Promise<boolean> {
     if (hypermeowClient.isConfigured()) {
-        return await hypermeowClient.sendImage(jid, imageUrl, caption);
+        const ok = await hypermeowClient.sendImage(jid, imageUrl, caption);
+        console.log(`[WA-Router] 📸 replyWithImage (hypermeow) to ${jid} -> ${ok ? "SUCCESS" : "FAILED"}`);
+        return ok;
     }
     try {
         const opts = quoted ? { quoted: quoted as WAMessage } : undefined;
         await sock.sendMessage(jid, { image: { url: imageUrl }, caption }, opts);
+        console.log(`[WA-Router] 📸 replyWithImage (baileys) to ${jid} -> SUCCESS`);
         return true;
     } catch (err: any) {
         console.error(`[WA] replyWithImage error for ${jid}:`, err?.message || err);
@@ -439,26 +442,27 @@ export async function routeMessage(
 
         const isMentioned = contextMentioned || textMentionsBot;
         const isChartRequest =
-            /\b(chart|price|rate|rates)\b/i.test(text) ||
+            /\b(chart|charts|price|prices|rate|rates|candlestick|candles?)\b/i.test(text) ||
             /^\/chart\b/i.test(text.trim()) ||
-            /^\/price\b/i.test(text.trim());
+            /^\/price\b/i.test(text.trim()) ||
+            /\b(btc|eth|sol|bnb|doge|xrp|ada|ton|sui|pepe|shib|avax|near|link|dot|ltc|bch|trx|pol|apt|arb|op|kas|fet|render|chz)\b/i.test(text);
 
         if (isMentioned && isChartRequest) {
-            // Anti-spam group cooldown (15s)
+            // Anti-spam group cooldown (10s)
             const now = Date.now();
             const lastSent = groupChartCooldowns.get(jid) || 0;
-            if (now - lastSent < 15000) {
+            if (now - lastSent < 10000) {
                 console.log(`[WA-Group] ⏳ Cooldown active for chart in ${jid}`);
                 return;
             }
             groupChartCooldowns.set(jid, now);
 
-            const coin = chartService.extractCoinFromText(text);
-            const timeframe = chartService.extractTimeframeFromText(text);
+            const { coin, timeframe } = chartService.extractTimeframeAndCoin(text);
             console.log(`[WA-Group] 📊 ${coin} (${timeframe}) candlestick chart requested in ${jid} by ${senderPhone}`);
             const chartData = await chartService.getCandlestickChart(coin, timeframe);
             if (chartData.result) {
-                await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+                const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+                console.log(`[WA-Group] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
             } else if (chartData.notFound) {
                 await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
             } else {
@@ -591,12 +595,12 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
         /(?:btc|eth|sol|bnb|doge|pepe|xrp|crypto)\s*(?:price|rate)/i.test(text.trim()) ||
         /(?:price|rate)\s*(?:of\s*)?(?:btc|eth|sol|bnb|doge|pepe|xrp)/i.test(text.trim());
     if (isChartCmd) {
-        const coin = chartService.extractCoinFromText(text);
-        const timeframe = chartService.extractTimeframeFromText(text);
+        const { coin, timeframe } = chartService.extractTimeframeAndCoin(text);
         console.log(`[WA-DM] 📊 ${coin} (${timeframe}) candlestick chart requested by ${senderPhone}`);
         const chartData = await chartService.getCandlestickChart(coin, timeframe);
         if (chartData.result) {
-            await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+            const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
+            console.log(`[WA-DM] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
         } else if (chartData.notFound) {
             await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
         } else {

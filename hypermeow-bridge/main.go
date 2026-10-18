@@ -452,9 +452,13 @@ func handleSendImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch image bytes from ImageURL
-	resp, err := http.Get(req.ImageURL)
+	fmt.Printf("[Hypermeow Bridge] 📸 Processing /send-image for %s (imgUrl=%s, captionLen=%d)...\n", jid.String(), req.ImageURL, len(req.Caption))
+
+	// Fetch image bytes from ImageURL with 15s timeout
+	httpClient := &http.Client{Timeout: 15 * time.Second}
+	resp, err := httpClient.Get(req.ImageURL)
 	if err != nil {
+		fmt.Printf("[Hypermeow Bridge] ❌ Failed to download image from %s: %v\n", req.ImageURL, err)
 		http.Error(w, fmt.Sprintf("Failed to download image: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -462,12 +466,14 @@ func handleSendImage(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Printf("[Hypermeow Bridge] ❌ Failed to read image bytes: %v\n", err)
 		http.Error(w, fmt.Sprintf("Failed to read image bytes: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	uploaded, err := client.Upload(context.Background(), data, whatsmeow.MediaImage)
 	if err != nil {
+		fmt.Printf("[Hypermeow Bridge] ❌ Failed to upload media to WhatsApp CDN: %v\n", err)
 		http.Error(w, fmt.Sprintf("Failed to upload media to WhatsApp: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -487,10 +493,12 @@ func handleSendImage(w http.ResponseWriter, r *http.Request) {
 
 	_, err = client.SendMessage(context.Background(), jid, msg)
 	if err != nil {
+		fmt.Printf("[Hypermeow Bridge] ❌ Failed to send image message to %s: %v\n", jid.String(), err)
 		http.Error(w, fmt.Sprintf("Failed to send image: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	fmt.Printf("[Hypermeow Bridge] ✅ Image successfully sent to %s!\n", jid.String())
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "jid": req.JID})
 }

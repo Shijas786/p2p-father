@@ -55,14 +55,19 @@ export class HypermeowClient {
 
     public async sendImage(jid: string, imageUrl: string, caption = ""): Promise<boolean> {
         try {
+            console.log(`[HypermeowClient] 📸 Requesting /send-image for ${jid}...`);
             const res = await axios.post(
                 `${this.baseUrl}/send-image`,
                 { jid, imageUrl, caption },
-                { timeout: 12000 }
+                { timeout: 20000 }
             );
-            return res.status === 200;
+            if (res.status === 200) {
+                console.log(`[HypermeowClient] ✅ Image sent successfully to ${jid}`);
+                return true;
+            }
+            return false;
         } catch (err: any) {
-            console.error(`[HypermeowClient] SendImage error for ${jid}:`, err?.message || err);
+            console.error(`[HypermeowClient] ❌ SendImage error for ${jid}:`, err?.response?.data || err?.message || err);
             return false;
         }
     }

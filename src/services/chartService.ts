@@ -94,8 +94,29 @@ const COIN_ALIASES: Record<string, string> = {
     kaspa: "KAS",
     fet: "FET",
     render: "RENDER",
-    rndr: "RENDER"
+    rndr: "RENDER",
+    chz: "CHZ",
+    chiliz: "CHZ",
+    uni: "UNI",
+    uniswap: "UNI",
+    aave: "AAVE",
+    ftm: "FTM",
+    fantom: "FTM",
+    xmr: "XMR",
+    monero: "XMR"
 };
+
+// Patterns ordered from most specific to least specific
+const TIMEFRAME_PATTERNS: { regex: RegExp; tf: string }[] = [
+    { regex: /\b15\s*(?:m|min|mins|minutes?)\b/i, tf: "15m" },
+    { regex: /\b4\s*(?:h|hr|hrs|hours?)\b/i, tf: "4h" },
+    { regex: /\b24\s*(?:h|hr|hrs|hours?)\b/i, tf: "24h" },
+    { regex: /\b(?:1\s*(?:h|hr|hrs|hours?)|60\s*(?:m|min|mins|minutes?))\b/i, tf: "1h" },
+    { regex: /\b7\s*(?:d|day|days?)\b/i, tf: "7d" },
+    { regex: /\b(?:30\s*(?:d|day|days?)|1\s*(?:mo|month)|monthly)\b/i, tf: "30d" },
+    { regex: /\b(?:1\s*(?:w|wk|wks|weeks?)|weekly)\b/i, tf: "1w" },
+    { regex: /\b(?:1\s*(?:d|day|days?)|daily)\b/i, tf: "1d" },
+];
 
 // 60-second in-memory cache per trading pair & timeframe
 interface CacheEntry {
@@ -140,44 +161,73 @@ export class ChartService {
     }
 
     /**
+     * Extracts both timeframe and coin ticker from raw user text reliably.
+     */
+    public extractTimeframeAndCoin(rawText: string): { coin: string; timeframe: string } {
+        // 1. Identify timeframe
+        let timeframe = "24h";
+        let matchedTfPattern: RegExp | null = null;
+
+        for (const { regex, tf } of TIMEFRAME_PATTERNS) {
+            const m = rawText.match(regex);
+            if (m) {
+                timeframe = tf;
+                matchedTfPattern = regex;
+                break;
+            }
+        }
+
+        // 2. Clean message
+        let clean = rawText
+            .replace(/@\S+/g, " ") // Remove @mentions
+            .replace(/^\/[a-zA-Z0-9_]+/g, " "); // Remove /command
+
+        // Strip the matched timeframe if any
+        if (matchedTfPattern) {
+            clean = clean.replace(matchedTfPattern, " ");
+        }
+        // Remove generic timeframe units so words like "hr" or "hour" are not mistaken for coin tickers
+        clean = clean.replace(/\b(?:hours?|hrs?|minutes?|mins?|days?|weeks?|daily|weekly|monthly)\b/gi, " ");
+
+        // Remove keywords like "chart", "charts", "price", "prices", "rate", "rates", "candlestick", "candles"
+        clean = clean.replace(/\b(?:chart|charts|price|prices|rate|rates|candlestick|candles?|candle|show|get|view|check|of|for|in|to)\b/gi, " ");
+
+        // Clean punctuation
+        clean = clean.replace(/[^a-zA-Z0-9\s]/g, " ").trim();
+
+        // Words remaining
+        const words = clean.split(/\s+/).filter(w => w.length > 0);
+
+        // Look for a word that is a known coin alias or looks like a valid ticker
+        let coin = "BTC";
+        for (const w of words) {
+            const lower = w.toLowerCase();
+            if (COIN_ALIASES[lower]) {
+                coin = COIN_ALIASES[lower];
+                break;
+            }
+            if (/^[a-zA-Z][a-zA-Z0-9]{1,9}$/.test(w)) {
+                coin = w.toUpperCase();
+                break;
+            }
+        }
+
+        return { coin, timeframe };
+    }
+
+    /**
      * Extracts timeframe from message text (e.g. "15m", "1h", "4h", "1d", "1w", "24h").
      * Defaults to "24h" if not found.
      */
     public extractTimeframeFromText(text: string): string {
-        const match = text.toLowerCase().match(/\b(15m|1h|24h|4h|1d|7d|30d|1w)\b/);
-        return match ? match[1] : "24h";
+        return this.extractTimeframeAndCoin(text).timeframe;
     }
 
     /**
      * Extracts coin ticker from message text (e.g. "@bot eth 4h chart", "sol price chart", "/chart doge 1d").
      */
     public extractCoinFromText(text: string): string {
-        const clean = text
-            .replace(/@\S+/g, "") // strip mentions like @917012751478 or @bot
-            .replace(/\b(15m|1h|24h|4h|1d|7d|30d|1w)\b/gi, "") // strip timeframe keywords
-            .replace(/[\/!?.,#*]/g, " ") // normalize punctuation and slash
-            .trim();
-
-        // 1. Check patterns like "chart of sol" or "chart sol"
-        const chartFirstMatch = clean.match(/\bchart\s+(?:of\s+)?([a-zA-Z0-9]{2,10})\b/i);
-        if (chartFirstMatch && chartFirstMatch[1]) {
-            return chartFirstMatch[1];
-        }
-
-        // 2. Check patterns like "sol chart" or "solana price chart"
-        const chartLastMatch = clean.match(/\b([a-zA-Z0-9]{2,10})\s+(?:price\s+)?chart\b/i);
-        if (chartLastMatch && chartLastMatch[1]) {
-            return chartLastMatch[1];
-        }
-
-        // 3. Simple standalone ticker if "chart" is elsewhere (e.g. "/chart ETH")
-        const words = clean.split(/\s+/).filter(w => w.toLowerCase() !== "chart" && w.toLowerCase() !== "price");
-        if (words.length > 0 && words[0].length >= 2 && words[0].length <= 10) {
-            return words[0];
-        }
-
-        // Default to BTC if no coin specified
-        return "BTC";
+        return this.extractTimeframeAndCoin(text).coin;
     }
 
     /**
@@ -240,7 +290,7 @@ export class ChartService {
             const formattedHigh = formatPrice(periodHigh);
             const formattedLow = formatPrice(periodLow);
 
-            // 2. Configure dark-mode candlestick chart (Style A)
+            // 2. Configure TradingView-styled candlestick chart (1200x675 HD)
             const chartConfig = {
                 type: "candlestick",
                 data: {
@@ -248,9 +298,9 @@ export class ChartService {
                         label: `${coin}/USDT`,
                         data: candlestickData,
                         color: {
-                            up: "#0ecb81",       // Binance Green
-                            down: "#f6465d",     // Binance Red
-                            unchanged: "#848e9c"
+                            up: "#26a69a",       // TradingView Teal
+                            down: "#ef5350",     // TradingView Red
+                            unchanged: "#787b86"
                         }
                     }]
                 },
@@ -259,46 +309,47 @@ export class ChartService {
                         legend: { display: false },
                         title: {
                             display: true,
-                            text: `Binance • ${coin}/USDT ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
-                            font: { size: 20, weight: "bold" },
-                            color: "#f0b90b", // Binance Yellow
-                            padding: { top: 10, bottom: 4 }
+                            text: `${coin}/USDT • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
+                            font: { size: 24, weight: "bold", family: "Trebuchet MS" },
+                            color: isUp ? "#26a69a" : "#ef5350",
+                            padding: { top: 14, bottom: 6 }
                         },
                         subtitle: {
                             display: true,
-                            text: `High: $${formattedHigh}  |  Low: $${formattedLow}  •  ⚡ P2PFather`,
-                            font: { size: 12 },
-                            color: "#848e9c",
-                            padding: { bottom: 12 }
+                            text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ⚡ P2PFather`,
+                            font: { size: 14, family: "Trebuchet MS" },
+                            color: "#787b86",
+                            padding: { bottom: 16 }
                         }
                     },
                     scales: {
                         x: {
                             type: "time",
                             time: { unit: tf.unit },
-                            grid: { color: "rgba(255, 255, 255, 0.05)" },
-                            ticks: { color: "#848e9c", font: { size: 11 } }
+                            grid: { color: "rgba(42, 46, 57, 0.6)" },
+                            ticks: { color: "#787b86", font: { size: 12, family: "Trebuchet MS" } }
                         },
                         y: {
                             position: "right",
-                            grid: { color: "rgba(255, 255, 255, 0.05)" },
-                            ticks: { color: "#848e9c", font: { size: 11 } }
+                            grid: { color: "rgba(42, 46, 57, 0.6)" },
+                            ticks: { color: "#787b86", font: { size: 12, family: "Trebuchet MS" } }
                         }
                     }
                 }
             };
 
             const qcPayload = {
-                backgroundColor: "#181a20", // Binance dark theme background
-                width: 800,
-                height: 440,
+                backgroundColor: "#131722", // TradingView dark theme
+                width: 1200,
+                height: 675,
+                devicePixelRatio: 2,
                 format: "png",
                 version: "3",
                 chart: chartConfig
             };
 
             // 3. Request chart image URL from QuickChart
-            const qcRes = await axios.post(this.QUICKCHART_URL, qcPayload, { timeout: 7000 });
+            const qcRes = await axios.post(this.QUICKCHART_URL, qcPayload, { timeout: 9000 });
             const imageUrl = qcRes.data?.url;
 
             if (!imageUrl) {
