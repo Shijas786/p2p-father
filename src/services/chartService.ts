@@ -37,14 +37,14 @@ export interface TimeframeConfig {
 }
 
 export const TIMEFRAMES: Record<string, TimeframeConfig> = {
-    "15m": { interval: "15m", limit: 32, label: "15M (Scalp)", unit: "hour" },
-    "1h":  { interval: "1h",  limit: 24, label: "24H (1H)", unit: "hour" },
-    "24h": { interval: "1h",  limit: 24, label: "24H (1H)", unit: "hour" },
-    "4h":  { interval: "4h",  limit: 30, label: "5D (4H)", unit: "day" },
-    "1d":  { interval: "1d",  limit: 30, label: "30D (Daily)", unit: "day" },
-    "30d": { interval: "1d",  limit: 30, label: "30D (Daily)", unit: "day" },
+    "15m": { interval: "15m", limit: 40, label: "10H (15M)", unit: "hour" },
+    "1h":  { interval: "1h",  limit: 48, label: "48H (1H)", unit: "hour" },
+    "24h": { interval: "1h",  limit: 48, label: "48H (1H)", unit: "hour" },
+    "4h":  { interval: "4h",  limit: 42, label: "7D (4H)", unit: "day" },
+    "1d":  { interval: "1d",  limit: 45, label: "45D (Daily)", unit: "day" },
+    "30d": { interval: "1d",  limit: 45, label: "45D (Daily)", unit: "day" },
     "7d":  { interval: "4h",  limit: 42, label: "7D (4H)", unit: "day" },
-    "1w":  { interval: "1w",  limit: 26, label: "6M (Weekly)", unit: "month" },
+    "1w":  { interval: "1w",  limit: 35, label: "8M (Weekly)", unit: "month" },
 };
 
 // Common coin name to ticker alias mapping
@@ -169,6 +169,113 @@ function formatPrice(val: number): string {
     return val.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 8 });
 }
 
+function calculateEMA(data: number[], timestamps: number[], period: number): { x: number; y: number }[] {
+    const k = 2 / (period + 1);
+    const result: { x: number; y: number }[] = [];
+    if (data.length < period) return result;
+
+    let prevEMA = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    for (let i = 0; i < data.length; i++) {
+        if (i === period - 1) {
+            result.push({ x: timestamps[i], y: parseFloat(prevEMA.toFixed(4)) });
+        } else if (i >= period) {
+            prevEMA = data[i] * k + prevEMA * (1 - k);
+            result.push({ x: timestamps[i], y: parseFloat(prevEMA.toFixed(4)) });
+        }
+    }
+    return result;
+}
+
+function calculateMACD(
+    closes: number[],
+    timestamps: number[]
+): {
+    macdLine: { x: number; y: number }[];
+    signalLine: { x: number; y: number }[];
+    histogram: { x: number; y: number; backgroundColor: string }[];
+} {
+    const k12 = 2 / (12 + 1);
+    const k26 = 2 / (26 + 1);
+    const k9 = 2 / (9 + 1);
+
+    const ema12: (number | null)[] = [];
+    const ema26: (number | null)[] = [];
+
+    let prev12 = closes.slice(0, 12).reduce((a, b) => a + b, 0) / 12;
+    for (let i = 0; i < closes.length; i++) {
+        if (i < 11) ema12.push(null);
+        else if (i === 11) ema12.push(prev12);
+        else {
+            prev12 = closes[i] * k12 + prev12 * (1 - k12);
+            ema12.push(prev12);
+        }
+    }
+
+    let prev26 = closes.slice(0, 26).reduce((a, b) => a + b, 0) / 26;
+    for (let i = 0; i < closes.length; i++) {
+        if (i < 25) ema26.push(null);
+        else if (i === 25) ema26.push(prev26);
+        else {
+            prev26 = closes[i] * k26 + prev26 * (1 - k26);
+            ema26.push(prev26);
+        }
+    }
+
+    const rawMacd: (number | null)[] = [];
+    const validMacd: number[] = [];
+    for (let i = 0; i < closes.length; i++) {
+        if (ema12[i] !== null && ema26[i] !== null) {
+            const val = (ema12[i] as number) - (ema26[i] as number);
+            rawMacd.push(val);
+            validMacd.push(val);
+        } else {
+            rawMacd.push(null);
+        }
+    }
+
+    const rawSignal: (number | null)[] = [];
+    let prevSig = validMacd.slice(0, 9).reduce((a, b) => a + b, 0) / 9;
+    let validCount = 0;
+    for (let i = 0; i < rawMacd.length; i++) {
+        if (rawMacd[i] === null) {
+            rawSignal.push(null);
+        } else {
+            if (validCount < 8) {
+                rawSignal.push(null);
+            } else if (validCount === 8) {
+                rawSignal.push(prevSig);
+            } else {
+                prevSig = (rawMacd[i] as number) * k9 + prevSig * (1 - k9);
+                rawSignal.push(prevSig);
+            }
+            validCount++;
+        }
+    }
+
+    const macdLine: { x: number; y: number }[] = [];
+    const signalLine: { x: number; y: number }[] = [];
+    const histogram: { x: number; y: number; backgroundColor: string }[] = [];
+
+    for (let i = 0; i < timestamps.length; i++) {
+        const time = timestamps[i];
+        if (rawMacd[i] !== null) {
+            macdLine.push({ x: time, y: parseFloat((rawMacd[i] as number).toFixed(4)) });
+        }
+        if (rawSignal[i] !== null) {
+            const sig = rawSignal[i] as number;
+            signalLine.push({ x: time, y: parseFloat(sig.toFixed(4)) });
+            const hist = (rawMacd[i] as number) - sig;
+            histogram.push({
+                x: time,
+                y: parseFloat(hist.toFixed(4)),
+                backgroundColor: hist >= 0 ? "rgba(38, 166, 154, 0.85)" : "rgba(239, 83, 80, 0.85)"
+            });
+        }
+    }
+
+    return { macdLine, signalLine, histogram };
+}
+
 export class ChartService {
     private readonly BINANCE_SPOT_URL = "https://api.binance.com/api/v3/klines";
     private readonly BINANCE_FUTURES_URL = "https://fapi.binance.com/fapi/v1/klines";
@@ -192,10 +299,11 @@ export class ChartService {
     }
 
     /**
-     * Extracts timeframe, coin ticker, and futures preference from raw user text.
+     * Extracts timeframe, coin ticker, futures preference, and MACD indicator preference from raw user text.
      */
-    public extractTimeframeAndCoin(rawText: string): { coin: string; timeframe: string; isFutures: boolean } {
-        const isFutures = /\b(perp|perpetual|perps|futures?|fut)\b/i.test(rawText);
+    public extractTimeframeAndCoin(rawText: string): { coin: string; timeframe: string; isFutures: boolean; isMacd: boolean } {
+        const isFutures = /\b(?:perp|perpetual|perps|futures?|fut)\b/i.test(rawText);
+        const isMacd = /\b(?:macd|mca)\b/i.test(rawText);
 
         // 1. Identify timeframe
         let timeframe = "24h";
@@ -225,11 +333,11 @@ export class ChartService {
         // Remove generic timeframe units so words like "hr" or "hour" are not mistaken for coin tickers
         clean = clean.replace(/\b(?:hours?|hrs?|minutes?|mins?|days?|weeks?|daily|weekly|monthly)\b/gi, " ");
 
-        // Remove futures/perp keywords
-        clean = clean.replace(/\b(?:perp|perpetual|perps|futures?|fut)\b/gi, " ");
+        // Remove futures/perp/indicator keywords
+        clean = clean.replace(/\b(?:perp|perpetual|perps|futures?|fut|macd|mca|ema|sma|ma|indicator|indicators|shwig)\b/gi, " ");
 
         // Remove keywords and common noise words
-        clean = clean.replace(/\b(?:chart|charts|price|prices|rate|rates|candlestick|candles?|candle|show|get|view|check|of|for|in|to|the|a|an|i|me|my)\b/gi, " ");
+        clean = clean.replace(/\b(?:chart|charts|price|prices|rate|rates|candlestick|candles?|candle|show|get|view|check|of|for|in|to|the|a|an|i|me|my|with)\b/gi, " ");
 
         // Clean punctuation
         clean = clean.replace(/[^a-zA-Z0-9\s]/g, " ").trim();
@@ -251,7 +359,7 @@ export class ChartService {
             }
         }
 
-        return { coin, timeframe, isFutures };
+        return { coin, timeframe, isFutures, isMacd };
     }
 
     /**
@@ -277,15 +385,16 @@ export class ChartService {
         coinInput = "BTC",
         timeframeInput = "24h",
         forceFresh = false,
-        preferFutures = false
+        preferFutures = false,
+        preferMacd = false
     ): Promise<{ result?: ChartResult; notFound?: boolean; error?: string }> {
         let { coin, pair } = this.resolveCoin(coinInput);
         const tfKey = timeframeInput.toLowerCase();
         const tf = TIMEFRAMES[tfKey] || TIMEFRAMES["24h"];
         const now = Date.now();
 
-        // Cache key per pair + timeframe + market preference
-        const cacheKey = `${pair}_${tfKey}_${preferFutures ? "futures" : "any"}`;
+        // Cache key per pair + timeframe + market + indicator preference
+        const cacheKey = `${pair}_${tfKey}_${preferFutures ? "futures" : "any"}_${preferMacd ? "macd" : "std"}`;
         const cached = chartCache.get(cacheKey);
         if (!forceFresh && cached && (now - cached.timestamp) < CACHE_TTL_MS) {
             return { result: cached.result };
@@ -353,15 +462,31 @@ export class ChartService {
             let periodHigh = -Infinity;
             let periodLow = Infinity;
 
-            const candlestickData: CandlestickData[] = rawData.map((c: any) => {
+            const candlestickData: CandlestickData[] = [];
+            const volumeData: { x: number; y: number; backgroundColor: string }[] = [];
+            const closes: number[] = [];
+            const timestamps: number[] = [];
+
+            for (const c of rawData) {
+                const time = c[0];
                 const o = parseFloat(c[1]);
                 const h = parseFloat(c[2]);
                 const l = parseFloat(c[3]);
                 const cl = parseFloat(c[4]);
+                const vol = parseFloat(c[5]) || 0;
+
                 if (h > periodHigh) periodHigh = h;
                 if (l < periodLow) periodLow = l;
-                return { x: c[0], o, h, l, c: cl };
-            });
+
+                candlestickData.push({ x: time, o, h, l, c: cl });
+                closes.push(cl);
+                timestamps.push(time);
+                volumeData.push({
+                    x: time,
+                    y: vol,
+                    backgroundColor: cl >= o ? "rgba(38, 166, 154, 0.45)" : "rgba(239, 83, 80, 0.45)"
+                });
+            }
 
             const lastCandle = candlestickData[candlestickData.length - 1];
             const firstCandle = candlestickData[0];
@@ -377,58 +502,231 @@ export class ChartService {
             const marketBadge = isFutures ? " (Perp)" : "";
             const marketSubtitle = isFutures ? "⚡ P2PFather Futures" : "⚡ P2PFather";
 
-            // 2. Configure TradingView-styled candlestick chart (1200x675 HD)
-            const chartConfig = {
-                type: "candlestick",
-                data: {
-                    datasets: [{
-                        label: `${coin}/USDT${marketBadge}`,
-                        data: candlestickData,
-                        color: {
-                            up: "#26a69a",       // TradingView Teal
-                            down: "#ef5350",     // TradingView Red
-                            unchanged: "#787b86"
-                        }
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: { display: false },
-                        title: {
-                            display: true,
-                            text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
-                            font: { size: 24, weight: "bold", family: "Trebuchet MS" },
-                            color: isUp ? "#26a69a" : "#ef5350",
-                            padding: { top: 14, bottom: 6 }
-                        },
-                        subtitle: {
-                            display: true,
-                            text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ${marketSubtitle}`,
-                            font: { size: 14, family: "Trebuchet MS" },
-                            color: "#787b86",
-                            padding: { bottom: 16 }
-                        }
+            // Calculate EMA(7) and EMA(25)
+            const ema7 = calculateEMA(closes, timestamps, 7);
+            const ema25 = calculateEMA(closes, timestamps, 25);
+            const maxVol = Math.max(...volumeData.map(v => v.y), 1);
+
+            let chartConfig: any;
+            let chartHeight = 675;
+
+            if (preferMacd) {
+                // Stacked Candlestick + EMA + MACD Panel
+                chartHeight = 750;
+                const macd = calculateMACD(closes, timestamps);
+
+                chartConfig = {
+                    type: "candlestick",
+                    data: {
+                        datasets: [
+                            {
+                                type: "candlestick",
+                                label: `${coin}/USDT${marketBadge}`,
+                                data: candlestickData,
+                                color: {
+                                    up: "#26a69a",
+                                    down: "#ef5350",
+                                    unchanged: "#787b86"
+                                },
+                                yAxisID: "yPrice"
+                            },
+                            {
+                                type: "line",
+                                label: "EMA(7)",
+                                data: ema7,
+                                borderColor: "#f5ac37",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                yAxisID: "yPrice"
+                            },
+                            {
+                                type: "line",
+                                label: "EMA(25)",
+                                data: ema25,
+                                borderColor: "#b388ff",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                yAxisID: "yPrice"
+                            },
+                            {
+                                type: "bar",
+                                label: "MACD Hist",
+                                data: macd.histogram.map(h => ({ x: h.x, y: h.y })),
+                                backgroundColor: macd.histogram.map(h => h.backgroundColor),
+                                yAxisID: "yMACD",
+                                barPercentage: 0.6
+                            },
+                            {
+                                type: "line",
+                                label: "MACD(12,26)",
+                                data: macd.macdLine,
+                                borderColor: "#2962ff",
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                yAxisID: "yMACD"
+                            },
+                            {
+                                type: "line",
+                                label: "Signal(9)",
+                                data: macd.signalLine,
+                                borderColor: "#ff6d00",
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                yAxisID: "yMACD"
+                            }
+                        ]
                     },
-                    scales: {
-                        x: {
-                            type: "time",
-                            time: { unit: tf.unit },
-                            grid: { color: "rgba(42, 46, 57, 0.6)" },
-                            ticks: { color: "#787b86", font: { size: 12, family: "Trebuchet MS" } }
+                    options: {
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: "top",
+                                align: "start",
+                                labels: {
+                                    color: "#d1d4dc",
+                                    font: { family: "Trebuchet MS", size: 11 },
+                                    boxWidth: 12
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
+                                font: { size: 24, weight: "bold", family: "Trebuchet MS" },
+                                color: isUp ? "#26a69a" : "#ef5350",
+                                padding: { top: 12, bottom: 4 }
+                            },
+                            subtitle: {
+                                display: true,
+                                text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ${marketSubtitle}`,
+                                font: { size: 13, family: "Trebuchet MS" },
+                                color: "#787b86",
+                                padding: { bottom: 12 }
+                            }
                         },
-                        y: {
-                            position: "right",
-                            grid: { color: "rgba(42, 46, 57, 0.6)" },
-                            ticks: { color: "#787b86", font: { size: 12, family: "Trebuchet MS" } }
+                        scales: {
+                            x: {
+                                type: "time",
+                                time: { unit: tf.unit },
+                                grid: { color: "rgba(42, 46, 57, 0.6)" },
+                                ticks: { color: "#787b86", font: { size: 11, family: "Trebuchet MS" } }
+                            },
+                            yPrice: {
+                                position: "right",
+                                stack: "main",
+                                stackWeight: 3.2,
+                                grid: { color: "rgba(42, 46, 57, 0.6)" },
+                                ticks: { color: "#d1d4dc", font: { size: 12, family: "Trebuchet MS" } }
+                            },
+                            yMACD: {
+                                position: "right",
+                                stack: "main",
+                                stackWeight: 1.2,
+                                offset: true,
+                                grid: { color: "rgba(42, 46, 57, 0.4)" },
+                                ticks: { color: "#787b86", font: { size: 10, family: "Trebuchet MS" } }
+                            }
                         }
                     }
-                }
-            };
+                };
+            } else {
+                // Classic TradingView View: Candlestick + EMA(7) + EMA(25) + Volume Bars
+                chartConfig = {
+                    type: "candlestick",
+                    data: {
+                        datasets: [
+                            {
+                                type: "candlestick",
+                                label: `${coin}/USDT${marketBadge}`,
+                                data: candlestickData,
+                                color: {
+                                    up: "#26a69a",
+                                    down: "#ef5350",
+                                    unchanged: "#787b86"
+                                },
+                                yAxisID: "y"
+                            },
+                            {
+                                type: "line",
+                                label: "EMA(7)",
+                                data: ema7,
+                                borderColor: "#f5ac37", // Amber
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                yAxisID: "y"
+                            },
+                            {
+                                type: "line",
+                                label: "EMA(25)",
+                                data: ema25,
+                                borderColor: "#b388ff", // Purple
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                yAxisID: "y"
+                            },
+                            {
+                                type: "bar",
+                                label: "Volume",
+                                data: volumeData.map(v => ({ x: v.x, y: v.y })),
+                                backgroundColor: volumeData.map(v => v.backgroundColor),
+                                yAxisID: "yVol",
+                                barPercentage: 0.8
+                            }
+                        ]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: "top",
+                                align: "start",
+                                labels: {
+                                    color: "#d1d4dc",
+                                    font: { family: "Trebuchet MS", size: 12 },
+                                    boxWidth: 14
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
+                                font: { size: 24, weight: "bold", family: "Trebuchet MS" },
+                                color: isUp ? "#26a69a" : "#ef5350",
+                                padding: { top: 12, bottom: 4 }
+                            },
+                            subtitle: {
+                                display: true,
+                                text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ${marketSubtitle}`,
+                                font: { size: 13, family: "Trebuchet MS" },
+                                color: "#787b86",
+                                padding: { bottom: 12 }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: "time",
+                                time: { unit: tf.unit },
+                                grid: { color: "rgba(42, 46, 57, 0.6)" },
+                                ticks: { color: "#787b86", font: { size: 11, family: "Trebuchet MS" } }
+                            },
+                            y: {
+                                position: "right",
+                                grid: { color: "rgba(42, 46, 57, 0.6)" },
+                                ticks: { color: "#d1d4dc", font: { size: 12, family: "Trebuchet MS" } }
+                            },
+                            yVol: {
+                                position: "left",
+                                display: false,
+                                max: maxVol * 4.5,
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                };
+            }
 
             const qcPayload = {
                 backgroundColor: "#131722", // TradingView dark theme
                 width: 1200,
-                height: 675,
+                height: chartHeight,
                 devicePixelRatio: 2,
                 format: "png",
                 version: "3",
@@ -445,6 +743,7 @@ export class ChartService {
             }
 
             const changeSymbol = isUp ? "🟢 +" : "🔴 ";
+            const indicatorsList = preferMacd ? "EMA(7), EMA(25), MACD(12,26,9)" : "EMA(7), EMA(25), Volume";
 
             const caption = [
                 `📊 *${coin} (USDT${isFutures ? " Perp" : ""}) — ${tf.label} Candlestick Chart*`,
@@ -452,7 +751,8 @@ export class ChartService {
                 `📈 *High:* $${formattedHigh}`,
                 `📉 *Low:* $${formattedLow}`,
                 `🔄 *Change:* ${changeSymbol}${priceChange.toFixed(2)}%`,
-                `💡 _Timeframes: 15m, 1h, 4h, 1d, 1w (e.g. "@bot ${coin.toLowerCase()} 4h chart")_`
+                `📈 *Indicators:* ${indicatorsList}`,
+                `💡 _Tip: Type "macd" for MACD indicator, or "4h" / "1d" for timeframes._`
             ].join("\n");
 
             const result: ChartResult = {

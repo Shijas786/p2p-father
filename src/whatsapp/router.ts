@@ -442,7 +442,7 @@ export async function routeMessage(
 
         const isMentioned = contextMentioned || textMentionsBot;
         const isChartRequest =
-            /\b(chart|charts|price|prices|rate|rates|candlestick|candles?|perp|perps|futures?)\b/i.test(text) ||
+            /\b(chart|charts|price|prices|rate|rates|candlestick|candles?|perp|perps|futures?|macd|mca|ema|indicator)\b/i.test(text) ||
             /^\/chart\b/i.test(text.trim()) ||
             /^\/price\b/i.test(text.trim()) ||
             /\b(btc|eth|sol|bnb|doge|xrp|ada|ton|sui|pepe|shib|avax|near|link|dot|ltc|bch|trx|pol|apt|arb|op|kas|fet|render|chz|1000pepe|1000bonk|1000sats|1000floki|1000shib|neiro|sats)\b/i.test(text);
@@ -457,9 +457,9 @@ export async function routeMessage(
             }
             groupChartCooldowns.set(jid, now);
 
-            const { coin, timeframe, isFutures } = chartService.extractTimeframeAndCoin(text);
-            console.log(`[WA-Group] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}) candlestick chart requested in ${jid} by ${senderPhone}`);
-            const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures);
+            const { coin, timeframe, isFutures, isMacd } = chartService.extractTimeframeAndCoin(text);
+            console.log(`[WA-Group] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}${isMacd ? ", MACD" : ""}) candlestick chart requested in ${jid} by ${senderPhone}`);
+            const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures, isMacd);
             if (chartData.result) {
                 const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
                 console.log(`[WA-Group] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
@@ -591,14 +591,14 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     // ── Multi-Coin Candlestick Chart Command (DM) ─────────────────────────────
     const isChartCmd =
         /^(?:\/chart|\/price|\/btcchart|\/btc_chart|\/price_chart)/i.test(text.trim()) ||
-        /\bchart\b/i.test(text.trim()) ||
+        /\b(chart|charts|candlestick|candles?|macd|mca|ema|indicator)\b/i.test(text.trim()) ||
         /\b(perp|perpetual|perps|futures?)\b/i.test(text.trim()) ||
         /(?:btc|eth|sol|bnb|doge|pepe|xrp|crypto)\s*(?:price|rate)/i.test(text.trim()) ||
         /(?:price|rate)\s*(?:of\s*)?(?:btc|eth|sol|bnb|doge|pepe|xrp)/i.test(text.trim());
     if (isChartCmd) {
-        const { coin, timeframe, isFutures } = chartService.extractTimeframeAndCoin(text);
-        console.log(`[WA-DM] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}) candlestick chart requested by ${senderPhone}`);
-        const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures);
+        const { coin, timeframe, isFutures, isMacd } = chartService.extractTimeframeAndCoin(text);
+        console.log(`[WA-DM] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}${isMacd ? ", MACD" : ""}) candlestick chart requested by ${senderPhone}`);
+        const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures, isMacd);
         if (chartData.result) {
             const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
             console.log(`[WA-DM] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
