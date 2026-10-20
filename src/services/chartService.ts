@@ -268,7 +268,7 @@ function calculateMACD(
             histogram.push({
                 x: time,
                 y: parseFloat(hist.toFixed(4)),
-                backgroundColor: hist >= 0 ? "rgba(38, 166, 154, 0.85)" : "rgba(239, 83, 80, 0.85)"
+                backgroundColor: hist >= 0 ? "rgba(14, 203, 129, 0.85)" : "rgba(246, 70, 93, 0.85)"
             });
         }
     }
@@ -484,7 +484,7 @@ export class ChartService {
                 volumeData.push({
                     x: time,
                     y: vol,
-                    backgroundColor: cl >= o ? "rgba(38, 166, 154, 0.45)" : "rgba(239, 83, 80, 0.45)"
+                    backgroundColor: cl >= o ? "rgba(14, 203, 129, 0.45)" : "rgba(246, 70, 93, 0.45)"
                 });
             }
 
@@ -524,8 +524,8 @@ export class ChartService {
                                 label: `${coin}/USDT${marketBadge}`,
                                 data: candlestickData,
                                 color: {
-                                    up: "#26a69a",
-                                    down: "#ef5350",
+                                    up: "#0ecb81",       // True Crypto Green
+                                    down: "#f6465d",     // True Crypto Red
                                     unchanged: "#787b86"
                                 },
                                 yAxisID: "yPrice"
@@ -592,7 +592,7 @@ export class ChartService {
                                 display: true,
                                 text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
                                 font: { size: 24, weight: "bold", family: "Trebuchet MS" },
-                                color: isUp ? "#26a69a" : "#ef5350",
+                                color: isUp ? "#0ecb81" : "#f6465d",
                                 padding: { top: 12, bottom: 4 }
                             },
                             subtitle: {
@@ -639,8 +639,8 @@ export class ChartService {
                                 label: `${coin}/USDT${marketBadge}`,
                                 data: candlestickData,
                                 color: {
-                                    up: "#26a69a",
-                                    down: "#ef5350",
+                                    up: "#0ecb81",       // True Crypto Green
+                                    down: "#f6465d",     // True Crypto Red
                                     unchanged: "#787b86"
                                 },
                                 yAxisID: "y"
@@ -689,7 +689,7 @@ export class ChartService {
                                 display: true,
                                 text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
                                 font: { size: 24, weight: "bold", family: "Trebuchet MS" },
-                                color: isUp ? "#26a69a" : "#ef5350",
+                                color: isUp ? "#0ecb81" : "#f6465d",
                                 padding: { top: 12, bottom: 4 }
                             },
                             subtitle: {
@@ -743,16 +743,13 @@ export class ChartService {
             }
 
             const changeSymbol = isUp ? "🟢 +" : "🔴 ";
-            const indicatorsList = preferMacd ? "EMA(7), EMA(25), MACD(12,26,9)" : "EMA(7), EMA(25), Volume";
 
             const caption = [
                 `📊 *${coin} (USDT${isFutures ? " Perp" : ""}) — ${tf.label} Candlestick Chart*`,
                 `💰 *Price:* $${formattedPrice}`,
                 `📈 *High:* $${formattedHigh}`,
                 `📉 *Low:* $${formattedLow}`,
-                `🔄 *Change:* ${changeSymbol}${priceChange.toFixed(2)}%`,
-                `📈 *Indicators:* ${indicatorsList}`,
-                `💡 _Tip: Type "macd" for MACD indicator, or "4h" / "1d" for timeframes._`
+                `🔄 *Change:* ${changeSymbol}${priceChange.toFixed(2)}%`
             ].join("\n");
 
             const result: ChartResult = {
