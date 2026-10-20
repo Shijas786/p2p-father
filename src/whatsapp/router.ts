@@ -442,10 +442,10 @@ export async function routeMessage(
 
         const isMentioned = contextMentioned || textMentionsBot;
         const isChartRequest =
-            /\b(chart|charts|price|prices|rate|rates|candlestick|candles?)\b/i.test(text) ||
+            /\b(chart|charts|price|prices|rate|rates|candlestick|candles?|perp|perps|futures?)\b/i.test(text) ||
             /^\/chart\b/i.test(text.trim()) ||
             /^\/price\b/i.test(text.trim()) ||
-            /\b(btc|eth|sol|bnb|doge|xrp|ada|ton|sui|pepe|shib|avax|near|link|dot|ltc|bch|trx|pol|apt|arb|op|kas|fet|render|chz)\b/i.test(text);
+            /\b(btc|eth|sol|bnb|doge|xrp|ada|ton|sui|pepe|shib|avax|near|link|dot|ltc|bch|trx|pol|apt|arb|op|kas|fet|render|chz|1000pepe|1000bonk|1000sats|1000floki|1000shib|neiro|sats)\b/i.test(text);
 
         if (isMentioned && isChartRequest) {
             // Anti-spam group cooldown (10s)
@@ -457,14 +457,14 @@ export async function routeMessage(
             }
             groupChartCooldowns.set(jid, now);
 
-            const { coin, timeframe } = chartService.extractTimeframeAndCoin(text);
-            console.log(`[WA-Group] 📊 ${coin} (${timeframe}) candlestick chart requested in ${jid} by ${senderPhone}`);
-            const chartData = await chartService.getCandlestickChart(coin, timeframe);
+            const { coin, timeframe, isFutures } = chartService.extractTimeframeAndCoin(text);
+            console.log(`[WA-Group] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}) candlestick chart requested in ${jid} by ${senderPhone}`);
+            const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures);
             if (chartData.result) {
                 const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
                 console.log(`[WA-Group] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
             } else if (chartData.notFound) {
-                await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
+                await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance Spot or Futures.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`1000PEPE\`, \`DOGE\`, \`SUI\`, etc.!`, msg);
             } else {
                 await reply(sock, jid, `⚠️ Could not fetch ${coin.toUpperCase()} chart right now. Please try again in a moment.`, msg);
             }
@@ -592,17 +592,18 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     const isChartCmd =
         /^(?:\/chart|\/price|\/btcchart|\/btc_chart|\/price_chart)/i.test(text.trim()) ||
         /\bchart\b/i.test(text.trim()) ||
+        /\b(perp|perpetual|perps|futures?)\b/i.test(text.trim()) ||
         /(?:btc|eth|sol|bnb|doge|pepe|xrp|crypto)\s*(?:price|rate)/i.test(text.trim()) ||
         /(?:price|rate)\s*(?:of\s*)?(?:btc|eth|sol|bnb|doge|pepe|xrp)/i.test(text.trim());
     if (isChartCmd) {
-        const { coin, timeframe } = chartService.extractTimeframeAndCoin(text);
-        console.log(`[WA-DM] 📊 ${coin} (${timeframe}) candlestick chart requested by ${senderPhone}`);
-        const chartData = await chartService.getCandlestickChart(coin, timeframe);
+        const { coin, timeframe, isFutures } = chartService.extractTimeframeAndCoin(text);
+        console.log(`[WA-DM] 📊 ${coin} (${timeframe}${isFutures ? ", Futures" : ""}) candlestick chart requested by ${senderPhone}`);
+        const chartData = await chartService.getCandlestickChart(coin, timeframe, false, isFutures);
         if (chartData.result) {
             const ok = await replyWithImage(sock, jid, chartData.result.imageUrl, chartData.result.caption, msg);
             console.log(`[WA-DM] 📸 Chart image reply for ${coin} (${timeframe}) to ${jid} -> ${ok ? "DELIVERED" : "FAILED"}`);
         } else if (chartData.notFound) {
-            await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`BNB\`, \`DOGE\`, \`PEPE\`, \`SUI\`, etc.!`, msg);
+            await reply(sock, jid, `⚠️ Coin "*${coin.toUpperCase()}*" was not found on Binance Spot or Futures.\n\nTry popular coins like: \`BTC\`, \`ETH\`, \`SOL\`, \`1000PEPE\`, \`DOGE\`, \`SUI\`, etc.!`, msg);
         } else {
             await reply(sock, jid, `⚠️ Could not fetch ${coin.toUpperCase()} chart right now. Please try again in a moment.`, msg);
         }

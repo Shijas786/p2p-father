@@ -26,6 +26,7 @@ export interface ChartResult {
     high24h: number;
     low24h: number;
     caption: string;
+    market?: "Spot" | "Futures";
 }
 
 export interface TimeframeConfig {
@@ -103,7 +104,36 @@ const COIN_ALIASES: Record<string, string> = {
     ftm: "FTM",
     fantom: "FTM",
     xmr: "XMR",
-    monero: "XMR"
+    monero: "XMR",
+    "1000pepe": "1000PEPE",
+    "1000bonk": "1000BONK",
+    "1000sats": "1000SATS",
+    sats: "1000SATS",
+    "1000floki": "1000FLOKI",
+    "1000shib": "1000SHIB",
+    "1000cat": "1000CAT",
+    "1000rats": "1000RATS",
+    "1000cheems": "1000CHEEMS",
+    neiro: "NEIRO",
+    neiroeth: "NEIROETH",
+    turbo: "TURBO",
+    blur: "BLUR",
+    tia: "TIA",
+    celestia: "TIA",
+    sei: "SEI",
+    ondo: "ONDO",
+    wif: "WIF",
+    dogwifhat: "WIF",
+    bome: "BOME",
+    popcat: "POPCAT",
+    mew: "MEW",
+    not: "NOT",
+    notcoin: "NOT",
+    dogs: "DOGS",
+    cats: "CATS",
+    hmstr: "HMSTR",
+    hamster: "HMSTR",
+    q: "Q"
 };
 
 // Patterns ordered from most specific to least specific
@@ -140,7 +170,8 @@ function formatPrice(val: number): string {
 }
 
 export class ChartService {
-    private readonly BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines";
+    private readonly BINANCE_SPOT_URL = "https://api.binance.com/api/v3/klines";
+    private readonly BINANCE_FUTURES_URL = "https://fapi.binance.com/fapi/v1/klines";
     private readonly QUICKCHART_URL = "https://quickchart.io/chart/create";
 
     /**
@@ -161,9 +192,11 @@ export class ChartService {
     }
 
     /**
-     * Extracts both timeframe and coin ticker from raw user text reliably.
+     * Extracts timeframe, coin ticker, and futures preference from raw user text.
      */
-    public extractTimeframeAndCoin(rawText: string): { coin: string; timeframe: string } {
+    public extractTimeframeAndCoin(rawText: string): { coin: string; timeframe: string; isFutures: boolean } {
+        const isFutures = /\b(perp|perpetual|perps|futures?|fut)\b/i.test(rawText);
+
         // 1. Identify timeframe
         let timeframe = "24h";
         let matchedTfPattern: RegExp | null = null;
@@ -186,11 +219,17 @@ export class ChartService {
         if (matchedTfPattern) {
             clean = clean.replace(matchedTfPattern, " ");
         }
+        // Remove bot display name tokens if mentioned as plain text (e.g. "@P2p Father")
+        clean = clean.replace(/\b(?:p2p\s*father|p2pfather|p2p|father|bot)\b/gi, " ");
+
         // Remove generic timeframe units so words like "hr" or "hour" are not mistaken for coin tickers
         clean = clean.replace(/\b(?:hours?|hrs?|minutes?|mins?|days?|weeks?|daily|weekly|monthly)\b/gi, " ");
 
-        // Remove keywords like "chart", "charts", "price", "prices", "rate", "rates", "candlestick", "candles"
-        clean = clean.replace(/\b(?:chart|charts|price|prices|rate|rates|candlestick|candles?|candle|show|get|view|check|of|for|in|to)\b/gi, " ");
+        // Remove futures/perp keywords
+        clean = clean.replace(/\b(?:perp|perpetual|perps|futures?|fut)\b/gi, " ");
+
+        // Remove keywords and common noise words
+        clean = clean.replace(/\b(?:chart|charts|price|prices|rate|rates|candlestick|candles?|candle|show|get|view|check|of|for|in|to|the|a|an|i|me|my)\b/gi, " ");
 
         // Clean punctuation
         clean = clean.replace(/[^a-zA-Z0-9\s]/g, " ").trim();
@@ -198,7 +237,7 @@ export class ChartService {
         // Words remaining
         const words = clean.split(/\s+/).filter(w => w.length > 0);
 
-        // Look for a word that is a known coin alias or looks like a valid ticker
+        // Look for a word that is a known coin alias or looks like a valid ticker (including single letters like Q, or 1000pepe)
         let coin = "BTC";
         for (const w of words) {
             const lower = w.toLowerCase();
@@ -206,13 +245,13 @@ export class ChartService {
                 coin = COIN_ALIASES[lower];
                 break;
             }
-            if (/^[a-zA-Z][a-zA-Z0-9]{1,9}$/.test(w)) {
+            if (/^(?!\d+$)[a-zA-Z0-9]{1,12}$/.test(w)) {
                 coin = w.toUpperCase();
                 break;
             }
         }
 
-        return { coin, timeframe };
+        return { coin, timeframe, isFutures };
     }
 
     /**
@@ -232,39 +271,83 @@ export class ChartService {
 
     /**
      * Generates a candlestick chart image for any coin on Binance across supported timeframes.
+     * Supports both Binance Spot and Binance USD-M Futures with automatic fallback.
      */
     public async getCandlestickChart(
         coinInput = "BTC",
         timeframeInput = "24h",
-        forceFresh = false
+        forceFresh = false,
+        preferFutures = false
     ): Promise<{ result?: ChartResult; notFound?: boolean; error?: string }> {
-        const { coin, pair } = this.resolveCoin(coinInput);
+        let { coin, pair } = this.resolveCoin(coinInput);
         const tfKey = timeframeInput.toLowerCase();
         const tf = TIMEFRAMES[tfKey] || TIMEFRAMES["24h"];
         const now = Date.now();
 
-        // Cache key per pair + timeframe
-        const cacheKey = `${pair}_${tfKey}`;
+        // Cache key per pair + timeframe + market preference
+        const cacheKey = `${pair}_${tfKey}_${preferFutures ? "futures" : "any"}`;
         const cached = chartCache.get(cacheKey);
         if (!forceFresh && cached && (now - cached.timestamp) < CACHE_TTL_MS) {
             return { result: cached.result };
         }
 
         try {
-            // 1. Fetch live candles from Binance for the chosen interval
-            const res = await axios.get(this.BINANCE_KLINES_URL, {
-                params: {
-                    symbol: pair,
-                    interval: tf.interval,
-                    limit: tf.limit
-                },
-                timeout: 5000
-            });
+            let rawData: any[] | null = null;
+            let market: "Spot" | "Futures" = "Spot";
 
-            const rawData = res.data;
-            if (!Array.isArray(rawData) || rawData.length === 0) {
-                console.warn(`[ChartService] Empty kline data from Binance for ${pair} (${tf.interval})`);
-                return { error: `No market data available for ${coin}.` };
+            const fetchKlines = async (url: string, symbol: string): Promise<any[] | null> => {
+                try {
+                    const res = await axios.get(url, {
+                        params: {
+                            symbol,
+                            interval: tf.interval,
+                            limit: tf.limit
+                        },
+                        timeout: 5000
+                    });
+                    return Array.isArray(res.data) && res.data.length > 0 ? res.data : null;
+                } catch {
+                    return null;
+                }
+            };
+
+            // 1. If user explicitly requested futures OR coin starts with 1000 (e.g. 1000PEPE)
+            if (preferFutures || pair.startsWith("1000")) {
+                rawData = await fetchKlines(this.BINANCE_FUTURES_URL, pair);
+                if (rawData) {
+                    market = "Futures";
+                }
+            }
+
+            // 2. Try Spot if not already loaded from Futures
+            if (!rawData && !preferFutures) {
+                rawData = await fetchKlines(this.BINANCE_SPOT_URL, pair);
+                if (rawData) {
+                    market = "Spot";
+                }
+            }
+
+            // 3. Fallback to Futures if Spot failed (for Futures-only coins like NEIROETH, or if Spot returned 400)
+            if (!rawData) {
+                rawData = await fetchKlines(this.BINANCE_FUTURES_URL, pair);
+                if (rawData) {
+                    market = "Futures";
+                }
+            }
+
+            // 4. Fallback to 1000x multiplier on Futures (e.g. PEPE -> 1000PEPE, BONK -> 1000BONK, SATS -> 1000SATS)
+            if (!rawData && !pair.startsWith("1000")) {
+                const thousandPair = `1000${pair}`;
+                rawData = await fetchKlines(this.BINANCE_FUTURES_URL, thousandPair);
+                if (rawData) {
+                    market = "Futures";
+                    pair = thousandPair;
+                    coin = `1000${coin}`;
+                }
+            }
+
+            if (!rawData || rawData.length === 0) {
+                return { notFound: true, error: `Coin "${coin}" was not found on Binance Spot or Futures.` };
             }
 
             let periodHigh = -Infinity;
@@ -290,12 +373,16 @@ export class ChartService {
             const formattedHigh = formatPrice(periodHigh);
             const formattedLow = formatPrice(periodLow);
 
+            const isFutures = market === "Futures";
+            const marketBadge = isFutures ? " (Perp)" : "";
+            const marketSubtitle = isFutures ? "⚡ P2PFather Futures" : "⚡ P2PFather";
+
             // 2. Configure TradingView-styled candlestick chart (1200x675 HD)
             const chartConfig = {
                 type: "candlestick",
                 data: {
                     datasets: [{
-                        label: `${coin}/USDT`,
+                        label: `${coin}/USDT${marketBadge}`,
                         data: candlestickData,
                         color: {
                             up: "#26a69a",       // TradingView Teal
@@ -309,14 +396,14 @@ export class ChartService {
                         legend: { display: false },
                         title: {
                             display: true,
-                            text: `${coin}/USDT • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
+                            text: `${coin}/USDT${marketBadge} • ${tf.label} • $${formattedPrice} (${isUp ? "+" : ""}${priceChange.toFixed(2)}%)`,
                             font: { size: 24, weight: "bold", family: "Trebuchet MS" },
                             color: isUp ? "#26a69a" : "#ef5350",
                             padding: { top: 14, bottom: 6 }
                         },
                         subtitle: {
                             display: true,
-                            text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ⚡ P2PFather`,
+                            text: `O: $${formatPrice(firstCandle.o)}   H: $${formattedHigh}   L: $${formattedLow}   C: $${formattedPrice}  •  ${marketSubtitle}`,
                             font: { size: 14, family: "Trebuchet MS" },
                             color: "#787b86",
                             padding: { bottom: 16 }
@@ -360,7 +447,7 @@ export class ChartService {
             const changeSymbol = isUp ? "🟢 +" : "🔴 ";
 
             const caption = [
-                `📊 *${coin} (USDT) — ${tf.label} Candlestick Chart*`,
+                `📊 *${coin} (USDT${isFutures ? " Perp" : ""}) — ${tf.label} Candlestick Chart*`,
                 `💰 *Price:* $${formattedPrice}`,
                 `📈 *High:* $${formattedHigh}`,
                 `📉 *Low:* $${formattedLow}`,
@@ -377,7 +464,8 @@ export class ChartService {
                 priceChange,
                 high24h: periodHigh,
                 low24h: periodLow,
-                caption
+                caption,
+                market
             };
 
             chartCache.set(cacheKey, { result, timestamp: now });
@@ -386,7 +474,7 @@ export class ChartService {
             // Check for Binance invalid symbol error (code -1121)
             const binanceError = err.response?.data;
             if (binanceError && binanceError.code === -1121) {
-                return { notFound: true, error: `Coin "${coin}" was not found on Binance.` };
+                return { notFound: true, error: `Coin "${coin}" was not found on Binance Spot or Futures.` };
             }
 
             console.error(`[ChartService] Error generating chart for ${coin} (${tfKey}):`, err?.message || err);
