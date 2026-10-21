@@ -53,6 +53,8 @@ const envSchema = z.object({
     WA_BOT_NUMBER: z.string().default("917012751478"),
     WA_ADMIN_SECRET: z.string().default(""),
     WA_OFFICIAL_GROUP_JID: z.string().default("120363410362268845@g.us"),
+    ENABLE_UPBIT_WATCHER: z.string().default("true"),
+    TREE_NEWS_API_KEY: z.string().default(""),
 
     // Redis
     REDIS_URL: z.string().default(""),

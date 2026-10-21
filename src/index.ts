@@ -35,12 +35,14 @@ async function main() {
         const { startExpiryJob, startLiquiditySyncJob, startTradeReconciliationJob } = await import("./services/jobs");
         const { escrow } = await import("./services/escrow");
         const { startMetaWhatsAppMonitor } = await import("./services/wa-meta-monitor");
+        const { startUpbitListingWatcher } = await import("./services/upbitWatcher");
         
         // 🚀 Start background services
         startExpiryJob();
         startLiquiditySyncJob(escrow);
         startTradeReconciliationJob();
         startMetaWhatsAppMonitor(); // 🔍 Track Meta WhatsApp Web client updates & alert Admin on TG
+        startUpbitListingWatcher(); // ⚡ Real-time Upbit listing alert monitor for WhatsApp group
     }
 
     // Hypermeow Go bridge is the active WhatsApp engine — Baileys removed
