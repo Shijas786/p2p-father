@@ -250,33 +250,202 @@ ${linksBlock}
 ⚡ *P2P Father Market Watch*`;
 }
 
+export interface BinanceParsedNotice {
+    id: string;
+    tokens: string;
+    rawTitle: string;
+    noticeUrl: string;
+    tweetUrl?: string;
+    isFromX: boolean;
+    tradingOpensAt?: string;
+    hasSeedTag: boolean;
+    imageUrl?: string;
+    timestamp: number;
+}
+
 /**
- * Sends the alert message to the official WhatsApp community group.
+ * Checks if incoming news payload is a Binance Spot listing notice.
+ * Strictly filters out Futures perps, margin-only additions, delistings, and marketing contests.
+ */
+export function parseBinanceListing(data: any): BinanceParsedNotice | null {
+    if (!data || typeof data !== "object") return null;
+
+    const source = (data.text || data.source || "").toString();
+    const body = (data.body || data.title || "").toString();
+    const combined = `${source} ${body}`;
+    const combinedLower = combined.toLowerCase();
+
+    const sourceLower = source.toLowerCase().trim();
+    const linkLower = (data.link || data.url || "").toLowerCase().trim();
+    const venueLower = (data.venue || "").toString().toLowerCase().trim();
+
+    // 1. Authenticity check: Must be official Binance
+    const tweetAuthorMatch = body.match(/^([^(:]+)\s*\(@([a-zA-Z0-9_]+)\)\s*:/);
+    const tweetAuthorHandle = tweetAuthorMatch ? tweetAuthorMatch[2].toLowerCase() : "";
+    const isOfficialTweet = tweetAuthorHandle === "binance";
+
+    const isOfficialBinance =
+        isOfficialTweet ||
+        sourceLower.includes("binance en") ||
+        sourceLower.includes("binance zh") ||
+        sourceLower === "binance" ||
+        venueLower === "binance" ||
+        linkLower.includes("binance.com/en/support/announcement") ||
+        linkLower.includes("x.com/binance") ||
+        linkLower.includes("twitter.com/binance");
+
+    if (!isOfficialBinance) return null;
+
+    // 2. Strict exclusion of Futures, Margin-only, Delistings, Contests, Outages
+    if (data.kind === "delisting" || data.kind === "outage" || data.kind === "airdrop") {
+        return null;
+    }
+
+    const exclusionKeywords = [
+        "futures will launch",
+        "futures will list",
+        "perpetual contract",
+        "usdⓈ-m",
+        "coin-m",
+        "perpetuals",
+        "will delist",
+        "delisting",
+        "delist",
+        "tournament",
+        "competition",
+        "giveaway",
+        "reward",
+        "promotion",
+        "fee discount"
+    ];
+    if (exclusionKeywords.some((kw) => combinedLower.includes(kw))) {
+        return null;
+    }
+
+    // 3. Must be a SPOT listing announcement
+    const isSpotListing =
+        combinedLower.includes("will list") ||
+        combinedLower.includes("new spot listing") ||
+        (combinedLower.includes("adds") && combinedLower.includes("spot")) ||
+        combinedLower.includes("spot trading pairs") ||
+        combinedLower.includes("seed tag applied") ||
+        combinedLower.includes("innovation zone") ||
+        (data.kind === "listing" && !combinedLower.includes("futures"));
+
+    if (!isSpotListing) return null;
+
+    // 4. Extract token symbols
+    const tokens: string[] = [];
+
+    // A. Check parentheses in title: e.g. "Peanut the Squirrel (PNUT)"
+    const parenMatches = [...combined.matchAll(/\(([A-Z0-9]{2,10})\)/g)];
+    parenMatches.forEach((m) => {
+        const sym = m[1].toUpperCase();
+        if (!["USDT", "BTC", "BNB", "FDUSD", "EUR", "TRY", "USDC", "SPOT", "DETAIL", "UTC"].includes(sym)) {
+            if (!tokens.includes(sym)) tokens.push(sym);
+        }
+    });
+
+    // B. Check cash tags like $PNUT in tweet
+    const cashtagMatches = combined.match(/\$([A-Z0-9]{2,10})\b/gi);
+    if (cashtagMatches) {
+        cashtagMatches.forEach((c) => {
+            const sym = c.replace("$", "").toUpperCase();
+            if (!["USDT", "BTC", "BNB", "FDUSD", "BINANCE"].includes(sym)) {
+                if (!tokens.includes(sym)) tokens.push(sym);
+            }
+        });
+    }
+
+    const primaryToken = tokens.length > 0 ? tokens.map((t) => `$${t}`).join(", ") : "New Token";
+    const uniqueId = String(data._id || data.id || `BINANCE_${tokens.join("_")}_${Date.now()}`);
+    const rawLink = String(data.link || data.url || "").trim().replace(/#$/, "");
+
+    // Notice URL & Tweet URL
+    const directNoticeMatch = body.match(/https?:\/\/(?:www\.)?binance\.com\/[^\s)\]]+/);
+    const noticeUrl = directNoticeMatch
+        ? directNoticeMatch[0].replace(/[.,;:!?]+$/, "")
+        : rawLink.includes("binance.com")
+        ? rawLink
+        : "https://www.binance.com/en/support/announcement";
+
+    const isTweetUrl = rawLink.includes("twitter.com") || rawLink.includes("x.com");
+    const tweetUrl = isTweetUrl ? rawLink : undefined;
+
+    // Trading opens at
+    const timeMatch = combined.match(/(?:Trading opens at|open trading for[^\n\r]+at)\s*[:：]?\s*([0-9]{4}-[0-9]{2}-[0-9]{2}\s+[0-9]{2}:[0-9]{2}(?:\s*\([A-Z]+\))?|[^\n\r.]+)/i);
+    const tradingOpensAt = timeMatch ? timeMatch[1].trim() : undefined;
+
+    const hasSeedTag = combinedLower.includes("seed tag");
+
+    // Poster image
+    const rawImage = (data.image || data.media || data.imageUrl || "")?.toString().trim();
+    const imageUrl = rawImage && /^https?:\/\//i.test(rawImage) ? rawImage : undefined;
+
+    return {
+        id: uniqueId,
+        tokens: primaryToken,
+        rawTitle: body || source,
+        noticeUrl,
+        tweetUrl,
+        isFromX: isTweetUrl || isOfficialTweet,
+        tradingOpensAt,
+        hasSeedTag,
+        imageUrl,
+        timestamp: data.ts || data.time || Date.now()
+    };
+}
+
+/**
+ * Formats a high-visibility Binance Spot listing alert message.
+ */
+export function formatBinanceAlert(notice: BinanceParsedNotice): string {
+    const seedTagBadge = notice.hasSeedTag ? "\n🏷️ *Seed Tag Applied (High Volatility)*" : "";
+
+    let detailsBlock = `🪙 *Token:* ${notice.tokens}`;
+    if (notice.tradingOpensAt) {
+        detailsBlock += `\n⏰ *Trading Opens:* ${notice.tradingOpensAt}`;
+    }
+
+    let linksBlock = `🔗 *Official Notice:* ${notice.noticeUrl}`;
+    if (notice.tweetUrl && notice.tweetUrl !== notice.noticeUrl) {
+        linksBlock += `\n🐦 *Tweet Link:* ${notice.tweetUrl}`;
+    }
+
+    return `🚨 *BINANCE NEW SPOT LISTING!* 🚨\n\n🔥 *TIER-1 EXCHANGE SPOT LISTING!*${seedTagBadge}\n${detailsBlock}\n\n${linksBlock}\n\n⚡ *P2P Father Market Watch*`;
+}
+
+/**
+ * Sends a listing alert message to the official WhatsApp community group.
  * Sends image poster if available with caption, otherwise clean text.
  */
-export async function sendUpbitAlertToWhatsApp(notice: UpbitParsedNotice, message: string): Promise<boolean> {
+export async function sendAlertToWhatsApp(notice: { imageUrl?: string }, message: string, exchange: string): Promise<boolean> {
     const officialGroupJid = env.WA_OFFICIAL_GROUP_JID || "120363410362268845@g.us";
     try {
         if (notice.imageUrl) {
-            console.log(`[Upbit-Watcher] 📸 Attempting image alert dispatch with: ${notice.imageUrl}`);
+            console.log(`[${exchange}-Watcher] 📸 Attempting image alert dispatch with: ${notice.imageUrl}`);
             const imageSent = await hypermeowClient.sendImage(officialGroupJid, notice.imageUrl, message);
             if (imageSent) {
-                console.log(`[Upbit-Watcher] ✅ Dispatched listing image alert to group: ${officialGroupJid}`);
+                console.log(`[${exchange}-Watcher] ✅ Dispatched listing image alert to group: ${officialGroupJid}`);
                 return true;
             }
         }
 
         const success = await hypermeowClient.sendText(officialGroupJid, message);
         if (success) {
-            console.log(`[Upbit-Watcher] ✅ Dispatched listing text alert to group: ${officialGroupJid}`);
+            console.log(`[${exchange}-Watcher] ✅ Dispatched listing text alert to group: ${officialGroupJid}`);
             return true;
         } else {
-            console.warn(`[Upbit-Watcher] ⚠️ SendText returned false for ${officialGroupJid}`);
+            console.warn(`[${exchange}-Watcher] ⚠️ SendText returned false for ${officialGroupJid}`);
         }
     } catch (err: any) {
-        console.error(`[Upbit-Watcher] ❌ Error sending alert to WhatsApp group:`, err?.message || err);
+        console.error(`[${exchange}-Watcher] ❌ Error sending alert to WhatsApp group:`, err?.message || err);
     }
     return false;
+}
+
+export async function sendUpbitAlertToWhatsApp(notice: UpbitParsedNotice, message: string): Promise<boolean> {
+    return sendAlertToWhatsApp(notice, message, "Upbit");
 }
 
 let activeWs: WebSocket | null = null;
@@ -395,28 +564,144 @@ function connectWebSocket(): void {
     }
 }
 
+// 🛡️ ANTI-SPAM & CIRCUIT BREAKER GUARDS:
+// Crucial for WhatsApp: Prevents duplicate messages, spam loops, or rapid bursts from endangering the WA account.
+const MIN_ALERT_INTERVAL_MS = 5000; // Minimum 5 seconds between consecutive listing alerts
+const MAX_ALERTS_PER_MINUTE = 3;    // Maximum 3 alerts in any rolling 60-second window
+let lastAlertSentTime = 0;
+const recentAlertTimestamps: number[] = [];
+let circuitBreakerTrippedUntil = 0;
+
+function canDispatchAlert(): { allowed: boolean; reason?: string } {
+    const now = Date.now();
+    if (now < circuitBreakerTrippedUntil) {
+        return {
+            allowed: false,
+            reason: `Circuit breaker active until ${new Date(circuitBreakerTrippedUntil).toISOString()} (burst storm protection)`
+        };
+    }
+
+    if (now - lastAlertSentTime < MIN_ALERT_INTERVAL_MS) {
+        return {
+            allowed: false,
+            reason: `Cooldown active (< ${MIN_ALERT_INTERVAL_MS / 1000}s since last alert)`
+        };
+    }
+
+    while (recentAlertTimestamps.length > 0 && recentAlertTimestamps[0] < now - 60000) {
+        recentAlertTimestamps.shift();
+    }
+
+    if (recentAlertTimestamps.length >= MAX_ALERTS_PER_MINUTE) {
+        circuitBreakerTrippedUntil = now + 3 * 60 * 1000; // Trip for 3 minutes
+        console.warn("[Listing-Watcher] 🛑 CIRCUIT BREAKER TRIPPED: >=3 alerts dispatched in 60s. Halting for 3 mins to protect WhatsApp account from ban.");
+        return {
+            allowed: false,
+            reason: "Circuit breaker tripped (burst rate limit reached)"
+        };
+    }
+
+    return { allowed: true };
+}
+
+function recordAlertDispatched(): void {
+    const now = Date.now();
+    lastAlertSentTime = now;
+    recentAlertTimestamps.push(now);
+}
+
 async function processIncomingNewsPayload(payload: any, channel: "WebSocket" | "Poller"): Promise<void> {
-    const notice = parseUpbitListing(payload);
-    if (!notice) return;
+    // 1. Check if it is an Upbit new listing
+    const upbitNotice = parseUpbitListing(payload);
+    if (upbitNotice) {
+        pruneSeenAnnouncements();
 
-    // Deduplicate by token and ID
-    const dedupeKey = notice.token !== "$New Asset"
-        ? `${notice.token}_${notice.markets.join("_")}`
-        : (notice.id || notice.noticeUrl);
+        // Multi-key deduplication (Token + Announcement ID + URLs)
+        const cleanToken = upbitNotice.token.replace("$", "").toUpperCase();
+        const tokenKey = `UPBIT_TOKEN_${cleanToken}`;
+        const idKey = `UPBIT_ID_${upbitNotice.id}`;
+        const urlKey = `URL_${upbitNotice.noticeUrl}`;
+        const tweetKey = upbitNotice.tweetUrl ? `URL_${upbitNotice.tweetUrl}` : null;
 
-    pruneSeenAnnouncements();
+        const isDuplicate =
+            (cleanToken !== "NEW ASSET" && seenAnnouncements.has(tokenKey)) ||
+            seenAnnouncements.has(idKey) ||
+            seenAnnouncements.has(urlKey) ||
+            (tweetKey && seenAnnouncements.has(tweetKey));
 
-    if (seenAnnouncements.has(dedupeKey) || (notice.id && seenAnnouncements.has(notice.id))) {
+        if (isDuplicate) {
+            console.log(`[Listing-Watcher] ⏭️ Dropping duplicate Upbit notice for ${upbitNotice.token}`);
+            return;
+        }
+
+        const throttle = canDispatchAlert();
+        if (!throttle.allowed) {
+            console.warn(`[Listing-Watcher] ⚠️ Blocked Upbit alert dispatch for ${upbitNotice.token}: ${throttle.reason}`);
+            return;
+        }
+
+        // Mark all keys as seen synchronously BEFORE dispatching
+        const now = Date.now();
+        if (cleanToken !== "NEW ASSET") seenAnnouncements.set(tokenKey, now);
+        seenAnnouncements.set(idKey, now);
+        seenAnnouncements.set(urlKey, now);
+        if (tweetKey) seenAnnouncements.set(tweetKey, now);
+
+        console.log(`[Listing-Watcher] 🚀 NEW UPBIT LISTING DETECTED via ${channel}: ${upbitNotice.token} [${upbitNotice.markets.join(", ")}]`);
+
+        const alertMessage = formatUpbitAlert(upbitNotice);
+        const dispatched = await sendAlertToWhatsApp(upbitNotice, alertMessage, "Upbit");
+        if (dispatched) {
+            recordAlertDispatched();
+        }
         return;
     }
 
-    seenAnnouncements.set(dedupeKey, Date.now());
-    if (notice.id) seenAnnouncements.set(notice.id, Date.now());
+    // 2. Check if it is a Binance Spot listing
+    const binanceNotice = parseBinanceListing(payload);
+    if (binanceNotice) {
+        pruneSeenAnnouncements();
 
-    console.log(`[Upbit-Watcher] 🚀 NEW UPBIT LISTING DETECTED via ${channel}: ${notice.token} [${notice.markets.join(", ")}]`);
+        // Multi-key deduplication (Tokens + Announcement ID + URLs)
+        const cleanTokens = binanceNotice.tokens.replace(/[\s$]/g, "").toUpperCase();
+        const tokensKey = `BINANCE_TOKENS_${cleanTokens}`;
+        const idKey = `BINANCE_ID_${binanceNotice.id}`;
+        const urlKey = `URL_${binanceNotice.noticeUrl}`;
+        const tweetKey = binanceNotice.tweetUrl ? `URL_${binanceNotice.tweetUrl}` : null;
 
-    const alertMessage = formatUpbitAlert(notice);
-    await sendUpbitAlertToWhatsApp(notice, alertMessage);
+        const isDuplicate =
+            (cleanTokens !== "NEWTOKEN" && seenAnnouncements.has(tokensKey)) ||
+            seenAnnouncements.has(idKey) ||
+            seenAnnouncements.has(urlKey) ||
+            (tweetKey && seenAnnouncements.has(tweetKey));
+
+        if (isDuplicate) {
+            console.log(`[Listing-Watcher] ⏭️ Dropping duplicate Binance notice for ${binanceNotice.tokens}`);
+            return;
+        }
+
+        const throttle = canDispatchAlert();
+        if (!throttle.allowed) {
+            console.warn(`[Listing-Watcher] ⚠️ Blocked Binance alert dispatch for ${binanceNotice.tokens}: ${throttle.reason}`);
+            return;
+        }
+
+        // Mark all keys as seen synchronously BEFORE dispatching
+        const now = Date.now();
+        if (cleanTokens !== "NEWTOKEN") seenAnnouncements.set(tokensKey, now);
+        seenAnnouncements.set(idKey, now);
+        seenAnnouncements.set(urlKey, now);
+        if (tweetKey) seenAnnouncements.set(tweetKey, now);
+
+        console.log(`[Listing-Watcher] 🚀 NEW BINANCE SPOT LISTING DETECTED via ${channel}: ${binanceNotice.tokens}`);
+
+        const alertMessage = formatBinanceAlert(binanceNotice);
+        const dispatched = await sendAlertToWhatsApp(binanceNotice, alertMessage, "Binance");
+        if (dispatched) {
+            recordAlertDispatched();
+        }
+        return;
+    }
 }
 
 function scheduleReconnect(): void {
