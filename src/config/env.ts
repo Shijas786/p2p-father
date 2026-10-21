@@ -52,6 +52,7 @@ const envSchema = z.object({
     // WhatsApp
     WA_BOT_NUMBER: z.string().default("917012751478"),
     WA_ADMIN_SECRET: z.string().default(""),
+    WA_OFFICIAL_GROUP_JID: z.string().default("120363410362268845@g.us"),
 
     // Redis
     REDIS_URL: z.string().default(""),

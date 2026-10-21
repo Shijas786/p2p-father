@@ -426,7 +426,27 @@ const WELCOME_TEMPLATES = [
 const recentlyWelcomed = new Map<string, number>();
 
 /**
+ * Checks if the given group JID is the official community group.
+ */
+export function isOfficialWhatsAppGroup(groupJid: string): boolean {
+    const rawConfig = env.WA_OFFICIAL_GROUP_JID || (process.env as any).WA_OFFICIAL_GROUP_JID || "120363410362268845@g.us";
+    const officialGroupJids = rawConfig
+        .split(",")
+        .map((j: string) => j.trim().toLowerCase())
+        .filter(Boolean);
+
+    const normalizedGroupJid = (groupJid || "").toLowerCase();
+    return officialGroupJids.some(
+        (official: string) =>
+            normalizedGroupJid === official ||
+            normalizedGroupJid.startsWith(official.split("@")[0]) ||
+            official.startsWith(normalizedGroupJid.split("@")[0])
+    );
+}
+
+/**
  * Sends welcome message when a new participant joins a WhatsApp group.
+ * NOTE: Welcome messages are restricted STRICTLY to the official main group.
  */
 export async function handleGroupJoin(
     sock: WASocket,
@@ -436,6 +456,12 @@ export async function handleGroupJoin(
     if (!participantJids || participantJids.length === 0) return;
 
     await registerGroupIfNew(groupJid, sock);
+
+    // 🛡️ Restrict welcome messages strictly to the official main community group
+    if (!isOfficialWhatsAppGroup(groupJid)) {
+        console.log(`[WA-Welcome] ⏭️ Skipping welcome: ${groupJid} is not the official main group.`);
+        return;
+    }
 
     const now = Date.now();
     for (const rawJid of participantJids) {
