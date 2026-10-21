@@ -297,3 +297,162 @@ describe("safeHtml Sanitizer", () => {
         assert.equal(result.includes(">"), false);
     });
 });
+
+// ─── 8. Upbit Real-Time Listing Watcher ─────────────────────────────────────
+describe("Upbit Real-Time Listing Watcher", () => {
+    const { parseUpbitListing, formatUpbitAlert } = require("../services/upbitWatcher");
+
+    it("correctly parses Upbit official website listing notice (e.g. AXIS KRW/BTC/USDT)", () => {
+        const item = {
+            _id: "1792580401805AKBU",
+            source: "Upbit",
+            title: "액시스로보틱스(AXIS) 신규 거래지원 안내 (KRW, BTC, USDT 마켓)",
+            url: "https://upbit.com/service_center/notice?id=1792580401626",
+            venue: "upbit",
+            kind: "listing"
+        };
+        const parsed = parseUpbitListing(item);
+        assert.ok(parsed);
+        assert.equal(parsed.id, "1792580401805AKBU");
+        assert.equal(parsed.token, "$AXIS");
+        assert.deepEqual(parsed.markets, ["KRW", "BTC", "USDT"]);
+        assert.equal(parsed.isKrw, true);
+        assert.equal(parsed.isFromX, false);
+        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice?id=1792580401626");
+        assert.equal(parsed.tweetUrl, undefined);
+    });
+
+    it("correctly parses Upbit English listing tweet with hashtags and handles", () => {
+        const tweetItem = {
+            _id: "198129381",
+            source: "Twitter",
+            title: "Official_Upbit (@Official_Upbit): Market Support for Axis Robotics (AXIS)\n\nSupported Markets: KRW, BTC, USDT Markets\nTrading opens at: 2026-10-21 22:00 KST\n\n#Upbit #AXIS\n@axisrobotics\n\nNotice: https://upbit.com/service_center/notice?id=1673103094",
+            url: "https://x.com/Official_Upbit/status/198129381#",
+            image: "https://pbs.twimg.com/media/poster.jpg"
+        };
+        const parsed = parseUpbitListing(tweetItem);
+        assert.ok(parsed);
+        assert.equal(parsed.token, "$AXIS");
+        assert.deepEqual(parsed.markets, ["KRW", "BTC", "USDT"]);
+        assert.equal(parsed.isKrw, true);
+        assert.equal(parsed.isFromX, true);
+        assert.equal(parsed.projectHandle, "@axisrobotics");
+        assert.equal(parsed.tradingOpensAt, "2026-10-21 22:00 KST");
+        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice?id=1673103094");
+        assert.equal(parsed.tweetUrl, "https://x.com/Official_Upbit/status/198129381");
+        assert.equal(parsed.imageUrl, "https://pbs.twimg.com/media/poster.jpg");
+    });
+
+    it("strictly rejects delisting notices (거래지원 종료) preventing false positive alerts", () => {
+        const delistingItem = {
+            _id: "100",
+            source: "Upbit",
+            title: "위믹스(WEMIX) 거래지원 종료 안내 (KRW, BTC 마켓)",
+            url: "https://upbit.com/service_center/notice?id=100",
+            venue: "upbit"
+        };
+        assert.equal(parseUpbitListing(delistingItem), null);
+    });
+
+    it("strictly rejects investment warning and caution designation notices", () => {
+        const warningItem = {
+            _id: "101",
+            source: "Upbit",
+            title: "[디지털 자산] 투자유의종목 지정 안내 (KRW 마켓)",
+            url: "https://upbit.com/service_center/notice?id=101"
+        };
+        assert.equal(parseUpbitListing(warningItem), null);
+    });
+
+    it("rejects trading events and marketing contests", () => {
+        const contestItem = {
+            _id: "102",
+            source: "Upbit",
+            title: "총 2,883,000 AXIS 경품! 액시스로보틱스(AXIS) 거래/순입금 TOP 랭킹 이벤트",
+            url: "https://upbit.com/service_center/notice?id=938518360"
+        };
+        assert.equal(parseUpbitListing(contestItem), null);
+    });
+
+    it("rejects routine maintenance and withdrawal outages", () => {
+        const outageItem = {
+            _id: "103",
+            source: "Upbit",
+            title: "루나클래식(LUNC) 출금 일시 중단 안내 (10/26 20:00 ~)",
+            url: "https://upbit.com/service_center/notice?id=1950729621",
+            kind: "outage"
+        };
+        assert.equal(parseUpbitListing(outageItem), null);
+    });
+
+    it("rejects third-party tweets merely mentioning @Official_Upbit", () => {
+        const mentionTweet = {
+            _id: "104",
+            source: "Twitter",
+            title: "Digital Asset (@digitalasset): Korean regulation now permits institutions to trade. Yuval discusses with @Official_Upbit.",
+            url: "https://x.com/digitalasset/status/2112551662472605704"
+        };
+        assert.equal(parseUpbitListing(mentionTweet), null);
+    });
+
+    it("rejects spoof and scam Twitter handles", () => {
+        const scamTweet = {
+            _id: "105",
+            source: "Twitter",
+            title: "Official_Upblt (@Official_Upblt): Market Support for SCAMCOIN (SCAM)\nSupported Markets: KRW",
+            url: "https://x.com/Official_Upblt/status/999999"
+        };
+        assert.equal(parseUpbitListing(scamTweet), null);
+    });
+
+    it("extracts correct token when notice contains multiple parentheses", () => {
+        const multiParen = {
+            _id: "106",
+            source: "Upbit",
+            title: "신규 거래지원 안내 (BTC) - 솔라나(SOL)",
+            url: "https://upbit.com/service_center/notice?id=106"
+        };
+        const parsed = parseUpbitListing(multiParen);
+        assert.ok(parsed);
+        assert.equal(parsed.token, "$SOL");
+    });
+
+    it("sanitizes empty whitespace image URLs to undefined", () => {
+        const whitespaceImageItem = {
+            _id: "107",
+            source: "Upbit",
+            title: "신규 거래지원 안내 - 솔라나(SOL) (KRW 마켓)",
+            url: "https://upbit.com/service_center/notice?id=107",
+            image: "   "
+        };
+        const parsed = parseUpbitListing(whitespaceImageItem);
+        assert.ok(parsed);
+        assert.equal(parsed.imageUrl, undefined);
+    });
+
+    it("formats high-visibility WhatsApp alert matching official template", () => {
+        const notice = {
+            id: "198129381",
+            token: "$AXIS",
+            markets: ["KRW", "BTC", "USDT"],
+            isKrw: true,
+            rawTitle: "Market Support for Axis Robotics (AXIS)",
+            noticeUrl: "https://upbit.com/service_center/notice?id=1673103094",
+            tweetUrl: "https://x.com/Official_Upbit/status/198129381",
+            isFromX: true,
+            tradingOpensAt: "2026-10-21 22:00 KST",
+            projectHandle: "@axisrobotics",
+            timestamp: Date.now()
+        };
+        const msg = formatUpbitAlert(notice);
+        assert.ok(msg.includes("🚨 *UPBIT NEW LISTING ALERT!* 🚨"));
+        assert.ok(msg.includes("🔥 *KRW FIAT PAIR LISTED! (HIGH VOLATILITY)*"));
+        assert.ok(msg.includes("🪙 *Token:* $AXIS (@axisrobotics)"));
+        assert.ok(msg.includes("📈 *Markets:* KRW / BTC / USDT"));
+        assert.ok(msg.includes("⏰ *Trading Opens:* 2026-10-21 22:00 KST"));
+        assert.ok(msg.includes("🔗 *Official Notice:* https://upbit.com/service_center/notice?id=1673103094"));
+        assert.ok(msg.includes("🐦 *Tweet Link:* https://x.com/Official_Upbit/status/198129381"));
+        assert.ok(msg.includes("⚡ *P2P Father Market Watch*"));
+    });
+});
+
