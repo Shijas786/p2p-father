@@ -10,7 +10,7 @@ export interface VIPUserConfig {
 }
 
 // Default minimum trade size in USD required to trigger VIP fee cashback
-export const MIN_VIP_CASHBACK_TRADE_USD = 100;
+export const MIN_VIP_CASHBACK_TRADE_USD = 50;
 
 // Default VIP traders list
 const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
@@ -26,7 +26,7 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         username: "Grim0011",
         rebateBps: 25, // 0.25% rebate
         applyAfterTimestamp: 0,
-        minTradeUsd: 100,
+        minTradeUsd: 50,
         hideVipBadge: true
     },
     {
@@ -34,7 +34,7 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         username: "Xaudaddys",
         rebateBps: 25, // 0.25% rebate
         applyAfterTimestamp: 0,
-        minTradeUsd: 100,
+        minTradeUsd: 50,
         hideVipBadge: true
     },
     {
@@ -42,7 +42,7 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         username: "societyisamyran",
         rebateBps: 25, // 0.25% rebate (100% cashback / 0% fee)
         applyAfterTimestamp: 0,
-        minTradeUsd: 100 // $100 minimum threshold
+        minTradeUsd: 50 // $50 minimum threshold
     }
 ];
 
