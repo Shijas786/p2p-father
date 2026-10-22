@@ -18,21 +18,24 @@ export class HypermeowClient {
         return Boolean(process.env.HYPERMEOW_URL);
     }
 
-    public async checkHealth(): Promise<{ connected: boolean; engine?: string }> {
+    public async checkHealth(): Promise<{ connected: boolean; engine?: string; paired?: boolean; has_qr?: boolean; last_qr_err?: string }> {
         try {
-            const res = await axios.get(`${this.baseUrl}/health`, { timeout: 3000 });
+            const res = await axios.get(`${this.baseUrl}/health`, { timeout: 4000 });
             return {
                 connected: Boolean(res.data?.connected),
-                engine: res.data?.engine
+                engine: res.data?.engine,
+                paired: Boolean(res.data?.paired),
+                has_qr: Boolean(res.data?.has_qr),
+                last_qr_err: res.data?.last_qr_err,
             };
-        } catch {
-            return { connected: false };
+        } catch (e: any) {
+            return { connected: false, last_qr_err: e?.message };
         }
     }
 
     public async getQrCode(): Promise<string | null> {
         try {
-            const res = await axios.get(`${this.baseUrl}/qr`, { timeout: 3000 });
+            const res = await axios.get(`${this.baseUrl}/qr`, { timeout: 6000 });
             return res.data?.qr || null;
         } catch {
             return null;

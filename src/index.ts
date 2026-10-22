@@ -131,6 +131,7 @@ async function main() {
                     connected: health.connected,
                     qr: qrDataUrl,
                     provider: "hypermeow",
+                    details: health,
                 });
                 return;
             }

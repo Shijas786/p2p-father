@@ -411,15 +411,14 @@ export async function registerGroupIfNew(groupJid: string, sock: WASocket): Prom
     }
 }
 
-// ─── Group Welcome Templates (Telegram Parity) ────────────────────────────────
-const WELCOME_TEMPLATES = [
-    (name: string) => `Welcome ${name}! Make yourself at home in our P2P trading hub 🔥`,
-    (name: string) => `Hey ${name}, welcome to the family 🎩 Big trades ahead!`,
-    (name: string) => `Welcome ${name}! Fast, escrow-protected P2P exchange starts here ⚡`,
-    (name: string) => `Hey ${name}, glad you joined us 🚀 Feel free to ask any questions!`,
-    (name: string) => `Welcome to the squad, ${name}! 🤝 Fast escrow at your fingertips.`,
-    (name: string) => `Welcome ${name}! 🎩 Glad to have another active trader in the group!`,
-    (name: string) => `Hey ${name}, welcome aboard 🌟 Happy trading!`,
+// ─── Group Welcome Templates (Short, punchy & human) ──────────────────────────
+export const WELCOME_TEMPLATES = [
+    (tag: string) => tag ? `Welcome ${tag}! 🤝` : `Welcome! 🤝`,
+    (tag: string) => tag ? `Hey ${tag}, welcome to P2P Father 🎩` : `Welcome to P2P Father 🎩`,
+    (tag: string) => tag ? `Welcome ${tag} 👋` : `Welcome to the group 👋`,
+    (tag: string) => tag ? `Yo ${tag}, welcome! 🔥` : `Yo, welcome to the group! 🔥`,
+    (tag: string) => tag ? `Hey ${tag}, welcome aboard ⚡` : `Welcome aboard ⚡`,
+    (tag: string) => tag ? `Welcome to the group ${tag} 🚀` : `Welcome to the group! 🚀`,
 ];
 
 // Deduplication cache: prevent double welcoming if user rejoins quickly (clear after 10 minutes)
@@ -478,7 +477,7 @@ export async function handleGroupJoin(
         recentlyWelcomed.set(cacheKey, now);
 
         const isLid = rawJid.includes("@lid") || phone.length > 12;
-        const welcomeTag = isLid ? "trader" : `@${phone}`;
+        const welcomeTag = isLid ? "" : `@${phone}`;
         const randomTemplate = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
         const welcomeText = randomTemplate(welcomeTag);
 

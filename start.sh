@@ -3,6 +3,9 @@
 export HYPERMEOW_PORT=8085
 export HYPERMEOW_URL=http://localhost:8085
 
+echo "[Launcher] Ensuring hypermeow data directory exists..."
+mkdir -p /app/hypermeow-bridge/data
+
 echo "[Launcher] Starting Go Hypermeow Bridge on port 8085..."
 cd /app/hypermeow-bridge
 ./hypermeow-bridge &

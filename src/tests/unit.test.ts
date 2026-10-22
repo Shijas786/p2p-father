@@ -581,4 +581,33 @@ describe("Binance Spot Listing Watcher", () => {
     });
 });
 
+// ─── 10. WhatsApp Group Welcome Templates ──────────────────────────────────
+import { WELCOME_TEMPLATES } from "../whatsapp/handlers/group";
+
+describe("WhatsApp Group Welcome Templates", () => {
+    it("all templates produce short, punchy greetings under 60 characters", () => {
+        const sampleTag = "@919876543210";
+        for (const tmpl of WELCOME_TEMPLATES) {
+            const msg = tmpl(sampleTag);
+            assert.ok(msg.length < 60, `Template output too long (${msg.length} chars): "${msg}"`);
+            assert.ok(msg.includes(sampleTag), `Template missing user tag: "${msg}"`);
+            // Ensure no robotic/AI phrases
+            assert.ok(!msg.includes("trading hub"), "Contains AI phrase: trading hub");
+            assert.ok(!msg.includes("at your fingertips"), "Contains AI phrase: at your fingertips");
+            assert.ok(!msg.includes("escrow-protected"), "Contains corporate marketing jargon");
+            assert.ok(!msg.includes("feel free to ask"), "Contains customer service bot phrasing");
+        }
+    });
+
+    it("handles masked LID (hidden phone) users gracefully without tags", () => {
+        for (const tmpl of WELCOME_TEMPLATES) {
+            const msg = tmpl("");
+            assert.ok(msg.length < 40, `Masked LID template output too long: "${msg}"`);
+            assert.ok(!msg.includes("@"), "Should not contain dangling @ tag");
+            assert.ok(!msg.includes("trader"), "Should not call user generic 'trader'");
+        }
+    });
+});
+
+
 

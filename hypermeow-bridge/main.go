@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -94,6 +95,7 @@ var (
 	container       *sqlstore.Container
 	webhookURL      string
 	latestQR        string
+	lastQRError     string
 	qrMutex         sync.Mutex
 	qrActive        bool
 	groupCache      = make(map[string]cachedGroup)
@@ -147,7 +149,8 @@ func resolveJID(rawJID string) (waTypes.JID, error) {
 }
 
 func startQRFlow() {
-	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" {
+	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" && client.IsConnected() {
+		fmt.Printf("[Hypermeow QR] Already paired and connected with user %s, skipping QR flow\n", client.Store.ID.User)
 		return
 	}
 	qrMutex.Lock()
@@ -156,28 +159,42 @@ func startQRFlow() {
 		return
 	}
 	qrActive = true
+	lastQRError = ""
 	qrMutex.Unlock()
 
 	// whatsmeow requires GetQRChannel to be called before Connect().
 	// If the socket is already open, disconnect it first so a new channel can be created.
 	if client != nil && client.IsConnected() {
 		client.Disconnect()
+		time.Sleep(350 * time.Millisecond)
+	}
+
+	// whatsmeow GetQRChannel fails with ErrNotAllowed if client.Store.ID != nil.
+	// Reset the device registration in SQLite so whatsmeow permits fresh QR channel creation.
+	if client != nil && client.Store.ID != nil {
+		fmt.Printf("[Hypermeow QR] Resetting device ID to allow fresh QR pairing\n")
+		_ = client.Store.Delete(context.Background())
+		client.Store.ID = nil
 	}
 
 	ctx := context.Background()
 	qrChan, err := client.GetQRChannel(ctx)
 	if err != nil {
-		fmt.Printf("[Hypermeow QR Error] Failed to get QR channel: %v\n", err)
+		errMsg := fmt.Sprintf("Failed to get QR channel: %v", err)
+		fmt.Printf("[Hypermeow QR Error] %s\n", errMsg)
 		qrMutex.Lock()
 		qrActive = false
+		lastQRError = errMsg
 		qrMutex.Unlock()
 		return
 	}
 
 	if err := client.Connect(); err != nil {
-		fmt.Printf("[Hypermeow QR Error] Failed to connect: %v\n", err)
+		errMsg := fmt.Sprintf("Failed to connect: %v", err)
+		fmt.Printf("[Hypermeow QR Error] %s\n", errMsg)
 		qrMutex.Lock()
 		qrActive = false
+		lastQRError = errMsg
 		qrMutex.Unlock()
 		return
 	}
@@ -187,12 +204,14 @@ func startQRFlow() {
 			if evt.Event == "code" {
 				qrMutex.Lock()
 				latestQR = evt.Code
+				lastQRError = ""
 				qrMutex.Unlock()
 				fmt.Printf("[Hypermeow QR Code] Fresh QR Code generated.\n")
 			} else if evt.Event == "success" {
 				qrMutex.Lock()
 				latestQR = ""
 				qrActive = false
+				lastQRError = ""
 				qrMutex.Unlock()
 				fmt.Println("[Hypermeow Status] Successfully paired with WhatsApp!")
 			} else {
@@ -229,6 +248,10 @@ func main() {
 	var err error
 	// Use persistent volume path so session survives redeploys
 	dbPath := "/app/hypermeow-bridge/data/hypermeow.db"
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		fmt.Printf("[Hypermeow] Warning: Failed to create db dir %s: %v\n", dbDir, err)
+	}
 	container, err = sqlstore.New(ctx, "sqlite3", "file:"+dbPath+"?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
 	if err != nil {
 		log.Fatalf("Failed to initialize SQLite store: %v", err)
@@ -248,9 +271,11 @@ func main() {
 	} else {
 		err = client.Connect()
 		if err != nil {
-			log.Fatalf("Failed to connect: %v", err)
+			log.Printf("[Hypermeow] Warning: Failed to connect with existing session: %v. Starting QR flow...\n", err)
+			startQRFlow()
+		} else {
+			fmt.Println("[Hypermeow] Connected successfully with existing session!")
 		}
-		fmt.Println("[Hypermeow] Connected successfully with existing session!")
 	}
 
 	mux := http.NewServeMux()
@@ -288,19 +313,30 @@ func main() {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	connected := client != nil && client.Store.ID != nil && client.Store.ID.User != ""
+	hasUser := client != nil && client.Store.ID != nil && client.Store.ID.User != ""
+	isConn := client != nil && client.IsConnected()
+	qrMutex.Lock()
+	hasQR := latestQR != ""
+	active := qrActive
+	lastErr := lastQRError
+	qrMutex.Unlock()
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":    "ok",
-		"connected": connected,
-		"engine":    "hypermeow-v1.0",
+		"status":      "ok",
+		"connected":   hasUser && isConn,
+		"paired":      hasUser,
+		"has_qr":      hasQR,
+		"qr_active":   active,
+		"last_qr_err": lastErr,
+		"engine":      "hypermeow-v1.0",
 	})
 }
 
 func handleGetQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// If already logged in / paired, never generate or return QR
-	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" {
+	// If already logged in / paired and actively connected, never generate or return QR
+	if client != nil && client.Store.ID != nil && client.Store.ID.User != "" && client.IsConnected() {
 		json.NewEncoder(w).Encode(map[string]string{
 			"qr": "",
 		})
@@ -313,8 +349,8 @@ func handleGetQR(w http.ResponseWriter, r *http.Request) {
 	qrMutex.Unlock()
 	if !hasQR {
 		startQRFlow()
-		// Wait briefly (up to 1.5s) for the first QR event from WhatsApp
-		for i := 0; i < 15; i++ {
+		// Wait up to 3.5s for the initial WebSocket handshake & QR frame
+		for i := 0; i < 35; i++ {
 			time.Sleep(100 * time.Millisecond)
 			qrMutex.Lock()
 			hasQR = latestQR != ""
@@ -338,10 +374,16 @@ func handleRestartQR(w http.ResponseWriter, r *http.Request) {
 	if client != nil {
 		if client.IsConnected() {
 			client.Disconnect()
+			time.Sleep(350 * time.Millisecond)
+		}
+		if client.Store.ID != nil {
+			_ = client.Store.Delete(context.Background())
+			client.Store.ID = nil
 		}
 		qrMutex.Lock()
 		latestQR = ""
 		qrActive = false
+		lastQRError = ""
 		qrMutex.Unlock()
 		go startQRFlow()
 	}
@@ -355,8 +397,15 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 	if client != nil {
 		_ = client.Logout(context.Background())
 		client.Disconnect()
+		time.Sleep(350 * time.Millisecond)
+		if client.Store.ID != nil {
+			_ = client.Store.Delete(context.Background())
+			client.Store.ID = nil
+		}
 		qrMutex.Lock()
 		latestQR = ""
+		qrActive = false
+		lastQRError = ""
 		qrMutex.Unlock()
 		go startQRFlow()
 	}
