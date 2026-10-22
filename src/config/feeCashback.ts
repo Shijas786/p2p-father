@@ -19,7 +19,7 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         username: "CmdrAj",
         rebateBps: 25, // 0.25% rebate
         applyAfterTimestamp: 1754067180000, // 2026-08-01 cutoff
-        minTradeUsd: 100
+        minTradeUsd: 0 // 0% fee on all trade sizes
     },
     {
         telegramId: "8124398855",
@@ -36,6 +36,13 @@ const DEFAULT_VIP_CONFIGS: VIPUserConfig[] = [
         applyAfterTimestamp: 0,
         minTradeUsd: 100,
         hideVipBadge: true
+    },
+    {
+        telegramId: "819438613",
+        username: "societyisamyran",
+        rebateBps: 25, // 0.25% rebate (100% cashback / 0% fee)
+        applyAfterTimestamp: 0,
+        minTradeUsd: 100 // $100 minimum threshold
     }
 ];
 
