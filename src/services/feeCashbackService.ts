@@ -134,7 +134,7 @@ export class FeeCashbackService {
                         username: user.username || user.first_name || "VIP Trader",
                         rebateBps: 25,
                         applyAfterTimestamp: 0,
-                        minTradeUsd: 100
+                        minTradeUsd: MIN_VIP_CASHBACK_TRADE_USD
                     };
                 }
 
@@ -152,7 +152,7 @@ export class FeeCashbackService {
                     continue;
                 }
 
-                // Minimum threshold: VIP fee cashback is only for trades of $100 and above
+                // Minimum threshold: VIP fee cashback is only for trades of $50 and above
                 const tokenSymbol = (trade.token || "USDT").toUpperCase();
                 let tradeValueUsd = tradeAmount;
                 if (tokenSymbol !== "USDT" && tokenSymbol !== "USDC") {
