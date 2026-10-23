@@ -100,7 +100,33 @@ var (
 	qrActive        bool
 	groupCache      = make(map[string]cachedGroup)
 	groupCacheMutex sync.RWMutex
+	recentMsgIDs      = make(map[string]time.Time)
+	recentMsgIDsMutex sync.Mutex
 )
+
+func isDuplicateIncomingMsg(msgID string) bool {
+	if msgID == "" {
+		return false
+	}
+	recentMsgIDsMutex.Lock()
+	defer recentMsgIDsMutex.Unlock()
+
+	now := time.Now()
+	// Periodic cleanup if map grows beyond 2000 items
+	if len(recentMsgIDs) > 2000 {
+		for id, t := range recentMsgIDs {
+			if now.Sub(t) > 10*time.Minute {
+				delete(recentMsgIDs, id)
+			}
+		}
+	}
+
+	if _, exists := recentMsgIDs[msgID]; exists {
+		return true
+	}
+	recentMsgIDs[msgID] = now
+	return false
+}
 
 type cachedGroup struct {
 	info      *waTypes.GroupInfo
@@ -1025,6 +1051,11 @@ func eventHandler(evt interface{}) {
 
 	case *events.Message:
 		if v.Info.IsFromMe {
+			return
+		}
+
+		if isDuplicateIncomingMsg(v.Info.ID) {
+			fmt.Printf("[Hypermeow Message] IGNORED — duplicate msgID=%s from sender=%s\n", v.Info.ID, v.Info.Sender.String())
 			return
 		}
 

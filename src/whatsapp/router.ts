@@ -263,12 +263,24 @@ export async function replyWithList(
     }
 }
 
+// Cooldown map to prevent duplicate welcome screens to the same user (60s)
+const welcomeScreenCooldowns = new Map<string, number>();
+
 // ── Step 1: Welcome Screen (first message to new WA users) ───────────────────
 async function showWelcomeScreen(
     sock: WASocket,
     jid: string,
-    msg: IWebMessageInfo
+    msg: IWebMessageInfo,
+    force = false
 ): Promise<void> {
+    const now = Date.now();
+    const lastSent = welcomeScreenCooldowns.get(jid) || 0;
+    if (!force && now - lastSent < 60000) {
+        console.log(`[WA-Router] ⏳ Suppressing duplicate welcome screen to ${jid} (cooldown: ${Math.round((60000 - (now - lastSent)) / 1000)}s remaining)`);
+        return;
+    }
+    welcomeScreenCooldowns.set(jid, now);
+
     await replyWithButtons(
         sock,
         jid,
@@ -408,6 +420,12 @@ export async function routeMessage(
     const isGroup = jid.endsWith("@g.us");
     const senderJid = (isGroup ? msg.key.participant : jid) ?? "";
     const senderPhone = senderJid.split("@")[0];
+
+    // 🛡️ Ignore empty protocol/sync stanzas with no text and no media
+    const hasImage = Boolean(msg.message?.imageMessage || (msg as any).imageBase64);
+    if (!text && !hasImage) {
+        return;
+    }
 
     // ── Group: Guard against spam & respond to bot mentions for BTC chart ─────
     if (isGroup) {
@@ -697,12 +715,12 @@ _Enter your phone number (+${senderPhone}) and the OTP code above on the web das
     // ── Explicit Welcome / Onboarding test command ────────────────────────────
     if (text === "/welcome" || text === "welcome" || text === "/onboarding") {
         await (db as any).clearWhatsappState(user.id);
-        await showWelcomeScreen(sock, jid, msg);
+        await showWelcomeScreen(sock, jid, msg, true);
         return;
     }
 
     const isRegistration = text.includes("register") || text.includes("sign up") || text.includes("signup") || text.includes("i want to register");
-    const isGreeting = isRegistration || ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help", ""].includes(text);
+    const isGreeting = isRegistration || ["/start", "start", "hi", "hy", "hey", "hello", "hola", "hallo", "menu", "/help", "help"].includes(text);
     if (isGreeting) {
         await (db as any).clearWhatsappState(user.id);
         // New user with no wallet yet — show welcome screen

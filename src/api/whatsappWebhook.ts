@@ -69,6 +69,27 @@ const stubSock: WASocket = {
 // Register stub socket for group live ad broadcasting
 setBroadcastSock(stubSock);
 
+// 🛡️ Message Deduplication Cache (10-minute sliding window)
+const processedWebhookMsgIds = new Map<string, number>();
+
+function isDuplicateWebhook(msgId?: string): boolean {
+    if (!msgId) return false;
+    const now = Date.now();
+    // Prune stale entries if cache grows
+    if (processedWebhookMsgIds.size > 2000) {
+        for (const [id, ts] of processedWebhookMsgIds.entries()) {
+            if (now - ts > 10 * 60 * 1000) {
+                processedWebhookMsgIds.delete(id);
+            }
+        }
+    }
+    if (processedWebhookMsgIds.has(msgId)) {
+        return true;
+    }
+    processedWebhookMsgIds.set(msgId, now);
+    return false;
+}
+
 whatsappWebhookRouter.post("/webhook", async (req, res) => {
     try {
         // 🛡️ Security Guard: Only allow local calls from Hypermeow or requests with valid webhook secret
@@ -91,6 +112,11 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
         // ── Hypermeow (Go bridge) webhook ──────────────────────────────────────
         // Payload: { jid, text, sender, pushName, audioBase64, msgId }
         if (body.jid && body.text !== undefined && !event) {
+            if (body.msgId && isDuplicateWebhook(body.msgId)) {
+                console.log(`[WA-Webhook] 🛡️ Ignored duplicate incoming message: ${body.msgId} from ${body.jid}`);
+                return res.status(200).json({ status: "ignored_duplicate" });
+            }
+
             let messageText = body.text;
 
             // If incoming message is a voice note with audioBase64
@@ -167,6 +193,9 @@ whatsappWebhookRouter.post("/webhook", async (req, res) => {
 
             const key = data.key || {};
             if (key.fromMe) return res.status(200).json({ status: "ignored_from_me" });
+            if (key.id && isDuplicateWebhook(key.id)) {
+                return res.status(200).json({ status: "ignored_duplicate" });
+            }
 
             const remoteJid = key.remoteJid || (data.sender ? `${data.sender}@s.whatsapp.net` : "");
             if (!remoteJid) return res.status(200).json({ status: "ignored_no_jid" });
