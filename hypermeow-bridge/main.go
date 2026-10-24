@@ -786,10 +786,19 @@ func handleGetContactInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	lidStr := ""
+	if client != nil && client.Store != nil && client.Store.LIDs != nil {
+		lidJID, err := client.Store.LIDs.GetLIDForPN(ctx, jid)
+		if err == nil && !lidJID.IsEmpty() {
+			lidStr = lidJID.String()
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"phone": phone,
 		"name":  name,
+		"lid":   lidStr,
 	})
 }
 
@@ -820,15 +829,38 @@ func handleGetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	type ParticipantDTO struct {
 		JID          string `json:"jid"`
 		LID          string `json:"lid"`
+		Phone        string `json:"phone,omitempty"`
 		IsAdmin      bool   `json:"isAdmin"`
 		IsSuperAdmin bool   `json:"isSuperAdmin"`
 	}
 
 	participants := make([]ParticipantDTO, 0, len(gInfo.Participants))
 	for _, p := range gInfo.Participants {
+		phone := ""
+		jidStr := p.JID.String()
+
+		// 1. If p.JID is a standard phone number JID (@s.whatsapp.net)
+		if !p.JID.IsEmpty() && p.JID.Server != "lid" {
+			phone = p.JID.User
+		} else if client != nil && client.Store != nil && client.Store.LIDs != nil {
+			// 2. Resolve phone number from LID
+			targetLID := p.LID
+			if targetLID.IsEmpty() && p.JID.Server == "lid" {
+				targetLID = p.JID
+			}
+			if !targetLID.IsEmpty() {
+				pn, err := client.Store.LIDs.GetPNForLID(context.Background(), targetLID)
+				if err == nil && !pn.IsEmpty() {
+					phone = pn.User
+					jidStr = pn.String()
+				}
+			}
+		}
+
 		participants = append(participants, ParticipantDTO{
-			JID:          p.JID.String(),
+			JID:          jidStr,
 			LID:          p.LID.String(),
+			Phone:        phone,
 			IsAdmin:      p.IsAdmin,
 			IsSuperAdmin: p.IsSuperAdmin,
 		})

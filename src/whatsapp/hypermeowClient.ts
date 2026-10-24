@@ -139,6 +139,18 @@ export class HypermeowClient {
         }
     }
 
+    public async getContactInfo(phone: string): Promise<{ name?: string; lid?: string; phone?: string } | null> {
+        try {
+            const res = await axios.get(`${this.baseUrl}/contact-info`, {
+                params: { phone },
+                timeout: 4000
+            });
+            return res.data || null;
+        } catch {
+            return null;
+        }
+    }
+
     public async getGroupMetadata(jid: string): Promise<any> {
         try {
             const res = await axios.get(`${this.baseUrl}/group-info`, {

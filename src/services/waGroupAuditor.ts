@@ -85,18 +85,30 @@ export class WAGroupAuditor {
             const participants: any[] = groupMetadata?.participants || [];
             const groupTopic = groupMetadata?.topic || "P2PFather Community";
 
-            // Index group members by exact digits and last 10 digits
+            // Index group members by exact digits, last 10 digits, and LID digits
             const groupMemberPhones = new Set<string>();
             const groupMemberLast10 = new Set<string>();
+            const groupMemberLids = new Set<string>();
 
             for (const p of participants) {
                 const rawJid = p.jid || p.id || "";
-                const phone = rawJid.split("@")[0].split(":")[0];
-                const digits = cleanDigits(phone);
+                const phoneField = p.phone || "";
+                const lidField = p.lid || "";
+
+                // 1. Phone digits
+                const rawPhone = phoneField || (rawJid && !rawJid.includes("@lid") ? rawJid.split("@")[0].split(":")[0] : "");
+                const digits = cleanDigits(rawPhone);
                 if (digits) {
                     groupMemberPhones.add(digits);
                     const l10 = getLast10(digits);
                     if (l10) groupMemberLast10.add(l10);
+                }
+
+                // 2. LID digits
+                const rawLid = lidField || (rawJid.includes("@lid") ? rawJid.split("@")[0].split(":")[0] : "");
+                const lidDigits = cleanDigits(rawLid);
+                if (lidDigits) {
+                    groupMemberLids.add(lidDigits);
                 }
             }
 
@@ -108,7 +120,22 @@ export class WAGroupAuditor {
                 if (!phone) continue;
 
                 const l10 = getLast10(phone);
-                const hasJoined = groupMemberPhones.has(phone) || (l10 && groupMemberLast10.has(l10));
+                let hasJoined = groupMemberPhones.has(phone) || Boolean(l10 && groupMemberLast10.has(l10));
+
+                // If not matched directly by phone, resolve LID from WhatsApp bridge store
+                if (!hasJoined && groupMemberLids.size > 0) {
+                    try {
+                        const contactInfo = await hypermeowClient.getContactInfo(phone);
+                        if (contactInfo?.lid) {
+                            const userLidDigits = cleanDigits(contactInfo.lid);
+                            if (groupMemberLids.has(userLidDigits)) {
+                                hasJoined = true;
+                            }
+                        }
+                    } catch {
+                        // ignore resolution failure, proceed with hasJoined = false
+                    }
+                }
 
                 const item: AuditedUser = {
                     id: user.id,
