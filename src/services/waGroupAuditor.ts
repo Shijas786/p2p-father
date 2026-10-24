@@ -196,7 +196,7 @@ export class WAGroupAuditor {
         const days = options.days ?? 2;
         const limit = options.limit ?? 50;
         const dryRun = options.dryRun ?? true;
-        const delayMs = options.delayMs ?? 3500;
+        const delayMs = options.delayMs ?? 5000;
 
         const audit = await this.auditNonJoiners(days);
         if (!audit.success) {
@@ -232,40 +232,27 @@ export class WAGroupAuditor {
                 continue;
             }
 
-            // Clean personal first name (e.g. remove emojis / phone suffixes)
-            const cleanName = user.name.replace(/[^a-zA-Z0-9\s]/g, "").trim() || "Trader";
-
             const messageText =
-                `👋 Hey *${cleanName}*! 🎩\n\n` +
-                `We noticed you checked out P2PFather recently, but haven't joined our official WhatsApp trading community yet!\n\n` +
-                `💬 *Why join our group?*\n` +
-                `• Live USDT market rates & instant trade alerts\n` +
-                `• 24/7 trade assistance & fraud protection\n` +
-                `• Connect with verified P2P traders across Kerala\n\n` +
-                `Tap below to join our group 👇`;
+                `Hey bro, you didn't join our group? We drop early listing announcements and alpha there before it gets posted anywhere else.\n\n` +
+                `Hop in if you want:\n${groupLink}`;
 
             const recipientJid = `${user.phone}@s.whatsapp.net`;
-            const buttons = [
-                { id: groupLink, url: groupLink, label: "💬 Join WhatsApp Group" },
-                { id: "/start", label: "🏠 Main Menu" },
-            ];
-
-            const sent = await hypermeowClient.sendButtons(recipientJid, messageText, buttons);
+            const sent = await hypermeowClient.sendText(recipientJid, messageText);
 
             if (sent) {
                 result.sentCount++;
                 result.details.push({ phone: user.phone, status: "sent" });
                 // Mark as reminded for 7 days
                 await redis.setex(cacheKey, 7 * 86400, Date.now().toString()).catch(() => {});
-                console.log(`[WAGroupAuditor] ✅ Sent group invite reminder to ${user.phone} (${cleanName})`);
+                console.log(`[WAGroupAuditor] ✅ Sent group invite reminder to ${user.phone}`);
             } else {
                 result.failedCount++;
-                result.details.push({ phone: user.phone, status: "failed", error: "sendButtons returned false" });
+                result.details.push({ phone: user.phone, status: "failed", error: "sendText returned false" });
                 console.warn(`[WAGroupAuditor] ❌ Failed to send group reminder to ${user.phone}`);
             }
 
-            // Anti-spam jitter pacing (3.5s - 5s)
-            const jitter = delayMs + Math.floor(Math.random() * 1500);
+            // Anti-spam jitter pacing: 5 to 10 seconds per user
+            const jitter = 5000 + Math.floor(Math.random() * 5000);
             await new Promise((resolve) => setTimeout(resolve, jitter));
         }
 
