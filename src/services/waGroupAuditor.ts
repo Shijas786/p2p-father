@@ -1,7 +1,59 @@
+import fs from "fs";
+import path from "path";
 import { db } from "../db/client";
 import { env } from "../config/env";
 import { hypermeowClient } from "../whatsapp/hypermeowClient";
 import { redis } from "./redis";
+
+const PERSISTENT_DATA_DIR = fs.existsSync("/app/hypermeow-bridge/data")
+    ? "/app/hypermeow-bridge/data"
+    : path.resolve(__dirname, "../../data");
+
+const REMINDED_FILE = path.join(PERSISTENT_DATA_DIR, "wa_reminded_users.json");
+
+// Pre-seeded with the 44 users who were reminded on 2026-10-24
+const SEEDED_REMINDED = [
+    "917708961835", "919388449988", "919895212920", "918078858932",
+    "919567026754", "919562220045", "919961517032", "919895327330",
+    "919745935841", "919656405931", "919747913291", "919544774310",
+    "919061234895", "916282917606", "919778300863", "918714333192",
+    "919995191857", "919846169893", "918111976084", "917994151149",
+    "918606513036", "918590692407", "918606382762", "919656575887",
+    "919895167495", "918807567105", "8562096364968", "917994464304",
+    "918136965695", "917012891462", "919747777019", "918129636088",
+    "919383487774", "918111978593", "971522869944", "919895624900",
+    "971506584784", "97470648371", "917907313159", "919539725232",
+    "919747406830", "919292164916", "919895607693", "919400467504"
+];
+
+function loadPersistentReminded(): Set<string> {
+    const set = new Set<string>(SEEDED_REMINDED);
+    try {
+        if (fs.existsSync(REMINDED_FILE)) {
+            const raw = fs.readFileSync(REMINDED_FILE, "utf-8");
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+                for (const phone of arr) set.add(phone);
+            }
+        }
+    } catch {
+        // ignore read error
+    }
+    return set;
+}
+
+function savePersistentReminded(phone: string) {
+    try {
+        const set = loadPersistentReminded();
+        set.add(phone);
+        if (!fs.existsSync(PERSISTENT_DATA_DIR)) {
+            fs.mkdirSync(PERSISTENT_DATA_DIR, { recursive: true });
+        }
+        fs.writeFileSync(REMINDED_FILE, JSON.stringify([...set], null, 2));
+    } catch {
+        // ignore write error
+    }
+}
 
 export interface AuditedUser {
     id: string;
@@ -215,13 +267,14 @@ export class WAGroupAuditor {
             details: [],
         };
 
+        const persistentReminded = loadPersistentReminded();
         let currentIdx = 0;
         for (const user of audit.notJoinedUsers) {
             if (result.sentCount >= limit) break;
             currentIdx++;
 
             const cacheKey = `wa_group_reminded:${user.phone}`;
-            const alreadyReminded = await redis.get(cacheKey).catch(() => null);
+            const alreadyReminded = persistentReminded.has(user.phone) || Boolean(await redis.get(cacheKey).catch(() => null));
 
             if (alreadyReminded) {
                 result.skippedAlreadyReminded++;
@@ -245,8 +298,9 @@ export class WAGroupAuditor {
             if (sent) {
                 result.sentCount++;
                 result.details.push({ phone: user.phone, status: "sent" });
-                // Mark as reminded for 7 days
+                // Mark as reminded for 7 days in Redis & permanently on disk
                 await redis.setex(cacheKey, 7 * 86400, Date.now().toString()).catch(() => {});
+                savePersistentReminded(user.phone);
                 console.log(`[WAGroupAuditor] ✅ Sent group invite reminder to ${user.phone}`);
             } else {
                 result.failedCount++;
