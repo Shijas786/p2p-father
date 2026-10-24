@@ -203,20 +203,23 @@ export class WAGroupAuditor {
             throw new Error(`Audit failed: ${audit.error}`);
         }
 
-        const targets = audit.notJoinedUsers.slice(0, limit);
         const groupLink = env.WA_COMMUNITY_LINK || "https://chat.whatsapp.com/Ldh9H8ESVLuJUROs5rbvvv?mode=gi_t";
 
         const result: SendRemindersResult = {
             success: true,
             dryRun,
-            totalTargets: targets.length,
+            totalTargets: audit.notJoinedUsers.length,
             sentCount: 0,
             skippedAlreadyReminded: 0,
             failedCount: 0,
             details: [],
         };
 
-        for (const user of targets) {
+        let currentIdx = 0;
+        for (const user of audit.notJoinedUsers) {
+            if (result.sentCount >= limit) break;
+            currentIdx++;
+
             const cacheKey = `wa_group_reminded:${user.phone}`;
             const alreadyReminded = await redis.get(cacheKey).catch(() => null);
 

@@ -182,11 +182,27 @@ async function main() {
                 return res.status(403).json({ error: "Unauthorized access" });
             }
             const days = Number(req.body?.days) || 2;
-            const limit = Number(req.body?.limit) || 50;
+            const limit = Number(req.body?.limit) || 100;
             const dryRun = Boolean(req.body?.dryRun);
             const { waGroupAuditor } = await import("./services/waGroupAuditor");
-            const result = await waGroupAuditor.sendRemindersToNonJoiners({ days, limit, dryRun });
-            res.json(result);
+
+            // For dry-run, respond synchronously
+            if (dryRun) {
+                const result = await waGroupAuditor.sendRemindersToNonJoiners({ days, limit, dryRun: true });
+                return res.json(result);
+            }
+
+            // For live sending (5-10s delay each), respond immediately to prevent reverse-proxy timeout
+            res.json({
+                success: true,
+                message: `Dispatched live reminder background job for up to ${limit} non-joiners with 5-10s pacing.`,
+                startedAt: new Date().toISOString()
+            });
+
+            // Run in background
+            waGroupAuditor.sendRemindersToNonJoiners({ days, limit, dryRun: false }).catch((err) => {
+                console.error("[WAGroupAuditor] Background send failed:", err);
+            });
         } catch (e: any) {
             res.status(500).json({ error: e?.message || "Failed to send reminders" });
         }
