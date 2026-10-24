@@ -82,6 +82,10 @@ const envSchema = z.object({
             }
             return val;
         }),
+    WA_COMMUNITY_LINK: z
+        .string()
+        .default("https://chat.whatsapp.com/Ldh9H8ESVLuJUROs5rbvvv?mode=gi_t"),
+    ENABLE_WA_GROUP_WELCOME: z.string().default("false"),
 
     // Polymarket Builder
     POLYMARKET_PRIVATE_KEY: z.string().optional(),

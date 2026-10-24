@@ -456,6 +456,11 @@ export async function handleGroupJoin(
 
     await registerGroupIfNew(groupJid, sock);
 
+    // 🛡️ Group welcome messages disabled per user request (enable via ENABLE_WA_GROUP_WELCOME=true)
+    if (env.ENABLE_WA_GROUP_WELCOME !== "true") {
+        return;
+    }
+
     // 🛡️ Restrict welcome messages strictly to the official main community group
     if (!isOfficialWhatsAppGroup(groupJid)) {
         console.log(`[WA-Welcome] ⏭️ Skipping welcome: ${groupJid} is not the official main group.`);

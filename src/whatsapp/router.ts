@@ -310,7 +310,7 @@ async function showCommunityScreen(
     msg: IWebMessageInfo,
     user?: User
 ): Promise<void> {
-    const waGroupUrl = "https://chat.whatsapp.com/JccGngl7bfa9tL4Bdwldv5";
+    const waGroupUrl = env.WA_COMMUNITY_LINK || "https://chat.whatsapp.com/Ldh9H8ESVLuJUROs5rbvvv?mode=gi_t";
     const tgGroupUrl =
         env.COMMUNITY_INVITE_LINK && !env.COMMUNITY_INVITE_LINK.includes("P2pFatherGroup")
             ? env.COMMUNITY_INVITE_LINK
