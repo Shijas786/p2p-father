@@ -318,8 +318,23 @@ describe("Upbit Real-Time Listing Watcher", () => {
         assert.deepEqual(parsed.markets, ["KRW", "BTC", "USDT"]);
         assert.equal(parsed.isKrw, true);
         assert.equal(parsed.isFromX, false);
-        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice?id=1792580401626");
+        // Timestamp placeholder IDs (>=10 digits) are sanitized to the live notice board
+        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice");
         assert.equal(parsed.tweetUrl, undefined);
+    });
+
+    it("preserves real sequential Upbit notice IDs while sanitizing timestamp placeholders", () => {
+        const item = {
+            _id: "4821",
+            source: "Upbit",
+            title: "신규 거래지원 안내 - 마켓 추가 (KRW, BTC)",
+            url: "https://upbit.com/service_center/notice?id=4821",
+            venue: "upbit",
+            kind: "listing"
+        };
+        const parsed = parseUpbitListing(item);
+        assert.ok(parsed);
+        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice?id=4821");
     });
 
     it("correctly parses Upbit English listing tweet with hashtags and handles", () => {
@@ -338,7 +353,7 @@ describe("Upbit Real-Time Listing Watcher", () => {
         assert.equal(parsed.isFromX, true);
         assert.equal(parsed.projectHandle, "@axisrobotics");
         assert.equal(parsed.tradingOpensAt, "2026-10-21 22:00 KST");
-        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice?id=1673103094");
+        assert.equal(parsed.noticeUrl, "https://upbit.com/service_center/notice");
         assert.equal(parsed.tweetUrl, "https://x.com/Official_Upbit/status/198129381");
         assert.equal(parsed.imageUrl, "https://pbs.twimg.com/media/poster.jpg");
     });

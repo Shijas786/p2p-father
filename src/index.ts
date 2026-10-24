@@ -159,6 +159,39 @@ async function main() {
         }
     });
 
+    // ── WhatsApp Group Joiner Audit & Reminders API ────────────────────────────
+    app.get("/api/admin/wa-group-audit", async (req, res) => {
+        try {
+            const secret = (req.query.secret as string) || (req.headers["x-admin-secret"] as string);
+            if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
+                return res.status(403).json({ error: "Unauthorized access" });
+            }
+            const days = Number(req.query.days) || 2;
+            const { waGroupAuditor } = await import("./services/waGroupAuditor");
+            const report = await waGroupAuditor.auditNonJoiners(days);
+            res.json(report);
+        } catch (e: any) {
+            res.status(500).json({ error: e?.message || "Audit failed" });
+        }
+    });
+
+    app.post("/api/admin/wa-group-audit/send-reminders", async (req, res) => {
+        try {
+            const secret = (req.query.secret as string) || (req.body?.secret as string) || (req.headers["x-admin-secret"] as string);
+            if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
+                return res.status(403).json({ error: "Unauthorized access" });
+            }
+            const days = Number(req.body?.days) || 2;
+            const limit = Number(req.body?.limit) || 50;
+            const dryRun = Boolean(req.body?.dryRun);
+            const { waGroupAuditor } = await import("./services/waGroupAuditor");
+            const result = await waGroupAuditor.sendRemindersToNonJoiners({ days, limit, dryRun });
+            res.json(result);
+        } catch (e: any) {
+            res.status(500).json({ error: e?.message || "Failed to send reminders" });
+        }
+    });
+
     app.get("/wa-qr", (req, res) => {
         const secret = (req.query.secret as string) || "";
         if (!env.WA_ADMIN_SECRET || secret !== env.WA_ADMIN_SECRET) {
