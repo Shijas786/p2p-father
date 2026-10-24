@@ -181,11 +181,18 @@ export function parseUpbitListing(data: any): UpbitParsedNotice | null {
 
     // Extract direct upbit link from body if present (e.g. from English / Korean tweet)
     const directNoticeMatch = body.match(/https?:\/\/(?:www\.)?upbit\.com\/[^\s)\]]+/);
-    const noticeUrl = directNoticeMatch
+    let noticeUrl = directNoticeMatch
         ? directNoticeMatch[0].replace(/[.,;:!?]+$/, "")
         : rawLink.includes("upbit.com")
         ? rawLink
         : "https://upbit.com/service_center/notice";
+
+    // 🛡️ Fix broken timestamp placeholder URLs: Tree News often appends a 10+ digit timestamp as ?id=1792...
+    // Real Upbit notice IDs are small sequential numbers (e.g. ?id=4821).
+    // Timestamps cause a 404, so point directly to the live Upbit notice board where the new listing is pinned at the top.
+    if (/service_center\/notice\?id=\d{10,}/.test(noticeUrl)) {
+        noticeUrl = "https://upbit.com/service_center/notice";
+    }
 
     const tweetUrl = isTweetUrl ? rawLink : undefined;
 
