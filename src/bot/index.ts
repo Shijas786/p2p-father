@@ -13,6 +13,12 @@ import { groupManager } from "../utils/groupManager";
 import { IpTrackerService } from "../services/ip-tracker";
 import { getQualifyingVIPConfig } from "../config/feeCashback";
 import {
+    isChatAdmin,
+    isTelegramGroupSpam,
+    handleGroupScamMessage,
+    handleUnauthorizedBotJoin,
+} from "./groupGuard";
+import {
     formatOrder,
     formatINR,
     formatTokenAmount,
@@ -775,6 +781,45 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
+// 🛡️ Telegram Group Anti-Scam & Bot Guard Middleware
+bot.use(async (ctx, next) => {
+    if (!ctx.chat || (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup')) {
+        return next();
+    }
+
+    const sender = ctx.from;
+    if (!sender) return next();
+
+    // 1. Admin Whitelist: Group administrators & platform superadmins bypass all checks
+    const isAdmin = await isChatAdmin(ctx, sender.id);
+    if (isAdmin) {
+        return next();
+    }
+
+    // 2. Unauthorized Bot Message in Group:
+    if (sender.is_bot) {
+        const botInfo = await getBotInfo();
+        if (sender.id !== botInfo.id) {
+            console.warn(`[GROUP-GUARD] 🚨 Unauthorized bot ${sender.id} (@${sender.username}) posted in group ${ctx.chat.id}. Deleting & Banning.`);
+            await ctx.deleteMessage().catch(() => {});
+            await ctx.api.banChatMember(ctx.chat.id, sender.id, { revoke_messages: true }).catch(() => {});
+            return;
+        }
+    }
+
+    // 3. Scan Message Content & Sender Name for Scams / Off-Platform Solicitation
+    const rawText = ctx.message?.text || ctx.message?.caption || "";
+    const senderFullName = `${sender.first_name || ""} ${sender.last_name || ""}`;
+    const scamCheck = isTelegramGroupSpam(rawText, senderFullName, sender.username);
+
+    if (scamCheck.isSpam) {
+        await handleGroupScamMessage(ctx, scamCheck.reason);
+        return; // Intercept: purge scam message and do not propagate
+    }
+
+    await next();
+});
+
 // 🎩 Telegram Group Unofficial OTC Offer Detector & Godfather Nudge System
 const groupOtcNudgeCooldown = new Map<string, number>();
 
@@ -1016,7 +1061,24 @@ bot.on("message:new_chat_members", async (ctx) => {
         const filteredMembers = newMembers.filter(m => m.id !== botInfo.id);
         if (filteredMembers.length === 0) return;
 
+        const inviter = ctx.from;
         for (const member of filteredMembers) {
+            // 🚨 1. Unauthorized Bot Added to Group:
+            if (member.is_bot) {
+                await handleUnauthorizedBotJoin(ctx, member, inviter);
+                continue;
+            }
+
+            // 🚨 2. Spammer Name Check (e.g. Chinese advertising or mass marketing account):
+            const fullName = `${member.first_name || ""} ${member.last_name || ""}`;
+            const spamCheck = isTelegramGroupSpam("", fullName, member.username);
+            if (spamCheck.isSpam) {
+                console.warn(`[GROUP-GUARD] 🚨 Spammer profile ${member.id} (${fullName}) joined group ${ctx.chat.id}. Banning immediately.`);
+                await ctx.api.banChatMember(ctx.chat.id, member.id, { revoke_messages: true }).catch(() => {});
+                await ctx.deleteMessage().catch(() => {});
+                continue;
+            }
+
             const isKicked = await checkAndKickIfScammer(ctx, member.id, member.username);
             if (!isKicked) {
                 await sendWelcomeMessage(ctx, member);
@@ -1042,6 +1104,26 @@ bot.on("chat_member", async (ctx) => {
             (newStatus === "member" || newStatus === "restricted");
 
         if (!isJoin) return;
+
+        const member = update.new_chat_member.user;
+        const botInfo = await getBotInfo();
+
+        if (member.id === botInfo.id) return;
+
+        // 🚨 1. Unauthorized Bot Joined
+        if (member.is_bot) {
+            await handleUnauthorizedBotJoin(ctx, member, update.from);
+            return;
+        }
+
+        // 🚨 2. Spammer Name Check
+        const fullName = `${member.first_name || ""} ${member.last_name || ""}`;
+        const spamCheck = isTelegramGroupSpam("", fullName, member.username);
+        if (spamCheck.isSpam) {
+            console.warn(`[GROUP-GUARD] 🚨 Spammer profile ${member.id} (${fullName}) joined group ${ctx.chat.id}. Banning immediately.`);
+            await ctx.api.banChatMember(ctx.chat.id, member.id, { revoke_messages: true }).catch(() => {});
+            return;
+        }
 
         const isKicked = await checkAndKickIfScammer(ctx, update.new_chat_member.user.id, update.new_chat_member.user.username);
         if (!isKicked) {

@@ -501,5 +501,95 @@ describe("WhatsApp Group Welcome Templates", () => {
     });
 });
 
+// ─── 11. Telegram Group Guard (Anti-Scam & Anti-Bot System) ─────────────────
+import {
+    isTelegramGroupSpam,
+    TELEGRAM_SPAM_NAME_RE,
+    TELEGRAM_SCAM_TEXT_RE,
+    TELEGRAM_FORBIDDEN_EXTERNAL_CONTACT_RE
+} from "../bot/groupGuard";
+
+describe("Telegram Group Guard (Anti-Scam & Anti-Bot System)", () => {
+    it("detects exact China USDT OTC scam message from attack screenshot", () => {
+        const attackMsg = `I'm from China 💰💰💰❤️❤️❤️💰💰
+and am currently unable to purchase USDT due to
+policy restrictions.
+I'm now buying USDT at 5%-20% above the market
+price. (No need to scan QR cod
+es or visit unfamiliar links.) Once we confirm you have
+the USDT, we'll make the payment first, and then you
+can send the
+USDT to me! Telegram: @YLPAY858`;
+
+        const result = isTelegramGroupSpam(attackMsg);
+        assert.equal(result.isSpam, true);
+        assert.ok(result.reason.length > 0);
+    });
+
+    it("detects exact spammer account display name from attack screenshot", () => {
+        const attackName = "天赐代发👉@xxin7👈Direct🔺advertising for Mr.kaleef";
+        const result = isTelegramGroupSpam("hello guys", attackName);
+        assert.equal(result.isSpam, true);
+        assert.ok(result.reason.includes("Spammer profile name"));
+    });
+
+    it("detects common Chinese proxy advertising and mule agent tags", () => {
+        const names = [
+            "天天代发",
+            "大宗承兑商",
+            "USDT代收跑分",
+            "全网精准引流",
+            "客服👉@test",
+            "Direct advertising for VIP"
+        ];
+        for (const name of names) {
+            assert.equal(TELEGRAM_SPAM_NAME_RE.test(name), true, `Failed to detect spam name: ${name}`);
+        }
+    });
+
+    it("detects off-platform external contact promotion and solicitation", () => {
+        const scamTexts = [
+            "Selling 500 USDT at 93, contact: @scammer999",
+            "Need USDT instantly, Telegram: @quick_usdt",
+            "DM me: @otc_trader_bot",
+            "Join our group: chat.whatsapp.com/Abc123Xyz",
+            "Join channel: t.me/joinchat/Abc123Xyz"
+        ];
+        for (const text of scamTexts) {
+            const result = isTelegramGroupSpam(text);
+            assert.equal(result.isSpam, true, `Failed to detect forbidden external contact in: ${text}`);
+        }
+    });
+
+    it("whitelists official platform handles and channels", () => {
+        const officialTexts = [
+            "You can open trade directly in @p2pfather_bot",
+            "Official updates are posted on @p2pfather"
+        ];
+        for (const text of officialTexts) {
+            const result = isTelegramGroupSpam(text);
+            assert.equal(result.isSpam, false, `Falsely flagged official handle: ${text}`);
+        }
+    });
+
+    it("does NOT falsely flag legitimate community discussion", () => {
+        const legitimateTexts = [
+            "How do I buy USDT using UPI?",
+            "Is there any sell order available right now?",
+            "What is the current USDT rate?",
+            "Rate is 92.5 today on P2PFather",
+            "I created an ad in the miniapp, check it out",
+            "Can I pay with IMPS?",
+            "Completed trade with 0% fee on Base!",
+            "Escrow is very fast today"
+        ];
+        for (const text of legitimateTexts) {
+            const result = isTelegramGroupSpam(text, "Rahul Sharma", "rahul_crypto");
+            assert.equal(result.isSpam, false, `Falsely flagged legitimate message: "${text}"`);
+        }
+    });
+});
+
+
 
 
