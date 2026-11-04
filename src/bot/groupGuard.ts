@@ -11,12 +11,13 @@ import { escapeMarkdown } from "../utils/formatters";
  * Detects Chinese proxy advertising tags, agent handles, and promotional arrows.
  * Example from live attack: "天赐代发👉@xxin7👈Direct🔺advertising for Mr.kaleef"
  */
-export const TELEGRAM_SPAM_NAME_RE = /(?:代发|广告|引流|代收|承兑|客服|大宗|盘总|跑分|direct[🔺\s]*advertising|advertising\s+for|👉.*👈|👉@\w+)/i;
+export const TELEGRAM_SPAM_NAME_RE = /(?:代发|广告|引流|代收|承兑|客服|大宗|盘总|跑分|direct[🔺\s]*advertising|advertising\s+for|👉.*👈|👉@\w+|mr\.?\s*kaleef|kaleef|faizal\s*khan)/i;
 
 /**
- * Matches high-frequency crypto scams, notably the "From China unable to buy USDT above market price" scam.
+ * Matches high-frequency crypto scams, notably the "From China unable to buy USDT above market price" scam,
+ * and mentions of blacklisted spam advertisers.
  */
-export const TELEGRAM_SCAM_TEXT_RE = /(?:(?:from\s+china|unable\s+to\s+purchase\s+usdt|policy\s+restrictions|buying\s+usdt|pay(?:ment)?\s+first.*send.*usdt).*?(?:5%|10%|20%|above.*market|@\w+|telegram:\s*@)|代发|代收|买u|出u|承兑|大宗|跑分|汇率.*点位|unable\s+to\s+purchase\s+usdt|buying\s+usdt\s+at\s+\d+%\s*-\s*\d+%\s+above)/i;
+export const TELEGRAM_SCAM_TEXT_RE = /(?:(?:from\s+china|unable\s+to\s+purchase\s+usdt|policy\s+restrictions|buying\s+usdt|pay(?:ment)?\s+first.*send.*usdt).*?(?:5%|10%|20%|above.*market|@\w+|telegram:\s*@)|代发|代收|买u|出u|承兑|大宗|跑分|汇率.*点位|unable\s+to\s+purchase\s+usdt|buying\s+usdt\s+at\s+\d+%\s*-\s*\d+%\s+above|mr\.?\s*kaleef|kaleef|faizal\s*khan)/i;
 
 /**
  * Matches unauthorized off-platform deal solicitation / external contacts in group chatter.

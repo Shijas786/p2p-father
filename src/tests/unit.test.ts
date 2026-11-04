@@ -533,14 +533,17 @@ USDT to me! Telegram: @YLPAY858`;
         assert.ok(result.reason.includes("Spammer profile name"));
     });
 
-    it("detects common Chinese proxy advertising and mule agent tags", () => {
+    it("detects common Chinese proxy advertising, mule agent tags, and blacklisted users", () => {
         const names = [
             "天天代发",
             "大宗承兑商",
             "USDT代收跑分",
             "全网精准引流",
             "客服👉@test",
-            "Direct advertising for VIP"
+            "Direct advertising for VIP",
+            "Mr. Kaleef",
+            "kaleef",
+            "Faizal Khan"
         ];
         for (const name of names) {
             assert.equal(TELEGRAM_SPAM_NAME_RE.test(name), true, `Failed to detect spam name: ${name}`);

@@ -1162,6 +1162,76 @@ bot.command("ping", async (ctx) => {
     await ctx.reply(`🏓 Pong! (Bot Version: ${new Date().toISOString()})`);
 });
 
+// 🔨 Admin Ban / Kick Command for Groups
+bot.command(["ban", "kick"], async (ctx) => {
+    if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
+        return;
+    }
+
+    const adminId = ctx.from?.id;
+    if (!adminId) return;
+
+    const isAdmin = await isChatAdmin(ctx, adminId);
+    if (!isAdmin) {
+        return; // Silent ignore for non-admins to prevent chat clutter
+    }
+
+    let targetUserId: number | null = null;
+    let targetName: string = "";
+
+    // Mode A: Replying directly to a spam message
+    if (ctx.message?.reply_to_message?.from) {
+        const target = ctx.message.reply_to_message.from;
+        targetUserId = target.id;
+        targetName = target.username ? `@${target.username}` : (target.first_name || `User ${target.id}`);
+
+        // Delete the offending message
+        await ctx.api.deleteMessage(ctx.chat.id, ctx.message.reply_to_message.message_id).catch(() => {});
+    } else {
+        // Mode B: Argument provided (e.g. /ban 123456789)
+        const arg = ctx.match?.toString().trim();
+        if (arg && /^\d+$/.test(arg)) {
+            targetUserId = Number(arg);
+            targetName = `User ${arg}`;
+        }
+    }
+
+    if (!targetUserId) {
+        const helpMsg = await ctx.reply("ℹ️ *Usage:* Reply to a scam message with `/ban` or type `/ban <userId>`", { parse_mode: "Markdown" });
+        setTimeout(() => {
+            ctx.api.deleteMessage(ctx.chat.id, helpMsg.message_id).catch(() => {});
+        }, 8000);
+        return;
+    }
+
+    try {
+        await ctx.api.banChatMember(ctx.chat.id, targetUserId, { revoke_messages: true });
+
+        // Ban in database if user exists
+        try {
+            const dbUser = await db.getUserByTelegramId(targetUserId);
+            if (dbUser?.id) {
+                await IpTrackerService.banUser(dbUser.id);
+            }
+        } catch (_) {}
+
+        // Delete the admin's /ban command message
+        await ctx.deleteMessage().catch(() => {});
+
+        // Post confirmation alert (auto-deleted after 10s)
+        const confMsg = await ctx.reply(
+            `⛔ *Banned:* ${escapeMarkdown(targetName)} was banned and all their recent messages purged from the group.`,
+            { parse_mode: "Markdown" }
+        );
+        setTimeout(() => {
+            ctx.api.deleteMessage(ctx.chat.id, confMsg.message_id).catch(() => {});
+        }, 10000);
+    } catch (err: any) {
+        console.error(`[AdminBan] Failed to ban ${targetUserId}:`, err?.message);
+        await ctx.reply(`⚠️ Could not ban ${targetName}: ${err?.message || "Unknown error"}`);
+    }
+});
+
 bot.command(["start", "open"], async (ctx) => {
     // 🛡️ Restrict command to Private Chats ONLY (prevents errors/spam in groups)
     if (ctx.chat.type !== "private") return;
