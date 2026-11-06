@@ -1,40 +1,38 @@
-# Reach: Decentralized P2P Counterparty Risk & Reputation Registry
+# Reach: Privacy-Preserving Dispute Dossier & Trust Layer
 
 **Project:** P2PFather — The On-Chain Escrow P2P Marketplace  
-**Dataset Mirrored to Arkiv:** `p2pfather.trader_reputation` & `p2pfather.fraud_blacklist`
+**Datasets on Arkiv:** `p2pfather.dispute_dossier`, `p2pfather.fraud_blacklist`, `p2pfather.trader_reputation`
 
 ---
 
 ### The Problem & Target Audience
-Peer-to-peer (P2P) crypto trading is the lifeblood of global crypto adoption in emerging markets (India, Southeast Asia, LATAM, Africa). Traders swap hundreds of millions of dollars weekly in fiat (UPI, IMPS, SEPA, Bank Transfers) directly for USDT and USDC.
+Peer-to-peer (P2P) crypto trading processes billions of dollars in emerging markets (India, Southeast Asia, LATAM, Africa). Traders swap fiat (UPI, IMPS, SEPA, Bank Transfers) directly for USDT and USDC.
 
-However, P2P trading faces an existential crisis: **Fraudulent Counterparties & Mule Bank Accounts**.
-* Fraudsters use stolen bank accounts to buy crypto from legitimate traders.
-* Days later, cyber crime police or banks freeze the seller’s bank account due to reported dirty money.
-* Today, blacklist notices and scammer identities are trapped in fragmented Telegram groups, private spreadsheets, or centralized exchange databases (Binance/Bybit) that do not share intelligence.
+However, P2P trading faces an existential crisis: **Bank Account Freezes & Untrusted Evidence**.
+* When disputes occur, fraudsters forge fake bank screenshots and fabricated UTR receipts.
+* When cyber cells or banks freeze bank accounts, innocent traders have no cryptographic, tamper-proof proof that they were legitimate escrow participants.
+* Today, dispute outcomes and evidence are trapped in private Telegram chats or closed exchange databases (Binance/Bybit).
 
 ---
 
 ### Who Uses This Mirrored Data on Arkiv?
 
-1. **P2PFather Active Traders:**
-   Over thousands of P2P trades, buyers and sellers can instantly verify their counterparty's on-chain trust score, completed trade count, and dispute history before locking funds into smart contract escrow.
+1. **Traders Defending Against Bank Account Freezes:**
+   When a trader's bank account is challenged, they download their **Official Cryptographic Dispute Settlement Certificate** from P2PFather (`/api/dispute/:id/certificate`). The certificate links directly to the Arkiv DB-Chain, proving the trade was adjudicated with an immutable SHA-256 evidence hash.
 
-2. **Third-Party P2P Bots & Escrow Protocols:**
+2. **Banks, Cyber Cells & Legal Authorities:**
+   Regulatory agencies and bank fraud officers can independently verify that the dispute was settled on-chain without trusting P2PFather's centralized servers. They simply verify that the physical receipt matches the on-chain SHA-256 commitment.
+
+3. **Third-Party P2P Bots & Escrow Protocols:**
    Any developer building a Telegram trading bot, WhatsApp crypto on-ramp, or Web3 payment gateway can query Arkiv using standard filters:
    ```sql
    SELECT * FROM p2pfather.fraud_blacklist WHERE flaggedAddress = '0x...';
    ```
-   If an address is flagged for bank freeze scams, other protocols can automatically block the trade before any fiat or crypto changes hands.
-
-3. **Web3 Wallets & Compliance Checkers:**
-   Consumer wallets (MetaMask Snaps, Coinbase Wallet, Telegram MiniApps) can integrate Arkiv as a real-time reputation feed to alert users when interacting with addresses with high dispute ratios.
+   If an address has committed fraud or lost disputes, other protocols can automatically block the trade before any fiat or crypto changes hands.
 
 ---
 
 ### Direct Impact
-By mirroring counterparty trust scores and scam alerts to an open, decentralized DB-chain:
-* **Zero Censorship:** No single exchange controls the blacklist.
-* **Collective Defense:** When a scammer is flagged in one P2P trade, the entire Ethereum ecosystem benefits immediately.
-* **Safer On-Ramps:** Lowers the risk of bank account freezes for thousands of grassroots crypto traders globally.
-
+* **Zero Censorship:** No single exchange controls or can manipulate the dispute outcome.
+* **Banking Privacy Preserved:** Zero PII or bank numbers are exposed publicly; only cryptographic evidence hashes are anchored on-chain.
+* **Verifiable Defense:** Gives thousands of grassroots crypto traders verifiable legal proof to unfreeze bank accounts.

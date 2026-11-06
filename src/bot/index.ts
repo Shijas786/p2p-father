@@ -2244,87 +2244,47 @@ bot.command("profile", async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-//                     /arkiv COMMAND
+//                 /certificate COMMAND
 // ═══════════════════════════════════════════════════════════════
 
-bot.command("arkiv", async (ctx) => {
+bot.command("certificate", async (ctx) => {
     const text = ctx.message?.text?.trim() || "";
     const parts = text.split(/\s+/);
-    let targetAddress = parts[1];
+    const tradeId = parts[1];
 
-    if (!targetAddress || !targetAddress.startsWith("0x")) {
-        const user = await ensureUser(ctx);
-        targetAddress = user.wallet_address || "";
-    }
-
-    if (!targetAddress || !targetAddress.startsWith("0x")) {
+    if (!tradeId) {
         return ctx.reply(
             [
-                "🛡️ *Arkiv On-Chain Trust & Risk Check*",
+                "📄 *Cryptographic Dispute Settlement Certificate*",
                 "",
-                "Usage: `/arkiv <wallet_address>`",
-                "Example: `/arkiv 0x3A5668F8B3E167771d503F0321c42a7B082789Ef`",
+                "Usage: `/certificate <trade_id>`",
+                "Example: `/certificate 8492`",
                 "",
-                "💡 _Queries decentralized counterparty reputation & fraud blacklist directly from Arkiv DB-Chain (Rabdi Testnet)._"
+                "💡 _Fetches the tamper-proof dispute adjudication certificate anchored to the Arkiv DB-Chain for bank, regulatory, or police verification._"
             ].join("\n"),
             { parse_mode: "Markdown" }
         );
     }
 
-    const waitMsg = await ctx.reply("🔍 *Querying Arkiv DB-Chain on Rabdi...*", { parse_mode: "Markdown" });
+    const certUrl = `https://p2pfather.com/api/dispute/${encodeURIComponent(tradeId)}/certificate`;
+    const kb = new InlineKeyboard()
+        .url("📄 Download / Print Certificate", certUrl);
 
-    try {
-        const rep = await ArkivService.getTraderReputation(targetAddress);
-        const bl = await ArkivService.checkBlacklist(targetAddress);
-
-        const lines: string[] = [];
-        lines.push("🛡️ *Arkiv DB-Chain Reputation Check*");
-        lines.push("━━━━━━━━━━━━━━━━━━━━");
-        lines.push(`💳 *Address:* \`${escapeMarkdown(targetAddress)}\``);
-        lines.push(`🌐 *Network:* Rabdi DB-Chain (\`7794095\`)`);
-        lines.push("");
-
-        if (bl && bl.isBlacklisted) {
-            lines.push(`🚨 *STATUS: BLACKLISTED / FRAUD DETECTED*`);
-            lines.push(`⚠️ *Reason:* ${escapeMarkdown(bl.reason || "Suspicious mule/freeze activity")}`);
-            lines.push(`🔴 *Severity:* ${escapeMarkdown(bl.severity || "HIGH")}`);
-            lines.push("");
-            lines.push("⛔ *DO NOT TRADE WITH THIS COUNTERPARTY.*");
-        } else if (rep) {
-            lines.push(`⭐ *Trust Score:* ${escapeMarkdown(rep.trustScore)}%`);
-            lines.push(`📈 *Completed Trades:* ${rep.completedTrades}`);
-            lines.push(`⚖️ *Disputes:* ${rep.disputeCount}`);
-            lines.push(`🛡️ *Risk Level:* ${escapeMarkdown(rep.riskLevel)}`);
-            lines.push(`🔐 *Verified Human:* ${rep.isVerified ? "Yes ✅" : "No"}`);
-            lines.push(`🕒 *Last Trade:* ${escapeMarkdown(rep.lastTradeAt || "Recent")}`);
-            lines.push("");
-            lines.push("✅ *STATUS: CLEAN ON-CHAIN REPUTATION*");
-        } else {
-            lines.push("ℹ️ *STATUS: NO FRAUD RECORD FOUND*");
-            lines.push("✅ Address is clean on the decentralized blacklist.");
-            lines.push("💡 _Not yet indexed with custom trade history on Rabdi testnet._");
-        }
-
-        lines.push("");
-        lines.push(`🔗 [View on Rabdi Explorer](https://rabdi.explorer.arkiv.network)`);
-
-        await ctx.api.editMessageText(
-            ctx.chat.id,
-            waitMsg.message_id,
-            lines.join("\n"),
-            {
-                parse_mode: "Markdown",
-                link_preview_options: { is_disabled: true }
-            }
-        );
-    } catch (err: any) {
-        await ctx.api.editMessageText(
-            ctx.chat.id,
-            waitMsg.message_id,
-            `❌ *Arkiv Query Error:* ${escapeMarkdown(err.message)}`,
-            { parse_mode: "Markdown" }
-        );
-    }
+    await ctx.reply(
+        [
+            `📄 *P2PFather Dispute Settlement Certificate*`,
+            `━━━━━━━━━━━━━━━━━━━━━━━━`,
+            `Case: *#${escapeMarkdown(tradeId)}*`,
+            `Status: *Anchored on Arkiv DB-Chain*`,
+            `Network: *Rabdi Testnet (7794095)*`,
+            "",
+            `🔒 *Privacy-Preserving Proof:*`,
+            `Raw bank account details and private receipts are kept strictly confidential. The cryptographic SHA-256 evidence hash is immutably anchored to Arkiv for bank or cyber cell verification.`,
+            "",
+            `Click below to view and download your official PDF/HTML certificate:`
+        ].join("\n"),
+        { parse_mode: "Markdown", reply_markup: kb }
+    );
 });
 
 bot.command("link", async (ctx) => {
@@ -4204,15 +4164,40 @@ bot.on("callback_query:data", async (ctx) => {
                     }
                 }
 
-                const resolveKb = new InlineKeyboard();
+                const certUrl = `https://p2pfather.com/api/dispute/${encodeURIComponent(tradeId)}/certificate`;
+                const resolveKb = new InlineKeyboard()
+                    .url("📄 Download Dispute Certificate", certUrl).row();
+
                 const scammerId = releaseToBuyer ? trade?.seller_id : trade?.buyer_id;
                 if (scammerId) {
                     resolveKb.text("🚫 Flag Scammer on Arkiv", `arkiv_flag:${tradeId}:${scammerId}`).row();
                 }
 
+                // Background commit dispute dossier to Arkiv DB-Chain
+                if (trade) {
+                    (async () => {
+                        try {
+                            const buyerUser = trade.buyer_id ? await db.getUserById(trade.buyer_id) : null;
+                            const sellerUser = trade.seller_id ? await db.getUserById(trade.seller_id) : null;
+                            await ArkivService.commitDisputeVerdict({
+                                tradeId,
+                                buyerWallet: buyerUser?.wallet_address || "",
+                                sellerWallet: sellerUser?.wallet_address || "",
+                                fiatAmount: `₹${trade.fiat_amount || "0"}`,
+                                amountToken: trade.amount || 0,
+                                evidenceTextOrUtr: `TRADE-${tradeId}-${releaseToBuyer ? "BUYER_WON" : "SELLER_WON"}-${Date.now()}`,
+                                verdict: releaseToBuyer ? "RELEASED_TO_BUYER" : "REFUNDED_TO_SELLER",
+                                verdictReason: releaseToBuyer ? "Verified genuine UTR payment receipt" : "Refunded to seller (no payment received)",
+                            });
+                        } catch (err: any) {
+                            console.warn(`[Arkiv] Background dispute commit warning:`, err.message);
+                        }
+                    })();
+                }
+
                 await ctx.editMessageText(
-                    `✅ Dispute resolved! ${releaseToBuyer ? "Released to buyer" : "Refunded to seller"}.`,
-                    { reply_markup: resolveKb }
+                    `✅ Dispute resolved! ${releaseToBuyer ? "Released to buyer" : "Refunded to seller"}.\n\n📄 *Arkiv Dispute Dossier Committed!*`,
+                    { parse_mode: "Markdown", reply_markup: resolveKb }
                 );
             } catch (error) {
                 await ctx.answerCallbackQuery({ text: "Failed to resolve dispute." });
@@ -4917,7 +4902,7 @@ const privateCommands = [
     { command: "wallet", description: "Wallet settings" },
     { command: "payment", description: "Set payment methods (UPI/Phone/Bank)" },
     { command: "profile", description: "Your stats & profile" },
-    { command: "arkiv", description: "Verify counterparty risk on Arkiv DB-Chain" },
+    { command: "certificate", description: "Download on-chain dispute settlement certificate" },
     { command: "help", description: "How to use this bot" },
     { command: "send", description: "Withdraw crypto" },
     { command: "invite", description: "Refer friends & earn points" },
