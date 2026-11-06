@@ -97,6 +97,10 @@ const envSchema = z.object({
     DIDIT_API_KEY: z.string().default(""),
     DIDIT_WORKFLOW_ID: z.string().default(""),
     DIDIT_WEBHOOK_SECRET: z.string().default(""),
+
+    // Arkiv Network (Decentralized Reputation & Risk Layer)
+    ARKIV_ACCESS_KEY: z.string().default(""),
+    ARKIV_PRIVATE_KEY: z.string().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);

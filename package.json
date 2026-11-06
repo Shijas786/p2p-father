@@ -24,6 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@arkiv-network/sdk": "^1.0.1",
     "@google/generative-ai": "^0.24.1",
     "@grammyjs/conversations": "^2.0.3",
     "@openzeppelin/contracts": "^5.4.0",
