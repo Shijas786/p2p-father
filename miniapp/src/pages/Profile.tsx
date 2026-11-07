@@ -74,6 +74,10 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         document_type: string | null;
     } | null>(null);
     const [kycLoading, setKycLoading] = useState(false);
+    const [worldLoading, setWorldLoading] = useState(false);
+
+    const isVerified = Boolean(kycData?.is_verified || user?.is_verified || kycData?.kyc_status === 'approved' || (user as any)?.kyc_status === 'approved');
+    const isWorldId = Boolean((kycData?.document_type || '').includes('world_id') || ((user as any)?.kyc_document_type || '').includes('world_id'));
 
     useEffect(() => {
         loadKycStatus();
@@ -147,17 +151,60 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }
     }
 
-    function startWorldId() {
-        haptic('medium');
-        const worldUrl = `https://p2pfather.com/world?userId=${user?.id || ''}`;
-        if (window.Telegram?.WebApp?.openLink) {
-            window.Telegram.WebApp.openLink(worldUrl);
-        } else {
-            window.open(worldUrl, '_blank');
+    async function startWorldId() {
+        if (isVerified) {
+            return;
         }
-        setTimeout(loadKycStatus, 4000);
-        setTimeout(loadKycStatus, 8000);
-        setTimeout(loadKycStatus, 15000);
+        haptic('medium');
+        setWorldLoading(true);
+        try {
+            const userIdentifier = user?.id || user?.telegram_id || '';
+            const res = await fetch('/api/world/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userIdentifier })
+            });
+            const data = await res.json();
+            if (data?.success && data?.connectorURI) {
+                if (window.Telegram?.WebApp?.openLink) {
+                    window.Telegram.WebApp.openLink(data.connectorURI);
+                } else {
+                    window.location.href = data.connectorURI;
+                }
+
+                // Poll status until verified
+                let polls = 0;
+                const interval = setInterval(async () => {
+                    polls++;
+                    if (polls > 45) {
+                        clearInterval(interval);
+                        setWorldLoading(false);
+                        return;
+                    }
+                    try {
+                        const statusData = await api.kyc.getStatus();
+                        if (statusData?.is_verified) {
+                            clearInterval(interval);
+                            setKycData(statusData);
+                            setWorldLoading(false);
+                            haptic('success');
+                            onUpdate?.();
+                        }
+                    } catch {}
+                }, 2000);
+            } else {
+                const worldUrl = `https://p2pfather.com/world?userId=${userIdentifier}`;
+                if (window.Telegram?.WebApp?.openLink) {
+                    window.Telegram.WebApp.openLink(worldUrl);
+                } else {
+                    window.open(worldUrl, '_blank');
+                }
+                setWorldLoading(false);
+            }
+        } catch (err) {
+            console.error('World ID start error:', err);
+            setWorldLoading(false);
+        }
     }
 
     // Accordion State
@@ -337,22 +384,22 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
                     {/* Binance-style Identity Verification Badge / CTA Button (Public Mode) */}
                     <div className="prof-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                        {kycData?.is_verified ? (
+                        {isVerified ? (
                             <div className="prof-kyc-badge verified" style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '5px',
-                                padding: '3px 8px',
+                                padding: '4px 10px',
                                 borderRadius: '4px',
-                                background: (kycData?.document_type || '').includes('world_id') ? 'rgba(78, 101, 255, 0.15)' : 'rgba(14, 203, 129, 0.12)',
-                                border: (kycData?.document_type || '').includes('world_id') ? '1px solid rgba(78, 101, 255, 0.4)' : '1px solid rgba(14, 203, 129, 0.3)',
-                                color: (kycData?.document_type || '').includes('world_id') ? '#818CF8' : '#0ecb81',
+                                background: 'rgba(14, 203, 129, 0.12)',
+                                border: '1px solid rgba(14, 203, 129, 0.3)',
+                                color: '#0ecb81',
                                 fontSize: '11px',
                                 fontWeight: 600
                             }}>
-                                {(kycData?.document_type || '').includes('world_id') ? (
+                                {isWorldId ? (
                                     <>
-                                        <IconWorldId size={13} color="#818CF8" />
+                                        <IconWorldId size={13} color="#0ecb81" />
                                         <span>World ID Verified</span>
                                     </>
                                 ) : (
@@ -386,7 +433,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 <button
                                     className="prof-kyc-btn binance-verify"
                                     onClick={startKyc}
-                                    disabled={kycLoading}
+                                    disabled={kycLoading || worldLoading}
                                     title="Verify with ID / Passport (Didit)"
                                     style={{
                                         display: 'inline-flex',
@@ -408,6 +455,7 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 <button
                                     className="prof-world-btn"
                                     onClick={startWorldId}
+                                    disabled={worldLoading || kycLoading}
                                     title="Verify with World App (Proof of Human)"
                                     style={{
                                         display: 'inline-flex',
@@ -421,11 +469,12 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                         fontSize: '11px',
                                         fontWeight: 700,
                                         border: 'none',
-                                        cursor: 'pointer'
+                                        cursor: worldLoading ? 'not-allowed' : 'pointer',
+                                        opacity: worldLoading ? 0.7 : 1
                                     }}
                                 >
                                     <IconWorldId size={13} color="#FFFFFF" />
-                                    <span>World ID</span>
+                                    <span>{worldLoading ? 'Opening...' : 'World ID'}</span>
                                 </button>
                             </div>
                         )}

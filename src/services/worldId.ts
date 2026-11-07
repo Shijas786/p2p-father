@@ -46,6 +46,41 @@ export class WorldIdService {
     private activeSessions = new Map<string, ActiveBridgeSession>();
 
     /**
+     * Resolve user from database by UUID, Telegram numeric ID, or username
+     */
+    async findUser(userIdOrTgId: string | number) {
+        if (!userIdOrTgId) return null;
+        const str = String(userIdOrTgId).trim();
+        const supabase = (db as any).getClient();
+
+        // 1. Try UUID
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+            try {
+                const { data } = await supabase.from("users").select("*").eq("id", str).maybeSingle();
+                if (data) return data;
+            } catch {}
+        }
+
+        // 2. Try numeric Telegram ID
+        const num = Number(str);
+        if (!isNaN(num) && num > 0) {
+            try {
+                const { data } = await supabase.from("users").select("*").eq("telegram_id", num).maybeSingle();
+                if (data) return data;
+            } catch {}
+        }
+
+        // 3. Try username
+        try {
+            const clean = str.replace(/^@/, "");
+            const { data } = await supabase.from("users").select("*").eq("username", clean).maybeSingle();
+            if (data) return data;
+        } catch {}
+
+        return null;
+    }
+
+    /**
      * Get client configuration for World App MiniKit or IDKit widget
      */
     getConfig() {
@@ -120,6 +155,9 @@ export class WorldIdService {
                 action,
                 createdAt: now,
             });
+
+            // Start autonomous server-side bridge polling (runs even if browser is closed/backgrounded)
+            this.startAutonomousBridgePolling(requestId);
 
             console.log(`[WORLD ID BRIDGE] Created session ${requestId} for trader ${userId}`);
             return {
@@ -217,6 +255,31 @@ export class WorldIdService {
     }
 
     /**
+     * Autonomous background bridge polling on server
+     */
+    private startAutonomousBridgePolling(requestId: string) {
+        let attempts = 0;
+        const maxAttempts = 150; // 150 * 2s = 5 minutes
+        const timer = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts || !this.activeSessions.has(requestId)) {
+                clearInterval(timer);
+                return;
+            }
+
+            try {
+                const res = await this.pollBridgeSession(requestId);
+                if (res.status === "completed" || res.status === "failed") {
+                    clearInterval(timer);
+                    console.log(`[WORLD ID BRIDGE AUTO-POLL] Bridge session ${requestId} concluded: ${res.status}`);
+                }
+            } catch (err: any) {
+                // Silently continue polling until timeout
+            }
+        }, 2000);
+    }
+
+    /**
      * Check if a trader is already verified via World ID
      */
     async getStatus(userId: string): Promise<{
@@ -226,7 +289,7 @@ export class WorldIdService {
         verified_at: string | null;
     }> {
         try {
-            const user = await db.getUserById(userId);
+            const user = await this.findUser(userId);
             if (!user) {
                 return { is_verified: false, level: null, nullifier_hash: null, verified_at: null };
             }
@@ -265,8 +328,8 @@ export class WorldIdService {
             return { success: false, error: "Missing cryptographic proof parameters", code: "invalid_payload" };
         }
 
-        // 1. Check user exists
-        const user = await db.getUserById(params.userId);
+        // 1. Check user exists (supports UUID, Telegram ID, or username)
+        const user = await this.findUser(params.userId);
         if (!user) {
             return { success: false, error: "Trader account not found", code: "user_not_found" };
         }
