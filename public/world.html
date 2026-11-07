@@ -577,11 +577,12 @@
         async function triggerWorldIdVerify() {
             const statusBox = document.getElementById('statusBox');
             statusBox.style.display = 'block';
-            statusBox.className = 'status-box info';
-            statusBox.textContent = 'Requesting Zero-Knowledge Proof from World App...';
 
-            // Check if MiniKit commands are available
+            // Check if running inside native World App webview
             if (window.MiniKit && window.MiniKit.isInstalled && window.MiniKit.isInstalled()) {
+                statusBox.className = 'status-box info';
+                statusBox.textContent = 'Requesting Zero-Knowledge Proof from World App...';
+
                 try {
                     const res = await window.MiniKit.commandsAsync.verify({
                         action: worldConfig.action,
@@ -596,34 +597,38 @@
                         statusBox.textContent = 'Verification canceled by user (' + (res.finalPayload.error_code || 'rejected') + '). Fallback to unverified or document KYC.';
                     }
                 } catch (err) {
-                    fallbackSimulation(err.message);
+                    statusBox.className = 'status-box error';
+                    statusBox.textContent = 'World App verify error: ' + (err.message || err);
                 }
             } else {
-                // Not inside native World App webview: Fallback simulation / IDKit flow
-                fallbackSimulation("Opened outside native World App webview");
+                // Outside native World App: Redirect to World App via Universal Link
+                const returnUrl = window.location.href;
+                const verifyUrl = `https://world.org/verify?app_id=${encodeURIComponent(worldConfig.app_id)}&action=${encodeURIComponent(worldConfig.action)}&signal=${encodeURIComponent(activeUserId)}&return_to=${encodeURIComponent(returnUrl)}`;
+
+                statusBox.className = 'status-box info';
+                statusBox.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>📱 Redirecting to World App...</strong><br>
+                        Opening World App on your phone to complete Zero-Knowledge Proof of Human.
+                    </div>
+                    <a href="${verifyUrl}" class="action-button btn-primary" style="text-decoration: none; padding: 10px; font-size: 13px; margin-top: 8px;">
+                        🚀 Open World App Now
+                    </a>
+                    <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted); text-align: center;">
+                        Scanning from desktop? Open World App on your phone & scan to verify:
+                    </div>
+                    <div style="display: flex; justify-content: center; margin-top: 8px;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}&bgcolor=18-31-44&color=254-116-70" alt="World ID QR" style="border-radius: 10px; border: 1px solid var(--border-orange); width: 140px; height: 140px;" />
+                    </div>
+                `;
+
+                // Attempt automatic mobile app redirect
+                try {
+                    window.location.href = verifyUrl;
+                } catch (e) {
+                    console.log("Auto-redirect fallback:", e);
+                }
             }
-        }
-
-        // 3. Fallback / Test Verification Path
-        async function fallbackSimulation(reason) {
-            const statusBox = document.getElementById('statusBox');
-            statusBox.style.display = 'block';
-            statusBox.className = 'status-box info';
-            statusBox.innerHTML = `<strong>World App Simulation Mode:</strong> (${reason})<br>Generating valid test ZK-nullifier commitment...`;
-
-            setTimeout(async () => {
-                const mockNullifier = '0xnullifier_' + Math.random().toString(16).slice(2, 14);
-                const mockPayload = {
-                    userId: activeUserId,
-                    merkle_root: '0x1c3a6b2222222222222222222222222222222222222222222222222222222222',
-                    nullifier_hash: mockNullifier,
-                    proof: '0xmock_zk_proof_world_id_' + Date.now(),
-                    verification_level: 'orb',
-                    action: worldConfig.action,
-                    signal: activeUserId
-                };
-                await submitProofToBackend(mockPayload);
-            }, 1200);
         }
 
         // 4. Submit Proof to Backend

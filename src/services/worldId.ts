@@ -124,56 +124,48 @@ export class WorldIdService {
         }
 
         // 3. Verify against Worldcoin Developer API v2
-        const isMockProof = params.proof.startsWith("0xmock") || params.proof.startsWith("test_");
         let apiVerified = false;
 
-        if (isMockProof && (process.env.NODE_ENV !== "production" || appId.startsWith("app_staging_"))) {
-            // Testnet / Sandbox developer mode
-            console.log(`[WORLD ID SANDBOX] Accepted mock proof for staging app ${appId}`);
-            apiVerified = true;
-        } else {
-            try {
-                const response = await axios.post(
-                    `${this.VERIFY_API_BASE}/${appId}`,
-                    {
-                        merkle_root: params.merkle_root,
-                        nullifier_hash: params.nullifier_hash,
-                        proof: params.proof,
-                        verification_level: verificationLevel,
-                        action,
-                        signal: params.signal || params.userId,
+        try {
+            const response = await axios.post(
+                `${this.VERIFY_API_BASE}/${appId}`,
+                {
+                    merkle_root: params.merkle_root,
+                    nullifier_hash: params.nullifier_hash,
+                    proof: params.proof,
+                    verification_level: verificationLevel,
+                    action,
+                    signal: params.signal || params.userId,
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "User-Agent": "P2PFather-WorldApp/2.0",
                     },
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "User-Agent": "P2PFather-WorldApp/2.0",
-                        },
-                        timeout: 10000,
-                    }
-                );
-
-                if (response.data?.success) {
-                    apiVerified = true;
-                } else {
-                    return {
-                        success: false,
-                        error: "World ID proof verification was rejected by Developer Portal",
-                        code: response.data?.code || "verification_failed",
-                        detail: response.data?.detail,
-                    };
+                    timeout: 10000,
                 }
-            } catch (err: any) {
-                const errorData = err.response?.data;
-                console.error("[WORLD ID] Developer API Error:", errorData || err.message);
+            );
 
-                // Check for explicit API error codes (e.g. invalid_proof, max_verifications_reached)
+            if (response.data?.success) {
+                apiVerified = true;
+            } else {
                 return {
                     success: false,
-                    error: errorData?.message || errorData?.detail || "World ID verification failed",
-                    code: errorData?.code || "world_api_error",
-                    detail: errorData?.detail,
+                    error: "World ID proof verification was rejected by Developer Portal",
+                    code: response.data?.code || "verification_failed",
+                    detail: response.data?.detail,
                 };
             }
+        } catch (err: any) {
+            const errorData = err.response?.data;
+            console.error("[WORLD ID] Developer API Error:", errorData || err.message);
+
+            return {
+                success: false,
+                error: errorData?.message || errorData?.detail || "World ID verification failed",
+                code: errorData?.code || "world_api_error",
+                detail: errorData?.detail,
+            };
         }
 
         if (!apiVerified) {
@@ -196,18 +188,6 @@ export class WorldIdService {
                 .eq("id", user.id);
 
             console.log(`[WORLD ID SUCCESS] Trader ${user.username || user.id} verified as ${docType} (Nullifier: ${params.nullifier_hash.slice(0, 10)}...)`);
-
-            // 5. Broadcast to community
-            try {
-                const { broadcastKycApprovalTelegram } = await import("../bot");
-                await broadcastKycApprovalTelegram({
-                    ...user,
-                    is_verified: true,
-                    kyc_document_type: docType,
-                });
-            } catch (bErr: any) {
-                console.warn("[WORLD ID] Telegram broadcast warning:", bErr.message);
-            }
 
             return {
                 success: true,
