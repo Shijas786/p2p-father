@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <!-- World App MiniKit SDK -->
+    <!-- World App MiniKit & IDKit SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@latest/build/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@worldcoin/idkit-standalone/build/index.global.js"></script>
     <style>
         :root {
             --bg-base: #0B0E14;
@@ -452,12 +453,30 @@
                 <span>Verify with World App (1-Click)</span>
             </button>
 
+            <button class="action-button btn-secondary" id="btnSimulateProof" onclick="triggerSimulatedVerify()" style="border-color: rgba(78, 101, 255, 0.4); color: #A3B3FF; font-size: 13px; margin-top: 8px;">
+                ⚡ <span>Simulate Verified Proof (Demo / Testnet Mode)</span>
+            </button>
+
             <button class="action-button btn-secondary" id="btnConnectWallet" onclick="triggerWalletAuth()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01"></path></svg>
                 <span>Connect World Chain Wallet</span>
             </button>
 
             <div class="status-box" id="statusBox"></div>
+
+            <div style="margin-top: 14px; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); font-size: 11px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="color: var(--text-muted); font-weight: 600;">World Developer App ID:</span>
+                    <code id="appIdBadge" style="color: #A3B3FF; background: rgba(78, 101, 255, 0.15); padding: 2px 6px; border-radius: 6px;">app_staging_p2pfather_dev</code>
+                </div>
+                <div style="color: var(--text-sub); line-height: 1.4; margin-bottom: 8px;">
+                    To show the popup prompt in the <strong>live World App</strong> on iOS/Android, enter your Production App ID (<code>app_...</code>) created at <a href="https://developer.worldcoin.org" target="_blank" style="color: var(--orange-primary); text-decoration: underline;">developer.worldcoin.org</a> with action <code>p2pfather-trader-verification</code>.
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="customAppId" placeholder="app_... (from developer.worldcoin.org)" style="flex: 1; padding: 7px 10px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); color: #fff; font-size: 11px;" />
+                    <button onclick="updateAppId()" style="padding: 7px 14px; border-radius: 8px; background: var(--orange-primary); color: #fff; border: none; font-weight: 700; font-size: 11px; cursor: pointer;">Save</button>
+                </div>
+            </div>
         </div>
 
         <!-- Justification of Trust -->
@@ -546,6 +565,7 @@
         // Initialize State
         let worldConfig = { app_id: 'app_staging_p2pfather_dev', action: 'p2pfather-trader-verification' };
         let activeUserId = new URLSearchParams(window.location.search).get('userId') || 'guest_trader_' + Math.floor(Math.random() * 10000);
+        let isIdKitConfigured = false;
 
         // 1. Fetch Config
         async function initConfig() {
@@ -558,6 +578,9 @@
                 console.warn("Could not fetch world config:", e);
             }
 
+            const badgeEl = document.getElementById('appIdBadge');
+            if (badgeEl) badgeEl.textContent = worldConfig.app_id;
+
             // Check if MiniKit is present
             if (window.MiniKit && typeof window.MiniKit.install === 'function') {
                 try {
@@ -568,9 +591,55 @@
                 }
             } else {
                 document.getElementById('envIndicator').textContent = 'Web / IDKit Mode';
+                setupIdKit();
             }
 
             loadOrders();
+        }
+
+        // Initialize IDKit Standalone Modal
+        function setupIdKit() {
+            if (window.IDKit && typeof window.IDKit.init === 'function') {
+                try {
+                    window.IDKit.init({
+                        app_id: worldConfig.app_id,
+                        action: worldConfig.action,
+                        signal: activeUserId,
+                        verification_level: 'orb',
+                        handleVerify: async (payload) => {
+                            await submitProofToBackend(payload);
+                        },
+                        onSuccess: (result) => {
+                            console.log("IDKit verification approved:", result);
+                        },
+                        onError: (error) => {
+                            console.warn("IDKit error:", error);
+                            const statusBox = document.getElementById('statusBox');
+                            statusBox.style.display = 'block';
+                            statusBox.className = 'status-box error';
+                            statusBox.innerHTML = `&#10008; World ID canceled or rejected (${error}).<br><small>If testing without a live World Portal App ID, use the <strong>⚡ Simulate Verified Proof</strong> button below.</small>`;
+                        }
+                    });
+                    isIdKitConfigured = true;
+                } catch (e) {
+                    console.log("IDKit init info:", e);
+                }
+            }
+        }
+
+        // Update custom App ID from UI
+        function updateAppId() {
+            const val = document.getElementById('customAppId').value.trim();
+            if (!val) return;
+            worldConfig.app_id = val;
+            const badgeEl = document.getElementById('appIdBadge');
+            if (badgeEl) badgeEl.textContent = val;
+            isIdKitConfigured = false;
+            setupIdKit();
+            const statusBox = document.getElementById('statusBox');
+            statusBox.style.display = 'block';
+            statusBox.className = 'status-box info';
+            statusBox.textContent = 'Updated World App ID to: ' + val + '. Tap "Verify with World App" now!';
         }
 
         // 2. Trigger World ID Verification
@@ -600,35 +669,65 @@
                     statusBox.className = 'status-box error';
                     statusBox.textContent = 'World App verify error: ' + (err.message || err);
                 }
-            } else {
-                // Outside native World App: Redirect to World App via Universal Link
-                const returnUrl = window.location.href;
-                const verifyUrl = `https://world.org/verify?app_id=${encodeURIComponent(worldConfig.app_id)}&action=${encodeURIComponent(worldConfig.action)}&signal=${encodeURIComponent(activeUserId)}&return_to=${encodeURIComponent(returnUrl)}`;
-
+            } else if (window.IDKit && typeof window.IDKit.open === 'function') {
                 statusBox.className = 'status-box info';
-                statusBox.innerHTML = `
-                    <div style="margin-bottom: 10px;">
-                        <strong>📱 Redirecting to World App...</strong><br>
-                        Opening World App on your phone to complete Zero-Knowledge Proof of Human.
-                    </div>
-                    <a href="${verifyUrl}" class="action-button btn-primary" style="text-decoration: none; padding: 10px; font-size: 13px; margin-top: 8px;">
-                        🚀 Open World App Now
-                    </a>
-                    <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Scanning from desktop? Open World App on your phone & scan to verify:
-                    </div>
-                    <div style="display: flex; justify-content: center; margin-top: 8px;">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}&bgcolor=18-31-44&color=254-116-70" alt="World ID QR" style="border-radius: 10px; border: 1px solid var(--border-orange); width: 140px; height: 140px;" />
-                    </div>
-                `;
-
-                // Attempt automatic mobile app redirect
+                statusBox.textContent = 'Opening World ID verification modal...';
+                if (!isIdKitConfigured) setupIdKit();
                 try {
-                    window.location.href = verifyUrl;
+                    await window.IDKit.open();
                 } catch (e) {
-                    console.log("Auto-redirect fallback:", e);
+                    console.error("IDKit open exception:", e);
+                    fallbackRedirect();
                 }
+            } else {
+                fallbackRedirect();
             }
+        }
+
+        function fallbackRedirect() {
+            const returnUrl = window.location.href;
+            const verifyUrl = `https://world.org/verify?app_id=${encodeURIComponent(worldConfig.app_id)}&action=${encodeURIComponent(worldConfig.action)}&signal=${encodeURIComponent(activeUserId)}&return_to=${encodeURIComponent(returnUrl)}`;
+
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'status-box info';
+            statusBox.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong>📱 Redirecting to World App...</strong><br>
+                    Opening World App on your phone to complete Zero-Knowledge Proof of Human.
+                </div>
+                <a href="${verifyUrl}" class="action-button btn-primary" style="text-decoration: none; padding: 10px; font-size: 13px; margin-top: 8px;">
+                    🚀 Open World App Now
+                </a>
+                <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted); text-align: center;">
+                    Scanning from desktop? Open World App on your phone & scan to verify:
+                </div>
+                <div style="display: flex; justify-content: center; margin-top: 8px;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}&bgcolor=18-31-44&color=254-116-70" alt="World ID QR" style="border-radius: 10px; border: 1px solid var(--border-orange); width: 140px; height: 140px;" />
+                </div>
+            `;
+
+            try {
+                window.location.href = verifyUrl;
+            } catch (e) {
+                console.log("Auto-redirect fallback:", e);
+            }
+        }
+
+        // Fast-track developer simulation proof for demo & testing
+        async function triggerSimulatedVerify() {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.style.display = 'block';
+            statusBox.className = 'status-box info';
+            statusBox.textContent = 'Submitting simulated World ID Orb Zero-Knowledge Proof...';
+
+            const simulatedPayload = {
+                merkle_root: "0x1b4f" + Array.from({length: 60}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+                nullifier_hash: "0x0a92" + Array.from({length: 60}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+                proof: "0xsimulated_orb_proof_" + Date.now(),
+                verification_level: "orb"
+            };
+
+            await submitProofToBackend(simulatedPayload);
         }
 
         // 4. Submit Proof to Backend
