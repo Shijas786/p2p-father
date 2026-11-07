@@ -9,6 +9,7 @@ import axios from "axios";
 import { miniappRouter } from "./api/miniapp";
 import { webhookRouter } from "./api/webhook";
 import { whatsappWebhookRouter } from "./api/whatsappWebhook";
+import { worldRouter } from "./api/worldRouter";
 
 async function main() {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -71,6 +72,12 @@ async function main() {
     app.use("/api/miniapp", miniappRouter);
     app.use("/api/webhook", webhookRouter);
     app.use("/api/whatsapp", whatsappWebhookRouter);
+    app.use("/api/world", worldRouter);
+
+    // World App Mini App Endpoint
+    app.get(["/world", "/world-app"], (_req, res) => {
+        res.sendFile(path.join(process.cwd(), "public", "world.html"));
+    });
 
     // KYC Webhook Aliases (ensures Didit webhooks resolve regardless of URL prefix)
     app.post(["/kyc/webhook", "/api/kyc/webhook"], (req, res, next) => {

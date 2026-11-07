@@ -285,6 +285,20 @@ export function fmtTradeReleased(trade: any): string {
 
 export function fmtKycApprovedBroadcast(user: any): string {
     const handle = formatTraderContact(user);
+    const isWorldId = user.kyc_document_type?.includes("world_id");
+
+    if (isWorldId) {
+        return `🎉 *WORLD ID VERIFICATION APPROVED!* 🌐
+
+*${handle}* is now a **WORLD ID VERIFIED HUMAN TRADER** 🛡️
+
+• *Verification:* 👁️ World ID Proof-of-Human (${user.kyc_document_type?.includes("orb") ? "Orb Verified" : "Device Verified"})
+• *Sybil Protection:* 🟢 Zero-Knowledge Authenticated (1 Person = 1 Account)
+• *Family Status:* 🟢 MADE MAN (P2PFather Family)
+
+⚡ Zero PII Leaked • Sybil Resistant • 100% Cryptographic Trust!
+🚀 Trade safely with *${handle}* in all P2PFather chats!`;
+    }
 
     return `🎉 *KYC VERIFICATION APPROVED!* 🛡️
 

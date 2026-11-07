@@ -101,6 +101,10 @@ const envSchema = z.object({
     // Arkiv Network (Decentralized Reputation & Risk Layer)
     ARKIV_ACCESS_KEY: z.string().default(""),
     ARKIV_PRIVATE_KEY: z.string().default(""),
+
+    // World (World ID & World App MiniKit)
+    WORLD_APP_ID: z.string().default(process.env.WORLD_APP_ID || "app_staging_p2pfather_dev"),
+    WORLD_ACTION: z.string().default(process.env.WORLD_ACTION || "p2pfather-trader-verification"),
 });
 
 const parsed = envSchema.safeParse(process.env);

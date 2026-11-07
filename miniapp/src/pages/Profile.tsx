@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { haptic, isTelegramEnvironment } from '../lib/telegram';
 import { APP_VERSION } from '../constants';
-import { IconTelegram, IconWhatsApp, IconExternalWeb3 } from '../components/Icons';
+import { IconTelegram, IconWhatsApp, IconExternalWeb3, IconWorldId } from '../components/Icons';
 import './Profile.css';
 
 interface Props {
@@ -77,6 +77,9 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
 
     useEffect(() => {
         loadKycStatus();
+        const onFocus = () => loadKycStatus();
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
     }, []);
 
     async function loadKycStatus() {
@@ -142,6 +145,18 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         } finally {
             setKycLoading(false);
         }
+    }
+
+    function startWorldId() {
+        haptic('medium');
+        const worldUrl = `https://p2pfather.com/world?userId=${user?.id || ''}`;
+        if (window.Telegram?.WebApp?.openLink) {
+            window.Telegram.WebApp.openLink(worldUrl);
+        } else {
+            window.open(worldUrl, '_blank');
+        }
+        setTimeout(loadKycStatus, 3000);
+        setTimeout(loadKycStatus, 6000);
     }
 
     // Accordion State
@@ -325,15 +340,26 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                             <div className="prof-kyc-badge verified" style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
+                                gap: '5px',
                                 padding: '3px 8px',
                                 borderRadius: '4px',
-                                background: 'rgba(14, 203, 129, 0.12)',
-                                border: '1px solid rgba(14, 203, 129, 0.3)',
-                                color: '#0ecb81',
+                                background: (kycData?.document_type || '').includes('world_id') ? 'rgba(78, 101, 255, 0.15)' : 'rgba(14, 203, 129, 0.12)',
+                                border: (kycData?.document_type || '').includes('world_id') ? '1px solid rgba(78, 101, 255, 0.4)' : '1px solid rgba(14, 203, 129, 0.3)',
+                                color: (kycData?.document_type || '').includes('world_id') ? '#818CF8' : '#0ecb81',
                                 fontSize: '11px',
                                 fontWeight: 600
                             }}>
-                                Verified
+                                {(kycData?.document_type || '').includes('world_id') ? (
+                                    <>
+                                        <IconWorldId size={13} color="#818CF8" />
+                                        <span>World ID Verified</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>🛡️</span>
+                                        <span>Verified</span>
+                                    </>
+                                )}
                             </div>
                         ) : kycData?.kyc_status === 'pending' ? (
                             <button
@@ -355,26 +381,52 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 Pending...
                             </button>
                         ) : (
-                            <button
-                                className="prof-kyc-btn binance-verify"
-                                onClick={startKyc}
-                                disabled={kycLoading}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '4px 10px',
-                                    borderRadius: '4px',
-                                    background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
-                                    boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
-                                    color: '#000',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    border: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {kycLoading ? 'Starting...' : 'Verify'}
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                    className="prof-kyc-btn binance-verify"
+                                    onClick={startKyc}
+                                    disabled={kycLoading}
+                                    title="Verify with ID / Passport (Didit)"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        padding: '4px 10px',
+                                        borderRadius: '4px',
+                                        background: 'linear-gradient(135deg, #f0b90b 0%, #f8d33a 100%)',
+                                        boxShadow: '0 2px 8px rgba(240, 185, 11, 0.25)',
+                                        color: '#000',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        border: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {kycLoading ? 'Starting...' : 'Verify'}
+                                </button>
+
+                                <button
+                                    className="prof-world-btn"
+                                    onClick={startWorldId}
+                                    title="Verify with World App (Proof of Human)"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '4px 10px',
+                                        borderRadius: '4px',
+                                        background: 'linear-gradient(135deg, #FE7446 0%, #FF5A26 100%)',
+                                        boxShadow: '0 2px 8px rgba(254, 116, 70, 0.35)',
+                                        color: '#FFFFFF',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        border: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <IconWorldId size={13} color="#FFFFFF" />
+                                    <span>World ID</span>
+                                </button>
+                            </div>
                         )}
 
                         <button className="prof-edit-socials-btn" style={{ marginTop: 0 }} onClick={() => { haptic('light'); setEditingSocials(!editingSocials); setMessage(''); }}>

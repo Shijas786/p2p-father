@@ -617,3 +617,14 @@ export function IconExternalWeb3({ size = 16, className }: { size?: number; clas
         </svg>
     );
 }
+
+export function IconWorldId({ size = 14, color = "currentColor", className }: { size?: number; color?: string; className?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2.2" />
+            <ellipse cx="12" cy="12" rx="4.8" ry="10" stroke={color} strokeWidth="2.2" />
+            <line x1="2" y1="12" x2="22" y2="12" stroke={color} strokeWidth="2.2" />
+            <circle cx="12" cy="12" r="1.8" fill={color} />
+        </svg>
+    );
+}

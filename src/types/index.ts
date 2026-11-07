@@ -48,6 +48,8 @@ export interface User {
     kyc_document_type?: string | null;
     kyc_country?: string | null;
     kyc_verified_at?: string | null;
+    world_id_nullifier?: string | null;
+    world_id_verification_level?: 'orb' | 'device' | null;
     is_banned: boolean;
     receive_address: string | null;
     cdm_bank_number: string | null;

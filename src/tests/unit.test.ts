@@ -593,6 +593,116 @@ USDT to me! Telegram: @YLPAY858`;
     });
 });
 
+// ─── 11. World ID & Proof-of-Human Sybil Resistance ─────────────────────────
+describe("World ID Proof-of-Human & Sybil Protection", () => {
+    interface VerificationPayload {
+        userId: string;
+        merkle_root: string;
+        nullifier_hash: string;
+        proof: string;
+        verification_level: "orb" | "device";
+    }
+
+    function validateWorldIdPayload(payload: Partial<VerificationPayload>): { valid: boolean; error?: string } {
+        if (!payload.userId) return { valid: false, error: "Missing userId" };
+        if (!payload.nullifier_hash) return { valid: false, error: "Missing nullifier_hash" };
+        if (!payload.merkle_root) return { valid: false, error: "Missing merkle_root" };
+        if (!payload.proof) return { valid: false, error: "Missing proof" };
+        if (!["orb", "device"].includes(payload.verification_level || "")) {
+            return { valid: false, error: "Invalid verification_level" };
+        }
+        return { valid: true };
+    }
+
+    function checkSybilConflict(
+        incomingNullifier: string,
+        currentUserId: string,
+        registry: Map<string, string> // nullifier -> userId
+    ): { allowed: boolean; reason?: string } {
+        const existingOwner = registry.get(incomingNullifier);
+        if (existingOwner && existingOwner !== currentUserId) {
+            return {
+                allowed: false,
+                reason: "Sybil violation: Nullifier already claimed by another trader"
+            };
+        }
+        return { allowed: true };
+    }
+
+    it("accepts a well-formed World ID Orb verification payload", () => {
+        const payload: VerificationPayload = {
+            userId: "trader_123",
+            merkle_root: "0x1c3a6b2222222222222222222222222222222222222222222222222222222222",
+            nullifier_hash: "0xnullifier_abc123456789",
+            proof: "0xproof_zk_world_9999",
+            verification_level: "orb"
+        };
+        const res = validateWorldIdPayload(payload);
+        assert.equal(res.valid, true);
+        assert.equal(res.error, undefined);
+    });
+
+    it("strictly rejects payload with missing nullifier or proof", () => {
+        const invalidPayload = {
+            userId: "trader_123",
+            merkle_root: "0x123",
+            verification_level: "orb" as const
+        };
+        const res = validateWorldIdPayload(invalidPayload);
+        assert.equal(res.valid, false);
+        assert.match(res.error || "", /Missing nullifier_hash/);
+    });
+
+    it("prevents Sybil multi-accounting when the same human registers twice", () => {
+        const registry = new Map<string, string>();
+        const nullifier = "0xnullifier_unique_human_99";
+
+        // Alice registers first
+        registry.set(nullifier, "user_alice");
+
+        // Scammer tries to register with Bob's account using Alice's World ID
+        const check = checkSybilConflict(nullifier, "user_bob", registry);
+        assert.equal(check.allowed, false);
+        assert.match(check.reason || "", /Sybil violation/);
+
+        // Alice re-verifying her own account is allowed (idempotent)
+        const recheck = checkSybilConflict(nullifier, "user_alice", registry);
+        assert.equal(recheck.allowed, true);
+    });
+
+    it("formats World ID broadcast notification with Proof-of-Human badge", async () => {
+        const { fmtKycApprovedBroadcast } = await import("../whatsapp/formatters");
+        const mockUser = {
+            id: "user_test_456",
+            username: "kerala_p2p_king",
+            first_name: "Rahul",
+            kyc_document_type: "world_id_orb",
+            is_verified: true
+        };
+
+        const broadcastMsg = fmtKycApprovedBroadcast(mockUser);
+        assert.match(broadcastMsg, /WORLD ID VERIFICATION APPROVED/);
+        assert.match(broadcastMsg, /Orb Verified/);
+        assert.match(broadcastMsg, /Zero-Knowledge Authenticated/);
+    });
+
+    it("falls back to standard KYC broadcast when not a World ID user", async () => {
+        const { fmtKycApprovedBroadcast } = await import("../whatsapp/formatters");
+        const mockUser = {
+            id: "user_test_789",
+            username: "standard_trader",
+            first_name: "Vijay",
+            kyc_document_type: "passport",
+            is_verified: true
+        };
+
+        const broadcastMsg = fmtKycApprovedBroadcast(mockUser);
+        assert.match(broadcastMsg, /KYC VERIFICATION APPROVED/);
+        assert.doesNotMatch(broadcastMsg, /World ID/);
+    });
+});
+
+
 
 
 

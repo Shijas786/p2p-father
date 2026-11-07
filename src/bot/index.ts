@@ -1240,6 +1240,33 @@ bot.command(["start", "open"], async (ctx) => {
     // Handle Deep Linking
     const payload = ctx.match?.toString().trim();
 
+    // 0. KYC / World ID Deep Link (?start=kyc or ?start=world)
+    if (payload === "kyc" || payload === "world") {
+        const user = await ensureUser(ctx);
+        const worldUrl = `https://p2pfather.com/world?userId=${user.id}`;
+        const kb = new InlineKeyboard()
+            .webApp("🌐 1-Click World ID Verification", worldUrl)
+            .row()
+            .url("🌐 Open in World App", worldUrl);
+
+        await ctx.reply(
+            [
+                "🛡️ *P2PFather Merchant Verification*",
+                "",
+                "Prove you are a real, unique human to unlock **0% protocol escrow fees** and protect our community from bank-freeze scammer bots.",
+                "",
+                "👁️ *World ID Proof-of-Human (Recommended)*",
+                "• Zero documents or ID uploads needed",
+                "• 100% Zero-Knowledge & DPDP privacy compliant",
+                "• Instant 1-click verification in World App",
+                "",
+                "Tap below to verify now with World App:"
+            ].join("\n"),
+            { parse_mode: "Markdown", reply_markup: kb }
+        );
+        return;
+    }
+
     // 1. Group-specific Sell/NewAd
     if (payload && (payload.startsWith("newad_") || payload.startsWith("sell_"))) {
         const parts = payload.split("_");
@@ -2218,6 +2245,18 @@ bot.command("profile", async (ctx) => {
                 user.trust_score >= 30 ? "🟡" : "🔴";
 
     const privacyStatus = (user as any).hide_group_handle ? "ON 🔒" : "OFF 🔓";
+    const isWorldId = (user.kyc_document_type || "").includes("world_id");
+    const verifiedLabel = user.is_verified
+        ? `Yes ✅ (${isWorldId ? "World ID Proof-of-Human" : "KYC"})`
+        : "No (Unverified)";
+
+    const worldUrl = `https://p2pfather.com/world?userId=${user.id}`;
+    const keyboard = new InlineKeyboard();
+    if (!user.is_verified) {
+        keyboard.webApp("🌐 Verify with World ID (0% Fees)", worldUrl).row();
+    } else {
+        keyboard.webApp("🌐 View World ID Status", worldUrl).row();
+    }
 
     await ctx.reply(
         [
@@ -2236,10 +2275,54 @@ bot.command("profile", async (ctx) => {
             `💳 Wallet: ${user.wallet_address ? `\`${escapeMarkdown(truncateAddress(user.wallet_address))}\`` : "Not set"}`,
             `📱 UPI: ${escapeMarkdown(user.upi_id || "Not set")}`,
             `🔒 Group Privacy Mode: ${escapeMarkdown(privacyStatus)} (Toggle via /privacy)`,
-            `🔐 Verified: ${user.is_verified ? "Yes ✅" : "No"}`,
+            `🔐 Verified: ${escapeMarkdown(verifiedLabel)}`,
             `🛡️ Arkiv DB-Chain: Verified Clean (Rabdi)`,
         ].join("\n"),
-        { parse_mode: "Markdown" }
+        { parse_mode: "Markdown", reply_markup: keyboard }
+    );
+});
+
+// ═══════════════════════════════════════════════════════════════
+//                 /kyc & /world COMMAND
+// ═══════════════════════════════════════════════════════════════
+
+bot.command(["kyc", "verify", "world"], async (ctx) => {
+    const user = await ensureUser(ctx);
+    const isWorldId = (user.kyc_document_type || "").includes("world_id");
+
+    if (user.is_verified) {
+        return ctx.reply(
+            [
+                "🎉 *You are already a Verified Merchant!* 🎩",
+                "",
+                `• Verification: *${isWorldId ? "World ID Proof-of-Human" : "Document KYC"}*`,
+                "• Status: *Approved (Made Man)*",
+                "• Perks: *0% protocol escrow fees on Base & World Chain*",
+            ].join("\n"),
+            { parse_mode: "Markdown" }
+        );
+    }
+
+    const worldUrl = `https://p2pfather.com/world?userId=${user.id}`;
+    const kb = new InlineKeyboard()
+        .webApp("🌐 Verify with World ID (1-Click)", worldUrl)
+        .row()
+        .url("🌐 Open in World App", worldUrl);
+
+    await ctx.reply(
+        [
+            "🛡️ *P2PFather Merchant Verification*",
+            "",
+            "Prove you are a real, unique human to unlock **0% protocol escrow fees** and protect our community from bank-freeze scammer bots.",
+            "",
+            "👁️ *World ID Proof-of-Human (Recommended)*",
+            "• Zero documents or ID uploads needed",
+            "• 100% Zero-Knowledge & DPDP privacy compliant",
+            "• Instant 1-click verification in World App",
+            "",
+            "Tap below to verify now with World App:"
+        ].join("\n"),
+        { parse_mode: "Markdown", reply_markup: kb }
     );
 });
 
@@ -3004,6 +3087,19 @@ bot.on("callback_query:data", async (ctx) => {
                     (user.trust_score ?? 0) >= 60 ? "🟢" :
                         (user.trust_score ?? 0) >= 30 ? "🟡" : "🔴";
 
+            const isWorldId = (user.kyc_document_type || "").includes("world_id");
+            const verifiedLabel = user.is_verified
+                ? `Yes ✅ (${isWorldId ? "World ID Proof-of-Human" : "KYC"})`
+                : "No (Unverified)";
+
+            const worldUrl = `https://p2pfather.com/world?userId=${user.id}`;
+            const keyboard = new InlineKeyboard();
+            if (!user.is_verified) {
+                keyboard.webApp("🌐 Verify with World ID (0% Fees)", worldUrl).row();
+            } else {
+                keyboard.webApp("🌐 View World ID Status", worldUrl).row();
+            }
+
             await ctx.reply(
                 [
                     "👤 *Your Profile*",
@@ -3017,9 +3113,10 @@ bot.on("callback_query:data", async (ctx) => {
                     "",
                     `💳 Wallet: \`${user.wallet_address ? truncateAddress(user.wallet_address) : "Not set"}\``,
                     `📱 UPI: ${user.upi_id || "Not set"}`,
-                    `🛡️ Arkiv DB-Chain: Verified Clean`,
+                    `🔐 Verified: ${verifiedLabel}`,
+                    `🛡️ Arkiv DB-Chain: Verified Clean (Rabdi)`,
                 ].join("\n"),
-                { parse_mode: "Markdown" }
+                { parse_mode: "Markdown", reply_markup: keyboard }
             );
             await ctx.answerCallbackQuery();
             return;
