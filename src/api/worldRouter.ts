@@ -19,6 +19,48 @@ worldRouter.get("/config", (_req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/world/initiate
+ * Initializes a cryptographic Worldcoin bridge session and returns the universal link that opens World App directly.
+ */
+worldRouter.post("/initiate", async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ success: false, error: "userId is required" });
+        }
+
+        const session = await worldIdService.initiateBridgeSession(userId);
+        if (!session.success) {
+            return res.status(500).json(session);
+        }
+
+        res.json(session);
+    } catch (err: any) {
+        console.error("[WORLD ROUTER] Initiate error:", err);
+        res.status(500).json({ success: false, error: err.message || "Failed to initiate session" });
+    }
+});
+
+/**
+ * GET /api/world/poll/:requestId
+ * Polls the bridge for completed proof from World App.
+ */
+worldRouter.get("/poll/:requestId", async (req: Request, res: Response) => {
+    try {
+        const requestId = req.params.requestId as string;
+        if (!requestId) {
+            return res.status(400).json({ status: "failed", error: "requestId is required" });
+        }
+
+        const pollResult = await worldIdService.pollBridgeSession(requestId);
+        res.json(pollResult);
+    } catch (err: any) {
+        console.error("[WORLD ROUTER] Poll error:", err);
+        res.status(500).json({ status: "failed", error: err.message || "Polling error" });
+    }
+});
+
+/**
  * GET /api/world/status/:userId
  * Returns whether a trader has completed Proof-of-Human verification.
  */

@@ -8,8 +8,17 @@
  */
 
 import axios from "axios";
+import crypto from "crypto";
 import { env } from "../config/env";
 import { db } from "../db/client";
+
+interface ActiveBridgeSession {
+    key: Buffer;
+    iv: Buffer;
+    userId: string;
+    action: string;
+    createdAt: number;
+}
 
 export interface WorldIdVerifyParams {
     userId: string;
@@ -34,6 +43,8 @@ export interface WorldIdVerifyResult {
 export class WorldIdService {
     private readonly VERIFY_API_BASE = "https://developer.worldcoin.org/api/v2/verify";
 
+    private activeSessions = new Map<string, ActiveBridgeSession>();
+
     /**
      * Get client configuration for World App MiniKit or IDKit widget
      */
@@ -43,6 +54,166 @@ export class WorldIdService {
             action: env.WORLD_ACTION || "p2pfather-trader-verification",
             is_staging: (env.WORLD_APP_ID || "").startsWith("app_staging_"),
         };
+    }
+
+    /**
+     * Create an authentic World ID bridge session and generate the valid Universal Link (world.org/verify?t=wld&i=...&k=...)
+     * This redirects directly and automatically into World App with the interactive prompt.
+     */
+    async initiateBridgeSession(userId: string): Promise<{
+        success: boolean;
+        requestId: string;
+        connectorURI: string;
+        error?: string;
+    }> {
+        try {
+            const key = crypto.randomBytes(32);
+            const iv = crypto.randomBytes(12);
+            const action = env.WORLD_ACTION || "p2pfather-trader-verification";
+            const appId = env.WORLD_APP_ID || "app_staging_p2pfather_dev";
+
+            // Clean expired sessions (> 15 minutes)
+            const now = Date.now();
+            for (const [id, sess] of this.activeSessions.entries()) {
+                if (now - sess.createdAt > 15 * 60 * 1000) {
+                    this.activeSessions.delete(id);
+                }
+            }
+
+            const signalHash = "0x" + crypto.createHash("sha256").update(userId).digest("hex");
+
+            const requestPayload = JSON.stringify({
+                app_id: appId,
+                action_description: "Verify Proof-of-Human for P2PFather Escrow Trading",
+                action,
+                signal: signalHash,
+                credential_types: ["orb", "device"],
+                verification_level: "orb",
+            });
+
+            const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+            const encrypted = Buffer.concat([cipher.update(requestPayload, "utf8"), cipher.final()]);
+            const tag = cipher.getAuthTag();
+            const combinedPayload = Buffer.concat([encrypted, tag]);
+
+            const body = JSON.stringify({
+                iv: iv.toString("base64"),
+                payload: combinedPayload.toString("base64"),
+            });
+
+            const bridgeRes = await axios.post("https://bridge.worldcoin.org/request", body, {
+                headers: { "Content-Type": "application/json" },
+                timeout: 8000,
+            });
+
+            if (bridgeRes.status !== 200 || !bridgeRes.data?.request_id) {
+                return { success: false, requestId: "", connectorURI: "", error: "Failed to create World App session on bridge." };
+            }
+
+            const requestId = bridgeRes.data.request_id;
+            const connectorURI = `https://world.org/verify?t=wld&i=${requestId}&k=${encodeURIComponent(key.toString("base64"))}`;
+
+            this.activeSessions.set(requestId, {
+                key,
+                iv,
+                userId,
+                action,
+                createdAt: now,
+            });
+
+            console.log(`[WORLD ID BRIDGE] Created session ${requestId} for trader ${userId}`);
+            return {
+                success: true,
+                requestId,
+                connectorURI,
+            };
+        } catch (err: any) {
+            console.error("[WORLD ID BRIDGE] Error initiating session:", err.message);
+            return {
+                success: false,
+                requestId: "",
+                connectorURI: "",
+                error: err.message || "Failed to initialize World App session",
+            };
+        }
+    }
+
+    /**
+     * Poll the Worldcoin bridge for the completed zero-knowledge proof response
+     */
+    async pollBridgeSession(requestId: string): Promise<{
+        status: "waiting" | "completed" | "failed";
+        verified?: boolean;
+        error?: string;
+        nullifier_hash?: string;
+    }> {
+        const session = this.activeSessions.get(requestId);
+        if (!session) {
+            return { status: "failed", error: "Session expired or not found" };
+        }
+
+        try {
+            const bridgeRes = await axios.get(`https://bridge.worldcoin.org/response/${requestId}`, {
+                timeout: 5000,
+            });
+
+            if (bridgeRes.status !== 200 || !bridgeRes.data) {
+                return { status: "waiting" };
+            }
+
+            const { status, response } = bridgeRes.data;
+
+            if (status !== "completed" || !response?.payload) {
+                return { status: "waiting" };
+            }
+
+            // Decrypt the payload
+            const payloadBuffer = Buffer.from(response.payload, "base64");
+            const responseIv = Buffer.from(response.iv, "base64");
+            const authTag = payloadBuffer.subarray(payloadBuffer.length - 16);
+            const ciphertext = payloadBuffer.subarray(0, payloadBuffer.length - 16);
+
+            const decipher = crypto.createDecipheriv("aes-256-gcm", session.key, responseIv);
+            decipher.setAuthTag(authTag);
+            const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+
+            const parsedResult = JSON.parse(decrypted);
+
+            if (parsedResult.error_code) {
+                this.activeSessions.delete(requestId);
+                return { status: "failed", error: parsedResult.error_code };
+            }
+
+            // Verify with verifyTraderProof
+            const verifyResult = await this.verifyTraderProof({
+                userId: session.userId,
+                merkle_root: parsedResult.merkle_root,
+                nullifier_hash: parsedResult.nullifier_hash,
+                proof: parsedResult.proof,
+                verification_level: parsedResult.verification_level || "orb",
+                action: session.action,
+                signal: session.userId,
+            });
+
+            this.activeSessions.delete(requestId);
+
+            if (verifyResult.success) {
+                return {
+                    status: "completed",
+                    verified: true,
+                    nullifier_hash: verifyResult.nullifier_hash,
+                };
+            } else {
+                return {
+                    status: "failed",
+                    verified: false,
+                    error: verifyResult.error,
+                };
+            }
+        } catch (err: any) {
+            console.error("[WORLD ID BRIDGE] Poll error:", err.message);
+            return { status: "waiting" };
+        }
     }
 
     /**

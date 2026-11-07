@@ -22,6 +22,7 @@
     "@reown/appkit-adapter-wagmi": "^1.8.18",
     "@supabase/supabase-js": "^2.78.0",
     "@tanstack/react-query": "^5.90.21",
+    "@worldcoin/idkit-core": "^4.6.0",
     "ox": "0.12.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
