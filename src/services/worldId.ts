@@ -50,9 +50,9 @@ export class WorldIdService {
      */
     getConfig() {
         return {
-            app_id: env.WORLD_APP_ID || "app_staging_p2pfather_dev",
-            action: env.WORLD_ACTION || "p2pfather-trader-verification",
-            is_staging: (env.WORLD_APP_ID || "").startsWith("app_staging_"),
+            app_id: env.WORLD_APP_ID || "app_2112e98ae700b17b3b2163c5baba7a38",
+            action: env.WORLD_ACTION || "verify-trader",
+            is_staging: false,
         };
     }
 
@@ -69,8 +69,8 @@ export class WorldIdService {
         try {
             const key = crypto.randomBytes(32);
             const iv = crypto.randomBytes(12);
-            const action = customAction || env.WORLD_ACTION || "p2pfather-trader-verification";
-            const appId = customAppId || env.WORLD_APP_ID || "app_staging_p2pfather_dev";
+            const action = customAction || env.WORLD_ACTION || "verify-trader";
+            const appId = customAppId || env.WORLD_APP_ID || "app_2112e98ae700b17b3b2163c5baba7a38";
 
             // Clean expired sessions (> 15 minutes)
             const now = Date.now();
@@ -254,8 +254,8 @@ export class WorldIdService {
      * Verify a Zero-Knowledge World ID Proof and upgrade trader to Verified Human
      */
     async verifyTraderProof(params: WorldIdVerifyParams): Promise<WorldIdVerifyResult> {
-        const appId = env.WORLD_APP_ID || "app_staging_p2pfather_dev";
-        const action = params.action || env.WORLD_ACTION || "p2pfather-trader-verification";
+        const appId = env.WORLD_APP_ID || "app_2112e98ae700b17b3b2163c5baba7a38";
+        const action = params.action || env.WORLD_ACTION || "verify-trader";
         const verificationLevel = params.verification_level || "orb";
 
         if (!params.userId) {
@@ -298,9 +298,9 @@ export class WorldIdService {
         let apiVerified = false;
         const isSimulated = params.proof.startsWith("0xsimulated") || params.proof.startsWith("0xmock");
 
-        if (isSimulated && (process.env.NODE_ENV !== "production" || appId.startsWith("app_staging_"))) {
-            // Testnet / Simulator / Sandbox developer mode
-            console.log(`[WORLD ID DEV] Accepting simulated proof for staging app ${appId}`);
+        if (isSimulated && process.env.NODE_ENV !== "production") {
+            // Testnet / Simulator — only allowed in local dev with NODE_ENV=development
+            console.log(`[WORLD ID DEV] Accepting simulated proof in dev environment`);
             apiVerified = true;
         } else {
             try {

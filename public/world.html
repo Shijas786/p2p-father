@@ -215,12 +215,12 @@
         <div class="app-id-bar">
             <div class="app-id-label">
                 <span>World App ID</span>
-                <span class="app-id-badge" id="appIdBadge">app_staging_p2pfather_dev</span>
+                <span class="app-id-badge" id="appIdBadge">app_2112e98ae700b17b3b2163c5baba7a38</span>
             </div>
             <div style="color: #6B7280; font-size: 10px; line-height: 1.4; margin-bottom: 6px;">
-                Using a registered app from <a href="https://developer.worldcoin.org" target="_blank" style="color: var(--orange-primary); text-decoration: underline;">developer.worldcoin.org</a>?
+                Connected to official app registered at <a href="https://developer.worldcoin.org" target="_blank" style="color: var(--orange-primary); text-decoration: underline;">developer.worldcoin.org</a>
             </div>
-            <div class="app-id-input-row">
+            <div class="app-id-input-row" style="display: none;">
                 <input type="text" id="customAppIdInput" placeholder="app_... (from developer.worldcoin.org)" class="app-id-input" />
                 <button onclick="saveAppId()" class="app-id-save-btn">Save</button>
             </div>
@@ -228,7 +228,7 @@
     </div>
 
     <script>
-        let worldConfig = { app_id: 'app_staging_p2pfather_dev', action: 'p2pfather-trader-verification' };
+        let worldConfig = { app_id: 'app_2112e98ae700b17b3b2163c5baba7a38', action: 'verify-trader' };
         let activeUserId = new URLSearchParams(window.location.search).get('userId') || 'guest_trader_' + Math.floor(Math.random() * 10000);
         let pollInterval = null;
 

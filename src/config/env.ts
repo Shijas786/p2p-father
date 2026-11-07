@@ -103,8 +103,8 @@ const envSchema = z.object({
     ARKIV_PRIVATE_KEY: z.string().default(""),
 
     // World (World ID & World App MiniKit)
-    WORLD_APP_ID: z.string().default(process.env.WORLD_APP_ID || "app_staging_p2pfather_dev"),
-    WORLD_ACTION: z.string().default(process.env.WORLD_ACTION || "p2pfather-trader-verification"),
+    WORLD_APP_ID: z.string().default(process.env.WORLD_APP_ID || "app_2112e98ae700b17b3b2163c5baba7a38"),
+    WORLD_ACTION: z.string().default(process.env.WORLD_ACTION || "verify-trader"),
 });
 
 const parsed = envSchema.safeParse(process.env);
