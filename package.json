@@ -8,7 +8,7 @@
     "dev": "NO_BOT=true tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "prebuild": "rm -rf dist",
-    "build": "tsc",
+    "build": "tsc && cd miniapp && npm run build",
     "serve": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/tests/unit.test.ts",

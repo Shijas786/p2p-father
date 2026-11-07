@@ -74,7 +74,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         document_type: string | null;
     } | null>(null);
     const [kycLoading, setKycLoading] = useState(false);
-    const [worldLoading, setWorldLoading] = useState(false);
 
     useEffect(() => {
         loadKycStatus();
@@ -148,73 +147,17 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
         }
     }
 
-    async function startWorldId() {
-        if (!user?.id) return;
+    function startWorldId() {
         haptic('medium');
-        setWorldLoading(true);
-        setMessage('');
-
-        try {
-            // Request authentic Worldcoin bridge session
-            const res = await fetch('/api/world/initiate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id })
-            });
-
-            const data = await res.json();
-            if (!data.success || !data.connectorURI) {
-                throw new Error(data.error || 'Failed to initialize World App session');
-            }
-
-            // Redirect automatically and directly into World App on user device
-            haptic('success');
-            if (window.Telegram?.WebApp?.openLink) {
-                window.Telegram.WebApp.openLink(data.connectorURI);
-            } else {
-                window.location.href = data.connectorURI;
-            }
-
-            // Poll for completion in the background
-            const requestId = data.requestId;
-            let attempts = 0;
-            const maxAttempts = 60; // 2 minutes (every 2s)
-
-            const pollInterval = setInterval(async () => {
-                attempts++;
-                if (attempts > maxAttempts) {
-                    clearInterval(pollInterval);
-                    setWorldLoading(false);
-                    return;
-                }
-
-                try {
-                    const pollRes = await fetch(`/api/world/poll/${requestId}`);
-                    const pollData = await pollRes.json();
-
-                    if (pollData.status === 'completed' && pollData.verified) {
-                        clearInterval(pollInterval);
-                        setWorldLoading(false);
-                        haptic('success');
-                        setMessage('success:World ID Verified! Unlocked 0% escrow fees.');
-                        loadKycStatus();
-                        onUpdate();
-                    } else if (pollData.status === 'failed') {
-                        clearInterval(pollInterval);
-                        setWorldLoading(false);
-                        setMessage(`error:World ID: ${pollData.error || 'Verification canceled'}`);
-                        haptic('error');
-                    }
-                } catch {
-                    // ignore network blips while polling
-                }
-            }, 2000);
-
-        } catch (err: any) {
-            setWorldLoading(false);
-            haptic('error');
-            setMessage(`error:${err.message}`);
+        const worldUrl = `https://p2pfather.com/world?userId=${user?.id || ''}`;
+        if (window.Telegram?.WebApp?.openLink) {
+            window.Telegram.WebApp.openLink(worldUrl);
+        } else {
+            window.open(worldUrl, '_blank');
         }
+        setTimeout(loadKycStatus, 4000);
+        setTimeout(loadKycStatus, 8000);
+        setTimeout(loadKycStatus, 15000);
     }
 
     // Accordion State
@@ -465,7 +408,6 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                 <button
                                     className="prof-world-btn"
                                     onClick={startWorldId}
-                                    disabled={worldLoading}
                                     title="Verify with World App (Proof of Human)"
                                     style={{
                                         display: 'inline-flex',
@@ -479,12 +421,11 @@ export function Profile({ user, onUpdate, onSwitchWallet }: Props) {
                                         fontSize: '11px',
                                         fontWeight: 700,
                                         border: 'none',
-                                        cursor: worldLoading ? 'not-allowed' : 'pointer',
-                                        opacity: worldLoading ? 0.75 : 1
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     <IconWorldId size={13} color="#FFFFFF" />
-                                    <span>{worldLoading ? 'Verifying...' : 'World ID'}</span>
+                                    <span>World ID</span>
                                 </button>
                             </div>
                         )}

@@ -24,12 +24,12 @@ worldRouter.get("/config", (_req: Request, res: Response) => {
  */
 worldRouter.post("/initiate", async (req: Request, res: Response) => {
     try {
-        const { userId } = req.body;
+        const { userId, appId, action } = req.body;
         if (!userId) {
             return res.status(400).json({ success: false, error: "userId is required" });
         }
 
-        const session = await worldIdService.initiateBridgeSession(userId);
+        const session = await worldIdService.initiateBridgeSession(userId, appId, action);
         if (!session.success) {
             return res.status(500).json(session);
         }

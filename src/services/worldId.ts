@@ -60,7 +60,7 @@ export class WorldIdService {
      * Create an authentic World ID bridge session and generate the valid Universal Link (world.org/verify?t=wld&i=...&k=...)
      * This redirects directly and automatically into World App with the interactive prompt.
      */
-    async initiateBridgeSession(userId: string): Promise<{
+    async initiateBridgeSession(userId: string, customAppId?: string, customAction?: string): Promise<{
         success: boolean;
         requestId: string;
         connectorURI: string;
@@ -69,8 +69,8 @@ export class WorldIdService {
         try {
             const key = crypto.randomBytes(32);
             const iv = crypto.randomBytes(12);
-            const action = env.WORLD_ACTION || "p2pfather-trader-verification";
-            const appId = env.WORLD_APP_ID || "app_staging_p2pfather_dev";
+            const action = customAction || env.WORLD_ACTION || "p2pfather-trader-verification";
+            const appId = customAppId || env.WORLD_APP_ID || "app_staging_p2pfather_dev";
 
             // Clean expired sessions (> 15 minutes)
             const now = Date.now();
